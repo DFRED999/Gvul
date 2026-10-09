@@ -210,6 +210,35 @@ tr.msub td:first-child .msind { padding-inline-start: 18px; font-size: 13.5px; }
 .svitems { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; } .svitem { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); padding: 6px 0; }
 .svitem span:first-child { display: flex; flex-direction: column; } .svitem small { color: var(--muted); font-size: 12px; }
 .svist { display: flex; gap: 4px; } .svist button { border: 1px solid #c9cdc5; background: #fff; border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; cursor: pointer; } .svist button.on { font-weight: 700; border-color: #777; }
+
+/* ---- סקר שטח: קוביות בצבע החומר — ✓ ממלא את הקובייה בצבע, ½ גוון בהיר, ✗ אפור ---- */
+.svflow { column-width: 200px; column-gap: 14px; }
+.svflow .agrp { break-inside: avoid; margin-top: 0; margin-bottom: 12px; }
+.svflow .agh { font-size: 14.5px; padding-bottom: 4px; margin-bottom: 6px; } .svflow .agi { width: 26px; height: 26px; border-radius: 8px; } .svflow .agi svg { width: 17px; height: 17px; }
+.svflow .svgrid { grid-template-columns: 1fr; gap: 6px; }
+.svact { position: relative; background: #fff; border: 1.5px solid color-mix(in srgb, var(--m) 30%, #d5d9d1) !important; border-radius: 14px; min-height: 52px; padding: 6px 8px; gap: 8px; justify-content: flex-start; font-weight: 700; line-height: 1.15; }
+.svact > span { flex: 1; } .svact small { font-size: 11.5px; font-weight: 600; opacity: .8; }
+.svact .svico { flex: none; width: 32px; height: 32px; border-radius: 10px; background: var(--m); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-style: normal; }
+.svact.lt .svico { color: var(--mi); } .svact .svico svg { width: 19px; height: 19px; }
+.svact .sb { width: 30px; height: 30px; font-size: 17px; }
+.svact.stok { background: var(--m); background: linear-gradient(155deg, color-mix(in srgb, var(--m) 75%, #fff), var(--m) 65%); border-color: var(--m) !important; color: var(--mi, #fff); }
+.svact.stok .svico { background: rgba(255,255,255,.22); color: inherit; } .svact.stok.lt .svico { background: rgba(0,0,0,.08); }
+.svact.stok .sb { background: #fff; border-color: #fff; color: var(--m); }
+.svact.sthalf { background: color-mix(in srgb, var(--m) 20%, #fff); border-color: color-mix(in srgb, var(--m) 60%, #fff) !important; }
+.svact.sthalf .sb { background: #e2b93b; border-color: #e2b93b; color: #fff; }
+.svact.stno { background: repeating-linear-gradient(135deg, #f1f1ef, #f1f1ef 6px, #e9e9e6 6px, #e9e9e6 12px); color: #777; border-color: #d0d0cc !important; }
+.svact.stno .svico { background: #a3a3a0; color: #fff; } .svact.stno .sb { background: #8c8c8c; border-color: #8c8c8c; color: #fff; }
+a.btn { text-decoration: none; }
+@media (max-width: 600px) {
+  .svrange { flex-wrap: nowrap; gap: 5px; } .svrange input, .svrk input { width: auto; flex: 1; min-width: 0; font-size: 17px; }
+  .svrange > span { white-space: nowrap; font-size: 13px; } .svrk .small, .svrange .svkd { display: none; }
+  .svflow { columns: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .svflow .agrp, .svflow .svgrid { display: contents; } .svflow .agh { display: none; }
+  .svact { flex-direction: column; justify-content: center; text-align: center; gap: 3px; min-height: 70px; padding: 6px 3px; font-size: 12px; border-radius: 12px; }
+  .svact .svico { width: 26px; height: 26px; border-radius: 8px; } .svact .svico svg { width: 16px; height: 16px; }
+  .svact .sb { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; font-size: 12px; border-width: 1.5px; }
+  .svact .sb:empty { display: none; }
+}
 .nbadge { background: #c4472b; color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700; padding: 0 7px; min-width: 18px; text-align: center; }
 .pipe { display: flex; flex-wrap: wrap; align-items: stretch; gap: 4px; margin-top: 12px; }
 .pstep { border: 1px solid #c9cdc5; border-radius: 8px; padding: 5px 9px; display: flex; flex-direction: column; align-items: center; min-width: 74px; cursor: pointer; font: inherit; color: var(--ink); }
@@ -863,6 +892,43 @@ function alertCloseModal(id) {
 const SV_BLOCK = 5;
 const SV_STATES = ["", "✓", "½", "✗"];
 const SV_COLORS = { "✓": "#a8d8b0", "½": "#f7e08f", "✗": "#e4e4e1", "": "#ffffff" };
+/* ---- צבע ואייקון לכל מלאכה לפי החומר בשטח (אותה הגדרה כמו באתר הדיווח) ---- */
+const matSvg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const matELL = (y, rx, ry) => [7, 12, 17].map(x => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/>`).join("");
+const MATS = [
+  { re: /אספלט/, c: "#26282c", i: '<path d="M9 3L5 21M15 3l4 18"/><path d="M12 4v2.5M12 10v3M12 16.5V20"/>' },
+  { re: /מצע/, c: "#e8b931", ink: "#33290a", i: '<path d="M2 17h20M2 21h20"/><circle cx="5.5" cy="13.5" r="1.6"/><circle cx="11" cy="13" r="1.9"/><circle cx="17" cy="13.6" r="1.6"/><circle cx="8.3" cy="9" r="1.4"/><circle cx="14.2" cy="8.6" r="1.5"/><circle cx="19.5" cy="9.8" r="1.1"/>' },
+  { re: /מבנה דרך/, c: "#a8743c", i: '<path d="M3 8l9-4 9 4-9 4z"/><path d="M3 12.5l9 4 9-4M3 17l9 4 9-4"/>' },
+  { re: /אחזקה/, c: "#9a7f55", i: '<path d="M5 21c1-6 7-6 7-11S9.5 4 9 3"/><path d="M12.5 21c1-6 7-6 7-11S17 4 16.5 3"/>' },
+  { re: /חשמל/, c: "#d9681a", i: '<path d="M2 7h4v13h12V7h4"/><path d="M13.2 8.5L10.5 13h3l-2.4 4.5"/>' },
+  { re: /חפיר.*(תקשור|תקשר)|(תקשור|תקשר).*חפיר/, c: "#2d6cb8", i: '<path d="M2 7h4v13h12V7h4"/><circle cx="12" cy="16" r="1.1"/><path d="M9.6 13.4a3.4 3.4 0 0 1 4.8 0M7.8 11a6 6 0 0 1 8.4 0"/>' },
+  { re: /שוח/, c: "#24508a", i: '<ellipse cx="12" cy="7.5" rx="8" ry="3"/><path d="M4 7.5v9c0 1.7 3.6 3 8 3s8-1.3 8-3v-9"/><path d="M9 7.5h6"/>' },
+  { re: /צנר|גוב/, c: "#4b6584", i: '<circle cx="7" cy="12" r="4.5"/><circle cx="7" cy="12" r="1.8"/><path d="M7 7.5h14M7 16.5h14M21 7.5v9"/>' },
+  { re: /שקד|ארון/, c: "#34557a", i: '<rect x="6" y="3" width="12" height="17" rx="1.5"/><path d="M12 3v17M10 10.5v2.5M14 10.5v2.5M4 21h16"/>' },
+  { re: /מעביר|סבכ/, c: "#1c7fb5", i: '<path d="M2 20h20"/><path d="M5 20v-6a7 7 0 0 1 14 0v6"/><path d="M8 17c1-.8 1.9-.8 2.9 0s1.9.8 2.9 0 1.9-.8 2.9 0"/>' },
+  { re: /מעקה בטון/, c: "#8a8377", i: '<path d="M8.5 5h7l.8 6.5L20 19H4l3.7-7.5z"/><path d="M2 19h20"/>' },
+  { re: /מעק/, c: "#5c6f7e", i: '<path d="M2 8h20v5H2z"/><path d="M2 10.5h20"/><path d="M5 13v7M12 13v7M19 13v7"/>' },
+  { re: /סימון|שילוט/, c: "#c0392b", i: '<path d="M12 21V12"/><path d="M12 2.5l8.5 9.5h-17z"/><path d="M12 6.5v2.5"/><path d="M3 21h4M10 21h4M17 21h4"/>' },
+  { re: /חישוף/, c: "#7a5230", i: '<path d="M18.5 2.5l-7 9"/><path d="M16.5 2l4 3"/><path d="M8.6 9.8l5 3.9-2.7 4.4a2.5 2.5 0 0 1-3.6.7l-1.4-1a2.5 2.5 0 0 1-.5-3.6z"/><path d="M2 21h20"/>' },
+  { re: /פריס.*תלתל/, c: "#64707d", i: matELL(12.5, 3.4, 5) + '<path d="M2 20.5h20"/>' },
+  { re: /פירוק/, c: "#b5541c", i: '<path d="M3 21V7M9 21V7M3 11h6M3 16h6"/><path d="M14 10l7 7M21 10l-7 7"/>' },
+  { re: /כלונס.*עמוד|עמוד.*כלונס/, c: "#5d6b78", i: '<path d="M2 13h20"/><path d="M6 4v9M12 4v9M18 4v9"/><path d="M6 13v8M12 13v8M18 13v8" stroke-dasharray="1.6 2.2"/>' },
+  { re: /כלונס/, c: "#6b7076", i: '<path d="M2 7h20"/><path d="M6 3v4M12 3v4M18 3v4"/><path d="M6 7v12M12 7v12M18 7v12" stroke-dasharray="1.6 2.2"/><path d="M4.5 20.5h3M10.5 20.5h3M16.5 20.5h3"/>' },
+  { re: /עמוד/, c: "#4f6475", i: '<path d="M2 21h20"/><path d="M6 21V5M12 21V5M18 21V5"/><path d="M6 5l2-1.5M12 5l2-1.5M18 5l2-1.5"/>' },
+  { re: /ברזל/, c: "#8c4a2f", i: '<rect x="3" y="6" width="18" height="12" rx="1.5"/><path d="M6 6v12M10 6v12M14 6v12M18 6v12" opacity=".55"/><circle cx="6.5" cy="9.5" r="1"/><circle cx="17.5" cy="9.5" r="1"/><circle cx="6.5" cy="14.5" r="1"/><circle cx="17.5" cy="14.5" r="1"/>' },
+  { re: /בטון רזה/, c: "#a3a8ad", ink: "#1f2328", i: '<path d="M2 15h20v4H2z"/><path d="M14 11l5-5M17.5 4.5l3 3"/><path d="M8 12.5c1.5-1 3-1 4.5 0"/>' },
+  { re: /קורה|קורת/, c: "#7b8087", i: '<rect x="2.5" y="8" width="19" height="6" rx="1"/><path d="M6 14v6M18 14v6M2 20h20"/>' },
+  { re: /ניו|ג.ר[סז]י/, c: "#8a8377", i: '<path d="M8.5 5h7l.8 6.5L20 19H4l3.7-7.5z"/><path d="M2 19h20"/>' },
+  { re: /קווי מי/, c: "#1f7a8c", i: '<path d="M2 15h20M2 19.5h20"/><path d="M12 3s3.2 3.5 3.2 5.8a3.2 3.2 0 0 1-6.4 0C8.8 6.5 12 3 12 3z"/>' },
+  { re: /סכינ/, c: "#37414b", i: '<path d="M2 13l2.5-3.5L7 13l2.5-3.5L12 13l2.5-3.5L17 13l2.5-3.5L22 13"/><path d="M2 18h20M2 6h20" opacity=".5"/>' },
+  { re: /תלתל/, c: "#64707d", i: matELL(7, 2.6, 3.6) + '<path d="M5 21V11M19 21V11M5 15h14"/>' },
+  { re: /קלמר|ריתוך/, c: "#c2410c", i: '<path d="M3.5 20.5l7-7"/><path d="M8.5 11.5l4 4"/><path d="M15 3v3M19.5 4.5l-2 2M21 9h-3M13.2 5.3l1.4 1.4"/>' },
+  { re: /תחתונה/, c: "#2f7d4f", i: '<rect x="3" y="3.5" width="18" height="17" rx="1.2"/><path d="M3 12h18" /><path d="M3 15l3-3M3 19l7-7M7 20.5l8.5-8.5M12 20.5l8.5-8.5M17 20.5l4-4M6 12l8.5 8.5M10.5 12l8.5 8.5M15 12l6 6M19 12l2 2M3 16l4.5 4.5"/>' },
+  { re: /עליונה/, c: "#2f7d4f", i: '<rect x="3" y="3.5" width="18" height="17" rx="1.2"/><path d="M3 12h18"/><path d="M3 7l3.5-3.5M3 11.5l8-8M7.5 12l8.5-8.5M12.5 12l8.5-8.5M17 12l4-4M6.5 3.5L15 12M11 3.5l8.5 8.5M15.5 3.5L21 9M3 4l8 8M20 3.5l1 1"/>' },
+  { re: /מודול/, c: "#2f7d4f", i: '<rect x="3" y="4" width="18" height="15" rx="1"/><path d="M7.5 4v15M12 4v15M16.5 4v15M3 9h18M3 14h18"/><path d="M2 21h20"/>' },
+  { re: /רשת/, c: "#2f7d4f", i: '<rect x="3" y="3.5" width="18" height="17" rx="1.2"/><path d="M3 9l5.5-5.5M3 15l11.5-11.5M5 20.5l16-16M11 20.5l10-10M17 20.5l4-4M9 3.5l12 12M3 3.5l17 17M3 9.5l11 11M3 15.5l5 5"/>' },
+];
+const matOf = a => MATS.find(m => m.re.test(a.name || "")) || null;
 const svShort = n => String(n || "").replace(/^(גדר|כביש|תקשורת)\s*-\s*/, "").replace(/^(גדר|כביש)-\s*/, "");
 /** ק.ד. ↔ חתך בקטע: טבלת ק.ד.↔חתכים אם יש, אחרת קו ישר בין (ק.ד. התחלה, חתך התחלה) ל־(ק.ד. סוף, חתך סוף) */
 function segKdSec(s) {
@@ -947,7 +1013,7 @@ function pageSurvey(d) {
   const F = S.rf ?? defF, T = S.rt ?? defT, custom = S.rf != null || S.rt != null;
   const ivs = ivsOf(x.s.id), r = SV[svId(c.id, x.s.id, b.from)] || {};
   const tot = ds.reduce((t, y) => t + svBlocks(y).length, 0), done = ds.reduce((t, y) => t + segStat(y)[0], 0);
-  return `<h1>סקר שטח</h1><p class="sub">מה בוצע בפועל. בוחרים בלוק (100 מ׳), כמה בלוקים, או מקלידים טווח חתכים מדויק — ואז לוחצים על המלאכה: ✓ בוצע → ✗ לא בוצע → מחיקה. נשמר אוטומטית.</p>
+  return `<div class="row" style="align-items:center"><h1 style="margin:0">סקר שטח</h1><span class="spacer"></span><a class="btn ghost sm" href="report.html" target="_blank" rel="noopener" title="דיווח ביצוע שוטף (שבועי) — אתר המפקחים">אתר הדיווח ↗</a></div><p class="sub">מה בוצע בפועל. בוחרים בלוק (100 מ׳), כמה בלוקים, או מקלידים טווח חתכים מדויק — ואז לוחצים על המלאכה: ✓ בוצע → ✗ לא בוצע → מחיקה. נשמר אוטומטית.</p>
   ${chips(mains.map(m => [m.id, m.name, m.id === c.id ? `${done}/${tot}` : ""]), c.id, "svC")}
   ${chips(ds.map(y => { const [a, n] = segStat(y); return [y.s.id, segName(y), `${a}/${n}`]; }), S.segId, "svS")}
   <div class="row" style="gap:6px;margin:4px 0 6px"><button class="btn sm ${S.multi ? "" : "ghost"}" data-act="svMulti">${S.multi ? "✓ בחירת טווח בלוקים פעילה" : "בחירת טווח בלוקים"}</button>
@@ -965,9 +1031,10 @@ function pageSurvey(d) {
       <span class="small muted">${kdSecPts(x.s) ? "מומר לחתכים לפי טבלת ק.ד.↔חתכים" : "מומר לחתכים בקירוב (≈) — חתך מדויק עדיף"}</span></div></div>
     <div class="row" style="gap:6px;margin:8px 0"><button class="btn ghost sm" data-act="svCopy" ${S.idx && !multi && !custom ? "" : "disabled"}>כמו הבלוק הקודם</button><button class="btn ghost sm" data-act="svAll" data-id="✓">הכל ✓</button><button class="btn ghost sm" data-act="svAll" data-id="✗">הכל ✗</button><button class="btn ghost sm" data-act="svAll" data-id="">ניקוי</button>
       <span class="spacer"></span><span class="small muted">${acts.filter(a => svState(ivs, a.id, F, T)).length}/${acts.length} סומנו</span></div>
-    ${groupActs(acts).map(({ G, acts: ga }) => { const n = ga.filter(a => svState(ivs, a.id, F, T)).length;
+    <div class="svflow">${groupActs(acts).map(({ G, acts: ga }) => { const n = ga.filter(a => svState(ivs, a.id, F, T)).length;
       return `<section class="agrp" style="--g:${G.color};--gt:${G.tint}"><div class="agh"><span class="agi">${agIcon(G.key)}</span><b>${G.name}</b><span class="agc">${n}/${ga.length}</span></div>
-      <div class="svgrid">${ga.map(a => { const s = svState(ivs, a.id, F, T); return `<button class="svact st${s === "✓" ? "ok" : s === "✗" ? "no" : s === "½" ? "half" : ""}" data-act="svTap" data-id="${a.id}"><span>${esc(svShort(a.name))}</span><b class="sb">${s === "½" ? "½" : s}</b></button>`; }).join("")}</div></section>`; }).join("")}
+      <div class="svgrid">${ga.map(a => { const s = svState(ivs, a.id, F, T), M = matOf(a), nm = svShort(a.name), pi = nm.indexOf("(");
+        return `<button class="svact st${s === "✓" ? "ok" : s === "✗" ? "no" : s === "½" ? "half" : ""} ${M?.ink ? "lt" : ""}" data-act="svTap" data-id="${a.id}" style="--m:${M?.c || G.color}${M?.ink ? `;--mi:${M.ink}` : ""}"><i class="svico">${M ? matSvg(M.i) : agIcon(G.key)}</i><span>${pi > 0 ? `${esc(nm.slice(0, pi).trim())}<br><small>${esc(nm.slice(pi))}</small>` : esc(nm)}</span><b class="sb">${s === "½" ? "½" : s}</b></button>`; }).join("")}</div></section>`; }).join("")}</div>
     ${custom || multi ? "" : `<div class="row" style="gap:10px;margin-top:10px"><span class="small"><b>שוחות תקשורת</b></span><button class="btn ghost svpm" data-act="svQty" data-id="-1">−</button><b style="font-size:20px;min-width:2ch;text-align:center">${r.qty || 0}</b><button class="btn ghost svpm" data-act="svQty" data-id="1">+</button>
       <input class="inp" id="svNote" data-act="svNote" placeholder="הערה לבלוק" value="${esc(r.note || "")}" style="flex:1;min-width:160px"></div>`}
   </div>
