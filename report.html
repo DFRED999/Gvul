@@ -51,7 +51,7 @@ input, select, textarea { font: inherit; border: 1px solid #c9cdc5; border-radiu
 .covbar i { position: absolute; top: 0; bottom: 0; } .covbar i.ok { background: #8fcf9f; } .covbar i.pd { background: repeating-linear-gradient(45deg, #f7e08f, #f7e08f 5px, #fbeec0 5px, #fbeec0 10px); }
 .covbar i.cur { border: 2.5px solid #2f6db5; border-radius: 4px; background: rgba(47,109,181,.12); }
 .covbar .l, .covbar .r { position: absolute; top: 3px; font-size: 10.5px; color: #555; } .covbar .l { left: 4px; } .covbar .r { right: 4px; }
-.covtxt { font-size: 13px; margin-top: 4px; } .lg { color: var(--muted); white-space: nowrap; } .lg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 6px; vertical-align: -1px; } .lg i.ok { background: #8fcf9f; } .lg i.pd { background: #f7e08f; }
+.covtxt { font-size: 13px; margin-top: 4px; } .cov.multi { margin-top: 6px; } .cov.multi .covbar { height: 12px; } .cov.multi .covbar .l, .cov.multi .covbar .r { display: none; } .cov.multi .covtxt { margin-top: 2px; font-size: 12px; } .cov.multi .lg { display: none; } .lg { color: var(--muted); white-space: nowrap; } .lg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 6px; vertical-align: -1px; } .lg i.ok { background: #8fcf9f; } .lg i.pd { background: #f7e08f; }
 .dup { position: sticky; bottom: 84px; z-index: 6; background: #fff4ea; border: 2px solid #e59a3c; border-radius: 14px; padding: 12px; margin-bottom: 8px; }
 .dup .btn { font-size: 14px; padding: 10px 14px; } .small { font-size: 13px; }
 
@@ -111,6 +111,29 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   .act.on .tick { top: -5px; left: -5px; width: 21px; height: 21px; font-size: 12px; }
   .sendbar { padding: 8px 10px; border-radius: 14px; } .sendbar .sum { font-size: 13px; } .sendbar .btn { padding: 12px 16px; font-size: 16px; }
   .dup { bottom: 70px; }
+}
+
+/* ---- נייד: כל הקוביות במסך אחד — גובה הקובייה מחושב לפי המקום שנשאר ---- */
+@media (max-width: 600px) {
+  header { margin-bottom: 6px; } header h1 { font-size: 17px; }
+  .top { padding: 8px 10px; } .top .row { flex-direction: row !important; align-items: center; }
+  .top .chips { flex: 1; min-width: 0; margin: 0; padding: 0 0 2px; } .top .chip { padding: 7px 10px; font-size: 13.5px; }
+  .date > span { display: none; } .date input { width: 118px; flex: none; font-size: 13px; padding: 6px; }
+  .where { padding: 8px 10px; } .where .chip.sm { padding: 6px 10px; font-size: 13px; } .sec { margin-top: 6px; } .where .hint { margin-top: 4px; font-size: 12px; }
+  .sec .num { font-size: 18px; padding: 6px 4px; }
+  .tiles { padding: 6px; } .tiles .flow { columns: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .gstart { display: contents; } .agh { display: none; }
+  .act { flex-direction: row; justify-content: flex-start; text-align: right; gap: 5px; margin: 0; padding: 3px 6px 3px 4px; border-radius: 11px;
+    min-height: 0; height: var(--th, 44px); font-size: 12px; line-height: 1.1; }
+  .act { overflow: hidden; justify-content: center; text-align: center; padding: 2px 5px; font-size: 12px; line-height: 1.08; }
+  .act > span { flex: 1; } .act .par { font-size: 10px; font-weight: 600; opacity: .9; }
+  .act .ico { display: none; }
+  .where .hint.empty { display: none; }
+  .cov { margin-top: 6px; } .covbar { height: 16px; } .covbar .l, .covbar .r { top: 1px; font-size: 9.5px; }
+  .covtxt { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .covtxt .lg { display: none; }
+  .kd { margin-top: 6px; padding: 4px 6px; }
+  .act.on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--g); } .act.on .tick { top: 3px; left: 3px; width: 16px; height: 16px; font-size: 10px; border-width: 1.5px; }
+  .sendbar { padding: 6px 8px; } .sendbar .btn { padding: 10px 14px; font-size: 15px; } .sendbar .sum { font-size: 12.5px; }
 }
 .login { max-width: 380px; margin: 12vh auto; }
 .login input { width: 100%; margin-bottom: 10px; direction: ltr; }
@@ -191,7 +214,7 @@ const priorOf = (cid, aid, sid) => list("progress").filter(p => p.contractorId =
 const ivOf = p => [Math.min(+p.secFrom, +p.secTo), Math.max(+p.secFrom, +p.secTo)];
 const emailKey = e => String(e || "").toLowerCase().replace(/\./g, ",");
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name).localeCompare(String(b.name), "he");
-let fb, user, me, D = {}, S = { cid: "", segId: "", actId: "", date: today(), from: "", to: "", qty: "", note: "", msg: "", err: false };
+let fb, user, me, D = {}, S = { cid: "", segId: "", acts: [], date: today(), from: "", to: "", qty: "", note: "", msg: "", err: false };
 const loadScript = src => new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
 
 function login(msg = "") {
@@ -226,7 +249,17 @@ function segsOf(c) {
 }
 /** שם בקובייה: סוגריים בשורה נפרדת; שם ארוך מתחלק לשתי שורות מאוזנות */
 const tileName = n => { n = String(n || "").trim(); const i = n.indexOf("(");
-  return i > 0 ? `${esc(n.slice(0, i).trim())}<br>${esc(n.slice(i))}` : esc(n); };
+  return i > 0 ? `${esc(n.slice(0, i).trim())}<br><small class="par">${esc(n.slice(i))}</small>` : esc(n); };
+/** נייד: גובה הקוביות כך שכל הלוח ייכנס בין כרטיס החתכים לפס השליחה */
+function fitTiles() {
+  const flow = document.querySelector(".tiles .flow"), bar = document.querySelector(".sendbar"); if (!flow) return;
+  if (innerWidth > 600) { flow.style.removeProperty("--th"); return; }
+  const n = flow.querySelectorAll(".act").length, rows = Math.ceil(n / 3); if (!rows) return;
+  const vh = window.visualViewport?.height || innerHeight, top = flow.getBoundingClientRect().top + scrollY;
+  const avail = vh - top - (bar ? bar.offsetHeight : 60) - 22;
+  flow.style.setProperty("--th", Math.max(34, Math.min(60, Math.floor((avail - (rows - 1) * 5) / rows))) + "px");
+}
+addEventListener("resize", () => requestAnimationFrame(fitTiles));
 function view() {
   const cids = me.admin ? Object.keys(D.contractors || {}).filter(k => D.contractors[k].kind !== "ייעודי").sort((a, b) => (D.contractors[a].order ?? 0) - (D.contractors[b].order ?? 0))
     : Object.keys(me.contractors || {}).filter(k => D.contractors?.[k]);
@@ -235,12 +268,14 @@ function view() {
   const c = { id: S.cid, ...D.contractors[S.cid] }, segs = segsOf(c);
   const acts = list("activities").filter(a => a.contractorId === c.id).sort(byOrder);
   if (!segs.some(s => s.id === S.segId)) S.segId = segs[0]?.id || "";
-  if (!acts.some(a => a.id === S.actId)) S.actId = "";
-  const seg = segs.find(s => s.id === S.segId), act = acts.find(a => a.id === S.actId), unit = act?.unit === "יח׳";
+  S.acts = S.acts.filter(id => acts.some(a => a.id === id));
+  const sel = acts.filter(a => S.acts.includes(a.id)), act = sel[0] || null, unit = sel.length === 1 && act.unit === "יח׳";
+  const seg = segs.find(s => s.id === S.segId);
+  const selName = sel.length <= 2 ? sel.map(a => short(a.name)).join(" + ") : `${short(sel[0].name)} + עוד ${sel.length - 1}`;
   const m = !unit && S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? Math.abs(S.to - S.from) * SECTION_M : null;
   const mine = list("progress").filter(p => p.reportedBy === me.email).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, 25);
   const actName = id => D.activities?.[id]?.name || "—", segName = id => segs.find(s => s.id === id)?.label || "";
-  const actTile = a => { const G = actGroup(a), M = matOf(a); return `<button class="act ${a.id === S.actId ? "on" : ""} ${M?.ink ? "lt" : ""}" data-a="${a.id}" style="--g:${M?.c || G.color};--gt:${G.tint}${M?.ink ? `;--fg:${M.ink}` : ""}"><i class="ico">${M ? SV(M.i) : agIcon(G.key)}</i><span>${tileName(short(a.name))}${a.unit === "יח׳" ? ` <small>(יח׳)</small>` : ""}</span><i class="tick">${a.id === S.actId ? "✓" : ""}</i></button>`; };
+  const actTile = a => { const G = actGroup(a), M = matOf(a); return `<button class="act ${S.acts.includes(a.id) ? "on" : ""} ${M?.ink ? "lt" : ""}" data-a="${a.id}" style="--g:${M?.c || G.color};--gt:${G.tint}${M?.ink ? `;--fg:${M.ink}` : ""}"><i class="ico">${M ? SV(M.i) : agIcon(G.key)}</i><span>${tileName(short(a.name))}${a.unit === "יח׳" ? ` <small>(יח׳)</small>` : ""}</span><i class="tick">${S.acts.includes(a.id) ? "✓" : ""}</i></button>`; };
   app.innerHTML = `<header><h1>דיווח ביצוע</h1><div class="who">${esc(me.name || user.email)}<br><button class="btn ghost" id="out" style="padding:4px 10px">יציאה</button></div></header>
   <div class="board">
   <div class="card top">
@@ -252,30 +287,34 @@ function view() {
       : `<div class="chips">${segs.map(s => `<button class="chip sm ${s.id === S.segId ? "on" : ""}" data-s="${s.id}">${esc(s.label)}</button>`).join("")}</div>
     <div class="row sec"><span>מחתך</span><input class="num" id="f" inputmode="numeric" value="${esc(S.from)}" placeholder="${seg?.lo ?? ""}"><span>עד</span><input class="num" id="t" inputmode="numeric" value="${esc(S.to)}" placeholder="${seg?.hi ?? ""}"><b id="m" class="len">${m === null ? "" : m.toLocaleString("he-IL") + " מ׳"}</b><button class="btn ghost kdbtn ${S.kdOpen ? "on" : ""}" id="kdt">לפי ק.ד.</button></div>
     <div class="row kd ${S.kdOpen || S.kf || S.kt ? "open" : ""}"><span>או ק.ד.</span><input class="num" id="kf" inputmode="decimal" value="${esc(S.kf ?? "")}" placeholder="${seg && S.from !== "" ? esc(kdOf(seg, S.from).replace("≈", "")) : "ק.ד."}"><span>עד</span><input class="num" id="kt" inputmode="decimal" value="${esc(S.kt ?? "")}" placeholder="${seg && S.to !== "" ? esc(kdOf(seg, S.to).replace("≈", "")) : "ק.ד."}"><button class="btn ghost" id="kgo">המרה</button></div>
-    ${act && seg ? (() => { const pr = priorOf(c.id, act.id, seg.id), W = seg.hi - seg.lo, pos = v => ((v - seg.lo) / W * 100).toFixed(2);
+    ${!unit && seg ? sel.map(act => { const pr = priorOf(c.id, act.id, seg.id), W = seg.hi - seg.lo, pos = v => ((v - seg.lo) / W * 100).toFixed(2);
       const ok = mergeIv(pr.filter(p => !p.review).map(ivOf)), pend = mergeIv(pr.filter(p => p.review === "לבדיקה").map(ivOf)), all = mergeIv(pr.map(ivOf));
       const done = all.reduce((s, [x, y]) => s + (y - x), 0) * SECTION_M, gaps = gapsIn(seg.lo, seg.hi, all);
       const cur = S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? [Math.min(S.from, S.to), Math.max(S.from, S.to)] : null;
       const bars = (arr, cls) => arr.map(([x, y]) => `<i class="${cls}" style="left:${pos(x)}%;width:${Math.max(.4, pos(y) - pos(x))}%"></i>`).join("");
-      return `<div class="cov"><div class="covbar" dir="ltr">${bars(ok, "ok")}${bars(pend, "pd")}${cur ? `<i class="cur" style="left:${pos(cur[0])}%;width:${Math.max(.6, pos(cur[1]) - pos(cur[0]))}%"></i>` : ""}<span class="l">${seg.lo}</span><span class="r">${seg.hi}</span></div>
-        <div class="covtxt"><b>${esc(short(act.name))}</b> בקטע: דווח ${done.toLocaleString("he-IL")} מ׳ מתוך ${(W * SECTION_M).toLocaleString("he-IL")}${gaps.length && done ? ` · עוד לא דווח: ${gaps.slice(0, 3).map(([x, y]) => rng(x, y)).join(", ")}${gaps.length > 3 ? "…" : ""}` : ""} <span class="lg"><i class="ok"></i>אושר <i class="pd"></i>ממתין</span></div></div>`; })() : ""}
-    <div class="hint">${seg ? `חתכי ${esc(seg.label)}: ${rng(seg.lo, seg.hi)}` : ""}${seg && S.from !== "" && S.to !== "" ? ` · <b style="color:#2f6db5">ק.ד. ${kdOf(seg, S.from)} – ${kdOf(seg, S.to)}</b>${S.byKd ? ` <span class="pill p2">הוזן לפי ק.ד.</span>` : ""}` : ""}</div>`}
+      return `<div class="cov ${sel.length > 1 ? "multi" : ""}"><div class="covbar" dir="ltr">${bars(ok, "ok")}${bars(pend, "pd")}${cur ? `<i class="cur" style="left:${pos(cur[0])}%;width:${Math.max(.6, pos(cur[1]) - pos(cur[0]))}%"></i>` : ""}<span class="l">${seg.lo}</span><span class="r">${seg.hi}</span></div>
+        <div class="covtxt"><b>${esc(short(act.name))}</b> בקטע: דווח ${done.toLocaleString("he-IL")} מ׳ מתוך ${(W * SECTION_M).toLocaleString("he-IL")}${gaps.length && done ? ` · עוד לא דווח: ${gaps.slice(0, 3).map(([x, y]) => rng(x, y)).join(", ")}${gaps.length > 3 ? "…" : ""}` : ""} <span class="lg"><i class="ok"></i>אושר <i class="pd"></i>ממתין</span></div></div>`; }).join("") : ""}
+    <div class="hint ${S.from !== "" && S.to !== "" ? "" : "empty"}">${seg ? `חתכי ${esc(seg.label)}: ${rng(seg.lo, seg.hi)}` : ""}${seg && S.from !== "" && S.to !== "" ? ` · <b style="color:#2f6db5">ק.ד. ${kdOf(seg, S.from)} – ${kdOf(seg, S.to)}</b>${S.byKd ? ` <span class="pill p2">הוזן לפי ק.ד.</span>` : ""}` : ""}</div>`}
   </div>
-  <div class="card tiles ${act ? "has" : ""}"><div class="flow">${groupActs(acts).map(({ G, acts: ga }) => `<section class="agrp" style="--g:${G.color};--gt:${G.tint}"><div class="acts"><div class="gstart"><div class="agh"><span class="agi">${agIcon(G.key)}</span><b>${G.name}</b></div>${actTile(ga[0])}</div>${ga.slice(1).map(actTile).join("")}</div></section>`).join("")}</div></div>
+  <div class="card tiles ${sel.length ? "has" : ""}"><div class="flow">${groupActs(acts).map(({ G, acts: ga }) => `<section class="agrp" style="--g:${G.color};--gt:${G.tint}"><div class="acts"><div class="gstart"><div class="agh"><span class="agi">${agIcon(G.key)}</span><b>${G.name}</b></div>${actTile(ga[0])}</div>${ga.slice(1).map(actTile).join("")}</div></section>`).join("")}</div></div>
   <div class="card side-note"><div class="lbl" style="margin-top:0">הערה (לא חובה)</div><textarea id="note" rows="2">${esc(S.note)}</textarea></div>
-  ${S.dup ? `<div class="dup"><b>${S.dup.full ? "הטווח הזה כבר דווח" : "חלק מהטווח כבר דווח"}</b>
-    <div class="small">${S.dup.overl.map(o => `${rng(o.f, o.t)} · ${fmtD(o.date)} · ${esc(o.by)} · ${o.st}`).join("<br>")}</div>
-    <div class="row" style="margin-top:8px;gap:6px">${S.dup.full ? "" : `<button class="btn" id="dupNew">שליחת החדש בלבד: ${S.dup.gaps.map(([x, y]) => rng(x, y)).join(", ")}</button>`}
+  ${S.dup ? `<div class="dup"><b>${S.dup.hits.length === 1 && !S.dup.clean.length ? (S.dup.full ? "הטווח הזה כבר דווח" : "חלק מהטווח כבר דווח") : "חלק מהמלאכות כבר דווחו בטווח הזה"}</b>
+    <div class="small">${S.dup.hits.map(x => `<div style="margin-top:4px"><b>${esc(x.name)}</b> — ${x.full ? "כבר דווח כולו" : `חדש: ${x.gaps.map(([p, q]) => rng(p, q)).join(", ")}`}<br>${x.overl.map(o => `${rng(o.f, o.t)} · ${fmtD(o.date)} · ${esc(o.by)} · ${o.st}`).join("<br>")}</div>`).join("")}
+      ${S.dup.clean.length ? `<div style="margin-top:4px">בלי כפילות (יישלחו במלואן): <b>${S.dup.clean.map(r => esc(short(D.activities?.[r.activityId]?.name || ""))).join(", ")}</b></div>` : ""}</div>
+    <div class="row" style="margin-top:8px;gap:6px">${S.dup.full ? "" : `<button class="btn" id="dupNew">${S.dup.hits.length === 1 && !S.dup.clean.length ? `שליחת החדש בלבד: ${S.dup.hits[0].gaps.map(([x, y]) => rng(x, y)).join(", ")}` : "שליחת מה שחדש בלבד"}</button>`}
       <button class="btn ghost" id="dupFix" title="כשהדיווח הקודם שגוי — נשלח עם הערה לבדיקת מנהל הפרויקט">בקשת תיקון</button><button class="btn ghost" id="dupNo">ביטול</button></div></div>` : ""}
-  <div class="sendbar"><div class="sum">${S.msg ? `<div class="msg ${S.err ? "err" : "ok"}" style="margin:0 0 2px">${esc(S.msg)}</div>` : ""}${act ? `<b>${esc(short(act.name))}</b> · ${unit ? (S.qty ? S.qty + " יח׳" : "כמות?") : m !== null ? `${rng(S.from, S.to)} · ${m.toLocaleString("he-IL")} מ׳` : "חתכים?"}` : "בחר מלאכה"}</div><button class="btn" id="send">שליחת דיווח</button></div>
+  <div class="sendbar"><div class="sum">${S.msg ? `<div class="msg ${S.err ? "err" : "ok"}" style="margin:0 0 2px">${esc(S.msg)}</div>` : ""}${act ? `<b>${esc(selName)}</b> · ${unit ? (S.qty ? S.qty + " יח׳" : "כמות?") : m !== null ? `${rng(S.from, S.to)} · ${m.toLocaleString("he-IL")} מ׳` : "חתכים?"}${sel.length > 1 && m !== null ? ` · ${sel.length} מלאכות` : ""}` : "בחר מלאכה — אפשר כמה"}</div><button class="btn" id="send">שליחת דיווח</button></div>
   </div>
   <div class="card"><b>הדיווחים שלי</b> <span class="hint">— ממתין לאישור עד שמנהל הפרויקט מאשר</span>
     ${mine.map(p => `<div class="rep"><div class="t"><b>${esc(actName(p.activityId))}</b><small>${fmtD(p.date)} · ${esc(D.contractors?.[p.contractorId]?.name || "")} · ${p.qty ? `${p.qty} יח׳` : `${esc(segName(p.segmentId))} ${rng(esc(p.secFrom), esc(p.secTo))}${(s => s ? ` · ק.ד. ${kdOf(s, p.secFrom)}–${kdOf(s, p.secTo)}` : "")(segs.find(x => x.id === p.segmentId))} (${(Math.abs(p.secTo - p.secFrom) * SECTION_M).toLocaleString("he-IL")} מ׳)`}${p.note ? " · " + esc(p.note) : ""}</small></div>
       ${p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span><button class="btn ghost" data-del="${p.id}" style="padding:6px 10px">מחיקה</button>` : p.review === "נדחה" ? `<span class="pill p2">לא אושר</span>` : `<span class="pill p1">אושר ✓</span>`}</div>`).join("") || `<p class="hint">עוד אין דיווחים</p>`}
   </div>`;
+  fitTiles();
   $("out").onclick = () => fb.auth().signOut();
-  app.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { S.cid = b.dataset.c; S.actId = ""; S.segId = ""; S.msg = ""; S.dup = null; view(); });
-  app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { S.actId = b.dataset.a; S.msg = ""; S.dup = null; view(); });
+  app.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { S.cid = b.dataset.c; S.acts = []; S.segId = ""; S.msg = ""; S.dup = null; view(); });
+  app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { const id = b.dataset.a, isU = x => D.activities?.[x]?.unit === "יח׳";
+    S.acts = isU(id) || S.acts.some(isU) ? (S.acts.includes(id) ? [] : [id]) : S.acts.includes(id) ? S.acts.filter(x => x !== id) : [...S.acts, id];
+    S.msg = ""; S.dup = null; view(); });
   app.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { S.segId = b.dataset.s; S.dup = null; view(); });
   app.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "בטוח?"; return; } await fb.database().ref(`${ROOT}/progress/${b.dataset.del}`).remove(); });
   $("dt").onchange = e => { if (e.target.value && +e.target.value.slice(0, 4) > 1990) S.date = e.target.value; };
@@ -293,39 +332,43 @@ function view() {
   if ($("loc")) $("loc").oninput = e => S.loc = e.target.value;
   $("send").onclick = async () => {
     const bad = t => { S.msg = t; S.err = true; view(); };
-    if (!S.actId) return bad("צריך לבחור מלאכה");
+    if (!sel.length) return bad("צריך לבחור מלאכה");
     if (!S.date) return bad("חסר תאריך");
-    const rec = { contractorId: c.id, date: S.date, activityId: S.actId, note: S.note.trim(), review: me.admin ? "" : "לבדיקה", baseline: false, reportedBy: me.email, reportedByName: me.name || "", updatedAt: new Date().toISOString(), updatedBy: me.email };
-    if (unit) { if (!(S.qty > 0)) return bad("צריך כמות"); Object.assign(rec, { segmentId: "", secFrom: "", secTo: "", qty: Number(S.qty), loc: S.loc || "" }); }
-    else {
-      if (!seg) return bad("צריך לבחור קטע תכנון");
-      if (S.from === "" || S.to === "" || isNaN(S.from) || isNaN(S.to) || S.from === S.to) return bad("צריך חתך התחלה וחתך סוף (שונים)");
-      if (Math.min(S.from, S.to) < seg.lo || Math.max(S.from, S.to) > seg.hi) return bad(`החתכים מחוץ לקטע (${rng(seg.lo, seg.hi)})`);
-      Object.assign(rec, { segmentId: seg.id, secFrom: S.from, secTo: S.to }, S.byKd ? { byKd: true, kdFrom: S.kf, kdTo: S.kt } : {});
-      const lo = Math.min(S.from, S.to), hi = Math.max(S.from, S.to), pr = priorOf(c.id, S.actId, seg.id), overl = pr.filter(p => ivOf(p)[0] < hi && ivOf(p)[1] > lo);
-      if (overl.length) {   // כפילות — לא שולחים; מציעים לשלוח רק את החדש / בקשת תיקון
-        S.dup = { rec, full: !gapsIn(lo, hi, mergeIv(pr.map(ivOf))).length, gaps: gapsIn(lo, hi, mergeIv(pr.map(ivOf))),
-          overl: overl.map(p => ({ f: ivOf(p)[0], t: ivOf(p)[1], date: p.date, by: p.reportedByName || (p.reportedBy || "משרד").split("@")[0], st: p.review === "לבדיקה" ? "ממתין" : "אושר" })) };
-        S.msg = ""; S.err = false; return view(); }
+    const base = { contractorId: c.id, date: S.date, note: S.note.trim(), review: me.admin ? "" : "לבדיקה", baseline: false, reportedBy: me.email, reportedByName: me.name || "", updatedAt: new Date().toISOString(), updatedBy: me.email };
+    if (unit) { if (!(S.qty > 0)) return bad("צריך כמות"); return sendRecs([{ ...base, activityId: act.id, segmentId: "", secFrom: "", secTo: "", qty: Number(S.qty), loc: S.loc || "" }]); }
+    if (!seg) return bad("צריך לבחור קטע תכנון");
+    if (S.from === "" || S.to === "" || isNaN(S.from) || isNaN(S.to) || S.from === S.to) return bad("צריך חתך התחלה וחתך סוף (שונים)");
+    if (Math.min(S.from, S.to) < seg.lo || Math.max(S.from, S.to) > seg.hi) return bad(`החתכים מחוץ לקטע (${rng(seg.lo, seg.hi)})`);
+    const lo = Math.min(S.from, S.to), hi = Math.max(S.from, S.to), clean = [], hits = [];
+    for (const a of sel) {   // כפילות נבדקת לכל מלאכה בנפרד
+      const rec = { ...base, activityId: a.id, segmentId: seg.id, secFrom: S.from, secTo: S.to, ...(S.byKd ? { byKd: true, kdFrom: S.kf, kdTo: S.kt } : {}) };
+      const pr = priorOf(c.id, a.id, seg.id), overl = pr.filter(p => ivOf(p)[0] < hi && ivOf(p)[1] > lo);
+      if (!overl.length) { clean.push(rec); continue; }
+      const gaps = gapsIn(lo, hi, mergeIv(pr.map(ivOf)));
+      hits.push({ rec, name: short(a.name), full: !gaps.length, gaps,
+        overl: overl.map(p => ({ f: ivOf(p)[0], t: ivOf(p)[1], date: p.date, by: p.reportedByName || (p.reportedBy || "משרד").split("@")[0], st: p.review === "לבדיקה" ? "ממתין" : "אושר" })) });
     }
-    await sendRecs([rec]);
+    if (!hits.length) return sendRecs(clean);
+    S.dup = { clean, hits, full: hits.every(x => x.full) && !clean.length }; S.msg = ""; S.err = false; view();
   };
   const sendRecs = async (recs, extra = "") => {
     $("send").disabled = true;
     try { for (const r of recs) await fb.database().ref(`${ROOT}/progress`).push(r);
-      const len = unit ? `${S.qty} יח׳` : `${recs.reduce((s, r) => s + Math.abs(r.secTo - r.secFrom), 0) * SECTION_M} מ׳`.replace(/^(\d+)/, n => Number(n).toLocaleString("he-IL")); S.dup = null;
+      const nA = new Set(recs.map(r => r.activityId)).size;
+      const mOf = rs => (rs.reduce((s, r) => s + Math.abs(r.secTo - r.secFrom), 0) * SECTION_M).toLocaleString("he-IL") + " מ׳";
+      const len = unit ? `${S.qty} יח׳` : nA > 1 ? [...new Set(recs.map(r => r.activityId))].map(id => `${short(D.activities?.[id]?.name || "")} ${mOf(recs.filter(r => r.activityId === id))}`).join(" · ") : mOf(recs); S.dup = null;
       Object.assign(S, { from: unit ? S.from : S.to, to: "", qty: "", note: "", byKd: false, kf: S.byKd ? S.kt : "", kt: "", msg: `נשלח ✓ ${len}${extra}${recs.every(r => r.review === "") ? " — נקלט כמאושר" : " — ממתין לאישור"}`, err: false });
     } catch (e) { S.msg = "השליחה נכשלה — אין הרשאה לקבלן הזה או אין חיבור"; S.err = true; }
     view();
   };
   if ($("dupNo")) $("dupNo").onclick = () => { S.dup = null; view(); };
-  if ($("dupNew")) $("dupNew").onclick = () => sendRecs(S.dup.gaps.map(([x, y]) => ({ ...S.dup.rec, secFrom: x, secTo: y, byKd: false })), " (רק החלק החדש)");
+  if ($("dupNew")) $("dupNew").onclick = () => sendRecs([...S.dup.clean, ...S.dup.hits.flatMap(x => x.gaps.map(([p, q]) => ({ ...x.rec, secFrom: p, secTo: q, byKd: false })))], " (רק מה שחדש)");
   if ($("dupFix")) $("dupFix").onclick = () => { if (!S.note.trim()) { S.msg = "בבקשת תיקון — כתוב בהערה מה שגוי בדיווח הקודם"; S.err = true; return view(); }
-    sendRecs([{ ...S.dup.rec, note: S.note.trim(), correction: true, review: "לבדיקה" }], " — בקשת תיקון"); };
+    sendRecs([...S.dup.clean.map(r => ({ ...r, note: S.note.trim() })), ...S.dup.hits.map(x => ({ ...x.rec, note: S.note.trim(), correction: true, review: "לבדיקה" }))], " — בקשת תיקון"); };
 }
 /* רענון בלי לקטוע הקלדה: אם המפקח באמצע שדה — מחכים שיצא ממנו */
 let later = false;
-const VER = "2026-10-09f";
+const VER = "2026-10-09h";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
