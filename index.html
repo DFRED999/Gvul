@@ -467,7 +467,7 @@ const PLANS = {
   mreport: ["דוח הנהלה", "הפקת הדוח השבועי.", ["תמונת מצב לכל ארבעת הקבלנים", "השוואה לשבוע הקודם", "חסמים קריטיים", "ייצוא PDF / Word"]],
 };
 const C_TABS = [["orders", "הזמנות"], ["design", "קטעי תכנון בגזרה"], ["deliveries", "מסירות תוכניות"], ["progress", "ביצוע"], ["issues", "נושאים פתוחים"]];
-const SETTINGS_TABS = [["data", "נתונים וגיבוי"], ["offices", "משרדי תכנון"], ["activities", "מלאכות ושלבים"], ["users", "משתמשים"]];
+const SETTINGS_TABS = [["data", "נתונים וגיבוי"], ["offices", "משרדי תכנון"], ["activities", "מלאכות ושלבים"], ["inspectors", "מפקחים"], ["users", "משתמשים"]];
 
 const ui = { filt: {}, execView: "seg", page: location.hash.slice(1) || "overview", setTab: "data", ctab: "orders", df: dlvEmpty(), pf: { date: todayStr(), actId: "", segId: "", secFrom: "", secTo: "", note: "", baseline: false, msg: "" } };
 const $app = document.getElementById("app");
@@ -2366,6 +2366,7 @@ const TABLE_DEFS = {
     { key: "secTo", label: "חתך עד", cls: "c", cell: p => cellInput("progress", p, "secTo", "num") },
     { key: "m", label: "מטרים / כמות", cls: "c nowrap", cell: p => isUnitAct(RAW.activities[p.activityId]) ? cellInput("progress", p, "qty", "num", 'style="width:5ch"') + ` יח׳${p.loc ? `<div class="small muted">${esc(p.loc)}</div>` : ""}` : p.secFrom === "" || p.secTo === "" || p.secFrom == null ? "—" : num(Math.abs(p.secTo - p.secFrom) * SECTION_M, 0) },
     { key: "note", label: "הערה", cls: "small w-text", cell: p => cellInput("progress", p, "note") },
+    { key: "by", label: "דיווח", cls: "small nowrap", cell: p => p.reportedBy ? `<span title="${esc(p.reportedBy)}">${esc(p.reportedByName || p.reportedBy.split("@")[0])}</span>` : `<span class="muted">משרד</span>` },
   ]; },
   contractorDesign: () => { const cid = ui.page.slice(2), ords = list("orders").filter(o => o.contractorId === cid);
     const lk = (u, t) => safeUrl(u) ? `<a href="${esc(safeUrl(u))}" target="_blank" rel="noopener">${t}</a>` : "";
@@ -2476,6 +2477,14 @@ function pageSettings(d) {
       <div class="bk"><b>טעינת גיבוי</b><span>מחליף את כל הנתונים באתר בנתוני קובץ שתבחר. דורש אישור.</span><button class="btn ghost" data-act="upBackup">בחירת קובץ…</button></div>
       <div class="bk"><b>טעינה מחדש מ-data.json</b><span>מבטל שינויים מקומיים וחוזר לקובץ שנמצא כרגע ב-GitHub.</span><button class="btn ghost" data-act="reloadFile">טעינה מחדש</button></div>
     </div>`; }
+  else if (tab[0] === "inspectors") { const mains = d.contractors.filter(isMain), cfg = RAW.tableConfig?.inspectors || {};
+    const url = location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "") + "report.html";
+    body = `<p class="small" style="max-width:85ch;margin-top:0">כל מפקח נכנס מהנייד לדף הדיווח, עם מייל וסיסמה משלו, ורואה רק את הקבלן שמשויך אליו. הדיווחים מגיעים ללשונית ״ביצוע״ של הקבלן כ<b>״לבדיקה״</b> — ונספרים רק אחרי אישור.
+      אפשר לשייך אותו מייל לכמה קבלנים. מחליפים מפקח = משנים כאן את המייל (המפקח החדש מקבל את אותה הרשאה; הדיווחים הקודמים נשארים).</p>
+      <div class="tablewrap" style="max-height:none"><table class="sheet"><thead><tr><th>קבלן</th><th>שם המפקח</th><th>מייל לכניסה</th></tr></thead><tbody>
+      ${mains.map(c => `<tr><td><b>${esc(c.name)}</b></td><td><input class="inp" id="insp_n_${c.id}" data-insp="${c.id}|name" value="${esc(cfg[c.id]?.name || "")}" placeholder="למשל דני"></td><td><input class="inp" id="insp_e_${c.id}" data-insp="${c.id}|email" dir="ltr" value="${esc(cfg[c.id]?.email || "")}" placeholder="name@mail.com" style="min-width:240px"></td></tr>`).join("")}</tbody></table></div>
+      <div class="row" style="margin-top:10px;gap:8px"><b class="small">דף הדיווח למפקחים:</b><a href="${esc(url)}" target="_blank" rel="noopener" dir="ltr" class="small">${esc(url)}</a></div>
+      <p class="small muted" style="max-width:85ch">לכל מייל צריך גם משתמש ב-Firebase: Authentication ← Users ← Add user (מייל + סיסמה), ולשלוח למפקח את הקישור והסיסמה. ${LOCAL ? `<b>האתר במצב עבודה מקומית — ההרשאות פועלות רק אחרי חיבור ל-Firebase.</b>` : ""}</p>`; }
   else if (tab[0] === "activities") { const mains = d.contractors.filter(isMain);
     const C = mains.find(c => c.id === ui.setCid) || mains[0];
     const stale = d.activities.filter(a => a.stage && !STAGES.includes(a.stage) && isMain(d.contractors.find(c => c.id === a.contractorId) || {})).length;
@@ -2705,6 +2714,13 @@ $app.addEventListener("change", async e => {
   if (t.dataset.act === "pFrom" || t.dataset.act === "pTo") { if (t.value && +t.value.slice(0, 4) < 1990) return; ui[t.dataset.act] = t.value; render(); return; }
   if (t.dataset.act === "autoSum") { await api.update("tableConfig", "issues", { autoSummary: t.checked }); return; }
   if (t.dataset.act === "svRF" || t.dataset.act === "svRT") return svRangeInput(t);
+  if (t.dataset.insp) { const [cid, k] = t.dataset.insp.split("|"), v = k === "email" ? t.value.trim().toLowerCase() : t.value.trim();
+    if (k === "email" && v && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) { t.style.borderColor = "var(--warn)"; return; }
+    const cfg = JSON.parse(JSON.stringify(RAW.tableConfig?.inspectors || {})); delete cfg.updatedAt; delete cfg.updatedBy;
+    cfg[cid] = { ...(cfg[cid] || {}), [k]: v };
+    // מפת הרשאות לפי מייל (לכללי האבטחה ב-Firebase ולדף הדיווח)
+    const access = {}; for (const [c, x] of Object.entries(cfg)) if (x?.email) { const ek = x.email.replace(/\./g, ","); access[ek] = access[ek] || { email: x.email, name: x.name || "", contractors: {} }; access[ek].contractors[c] = true; if (x.name && !access[ek].name) access[ek].name = x.name; }
+    await api.put("tableConfig", "inspectors", cfg); await api.put("tableConfig", "inspectorAccess", access); return; }
   if (t.dataset.act === "svNote") { const v = t.value; await svSet(() => ({ note: v })); return; }
   if (t.dataset.act === "showClosed") { ui.showClosed = t.checked; render(); return; }
   if (t.dataset.act === "iecKind") { ui.iec.kind = t.value; render(); return; }
