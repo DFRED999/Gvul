@@ -100,6 +100,10 @@ h2 { font-size: 17px; margin: 0 0 12px; font-weight: 700; }
 .sheet .fcount { font-size: 11px; font-weight: 400; white-space: nowrap; }
 .btn.sm.on { background: var(--accent); color: #fff; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+body.ro .cell, body.ro .inp:not(.finp), body.ro main input[type=date], body.ro main input[type=checkbox]:not([data-act=kindF]), body.ro main input[type=color], body.ro main select:not(.finp) { pointer-events: none; }
+body.ro .cell, body.ro .inp:not(.finp) { background: transparent; border-color: transparent; }
+body.ro main [data-act^="add"], body.ro main .btn.del, body.ro main [data-act="del"], body.ro main [data-act="bulkItems"], body.ro main [data-act="delContractor"], body.ro .databar button:not([data-act="backup"]) { display: none !important; }
+body.ro .side .foot::after { content: " · צפייה בלבד"; color: #f2c66d; }
 .kbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 10px; } .kbar .chip { padding: 6px 12px; font-size: 14px; } .kbar .chip.on { background: #e1efe6; border-color: var(--accent); font-weight: 700; } .kbar .chip b { color: var(--muted); font-weight: 600; }
 .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 13px; background: #fff; cursor: pointer; }
 .chip:has(input:checked) { background: #e7f2ea; border-color: var(--accent); }
@@ -365,27 +369,44 @@ function applyData(data, source, savedAt, backedUp) {
 const fbKey = k => String(k).replace(/[.#$\[\]\/]/g, "_");
 const fbSafe = o => Array.isArray(o) ? o.map(fbSafe) : o && typeof o === "object" ? Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined).map(([k, v]) => [fbKey(k), k === "itemId" && typeof v === "string" ? fbKey(v) : fbSafe(v)])) : o;
 const refOf = (col, id) => fb.database().ref(col === "users" ? `${DB_ROOT}_access/${id}` : `${DB_ROOT}/${col}/${id}`);
+/** תפקידים מוגבלים: צופה = רואה הכל ולא משנה · חיבורי חשמל = רק חיבורי חח״י והקבלן שלהם (הכללים ב-Firebase אוכפים את אותו דבר) */
+const ROLE_VIEW = "צופה", ROLE_IEC = "חיבורי חשמל", IEC_CID = "sp-iec";
+const isViewer = () => !LOCAL && me?.role === ROLE_VIEW, isIecOnly = () => !LOCAL && me?.role === ROLE_IEC;
+function denyWrite(col, id, obj) {
+  if (LOCAL || !me) return false;
+  let ok = true;
+  if (isViewer()) ok = false;
+  else if (isIecOnly()) ok = col === "iecOrders" || (col === "items" && (obj?.contractorId ?? RAW.items?.[id]?.contractorId) === IEC_CID && (!RAW.items?.[id] || RAW.items[id].contractorId === IEC_CID));
+  if (ok) return false;
+  setTimeout(() => { render(); alertMsg(isViewer() ? "הרשאת צפייה בלבד — אי אפשר לשנות נתונים." : "ההרשאה שלך היא לחיבורי חשמל בלבד — את זה אי אפשר לשנות."); }, 0);
+  return true;
+}
 const api = {
   async add(col, obj) {
+    if (denyWrite(col, null, obj)) return null;
     const id = newId();
     if (col === "issues" && !obj.code) obj = { ...obj, code: nextIssueCode(obj.contractorId) };
     if (LOCAL) { RAW[col][id] = { ...obj, ...stamp() }; touched(); render(); return id; }
     await refOf(col, id).set(fbSafe({ ...obj, ...stamp() })); return id;
   },
   async update(col, id, patch) {
+    if (denyWrite(col, id, patch)) return;
     if (LOCAL) { RAW[col][id] = { ...RAW[col][id], ...patch, ...stamp() }; touched(); render(); return; }
     await refOf(col, id).update(fbSafe({ ...patch, ...stamp() }));
   },
   async put(col, id, obj) {
+    if (denyWrite(col, id, obj)) return;
     if (LOCAL) { if (obj === null) delete RAW[col][id]; else RAW[col][id] = obj; touched(); render(); return; }
     await refOf(col, id).set(obj === null ? null : fbSafe(obj));
   },
   async remove(col, id) {
+    if (denyWrite(col, id)) return;
     if (LOCAL) { delete RAW[col][id]; touched(); render(); return; }
     await refOf(col, id).remove();
   },
   /** החלפת כל הנתונים (מגיבוי) */
   async replaceAll(data, source, savedAt) {
+    if (denyWrite("*")) return;
     if (LOCAL) { applyData(data, source, savedAt, true); storeLocal(); render(); return; }
     await fb.database().ref(DB_ROOT).set(fbSafe(Object.fromEntries(DATA_COLS.map(c => [c, data[c] || {}]))));
     META.source = source;
@@ -506,7 +527,8 @@ function dataBar() {
 /* =====================================================================
    מבנה האתר — האתר מוכוון ביצוע: חוצץ לכל קבלן, באותה תבנית בדיוק
    ===================================================================== */
-const NAV = () => [
+const NAV = () => isIecOnly() ? [{ group: "חיבורי חשמל", items: [["power", "חיבורי חח״י"], ...list("contractors").filter(c => c.id === IEC_CID).map(c => ["c:" + c.id, c.name])] }] : NAV_ALL().filter(g => !isViewer() || g.items.length).map(g => isViewer() ? { ...g, items: g.items.filter(i => i[3] !== "add" && i[0] !== "settings") } : g).filter(g => g.items.length);
+const NAV_ALL = () => [
   { group: "", items: [["overview", "סקירה כללית"], ["alerts", "לוח התראות", "", "", (() => { try { return allAlerts(D()).filter(a => !a.done).length; } catch { return 0; } })()]] },
   { group: "קבלנים ראשיים", items: list("contractors").filter(isMain).map(c => ["c:" + c.id, c.name]) },
   ...(list("contractors").some(c => !isMain(c)) ? [{ group: "קבלנים ייעודיים", items: list("contractors").filter(c => !isMain(c)).map(c => ["c:" + c.id, c.name]) }] : []),
@@ -531,7 +553,7 @@ const $app = document.getElementById("app");
 /** תיקון חד-פעמי: מעבירים איריים יובאו כ"מעבירי מים" — מעבירים אותם להתמחות משלהם */
 let _irishFixed = false;
 function fixIrish() {
-  if (_irishFixed) return; const its = list("items"); if (!its.length) return; _irishFixed = true;
+  if (_irishFixed || isViewer() || isIecOnly()) return; const its = list("items"); if (!its.length) return; _irishFixed = true;
   const bad = its.filter(i => i.kind === "מעבירי מים" && /^מעביר אירי/.test(i.name || ""));
   if (bad.length) setTimeout(async () => { for (const i of bad) await api.update("items", i.id, { kind: "מעביר אירי" }); }, 0);
 }
@@ -546,7 +568,8 @@ function render() {
   const wrapScroll = [...document.querySelectorAll(".tablewrap")].map(w => [w.querySelector("table")?.dataset.table || "", w.scrollTop, w.scrollLeft]);
   const d = Object.fromEntries(COLS.map(c => [c, list(c)]));
   const nav = NAV();
-  if (!nav.flatMap(g => g.items).some(i => i[0] === ui.page)) ui.page = "overview";
+  if (!nav.flatMap(g => g.items).some(i => i[0] === ui.page)) ui.page = nav[0]?.items[0]?.[0] || "overview";
+  document.body.classList.toggle("ro", isViewer());
   const p = ui.page;
   const body = p === "overview" ? alertsStrip(d) + pageOverview(d) : p === "alerts" ? pageAlerts(d) : p === "power" ? pageIec(d) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
     : p === "segments" ? pageSegments(d) : p === "deliveries" ? pageDeliveries(d) : p === "settings" ? pageSettings(d) : pagePlan(p);
@@ -1054,6 +1077,7 @@ function pageSurvey(d) {
 }
 /** כתיבה של כמה רשומות סקר בבת אחת (רינדור אחד / עדכון Firebase אחד) */
 async function svWrite(recs) {
+  if (denyWrite("survey")) return;
   if (LOCAL) { RAW.survey = { ...(RAW.survey || {}), ...recs }; touched(); render(); return; }
   const up = {}; for (const [id, v] of Object.entries(recs)) up[`survey/${fbKey(id)}`] = v === null ? null : fbSafe(v); await fb.database().ref(DB_ROOT).update(up);
 }
@@ -1139,7 +1163,7 @@ async function saveInspectors(L) {
 /** יצירת משתמש ב-Firebase בלי לנתק את המנהל: אפליקציה משנית */
 async function fbCreateUser(email, pass) {
   const app2 = firebase.apps.find(a => a.name === "insp") || firebase.initializeApp(FIREBASE_CONFIG, "insp");
-  try { await app2.auth().createUserWithEmailAndPassword(email, pass); await app2.auth().signOut(); return "created"; }
+  try { const cr = await app2.auth().createUserWithEmailAndPassword(email, pass); fbCreateUser.uid = cr.user.uid; await app2.auth().signOut(); return "created"; }
   catch (e) { if (e.code === "auth/email-already-in-use") return "exists"; throw e; }
 }
 const AUTH_ERR = { "auth/weak-password": "סיסמה חלשה — לפחות 6 תווים", "auth/invalid-email": "מייל לא תקין", "auth/operation-not-allowed": "צריך להפעיל ב-Firebase: Authentication ← Sign-in method ← Email/Password", "auth/admin-restricted-operation": "ב-Firebase: Authentication ← Settings ← User actions ← לסמן Enable create (sign-up)", "auth/network-request-failed": "אין חיבור לאינטרנט" };
@@ -1462,7 +1486,7 @@ function specialistDash(d, S) {
 const SP_TABS = [["items", "פריטי עבודה"], ["orders", "הזמנות"], ["deliveries", "מסירות תוכניות"], ["issues", "נושאים פתוחים"]];
 function pageSpecialist(d, c) {
   const id = c.id, its = d.items.filter(i => i.contractorId === id), specs = specsOf(c);
-  if (!SP_TABS.some(t => t[0] === ui.ctab)) ui.ctab = "items";
+  if (!SP_TABS.some(t => t[0] === ui.ctab) || isIecOnly()) ui.ctab = "items";
   const fld = (key, label) => `<label class="field">${label}<input class="inp" id="c_${id}_${key}" value="${esc(c[key])}" data-edit="contractors|${id}|${key}"></label>`;
   const sel = (key, label, opts) => `<label class="field">${label}<select class="inp" id="c_${id}_${key}" data-edit="contractors|${id}|${key}">${["", ...opts].map(o => `<option ${o === c[key] ? "selected" : ""}>${o}</option>`).join("")}</select></label>`;
   const all = [...d.contractors.filter(isMain).map(kdRange), ...its.map(itemRange)].filter(Boolean);
@@ -1500,7 +1524,7 @@ function pageSpecialist(d, c) {
     <div class="row stats"><span>פריטים: <b>${st.total}</b></span><span>הושלמו: <b>${st.done}${st.total ? ` (${Math.round(st.done / st.total * 100)}%)` : ""}</b></span><span>בביצוע: <b>${st.prog}</b></span><span>HOLD: <b>${st.hold}</b></span>${st.km ? `<span>טווחים: <b>${num(Math.round(st.kmDone * 1000), 0)} / ${MTR(st.km)}</b></span>` : ""}</div>
     ${range ? strip(range, rows, legend) : `<p class="muted small">אחרי הוספת פריטים עם ק.ד. תופיע כאן פריסה לאורך הקו.</p>`}
   </div>
-  <div class="tabs">${SP_TABS.map(([k, l]) => `<button class="tab ${k === ui.ctab ? "on" : ""}" data-act="ctab" data-id="${k}">${l}</button>`).join("")}<button class="btn ghost sm" data-act="xlsxAll" style="margin-inline-start:auto;align-self:center" title="כל הטבלאות שבחוצץ — כל טבלה בגיליון נפרד">אקסל — כל החוצץ</button></div>
+  <div class="tabs">${SP_TABS.filter(([k]) => !isIecOnly() || k === "items").map(([k, l]) => `<button class="tab ${k === ui.ctab ? "on" : ""}" data-act="ctab" data-id="${k}">${l}</button>`).join("")}<button class="btn ghost sm" data-act="xlsxAll" style="margin-inline-start:auto;align-self:center" title="כל הטבלאות שבחוצץ — כל טבלה בגיליון נפרד">אקסל — כל החוצץ</button></div>
   <div class="card">${tab}</div>`;
 }
 function bulkItemsModal(cid) {
@@ -2664,7 +2688,7 @@ const TABLE_DEFS = {
   users: () => [
     { key: "name", label: "שם", cell: u => cellInput("users", u, "name") },
     { key: "email", label: "מייל", cls: "small", cell: u => `<span dir="ltr">${esc(u.email)}</span>` },
-    { key: "role", label: "תפקיד", cell: u => `<select class="inp" id="f_users_${u.id}_role" data-edit="users|${u.id}|role">${["סופר מנהל", "מנהל", "מתאם", "מתאם איסוף", "מפקח כללי", "מפקח שטח", "לקוח"].map(r => `<option ${r === u.role ? "selected" : ""}>${r}</option>`).join("")}</select>` },
+    { key: "role", label: "תפקיד", cell: u => `<select class="inp" id="f_users_${u.id}_role" data-edit="users|${u.id}|role">${["סופר מנהל", "מנהל", "מתאם", "מתאם איסוף", "מפקח כללי", "מפקח שטח", "לקוח", "צופה", "חיבורי חשמל"].map(r => `<option ${r === u.role ? "selected" : ""}>${r}</option>`).join("")}</select>` },
     { key: "active", label: "פעיל", cls: "c", cell: u => `<input type="checkbox" id="f_users_${u.id}_active" ${u.active ? "checked" : ""} data-edit="users|${u.id}|active|b" aria-label="פעיל">` },
   ],
   designSegments: () => [
@@ -2761,7 +2785,8 @@ function pageSettings(d) {
       ${C ? renderSheet("activities", d.activities.filter(a => a.contractorId === C.id).sort(byOrder), "אין מלאכות", { del: false }) + `<div class="row" style="margin-top:8px"><button class="btn ghost sm" data-act="autoStages" data-id="${C.id}" title="משייך לכל מלאכה בלי שלב את השלב המוצע לפי השם">שיוך אוטומטי למלאכות בלי שלב</button>${(n => n ? `<span class="pill warn">${n} מלאכות בלי שלב — לא נספרות בדשבורד</span>` : `<span class="pill ok">כל המלאכות משויכות</span>`)(d.activities.filter(a => a.contractorId === C.id && !a.stage).length)}</div>` : ""}`; }
   else if (tab[0] === "offices") body = renderSheet("designOffices", d.designOffices, "אין משרדים") + `<button class="btn ghost" style="margin-top:10px" data-act="addOffice">+ משרד תכנון</button>`;
   else if (tab[0] === "users") body = LOCAL ? `<p class="muted">ניהול משתמשים פעיל אחרי חיבור ל-Firebase. כל מי שנכנס בפעם הראשונה מופיע כאן כ״לא פעיל״ עד שמאשרים אותו.</p>`
-    : renderSheet("users", d.users, "אין משתמשים");
+    : renderSheet("users", d.users, "אין משתמשים") + `<div class="row" style="margin-top:10px;gap:8px"><button class="btn" data-act="addUser">+ משתמש חדש</button>
+      <span class="small muted">משתמש פעיל באתר הראשי נכנס גם לאתר הדיווח, עם גישה לכל הקבלנים. מפקחים שמדווחים רק על קבלן אחד — בחוצץ ״מפקחים״.</span></div>`;
   return `<h1>הגדרות</h1><p class="sub">מבנה הפרויקט. המסכים המסומנים ״בהמשך״ ייבנו לפי הסדר שנחליט.</p>
   <div class="tabs">${SETTINGS_TABS.map(([id, l, s]) => `<button class="tab ${id === tab[0] ? "on" : ""}" data-act="setTab" data-id="${id}">${l}${s ? " · בהמשך" : ""}</button>`).join("")}</div>
   <div class="card">${body}</div>`;
@@ -2900,6 +2925,36 @@ $app.addEventListener("click", async e => {
     const L = lenFromDesign(D(), kdRange(rec));
     ui.df = { ...dlvEmpty(f.contractorId), msg: `נשמרה מסירה ק.ד. ${rec.kdFrom}–${rec.kdTo}${L ? ` (${L.approx ? "≈" : ""}${MTR(L.km)})` : ""}` };
     render();
+  }
+  else if (act === "addUser") {
+    const ROLES = ["מנהל", "סופר מנהל", "מתאם", "מתאם איסוף", "מפקח כללי", "מפקח שטח", "לקוח", "צופה", "חיבורי חשמל"];
+    modal(`<h2>משתמש חדש</h2>
+      <label class="field">שם<input class="inp" id="nu_name" placeholder="למשל רפאל"></label>
+      <label class="field">מייל לכניסה<input class="inp" id="nu_mail" dir="ltr" type="email" autocomplete="off"></label>
+      <label class="field">תפקיד<select class="inp" id="nu_role">${ROLES.map(r => `<option>${r}</option>`).join("")}</select></label>
+      <label class="field">סיסמה זמנית (לפחות 6 תווים)<input class="inp" id="nu_pass" dir="ltr" value="${Math.random().toString(36).slice(2, 8)}A1"></label>
+      <p class="small muted">״צופה״ — רואה הכל ולא יכול לשנות. ״חיבורי חשמל״ — רואה ועורך רק את חיבורי חח״י ואת פריטי השקד / תט״ז / טרפו. אחרי היצירה אפשר לשלוח לו מייל לבחירת סיסמה משלו (״שכחתי סיסמה״ במסך הכניסה עושה אותו דבר).</p>
+      <p class="small" id="nu_msg"></p>
+      <div class="row"><button class="btn" id="mYes">יצירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+      const q = s => m.querySelector(s), say = (t, err) => { q("#nu_msg").textContent = t; q("#nu_msg").style.color = err ? "var(--warn)" : "var(--accent)"; };
+      q("#mNo").onclick = close; q("#nu_name").focus();
+      q("#mYes").onclick = async () => {
+        const name = q("#nu_name").value.trim(), email = q("#nu_mail").value.trim().toLowerCase(), role = q("#nu_role").value, pass = q("#nu_pass").value;
+        if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say("צריך שם ומייל תקין", true);
+        if (Object.values(RAW.users || {}).some(u => String(u.email).toLowerCase() === email)) return say("המייל הזה כבר ברשימת המשתמשים — מסמנים אותו ״פעיל״ בטבלה", true);
+        q("#mYes").disabled = true; say("יוצר…");
+        try {
+          const r = await fbCreateUser(email, pass);
+          if (r === "exists") { q("#mYes").disabled = false; return say("למייל הזה כבר יש חשבון (למשל כמפקח). שיכנס פעם אחת לאתר הראשי — הוא יופיע בטבלה ואז מסמנים לו תפקיד ו״פעיל״.", true); }
+          await fb.database().ref(`${DB_ROOT}_access/${fbCreateUser.uid}`).set({ email, name, role, active: true, createdAt: new Date().toISOString(), createdBy: user?.email || "" });
+          m.querySelector(".card").innerHTML = `<h2>נוצר ✓</h2><p><b>${esc(name)}</b> · ${esc(role)}<br>מייל: <span dir="ltr">${esc(email)}</span><br>סיסמה זמנית: <b dir="ltr">${esc(pass)}</b></p>
+            <p class="small muted">קישור לאתר: <span dir="ltr">${esc(location.href.replace(/[#?].*$/, ""))}</span></p>
+            <div class="row"><button class="btn ghost" id="nu_reset">שליחת מייל לבחירת סיסמה</button><button class="btn" id="nu_ok">סגירה</button></div><p class="small" id="nu_msg2"></p>`;
+          m.querySelector("#nu_ok").onclick = close;
+          m.querySelector("#nu_reset").onclick = async () => { try { await fb.auth().sendPasswordResetEmail(email); m.querySelector("#nu_msg2").textContent = "נשלח ✓"; } catch { m.querySelector("#nu_msg2").textContent = "לא נשלח"; } };
+        } catch (e) { q("#mYes").disabled = false; say(AUTH_ERR[e.code] || ("שגיאה: " + (e.message || e)), true); }
+      };
+    });
   }
   else if (act === "kindFAll") { (ui.kindF = ui.kindF || {})[b.dataset.id] = []; render(); }
   else if (act === "saveProg" && isUnitAct(RAW.activities[ui.pf.actId])) {   // מלאכה ביחידות: כמות + מיקום
@@ -3121,6 +3176,12 @@ async function start() {
       if (me && !bound) {
         bound = true;
         const root = db.ref(DB_ROOT), acc = db.ref(`${DB_ROOT}_access`);
+        if (me.role === ROLE_IEC) {   // רק האוספים שמותרים לו — כל אוסף בנפרד
+          for (const c of DATA_COLS) RAW[c] = {};
+          const subs = [["contractors"], ["items"], ["iecOrders"], ["designSegments"], ["designOffices"], ["kdSections"], ["tableConfig", "iec"], ["tableConfig", "items"], ["tableConfig", "iecOrders"]];
+          for (const [c, k] of subs) { const r = db.ref(`${DB_ROOT}/${c}${k ? "/" + k : ""}`), cb = r.on("value", s4 => { if (k) RAW[c] = { ...RAW[c], [k]: s4.val() || undefined }; else RAW[c] = s4.val() || {}; META.source = "Firebase"; META.savedAt = new Date().toISOString(); render(); }, () => {}); off.push(() => r.off("value", cb)); }
+          return render();
+        }
         const c1 = root.on("value", async s2 => {
           const v2 = s2.val();
           // Firebase ריק — טוענים גיבוי ידנית: הגדרות ← נתונים וגיבוי ← טעינת גיבוי
