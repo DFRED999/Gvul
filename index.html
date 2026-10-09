@@ -100,6 +100,7 @@ h2 { font-size: 17px; margin: 0 0 12px; font-weight: 700; }
 .sheet .fcount { font-size: 11px; font-weight: 400; white-space: nowrap; }
 .btn.sm.on { background: var(--accent); color: #fff; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.kbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 10px; } .kbar .chip { padding: 6px 12px; font-size: 14px; } .kbar .chip.on { background: #e1efe6; border-color: var(--accent); font-weight: 700; } .kbar .chip b { color: var(--muted); font-weight: 600; }
 .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 13px; background: #fff; cursor: pointer; }
 .chip:has(input:checked) { background: #e7f2ea; border-color: var(--accent); }
 .ofT { font-size: .62em; font-weight: 500; opacity: .75; }
@@ -1476,7 +1477,10 @@ function pageSpecialist(d, c) {
   if (ui.ctab === "items") {
     const sum = kinds.length ? `<div class="tablewrap"><table class="sheet">${statHead("התמחות")}<tbody>${kinds.map(k => statRow(esc(k), itemStats(its.filter(i => (i.kind || "אחר") === k)))).join("")}
       ${kinds.length > 1 ? statRow("סה״כ", itemStats(its)) : ""}</tbody></table></div>` : "";
-    tab = `${sum}<h2 style="margin-top:16px">פריטי עבודה</h2>${renderSheet("items", (k => [...its].sort((a, b) => (k(b) ?? -1) - (k(a) ?? -1) || String(a.name).localeCompare(String(b.name), "he", { numeric: true })))(i => itemKd(d, i)), "עוד אין פריטים — מוסיפים פריט אחד או רשימה לפי ק.ד.")}
+    const KF = (ui.kindF = ui.kindF || {})[id] || [], have = kinds.filter(k => its.some(i => (i.kind || "אחר") === k));
+    const shown = KF.length ? its.filter(i => KF.includes(i.kind || "אחר")) : its;
+    const kbar = have.length > 1 ? `<div class="kbar"><span class="small muted">הצגה:</span>${have.map(k => `<label class="chip ${KF.includes(k) ? "on" : ""}"><input type="checkbox" data-act="kindF" data-id="${id}" value="${esc(k)}" ${KF.includes(k) ? "checked" : ""}> ${esc(KIND_PLURAL[k] || k)} <b>${its.filter(i => (i.kind || "אחר") === k).length}</b></label>`).join("")}${KF.length ? `<button class="btn ghost sm" data-act="kindFAll" data-id="${id}">הכל</button>` : `<span class="small muted">— סמן כדי להציג רק סוג מסוים</span>`}</div>` : "";
+    tab = `${sum}<h2 style="margin-top:16px">פריטי עבודה${KF.length ? ` <span class="small muted">(${shown.length} מתוך ${its.length})</span>` : ""}</h2>${kbar}${renderSheet("items", (k => [...shown].sort((a, b) => (k(b) ?? -1) - (k(a) ?? -1) || String(a.name).localeCompare(String(b.name), "he", { numeric: true })))(i => itemKd(d, i)), "עוד אין פריטים — מוסיפים פריט אחד או רשימה לפי ק.ד.")}
       <div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="addItem" data-id="${id}">+ פריט</button><button class="btn ghost sm" data-act="bulkItems" data-id="${id}">+ כמה פריטים לפי ק.ד.</button>
       <span class="small muted">פריט = נקודה (ק.ד. אחד, למשל שער) או טווח (ק.ד. מ–עד, למשל קטע לפינוי מוקשים). הקבלן הראשי והגזרה נגזרים מהק.ד.</span></div>`;
   } else if (ui.ctab === "orders") {
@@ -2592,7 +2596,7 @@ const TABLE_DEFS = {
     { key: "note", label: "הערה", cls: "w-place", cell: x => cellInput("deliveries", x, "note") },
   ]; },
   items: () => { const d = D(); return [
-    { key: "kind", label: "התמחות", cell: i => { const c = d.contractors.find(x => x.id === i.contractorId), ks = [...new Set([...specsOf(c || {}), ...SPECIALTIES, i.kind].filter(Boolean))];
+    { key: "kind", label: "התמחות", cell: i => { const c = d.contractors.find(x => x.id === i.contractorId), sp = specsOf(c || {}), ks = [...new Set([...(sp.length ? sp : SPECIALTIES), i.kind].filter(Boolean))];
       return `<select class="inp" id="f_items_${i.id}_kind" data-edit="items|${i.id}|kind">${ks.map(k => `<option ${k === i.kind ? "selected" : ""}>${esc(k)}</option>`).join("")}</select>`; } },
     { key: "name", label: "תיאור", cls: "w-place", cell: i => cellInput("items", i, "name") + (i.conflict ? `<div><span class="pill" style="background:#fde2c8;color:#9a4b00;cursor:help" title="${esc(i.conflict)}">סתירה — לבדיקה</span></div>` : "") },
     { key: "kdFrom", label: "ק.ד. מ", cls: "w-kd", cell: i => cellInput("items", i, "kdFrom", "kdin") + (kdNum(i.kdFrom) === null ? (k => k === null ? "" : `<div class="small muted nowrap" title="משוער לפי הנ.צ. ביחס לנקודות עם ק.ד. ידוע — לא נשמר. כדאי לאמת ולהקליד.">≈${k} לפי נ.צ.</div>`)(kdEst(d, i)) : "") },
@@ -2897,6 +2901,7 @@ $app.addEventListener("click", async e => {
     ui.df = { ...dlvEmpty(f.contractorId), msg: `נשמרה מסירה ק.ד. ${rec.kdFrom}–${rec.kdTo}${L ? ` (${L.approx ? "≈" : ""}${MTR(L.km)})` : ""}` };
     render();
   }
+  else if (act === "kindFAll") { (ui.kindF = ui.kindF || {})[b.dataset.id] = []; render(); }
   else if (act === "saveProg" && isUnitAct(RAW.activities[ui.pf.actId])) {   // מלאכה ביחידות: כמות + מיקום
     const f = ui.pf, bad = msg => { f.msg = msg; f.err = true; render(); };
     if (!f.date) return bad("חסר תאריך");
@@ -2994,6 +2999,8 @@ $app.addEventListener("input", e => {
 $app.addEventListener("change", async e => {
   const t = e.target;
   if (t.dataset.df) { ui.df[t.dataset.df] = t.value; if (t.dataset.rerender) render(); return; }
+  if (t.dataset.act === "kindF") { const F = (ui.kindF = ui.kindF || {}), cur = F[t.dataset.id] || [];
+    F[t.dataset.id] = t.checked ? [...new Set([...cur, t.value])] : cur.filter(x => x !== t.value); render(); return; }
   if (t.dataset.act === "spec") { const c = RAW.contractors[t.dataset.id], cur = specsOf(c || {});
     const nx = t.checked ? [...new Set([...cur, t.value])] : cur.filter(x => x !== t.value);
     await api.update("contractors", t.dataset.id, { specialties: nx.join(" · ") }); return; }
