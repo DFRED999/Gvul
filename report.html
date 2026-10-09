@@ -59,7 +59,9 @@ const loadScript = src => new Promise((ok, no) => { const s = document.createEle
 function login(msg = "") {
   app.innerHTML = `<div class="card login"><h1 style="margin-top:0">דיווח מפקח</h1><p class="hint">כניסה עם המייל והסיסמה שקיבלת ממנהל הפרויקט</p>
     <input id="em" type="email" placeholder="מייל" autocomplete="username"><input id="pw" type="password" placeholder="סיסמה" autocomplete="current-password">
-    <button class="btn" id="go" style="width:100%">כניסה</button><p class="msg err">${esc(msg)}</p></div>`;
+    <button class="btn" id="go" style="width:100%">כניסה</button><button class="btn ghost" id="fg" style="width:100%;margin-top:8px">שכחתי סיסמה</button><p class="msg ${/נשלח/.test(msg) ? "ok" : "err"}">${esc(msg)}</p></div>`;
+  $("fg").onclick = async () => { const e = $("em").value.trim(); if (!e) return login("כתוב את המייל ואז לחץ ״שכחתי סיסמה״");
+    try { await fb.auth().sendPasswordResetEmail(e); login("נשלח מייל עם קישור לבחירת סיסמה חדשה (כדאי לבדוק גם בספאם)"); } catch { login("לא ניתן לשלוח איפוס לכתובת הזו"); } };
   $("go").onclick = async () => { try { await fb.auth().signInWithEmailAndPassword($("em").value.trim(), $("pw").value); } catch { login("מייל או סיסמה שגויים"); } };
 }
 function noAccess() {
@@ -75,7 +77,8 @@ function segsOf(c) {
     .sort((p, q) => Math.max(kdNum(q.kdFrom), kdNum(q.kdTo)) - Math.max(kdNum(p.kdFrom), kdNum(p.kdTo)));
 }
 function view() {
-  const cids = Object.keys(me.contractors || {}).filter(k => D.contractors?.[k]);
+  const cids = me.admin ? Object.keys(D.contractors || {}).filter(k => D.contractors[k].kind !== "ייעודי").sort((a, b) => (D.contractors[a].order ?? 0) - (D.contractors[b].order ?? 0))
+    : Object.keys(me.contractors || {}).filter(k => D.contractors?.[k]);
   if (!cids.length) return noAccess();
   if (!cids.includes(S.cid)) S.cid = cids[0];
   const c = { id: S.cid, ...D.contractors[S.cid] }, segs = segsOf(c);
@@ -117,7 +120,7 @@ function view() {
     const bad = t => { S.msg = t; S.err = true; view(); };
     if (!S.actId) return bad("צריך לבחור מלאכה");
     if (!S.date) return bad("חסר תאריך");
-    const rec = { contractorId: c.id, date: S.date, activityId: S.actId, note: S.note.trim(), review: "לבדיקה", baseline: false, reportedBy: me.email, reportedByName: me.name || "", updatedAt: new Date().toISOString(), updatedBy: me.email };
+    const rec = { contractorId: c.id, date: S.date, activityId: S.actId, note: S.note.trim(), review: me.admin ? "" : "לבדיקה", baseline: false, reportedBy: me.email, reportedByName: me.name || "", updatedAt: new Date().toISOString(), updatedBy: me.email };
     if (unit) { if (!(S.qty > 0)) return bad("צריך כמות"); Object.assign(rec, { segmentId: "", secFrom: "", secTo: "", qty: Number(S.qty), loc: S.loc || "" }); }
     else {
       if (!seg) return bad("צריך לבחור קטע תכנון");
@@ -128,7 +131,7 @@ function view() {
     $("send").disabled = true;
     try { await fb.database().ref(`${ROOT}/progress`).push(rec);
       const len = unit ? `${S.qty} יח׳` : `${(Math.abs(S.to - S.from) * SECTION_M).toLocaleString("he-IL")} מ׳`;
-      Object.assign(S, { from: unit ? S.from : S.to, to: "", qty: "", note: "", msg: `נשלח ✓ ${len} — ממתין לאישור`, err: false });
+      Object.assign(S, { from: unit ? S.from : S.to, to: "", qty: "", note: "", msg: `נשלח ✓ ${len}${me.admin ? " — נקלט כמאושר" : " — ממתין לאישור"}`, err: false });
     } catch (e) { S.msg = "השליחה נכשלה — אין הרשאה לקבלן הזה או אין חיבור"; S.err = true; }
     view();
   };
@@ -148,7 +151,12 @@ document.addEventListener("focusout", () => { if (later) { later = false; setTim
     if (!u) return login();
     app.innerHTML = `<div class="card">טוען…</div>`;
     const db = fb.database(), acc = await db.ref(`${ROOT}/tableConfig/inspectorAccess/${emailKey(u.email)}`).get().catch(() => null);
-    me = acc?.val(); if (!me) return noAccess();
+    me = acc?.val();
+    if (!me) {   // מנהל פעיל באתר הראשי — גישה לכל הקבלנים הראשיים
+      const adm = (await db.ref(`${ROOT}_access/${u.uid}`).get().catch(() => null))?.val();
+      if (adm?.active) me = { name: adm.name || "", admin: true, contractors: {} };
+    }
+    if (!me) return noAccess();
     me.email = String(u.email).toLowerCase();
     let pending = 6;
     for (const col of ["contractors", "activities", "designSegments", "designOffices", "progress"]) {
