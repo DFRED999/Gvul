@@ -1320,7 +1320,31 @@ function dashboard(d, cs) {
 const itemRange = i => { const a = kdNum(i.kdFrom), b = kdNum(i.kdTo); if (a === null) return null; return b === null || a === b ? { lo: a - .3, hi: a + .3, point: true } : { lo: Math.min(a, b), hi: Math.max(a, b) }; };
 const mainAuto = (d, i) => { const r = itemRange(i); return r ? d.contractors.filter(isMain).find(c => overlap(kdRange(c), r)) : null; };
 /** קבלן ראשי באזור: מה שנבחר ידנית בטבלה (mainId), אחרת לפי הק.ד. */
-const mainAt = (d, i) => { if (i.mainId) { const m = d.contractors.find(c => c.id === i.mainId); if (m) return m; } const r = itemRange(i); return r ? d.contractors.filter(isMain).find(c => overlap(kdRange(c), r)) : null; };
+/** ק.ד. משוער לפי נ.צ. — לא נשמר בנתונים; מחושב מנקודות ידועות (פריטים ותיקי חח״י עם נ.צ. + ק.ד.).
+    מוצג רק כשיש נקודה ידועה עד 600 מ׳ ושתי נקודות משני הצדדים (בבדיקה — סטייה חציונית של חצי ק.ד.) */
+const _kdRefs = new WeakMap();
+function kdRefs(d) {
+  if (_kdRefs.has(d.items)) return _kdRefs.get(d.items);
+  const R = [];
+  for (const i of d.items) { const c = parseCoord(i.coord), k = kdNum(i.kdFrom); if (c && k !== null && (kdNum(i.kdTo) === null || kdNum(i.kdTo) === k)) R.push({ k, E: c[0], N: c[1], id: i.id }); }
+  for (const o of d.iecOrders) { const c = parseCoord(o.coord), k = kdNum(o.kd); if (c && k !== null) R.push({ k, E: c[0], N: c[1], id: "iec:" + o.id }); }
+  _kdRefs.set(d.items, R); return R;
+}
+const _kdEstC = new WeakMap();
+function kdEst(d, i) { let m = _kdEstC.get(d.items); if (!m) _kdEstC.set(d.items, m = new Map());
+  const key = i.id + "|" + i.coord; if (!m.has(key)) m.set(key, kdEst0(d, i)); return m.get(key); }
+function kdEst0(d, i) {
+  const c = parseCoord(i.coord); if (!c) return null; const [E, N] = c, R = kdRefs(d).filter(r => r.id !== i.id); if (R.length < 2) return null;
+  const ds = R.map(r => ({ r, dd: Math.hypot(r.E - E, r.N - N) })).sort((a, b) => a.dd - b.dd), a = ds[0].r;
+  if (ds[0].dd > 600) return null;
+  for (const { r: b, dd } of ds.slice(1, 8)) { if (Math.abs(b.k - a.k) < .5 || dd > 900) continue;
+    const vx = b.E - a.E, vy = b.N - a.N, t = ((E - a.E) * vx + (N - a.N) * vy) / (vx * vx + vy * vy);
+    if (t >= 0 && t <= 1) return Math.round((a.k + t * (b.k - a.k)) * 10) / 10; }
+  return null;
+}
+const itemKd = (d, i) => kdNum(i.kdFrom) ?? kdEst(d, i);
+const mainByEst = (d, i) => { if (kdNum(i.kdFrom) !== null) return null; const k = kdEst(d, i); return k === null ? null : d.contractors.filter(isMain).find(c => overlap(kdRange(c), { lo: k - .3, hi: k + .3 })) || null; };
+const mainAt = (d, i) => { if (i.mainId) { const m = d.contractors.find(c => c.id === i.mainId); if (m) return m; } const r = itemRange(i); return r ? d.contractors.filter(isMain).find(c => overlap(kdRange(c), r)) : mainByEst(d, i); };
 const itemSector = (d, i) => mainAt(d, i)?.sector || d.contractors.find(c => c.id === i.contractorId)?.sector || "";
 const itemTxt = i => `${i.kdFrom || ""}${i.kdTo && i.kdTo !== i.kdFrom ? "–" + i.kdTo : ""}`;
 function itemsIn(d, r) {
@@ -1370,7 +1394,7 @@ function pageSpecialist(d, c) {
   if (ui.ctab === "items") {
     const sum = kinds.length ? `<div class="tablewrap"><table class="sheet">${statHead("התמחות")}<tbody>${kinds.map(k => statRow(esc(k), itemStats(its.filter(i => (i.kind || "אחר") === k)))).join("")}
       ${kinds.length > 1 ? statRow("סה״כ", itemStats(its)) : ""}</tbody></table></div>` : "";
-    tab = `${sum}<h2 style="margin-top:16px">פריטי עבודה</h2>${renderSheet("items", [...its].sort((a, b) => (kdNum(b.kdFrom) ?? 0) - (kdNum(a.kdFrom) ?? 0)), "עוד אין פריטים — מוסיפים פריט אחד או רשימה לפי ק.ד.")}
+    tab = `${sum}<h2 style="margin-top:16px">פריטי עבודה</h2>${renderSheet("items", (k => [...its].sort((a, b) => (k(b) ?? -1) - (k(a) ?? -1) || String(a.name).localeCompare(String(b.name), "he", { numeric: true })))(i => itemKd(d, i)), "עוד אין פריטים — מוסיפים פריט אחד או רשימה לפי ק.ד.")}
       <div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="addItem" data-id="${id}">+ פריט</button><button class="btn ghost sm" data-act="bulkItems" data-id="${id}">+ כמה פריטים לפי ק.ד.</button>
       <span class="small muted">פריט = נקודה (ק.ד. אחד, למשל שער) או טווח (ק.ד. מ–עד, למשל קטע לפינוי מוקשים). הקבלן הראשי והגזרה נגזרים מהק.ד.</span></div>`;
   } else if (ui.ctab === "orders") {
@@ -2488,11 +2512,20 @@ const TABLE_DEFS = {
   items: () => { const d = D(); return [
     { key: "kind", label: "התמחות", cell: i => { const c = d.contractors.find(x => x.id === i.contractorId), ks = [...new Set([...specsOf(c || {}), ...SPECIALTIES, i.kind].filter(Boolean))];
       return `<select class="inp" id="f_items_${i.id}_kind" data-edit="items|${i.id}|kind">${ks.map(k => `<option ${k === i.kind ? "selected" : ""}>${esc(k)}</option>`).join("")}</select>`; } },
-    { key: "name", label: "תיאור", cls: "w-place", cell: i => cellInput("items", i, "name") },
-    { key: "kdFrom", label: "ק.ד. מ", cls: "w-kd", cell: i => cellInput("items", i, "kdFrom", "kdin") },
+    { key: "name", label: "תיאור", cls: "w-place", cell: i => cellInput("items", i, "name") + (i.conflict ? `<div><span class="pill" style="background:#fde2c8;color:#9a4b00;cursor:help" title="${esc(i.conflict)}">סתירה — לבדיקה</span></div>` : "") },
+    { key: "kdFrom", label: "ק.ד. מ", cls: "w-kd", cell: i => cellInput("items", i, "kdFrom", "kdin") + (kdNum(i.kdFrom) === null ? (k => k === null ? "" : `<div class="small muted nowrap" title="משוער לפי הנ.צ. ביחס לנקודות עם ק.ד. ידוע — לא נשמר. כדאי לאמת ולהקליד.">≈${k} לפי נ.צ.</div>`)(kdEst(d, i)) : "") },
     { key: "kdTo", label: "ק.ד. עד", cls: "w-kd", cell: i => cellInput("items", i, "kdTo", "kdin") },
-    { key: "main", label: "קבלן ראשי באזור", cls: "small", cell: i => { const a = mainAuto(d, i);
-      return `<select class="inp" id="f_items_${i.id}_mainId" data-edit="items|${i.id}|mainId" title="ברירת מחדל — לפי הק.ד.; אפשר לבחור ידנית"><option value="">${a ? "אוטו׳: " + esc(a.name) : "— (לפי ק.ד.)"}</option>${d.contractors.filter(isMain).map(c => `<option value="${esc(c.id)}" ${c.id === i.mainId ? "selected" : ""}>${esc(c.name)} · ${esc(c.sector || "")}</option>`).join("")}</select>`; } },
+    { key: "coord", label: "נ.צ. (ITM)", cls: "c", cell: i => `<input class="cell" id="f_items_${i.id}_coord" value="${esc(i.coord || "")}" data-edit="items|${i.id}|coord" dir="ltr" style="width:19ch;font-size:12px;text-align:center" placeholder="E / N">` + (parseCoord(i.coord) ? `<div>${mapLinks(i.coord)}</div>` : "") },
+    ...(ui.page === "c:sp-haoman" ? [
+      { key: "shape", label: "צורה", cls: "c", cell: i => `<select class="inp" id="f_items_${i.id}_shape" data-edit="items|${i.id}|shape"><option value=""></option>${["צינור", "BOX"].concat(i.shape && !["צינור", "BOX"].includes(i.shape) ? [i.shape] : []).map(k => `<option ${k === i.shape ? "selected" : ""}>${esc(k)}</option>`).join("")}</select>` },
+      { key: "sizeEx", label: "מידה קיימת", cls: "c", cell: i => cellInput("items", i, "sizeEx", "kdin", 'dir="ltr" style="field-sizing:content;min-width:5ch"') },
+      { key: "sizePlan", label: "מידה מתוכננת", cls: "c", cell: i => cellInput("items", i, "sizePlan", "kdin", 'dir="ltr" style="field-sizing:content;min-width:5ch"') },
+      { key: "action", label: "פעולה", cell: i => cellInput("items", i, "action") },
+      { key: "newLen", label: "אורך חדש / הארכה (מ׳)", cls: "c", cell: i => cellInput("items", i, "newLen", "num", 'style="width:6ch"') },
+      { key: "sheet", label: "גיליון", cls: "c", cell: i => cellInput("items", i, "sheet", "kdin", 'style="width:6ch"') },
+    ] : []),
+    { key: "main", label: "קבלן ראשי באזור", cls: "small", cell: i => { const a = mainAuto(d, i) || mainByEst(d, i), est = !mainAuto(d, i) && a;
+      return `<select class="inp" id="f_items_${i.id}_mainId" data-edit="items|${i.id}|mainId" title="ברירת מחדל — לפי הק.ד.; אפשר לבחור ידנית"><option value="">${a ? (est ? "לפי נ.צ.: " : "אוטו׳: ") + esc(a.name) : "— (לפי ק.ד.)"}</option>${d.contractors.filter(isMain).map(c => `<option value="${esc(c.id)}" ${c.id === i.mainId ? "selected" : ""}>${esc(c.name)} · ${esc(c.sector || "")}</option>`).join("")}</select>`; } },
     { key: "status", label: "סטטוס", cell: i => `<select class="inp" id="f_items_${i.id}_status" data-edit="items|${i.id}|status" style="background:${ITEM_COLORS[i.status] || "#fff"}${i.status === "מבוטל" ? ";text-decoration:line-through;color:#888" : ""}">${ITEM_STATUS.map(k => `<option ${k === i.status ? "selected" : ""}>${k}</option>`).join("")}</select>` },
     { key: "plannedDate", label: "תאריך מתוכנן", cell: i => `<input type="date" class="cell" id="f_items_${i.id}_plannedDate" value="${esc(i.plannedDate)}" data-edit="items|${i.id}|plannedDate">` },
     { key: "doneDate", label: "תאריך ביצוע", cell: i => `<input type="date" class="cell" id="f_items_${i.id}_doneDate" value="${esc(i.doneDate)}" data-edit="items|${i.id}|doneDate">` },
