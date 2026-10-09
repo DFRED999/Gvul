@@ -433,7 +433,7 @@ function newContractorModal() {
     });
 }
 function alertModal(text, title = "לא ניתן לטעון") {
-  modal(`<h2>${title}</h2><p>${esc(text)}</p><div class="row"><button class="btn" id="mNo">סגירה</button></div>`, (m, close) => { m.querySelector("#mNo").onclick = close; });
+  modal(`<h2>${title}</h2><p style="white-space:pre-line">${esc(text)}</p><div class="row"><button class="btn" id="mNo">סגירה</button></div>`, (m, close) => { m.querySelector("#mNo").onclick = close; });
 }
 
 /** פס מצב הנתונים — מוצג למעלה בכל מסך */
@@ -970,6 +970,93 @@ function svRangeInput(t) {
   if (t.dataset.act === "svRF") S.rf = c; else S.rt = c;
   const { F, T } = svCtx(); if (F === T) { if (t.dataset.act === "svRF") S.rt = Math.min(hi, c + 1); else S.rf = Math.max(lo, c - 1); }
   render();
+}
+
+/* =====================================================================
+   מפקחים — רשימת מפקחים (כמה לכל קבלן, מפקח אחד יכול לכמה קבלנים), יצירת משתמש וסיסמה, איפוס סיסמה.
+   נשמר ב-tableConfig/inspectorList; ממנו נגזרת מפת ההרשאות tableConfig/inspectorAccess (לפי מייל) שכללי Firebase בודקים.
+   ===================================================================== */
+const inspList = () => { const L = { ...(RAW.tableConfig?.inspectorList || {}) }; delete L.updatedAt; delete L.updatedBy;
+  if (!Object.keys(L).length && RAW.tableConfig?.inspectors) {   // מעבר מהמבנה הקודם (מפקח לכל קבלן)
+    const by = {}; for (const [cid, x] of Object.entries(RAW.tableConfig.inspectors)) if (x?.email) { const k = "i" + x.email.replace(/[^a-z0-9]/gi, "").slice(0, 20); by[k] = by[k] || { name: x.name || "", email: x.email, phone: "", active: true, contractors: {} }; by[k].contractors[cid] = true; }
+    return by; }
+  return L; };
+const emailOk = e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e || "");
+async function saveInspectors(L) {
+  const access = {};
+  for (const x of Object.values(L)) if (x?.active !== false && emailOk(x?.email)) {
+    const ek = x.email.toLowerCase().replace(/\./g, ","), cs = Object.keys(x.contractors || {}).filter(k => x.contractors[k]); if (!cs.length) continue;
+    access[ek] = access[ek] || { email: x.email.toLowerCase(), name: x.name || "", contractors: {} }; cs.forEach(c => access[ek].contractors[c] = true); }
+  await api.put("tableConfig", "inspectorList", Object.keys(L).length ? L : null);
+  await api.put("tableConfig", "inspectorAccess", Object.keys(access).length ? access : null);
+}
+/** יצירת משתמש ב-Firebase בלי לנתק את המנהל: אפליקציה משנית */
+async function fbCreateUser(email, pass) {
+  const app2 = firebase.apps.find(a => a.name === "insp") || firebase.initializeApp(FIREBASE_CONFIG, "insp");
+  try { await app2.auth().createUserWithEmailAndPassword(email, pass); await app2.auth().signOut(); return "created"; }
+  catch (e) { if (e.code === "auth/email-already-in-use") return "exists"; throw e; }
+}
+const AUTH_ERR = { "auth/weak-password": "סיסמה חלשה — לפחות 6 תווים", "auth/invalid-email": "מייל לא תקין", "auth/operation-not-allowed": "צריך להפעיל ב-Firebase: Authentication ← Sign-in method ← Email/Password", "auth/admin-restricted-operation": "ב-Firebase: Authentication ← Settings ← User actions ← לסמן Enable create (sign-up)", "auth/network-request-failed": "אין חיבור לאינטרנט" };
+function inspectorsTab(d) {
+  const mains = d.contractors.filter(isMain), L = inspList();
+  const url = location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "") + "report.html";
+  const rows = Object.entries(L).sort((a, b) => String(a[1].name).localeCompare(String(b[1].name), "he"));
+  const per = mains.map(c => ({ c, n: rows.filter(([, x]) => x.active !== false && x.contractors?.[c.id]).map(([, x]) => x.name || x.email) }));
+  return `<p class="small" style="max-width:90ch;margin-top:0">כל מפקח נכנס מהנייד לדף הדיווח עם מייל וסיסמה משלו, ורואה רק את הקבלנים שסומנו לו. אפשר כמה מפקחים לאותו קבלן, ומפקח אחד לכמה קבלנים. הדיווחים מגיעים כ<b>״לבדיקה״</b>.</p>
+    <div class="row" style="gap:6px;margin-bottom:10px">${per.map(p => `<span class="pill ${p.n.length ? "ok" : "warn"}">${esc(p.c.name)}: ${p.n.length ? esc(p.n.join(", ")) : "אין מפקח"}</span>`).join("")}</div>
+    <div class="tablewrap" style="max-height:none"><table class="sheet"><thead><tr><th>שם</th><th>מייל לכניסה</th><th>טלפון</th>${mains.map(c => `<th class="c">${esc(c.name)}</th>`).join("")}<th class="c">פעיל</th><th>סיסמה</th><th></th></tr></thead><tbody>
+    ${rows.map(([id, x]) => `<tr style="${x.active === false ? "opacity:.55" : ""}">
+      <td><input class="inp" id="ins_${id}_name" data-ins="${id}|name" value="${esc(x.name || "")}" style="width:120px"></td>
+      <td><input class="inp" id="ins_${id}_email" data-ins="${id}|email" value="${esc(x.email || "")}" dir="ltr" style="width:220px"></td>
+      <td><input class="inp" id="ins_${id}_phone" data-ins="${id}|phone" value="${esc(x.phone || "")}" dir="ltr" style="width:110px"></td>
+      ${mains.map(c => `<td class="c"><input type="checkbox" id="ins_${id}_c_${c.id}" data-ins="${id}|c|${c.id}" ${x.contractors?.[c.id] ? "checked" : ""} aria-label="${esc(c.name)}"></td>`).join("")}
+      <td class="c"><input type="checkbox" id="ins_${id}_active" data-ins="${id}|active" ${x.active !== false ? "checked" : ""} aria-label="פעיל"></td>
+      <td class="nowrap"><button class="btn ghost sm" data-act="insPass" data-id="${id}" ${LOCAL ? "disabled" : ""}>קביעת סיסמה</button> <button class="btn ghost sm" data-act="insReset" data-id="${id}" ${LOCAL ? "disabled" : ""} title="Firebase שולח למפקח מייל עם קישור לבחירת סיסמה חדשה">מייל איפוס</button></td>
+      <td><button class="btn del" data-act="insDel" data-id="${id}">הסרה</button></td></tr>`).join("") || `<tr><td colspan="${mains.length + 6}" class="c muted">עוד אין מפקחים</td></tr>`}</tbody></table></div>
+    <div class="row" style="margin-top:10px;gap:8px"><button class="btn" data-act="insNew">+ מפקח חדש</button><span class="spacer"></span><b class="small">דף הדיווח:</b><a href="${esc(url)}" target="_blank" rel="noopener" dir="ltr" class="small">${esc(url)}</a></div>
+    <details style="margin-top:12px"><summary class="small"><b>איך זה עובד — סיסמאות והרשאות</b></summary><ul class="small" style="max-width:90ch">
+      <li><b>מפקח חדש</b> — ״+ מפקח חדש״: שם, מייל, סיסמה ראשונה וקבלנים. המשתמש נוצר ב-Firebase מכאן; שולחים למפקח את הקישור והסיסמה.</li>
+      <li><b>שכח סיסמה</b> — ״מייל איפוס״ (או ״שכחתי סיסמה״ בדף הדיווח): Firebase שולח לו קישור והוא בוחר סיסמה חדשה. מנהל לא יכול לראות סיסמה קיימת.</li>
+      <li><b>״קביעת סיסמה״</b> — עובד רק למשתמש שעוד לא נוצר (למשל אחרי שינוי מייל). למשתמש קיים — ״מייל איפוס״.</li>
+      <li><b>חסימה</b> — מורידים ״פעיל״ או מסירים: הגישה נחסמת מיד (הדיווחים שלו נשארים). למחיקה מלאה של המשתמש: Firebase ← Authentication ← Users.</li>
+      <li><b>החלפת מפקח</b> — משנים מייל ושם בשורה (ואז ״קביעת סיסמה״ למייל החדש), או מוסיפים מפקח חדש ומבטלים את הקודם.</li></ul></details>
+    ${LOCAL ? `<p class="small" style="color:var(--warn)">האתר במצב עבודה מקומית — יצירת משתמשים ואיפוס סיסמה פועלים רק כשהאתר מחובר ל-Firebase.</p>` : ""}`;
+}
+function inspModal(title, html, onOk) {
+  modal(`<h2>${title}</h2>${html}<p class="small" id="imErr" style="color:var(--warn)"></p><div class="row"><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close;
+    m.querySelector("#mYes").onclick = async () => { const er = m.querySelector("#imErr"), y = m.querySelector("#mYes"); y.disabled = true; er.textContent = "";
+      try { const msg = await onOk(m); close(); if (msg) alertModal(msg, "בוצע"); } catch (e) { er.textContent = AUTH_ERR[e.code] || e.message || String(e); y.disabled = false; } };
+  });
+}
+async function inspClick(act, b) {
+  const L = inspList(), id = b.dataset.id, x = L[id], mains = list("contractors").filter(isMain);
+  if (act === "insNew") inspModal("מפקח חדש", `<label class="field">שם<input id="imN" placeholder="למשל דני"></label><label class="field">מייל לכניסה<input id="imE" dir="ltr" type="email"></label>
+      <label class="field">טלפון (לא חובה)<input id="imP" dir="ltr"></label>${LOCAL ? "" : `<label class="field">סיסמה ראשונה (6 תווים לפחות)<input id="imS" dir="ltr" value="${Math.random().toString(36).slice(2, 10)}"></label>`}
+      <b class="small">קבלנים</b><div class="chips">${mains.map(c => `<label class="chip"><input type="checkbox" value="${c.id}"> ${esc(c.name)}</label>`).join("")}</div>`, async m => {
+      const name = m.querySelector("#imN").value.trim(), email = m.querySelector("#imE").value.trim().toLowerCase(), cs = [...m.querySelectorAll(".chips input:checked")].map(i => i.value);
+      if (!name || !emailOk(email)) throw new Error("צריך שם ומייל תקין");
+      if (!cs.length) throw new Error("צריך לסמן לפחות קבלן אחד");
+      if (Object.values(L).some(y => y.email === email)) throw new Error("המייל הזה כבר ברשימה");
+      let note = "";
+      if (!LOCAL) { const pass = m.querySelector("#imS").value; const r = await fbCreateUser(email, pass);
+        note = r === "created" ? `נוצר משתמש: ${email}\nסיסמה: ${pass}\n\nלשלוח למפקח יחד עם הקישור לדף הדיווח.` : `${email} כבר קיים ב-Firebase — הסיסמה שלו לא השתנתה. אם צריך — ״מייל איפוס״.`; }
+      L["i" + newId()] = { name, email, phone: m.querySelector("#imP").value.trim(), active: true, contractors: Object.fromEntries(cs.map(c => [c, true])) };
+      await saveInspectors(L); return note; });
+  else if (act === "insPass") inspModal(`סיסמה ל${esc(x.name || x.email)}`, `<p class="small">יוצר את המשתמש <b dir="ltr">${esc(x.email)}</b> ב-Firebase עם הסיסמה הזו. אם המשתמש כבר קיים — הסיסמה לא תשתנה (משתמשים ב״מייל איפוס״).</p>
+      <label class="field">סיסמה (6 תווים לפחות)<input id="imS" dir="ltr" value="${Math.random().toString(36).slice(2, 10)}"></label>`, async m => {
+      const pass = m.querySelector("#imS").value, r = await fbCreateUser(x.email, pass);
+      return r === "created" ? `נוצר משתמש: ${x.email}\nסיסמה: ${pass}` : `${x.email} כבר קיים — הסיסמה לא השתנתה. כדי להחליף: ״מייל איפוס״.`; });
+  else if (act === "insReset") { try { await fb.auth().sendPasswordResetEmail(x.email); alertModal(`נשלח מייל איפוס ל-${x.email}. המפקח לוחץ על הקישור ובוחר סיסמה חדשה (כדאי לבדוק גם בספאם).`, "נשלח"); } catch (e) { alertModal(AUTH_ERR[e.code] || e.message, "לא נשלח"); } }
+  else if (act === "insDel") { if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "בטוח?"; return; } delete L[id]; await saveInspectors(L); }
+}
+async function inspChange(t) {
+  const [id, k, cid] = t.dataset.ins.split("|"), L = inspList(), x = L[id]; if (!x) return;
+  if (k === "c") x.contractors = { ...(x.contractors || {}), [cid]: t.checked };
+  else if (k === "active") x.active = t.checked;
+  else if (k === "email") { const v = t.value.trim().toLowerCase(); if (!emailOk(v)) { t.style.borderColor = "var(--warn)"; return; } x.email = v; }
+  else x[k] = t.value.trim();
+  await saveInspectors(L);
 }
 
 /* ---------- סקירה כללית ---------- */
@@ -2477,14 +2564,7 @@ function pageSettings(d) {
       <div class="bk"><b>טעינת גיבוי</b><span>מחליף את כל הנתונים באתר בנתוני קובץ שתבחר. דורש אישור.</span><button class="btn ghost" data-act="upBackup">בחירת קובץ…</button></div>
       <div class="bk"><b>טעינה מחדש מ-data.json</b><span>מבטל שינויים מקומיים וחוזר לקובץ שנמצא כרגע ב-GitHub.</span><button class="btn ghost" data-act="reloadFile">טעינה מחדש</button></div>
     </div>`; }
-  else if (tab[0] === "inspectors") { const mains = d.contractors.filter(isMain), cfg = RAW.tableConfig?.inspectors || {};
-    const url = location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "") + "report.html";
-    body = `<p class="small" style="max-width:85ch;margin-top:0">כל מפקח נכנס מהנייד לדף הדיווח, עם מייל וסיסמה משלו, ורואה רק את הקבלן שמשויך אליו. הדיווחים מגיעים ללשונית ״ביצוע״ של הקבלן כ<b>״לבדיקה״</b> — ונספרים רק אחרי אישור.
-      אפשר לשייך אותו מייל לכמה קבלנים. מחליפים מפקח = משנים כאן את המייל (המפקח החדש מקבל את אותה הרשאה; הדיווחים הקודמים נשארים).</p>
-      <div class="tablewrap" style="max-height:none"><table class="sheet"><thead><tr><th>קבלן</th><th>שם המפקח</th><th>מייל לכניסה</th></tr></thead><tbody>
-      ${mains.map(c => `<tr><td><b>${esc(c.name)}</b></td><td><input class="inp" id="insp_n_${c.id}" data-insp="${c.id}|name" value="${esc(cfg[c.id]?.name || "")}" placeholder="למשל דני"></td><td><input class="inp" id="insp_e_${c.id}" data-insp="${c.id}|email" dir="ltr" value="${esc(cfg[c.id]?.email || "")}" placeholder="name@mail.com" style="min-width:240px"></td></tr>`).join("")}</tbody></table></div>
-      <div class="row" style="margin-top:10px;gap:8px"><b class="small">דף הדיווח למפקחים:</b><a href="${esc(url)}" target="_blank" rel="noopener" dir="ltr" class="small">${esc(url)}</a></div>
-      <p class="small muted" style="max-width:85ch">לכל מייל צריך גם משתמש ב-Firebase: Authentication ← Users ← Add user (מייל + סיסמה), ולשלוח למפקח את הקישור והסיסמה. ${LOCAL ? `<b>האתר במצב עבודה מקומית — ההרשאות פועלות רק אחרי חיבור ל-Firebase.</b>` : ""}</p>`; }
+  else if (tab[0] === "inspectors") body = inspectorsTab(d);
   else if (tab[0] === "activities") { const mains = d.contractors.filter(isMain);
     const C = mains.find(c => c.id === ui.setCid) || mains[0];
     const stale = d.activities.filter(a => a.stage && !STAGES.includes(a.stage) && isMain(d.contractors.find(c => c.id === a.contractorId) || {})).length;
@@ -2560,6 +2640,7 @@ $app.addEventListener("click", async e => {
   const b = e.target.closest("[data-act]"); if (!b) return;
   const act = b.dataset.act;
   if (/^sv[A-Z]/.test(act)) return svClick(act, b);
+  if (/^ins[A-Z]/.test(act)) return inspClick(act, b);
   if (act === "nav") { ui.page = b.dataset.id; location.hash = ui.page; render(); window.scrollTo(0, 0); }
   else if (act === "logout") fb.auth().signOut();
   else if (act === "dlBackup") downloadJson(backupName());
@@ -2714,13 +2795,7 @@ $app.addEventListener("change", async e => {
   if (t.dataset.act === "pFrom" || t.dataset.act === "pTo") { if (t.value && +t.value.slice(0, 4) < 1990) return; ui[t.dataset.act] = t.value; render(); return; }
   if (t.dataset.act === "autoSum") { await api.update("tableConfig", "issues", { autoSummary: t.checked }); return; }
   if (t.dataset.act === "svRF" || t.dataset.act === "svRT") return svRangeInput(t);
-  if (t.dataset.insp) { const [cid, k] = t.dataset.insp.split("|"), v = k === "email" ? t.value.trim().toLowerCase() : t.value.trim();
-    if (k === "email" && v && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) { t.style.borderColor = "var(--warn)"; return; }
-    const cfg = JSON.parse(JSON.stringify(RAW.tableConfig?.inspectors || {})); delete cfg.updatedAt; delete cfg.updatedBy;
-    cfg[cid] = { ...(cfg[cid] || {}), [k]: v };
-    // מפת הרשאות לפי מייל (לכללי האבטחה ב-Firebase ולדף הדיווח)
-    const access = {}; for (const [c, x] of Object.entries(cfg)) if (x?.email) { const ek = x.email.replace(/\./g, ","); access[ek] = access[ek] || { email: x.email, name: x.name || "", contractors: {} }; access[ek].contractors[c] = true; if (x.name && !access[ek].name) access[ek].name = x.name; }
-    await api.put("tableConfig", "inspectors", cfg); await api.put("tableConfig", "inspectorAccess", access); return; }
+  if (t.dataset.ins) return inspChange(t);
   if (t.dataset.act === "svNote") { const v = t.value; await svSet(() => ({ note: v })); return; }
   if (t.dataset.act === "showClosed") { ui.showClosed = t.checked; render(); return; }
   if (t.dataset.act === "iecKind") { ui.iec.kind = t.value; render(); return; }
