@@ -271,7 +271,7 @@ const SECTION_M = 20;          // מרחק בין חתכים (מ׳) — קבוע
    ===================================================================== */
 const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "tableConfig", "users"];
 /* קבלנים ייעודיים — עובדים לרוחב הקו לפי התמחות (שערים, מבני חשמל, פינוי מוקשים, סבכות…) ומנוהלים לפי "פריטי עבודה" */
-const SPECIALTIES = ["ארון שקד", "חדר טרפו", "תט״ז", "שערים", "פינוי מוקשים", "סבכות למעבירי מים", "תקשורת", "מעבירי מים", "אחר"];
+const SPECIALTIES = ["ארון שקד", "חדר טרפו", "תט״ז", "שערים", "פינוי מוקשים", "סבכות למעבירי מים", "תקשורת", "מעבירי מים", "מעביר אירי", "אחר"];
 const ITEM_STATUS = ["טרם", "מתוכנן", "בביצוע", "הושלם", "HOLD", "מבוטל"];
 /** צבע רקע לשורה שלמה לפי הסטטוס (גוון בהיר של צבע הסטטוס) */
 const ROW_TINT = {
@@ -491,9 +491,17 @@ const SETTINGS_TABS = [["data", "נתונים וגיבוי"], ["offices", "מש�
 const ui = { filt: {}, execView: "seg", page: location.hash.slice(1) || "overview", setTab: "data", ctab: "orders", df: dlvEmpty(), pf: { date: todayStr(), actId: "", segId: "", secFrom: "", secTo: "", note: "", baseline: false, msg: "" } };
 const $app = document.getElementById("app");
 
+/** תיקון חד-פעמי: מעבירים איריים יובאו כ"מעבירי מים" — מעבירים אותם להתמחות משלהם */
+let _irishFixed = false;
+function fixIrish() {
+  if (_irishFixed) return; const its = list("items"); if (!its.length) return; _irishFixed = true;
+  const bad = its.filter(i => i.kind === "מעבירי מים" && /^מעביר אירי/.test(i.name || ""));
+  if (bad.length) setTimeout(async () => { for (const i of bad) await api.update("items", i.id, { kind: "מעביר אירי" }); }, 0);
+}
 function render() {
   if (!LOCAL && !user) return renderLogin();
   if (!LOCAL && !me) return renderPending();
+  fixIrish();
   const scroll = window.scrollY, focusId = document.activeElement?.id;
   // לשמור מה היה פתוח/גלול כדי שעדכון לא "יסגור" את המסך: חלונות מתקפלים וגלילה פנימית של טבלאות
   const keyOf = el => (el.querySelector("summary")?.textContent || "").replace(/\d+/g, "#").trim();
@@ -1365,7 +1373,7 @@ const ofT = (a, b) => `${a}<span class="ofT"> מתוך ${b}</span>`;
 const statRow = (label, st, extra = "") => `<tr><td><b>${label}</b>${extra}</td><td class="c">${st.total}</td><td class="c">${st.done}</td><td class="c">${st.prog}</td><td class="c">${st.plan}</td><td class="c">${st.notyet}</td><td class="c">${st.hold}</td>
   <td class="c" style="${heatBg(st.total ? st.done / st.total : null)}"><b>${st.total ? ofT(st.done, st.total) : "—"}</b><div class="small">${st.total ? Math.round(st.done / st.total * 100) + "%" : ""}</div></td><td class="c small">${st.km ? `<b>${ofT(num(Math.round(st.kmDone * 1000), 0), MTR(st.km))}</b><div class="small">${Math.round(st.kmDone / st.km * 100)}%</div>` : "—"}</td></tr>`;
 const statHead = first => `<thead><tr><th>${first}</th><th>סה״כ</th><th>הושלמו</th><th>בביצוע</th><th>מתוכננים</th><th>טרם</th><th>HOLD</th><th>הושלמו מתוך</th><th>אורך (טווחים)</th></tr></thead>`;
-const KIND_PLURAL = { "ארון שקד": "ארונות שקד", "חדר טרפו": "חדרי טרפו", "תט״ז": "תט״זים", "שערים": "שערים", "פינוי מוקשים": "קטעי פינוי מוקשים", "סבכות למעבירי מים": "סבכות למעבירי מים", "מעבירי מים": "מעבירי מים" };
+const KIND_PLURAL = { "ארון שקד": "ארונות שקד", "חדר טרפו": "חדרי טרפו", "תט״ז": "תט״זים", "שערים": "שערים", "פינוי מוקשים": "קטעי פינוי מוקשים", "סבכות למעבירי מים": "סבכות למעבירי מים", "מעבירי מים": "מעבירי מים", "מעביר אירי": "מעברים איריים" };
 function specialistDash(d, S) {
   const sp = d.contractors.filter(c => !isMain(c)); if (!sp.length) return "";
   const rows = sp.flatMap(c => { const its = d.items.filter(i => i.contractorId === c.id && (S === "הכל" || itemSector(d, i) === S));
