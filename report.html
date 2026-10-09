@@ -81,12 +81,13 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 @media (min-width: 900px) {
   .wrap { max-width: 1440px; padding: 10px 14px 40px; }
   header { margin-bottom: 8px; } header h1 { font-size: 19px; }
-  .board { display: grid; grid-template-columns: 380px 1fr; column-gap: 14px; align-items: start;
+  .board { display: grid; grid-template-columns: 350px 1fr; column-gap: 12px; align-items: start;
     grid-template-areas: "top tiles" "where tiles" "note tiles" "dup tiles" "send tiles" "x tiles"; grid-template-rows: auto auto auto auto auto 1fr; }
   .board > .top { grid-area: top; } .board > .where { grid-area: where; position: static; box-shadow: none; } .board > .side-note { grid-area: note; }
   .board > .dup { grid-area: dup; position: static; } .board > .sendbar { grid-area: send; position: static; box-shadow: none; }
   .board > .tiles { grid-area: tiles; }
-  .where .num { width: 92px; font-size: 20px; } .kd .num { width: 80px; }
+  .where .num { width: 84px; font-size: 19px; } .kd { flex-wrap: nowrap; gap: 6px; } .kd .num { width: 66px; font-size: 16px; padding: 8px 4px; } .kd .btn.ghost { padding: 8px 9px; font-size: 13px; }
+  .top .chip { padding: 8px 10px; font-size: 14px; } .top .chips { gap: 5px; } .sendbar .sum { font-size: 13px; }
 }
 
 /* ---- נייד ---- */
@@ -134,6 +135,23 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   .kd { margin-top: 6px; padding: 4px 6px; }
   .act.on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--g); } .act.on .tick { top: 3px; left: 3px; width: 16px; height: 16px; font-size: 10px; border-width: 1.5px; }
   .sendbar { padding: 6px 8px; } .sendbar .btn { padding: 10px 14px; font-size: 15px; } .sendbar .sum { font-size: 12.5px; }
+}
+
+/* ---- לוח ישר: כל קבוצה רצועה משלה, כל הקוביות באותו גודל ובאותם טורים ---- */
+.tiles .flow { columns: auto !important; display: flex; flex-direction: column; gap: 10px; --cols: 4; }
+.tiles .agrp { display: flex; gap: 8px; align-items: stretch; margin: 0; }
+.tiles .agh { flex: none; width: 76px; margin: 0; padding: 8px 6px; border-radius: 14px; background: var(--gt); color: var(--g); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px; font-size: 13px; line-height: 1.15; border: 0; }
+.tiles .agh .agi { width: 30px; height: 30px; background: #fff; } .tiles .agh .agi svg { width: 19px; height: 19px; }
+.tiles .acts { flex: 1; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 8px; align-content: start; }
+.tiles .act { margin: 0; height: 58px; min-height: 0; overflow: hidden; font-size: 14px; gap: 7px; padding: 6px 8px 6px 6px; }
+.tiles .act .ico { width: 26px; height: 26px; } .tiles .act .ico svg { width: 17px; height: 17px; }
+.tiles .act .par { font-size: 11px; font-weight: 600; opacity: .9; }
+.tiles .act.on .tick { top: 4px; left: 4px; width: 18px; height: 18px; font-size: 11px; border-width: 1.5px; }
+@media (min-width: 1300px) { .tiles .flow { --cols: 5; } }
+@media (max-width: 600px) {
+  .tiles .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .tiles .agrp, .tiles .acts { display: contents; } .tiles .agh { display: none; }
+  .tiles .act { height: var(--th, 44px); }
 }
 .login { max-width: 380px; margin: 12vh auto; }
 .login input { width: 100%; margin-bottom: 10px; direction: ltr; }
@@ -296,7 +314,7 @@ function view() {
         <div class="covtxt"><b>${esc(short(act.name))}</b> בקטע: דווח ${done.toLocaleString("he-IL")} מ׳ מתוך ${(W * SECTION_M).toLocaleString("he-IL")}${gaps.length && done ? ` · עוד לא דווח: ${gaps.slice(0, 3).map(([x, y]) => rng(x, y)).join(", ")}${gaps.length > 3 ? "…" : ""}` : ""} <span class="lg"><i class="ok"></i>אושר <i class="pd"></i>ממתין</span></div></div>`; }).join("") : ""}
     <div class="hint ${S.from !== "" && S.to !== "" ? "" : "empty"}">${seg ? `חתכי ${esc(seg.label)}: ${rng(seg.lo, seg.hi)}` : ""}${seg && S.from !== "" && S.to !== "" ? ` · <b style="color:#2f6db5">ק.ד. ${kdOf(seg, S.from)} – ${kdOf(seg, S.to)}</b>${S.byKd ? ` <span class="pill p2">הוזן לפי ק.ד.</span>` : ""}` : ""}</div>`}
   </div>
-  <div class="card tiles ${sel.length ? "has" : ""}"><div class="flow">${groupActs(acts).map(({ G, acts: ga }) => `<section class="agrp" style="--g:${G.color};--gt:${G.tint}"><div class="acts"><div class="gstart"><div class="agh"><span class="agi">${agIcon(G.key)}</span><b>${G.name}</b></div>${actTile(ga[0])}</div>${ga.slice(1).map(actTile).join("")}</div></section>`).join("")}</div></div>
+  <div class="card tiles ${sel.length ? "has" : ""}"><div class="flow">${groupActs(acts).map(({ G, acts: ga }) => `<section class="agrp" style="--g:${G.color};--gt:${G.tint}"><div class="agh"><span class="agi">${agIcon(G.key)}</span><b>${G.name}</b></div><div class="acts">${ga.map(actTile).join("")}</div></section>`).join("")}</div></div>
   <div class="card side-note"><div class="lbl" style="margin-top:0">הערה (לא חובה)</div><textarea id="note" rows="2">${esc(S.note)}</textarea></div>
   ${S.dup ? `<div class="dup"><b>${S.dup.hits.length === 1 && !S.dup.clean.length ? (S.dup.full ? "הטווח הזה כבר דווח" : "חלק מהטווח כבר דווח") : "חלק מהמלאכות כבר דווחו בטווח הזה"}</b>
     <div class="small">${S.dup.hits.map(x => `<div style="margin-top:4px"><b>${esc(x.name)}</b> — ${x.full ? "כבר דווח כולו" : `חדש: ${x.gaps.map(([p, q]) => rng(p, q)).join(", ")}`}<br>${x.overl.map(o => `${rng(o.f, o.t)} · ${fmtD(o.date)} · ${esc(o.by)} · ${o.st}`).join("<br>")}</div>`).join("")}
@@ -370,7 +388,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-09j";
+const VER = "2026-10-09k";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
