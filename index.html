@@ -1713,7 +1713,25 @@ function deliveryCoverage(range, dls) {
   const c = coverage(range, dls.filter(x => x.status !== "מבוטל" && (!x.kind || x.kind === DLV_KINDS[0])));
   return c ? c.pct : null;
 }
-function dlvEmpty(cid = "") { return ({ date: todayStr(), contractorId: cid, kdFrom: "", kdTo: "", title: "", kind: "תנוחה וחתכים", revision: "", status: "לביצוע", note: "", msg: "", err: false }); }
+/** מסירות: סנכרון ק.ד. ↔ חתך. חתכים חוזרים בין משרדים — לכן מעדיפים את קטעי התכנון שבגזרת הקבלן, ושומרים לאיזה קטע שייך החתך */
+function dlvSegs(d, cid) { const c = d.contractors.find(x => x.id === cid), all = d.designSegments.filter(s => segKdSec(s));
+  const own = c && kdRange(c) ? designInRange(d, kdRange(c)).map(x => x.s).filter(s => segKdSec(s)) : []; return { own, all }; }
+const kdStr = k => k === null || k === undefined || isNaN(k) ? "" : String(Math.round(k * 10) / 10);
+function dlvKdToSec(d, cid, kd) { const k = kdNum(kd); if (k === null) return null; const { own, all } = dlvSegs(d, cid);
+  const s = segOfKd(own, k) || segOfKd(all, k); return s ? { sec: kd2sec(s, k), seg: s.id } : null; }
+function dlvSecToKd(d, cid, sec, hint) { const n = Number(sec); if (sec === "" || sec == null || isNaN(n)) return null; const { own, all } = dlvSegs(d, cid);
+  const inSeg = s => n >= Math.min(+s.secFrom, +s.secTo) && n <= Math.max(+s.secFrom, +s.secTo);
+  const c1 = own.filter(inSeg), c2 = all.filter(inSeg), s = c1.find(x => x.id === hint) || (c1.length === 1 ? c1[0] : null) || c2.find(x => x.id === hint) || (c1[0] || (c2.length === 1 ? c2[0] : null));
+  return s ? { kd: kdStr(sec2kd(s, n)), seg: s.id, many: c1.length > 1 || (!c1.length && c2.length > 1) } : null; }
+/** מה לעדכן כשמשנים ק.ד. או חתך במסירה */
+function dlvSync(d, x, key, v) {
+  const end = /From$/.test(key) ? "From" : "To", p = { [key]: v };
+  if (key === "kdFrom" || key === "kdTo") { const r = dlvKdToSec(d, x.contractorId, v); Object.assign(p, r ? { ["sec" + end]: r.sec, ["sec" + end + "Seg"]: r.seg } : { ["sec" + end]: "", ["sec" + end + "Seg"]: "" }); }
+  else { const r = dlvSecToKd(d, x.contractorId, v, x["sec" + end + "Seg"] || x["sec" + (end === "From" ? "To" : "From") + "Seg"]); if (r) Object.assign(p, { ["kd" + end]: r.kd, ["sec" + end + "Seg"]: r.seg }); }
+  return p;
+}
+const segName = (d, id) => { const s = d.designSegments.find(x => x.id === id); return s ? `${d.designOffices.find(o => o.id === s.officeId)?.name || ""} ${s.num}` : ""; };
+function dlvEmpty(cid = "") { return ({ date: todayStr(), contractorId: cid, kdFrom: "", kdTo: "", secFrom: "", secTo: "", title: "", kind: "תנוחה וחתכים", revision: "", status: "לביצוע", note: "", msg: "", err: false }); }
 
 function deliveryForm(d, fixedCid) {
   const f = ui.df; if (fixedCid) f.contractorId = fixedCid;
@@ -1725,6 +1743,8 @@ function deliveryForm(d, fixedCid) {
     ${fixedCid ? "" : `<label class="field">קבלן<select id="df_c" data-df="contractorId" data-rerender="1"><option value="">בחר…</option>${d.contractors.map(x => `<option value="${x.id}" ${x.id === f.contractorId ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>`}
     <label class="field">מק.ד.<input id="df_from" value="${esc(f.kdFrom)}" data-df="kdFrom" data-rerender="1" inputmode="decimal"></label>
     <label class="field">עד ק.ד.<input id="df_to" value="${esc(f.kdTo)}" data-df="kdTo" data-rerender="1" inputmode="decimal"></label>
+    <label class="field">או מחתך${f.secFromSeg ? ` <small class="muted">${esc(segName(d, f.secFromSeg))}</small>` : ""}<input id="df_sfrom" value="${esc(f.secFrom ?? "")}" data-df="secFrom" data-rerender="1" inputmode="numeric"></label>
+    <label class="field">עד חתך${f.secToSeg ? ` <small class="muted">${esc(segName(d, f.secToSeg))}</small>` : ""}<input id="df_sto" value="${esc(f.secTo ?? "")}" data-df="secTo" data-rerender="1" inputmode="numeric"></label>
     <label class="field">תיאור / סט תוכניות<input id="df_title" value="${esc(f.title)}" data-df="title" placeholder="לדוגמה: תנוחה וחתכים"></label>
     <label class="field">סוג<select id="df_kind" data-df="kind">${DLV_KINDS.map(k => `<option ${k === f.kind ? "selected" : ""}>${k}</option>`).join("")}</select></label>
     <label class="field">מהדורה<input id="df_rev" value="${esc(f.revision)}" data-df="revision" placeholder="0 / A / 3"></label>
@@ -2086,89 +2106,201 @@ const PPTX_SRC = ["https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxg
 async function loadPptx() { if (window.PptxGenJS) return; for (const u of PPTX_SRC) { try { await loadScript(u); if (window.PptxGenJS) return; } catch (e) {} } throw new Error("לא ניתן לטעון את רכיב ה-PowerPoint (אין חיבור לאינטרנט?)"); }
 const addDays = (s, n) => { const t = new Date(s + "T12:00:00"); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
 function snapshot(d, c, asOf) {
-  const ex = execState(d, c.id, asOf), km = ex.rows.find(r => r.plan)?.plan / 1000 || lenFromDesign(d, kdRange(c))?.km || 0, st = {};
-  STAGES.forEach(g => { const it = itemStageStat(d, c, g, asOf); if (it) { st[g] = it.pct; return; }
-    const ur = ex.rows.filter(r => r.a.stage === g && r.unit); if (ur.length) { st[g] = null; return; }
-    const rs = ex.rows.filter(r => r.a.stage === g && r.pct !== null); st[g] = rs.length ? rs.reduce((t, r) => t + r.pct, 0) / rs.length : null; });
-  return { ex, km, st, overall: ex.overall };
+  const ex = execState(d, c.id, asOf), km = ex.rows.find(r => r.plan)?.plan / 1000 || lenFromDesign(d, kdRange(c))?.km || 0, st = {}, info = {};
+  STAGES.forEach(g => { const it = itemStageStat(d, c, g, asOf); if (it) { st[g] = it.pct; info[g] = { u: true, done: it.done, total: it.total }; return; }
+    const ur = ex.rows.filter(r => r.a.stage === g && r.unit);
+    if (ur.length) { const done = ur.reduce((t, r) => t + (r.done || 0), 0), plan = ur.reduce((t, r) => t + (r.plan || 0), 0); st[g] = plan ? Math.min(1, done / plan) : (done ? null : 0); info[g] = { u: true, done, total: plan || null }; return; }
+    const rs = ex.rows.filter(r => r.a.stage === g && r.pct !== null); st[g] = rs.length ? rs.reduce((t, r) => t + r.pct, 0) / rs.length : null; info[g] = { u: false }; });
+  return { ex, km, st, info, overall: ex.overall };
 }
+/** קטעים שבוצעו (מאושר) לכל מלאכה — בק.ד., ממוזגים */
+function kdDone(d, c, asOf) {
+  const segs = Object.fromEntries(d.designSegments.map(s => [s.id, s])), out = {};
+  for (const p of d.progress) {
+    if (p.contractorId !== c.id || p.review || (asOf && p.date && p.date > asOf) || p.secFrom === "" || p.secTo === "" || p.secFrom == null) continue;
+    const s = segs[p.segmentId]; if (!s) continue;
+    const k1 = sec2kd(s, Number(p.secFrom)), k2 = sec2kd(s, Number(p.secTo)); if (k1 === null || k2 === null) continue;
+    (out[p.activityId] = out[p.activityId] || []).push([Math.min(k1, k2), Math.max(k1, k2)]);
+  }
+  for (const k in out) { const v = out[k].sort((x, y) => x[0] - y[0]), m = []; for (const [x, y] of v) { const L = m[m.length - 1]; if (L && x <= L[1] + 0.05) L[1] = Math.max(L[1], y); else m.push([x, y]); } out[k] = m; }
+  return out;
+}
+/** a פחות b (רשימות טווחים ממוזגות) */
+function ivMinus(a, b) { const out = []; for (const [x, y] of a) { let segs = [[x, y]]; for (const [p, q] of b) segs = segs.flatMap(([u, v]) => q <= u || p >= v ? [[u, v]] : [...(p > u ? [[u, p]] : []), ...(q < v ? [[q, v]] : [])]); out.push(...segs.filter(([u, v]) => v - u > 0.02)); } return out; }
 async function mgmtDeck(asOf) {
   await loadPptx();
-  const d = D(), from = addDays(asOf, -7), inWeek = s => s && s > from && s <= asOf;
+  const d = D(), from = addDays(asOf, -7), mFrom = addDays(asOf, -30), inWeek = s => s && s > from && s <= asOf, inMonth = s => s && s > mFrom && s <= asOf;
   const P = new PptxGenJS(); P.layout = "LAYOUT_WIDE"; P.rtlMode = true; P.title = "סטטוס שבועי — מכשול מזרחי";
-  const F = "Arial", INK = "1F2A24", MUT = "6B7064", ACC = "2F6B4F", HEAD = "DBE8F1", W = 13.33;
-  const n1 = v => v === null || v === undefined ? "—" : Math.round(v * 1000).toLocaleString("he-IL");   // ק״מ → מטרים
+  const C_OLD = "2F7D4F", C_MON = "8FD19E", C_WK = "F39C12";   // ירוק כהה = לפני החודש · ירוק בהיר = בחודש האחרון · כתום = בשבוע האחרון
+  const F = "Arial", INK = "1F2A24", MUT = "6B7064", ACC = "2F6B4F", HEAD = "DBE8F1", SUB = "EEF3EA", W = 13.33, LANG = "he-IL";
+  const RLM = "‏", m0 = v => Math.round(v * 1000).toLocaleString("he-IL");
+  const n1 = v => v === null || v === undefined ? "—" : m0(v);                         // ק״מ → מטרים
   const pc = v => v === null || v === undefined ? "—" : Math.round(v * 100) + "%";
-  const sgn = v => v > 0.05 ? `+${n1(v)}` : "—";
-  const wk = v => v > 0.05 ? `השבוע +${n1(v)} מ׳` : "ללא שינוי השבוע";
-  const T = (sl, text, o) => sl.addText(text, { fontFace: F, color: INK, rtlMode: true, align: "right", valign: "top", ...o });
+  const sgn = v => v > 0.05 ? `+${m0(v)}` : "—";
+  const of = (a, b) => `${a}${RLM} מתוך${RLM} ${b}`;                                   // "4,618 מתוך 15,570" — בלי שהרווח ייבלע
+  const wk = v => v > 0.05 ? `השבוע +${m0(v)}${RLM} מ׳` : "ללא שינוי השבוע";
+  const wkmo = (w, m) => `${wk(w)} · ${m > 0.05 ? `החודש +${m0(m)}${RLM} מ׳` : "ללא שינוי החודש"}`;
+  const kd1 = k => String(Math.round(k));   // ק.ד. תמיד מספר שלם
+  const T = (sl, text, o) => sl.addText(Array.isArray(text) ? text.map(r => ({ ...r, options: { rtlMode: true, lang: LANG, align: o?.align || "right", ...(r.options || {}) } })) : text,
+    { fontFace: F, color: INK, rtlMode: true, lang: LANG, align: "right", valign: "top", isTextBox: true, ...o });
   const header = (sl, title, sub) => { sl.background = { color: "FFFFFF" };
     sl.addShape(P.ShapeType.rect, { x: 0, y: 0, w: W, h: 0.9, fill: { color: "1F2A24" } });
     T(sl, title, { x: 0.4, y: 0.12, w: W - 0.8, h: 0.5, fontSize: 24, bold: true, color: "FFFFFF" });
     T(sl, sub, { x: 0.4, y: 0.55, w: W - 0.8, h: 0.3, fontSize: 12, color: "C9D4CC" });
-    T(sl, `שבוע ${fmtD(addDays(from, 1))}–${fmtD(asOf)}`, { x: 0.4, y: 7.05, w: W - 0.8, h: 0.3, fontSize: 9, color: MUT }); };
+    T(sl, `שבוע ${fmtD(addDays(from, 1))} – ${fmtD(asOf)}`, { x: 0.4, y: 7.08, w: W - 0.8, h: 0.3, fontSize: 9, color: MUT }); };
   const kpiBox = (sl, x, y, w, label, big, small) => {
     sl.addShape(P.ShapeType.roundRect, { x, y, w, h: 1.15, fill: { color: "F4F6F1" }, line: { color: "DADFD5" }, rectRadius: 0.08 });
     T(sl, label, { x: x + 0.1, y: y + 0.08, w: w - 0.2, h: 0.3, fontSize: 11, color: MUT });
-    T(sl, big, { x: x + 0.1, y: y + 0.36, w: w - 0.2, h: 0.48, fontSize: 24, bold: true });
+    T(sl, big, { x: x + 0.1, y: y + 0.36, w: w - 0.2, h: 0.48, fontSize: 24, bold: true, fit: "shrink" });
     T(sl, small, { x: x + 0.1, y: y + 0.82, w: w - 0.2, h: 0.28, fontSize: 10, color: MUT }); };
-  const table = (sl, head, rows, o) => {    // עמודה ראשונה מימין — הופכים סדר עמודות לטבלה של PowerPoint
-    const cell = (t, h) => ({ text: String(t ?? ""), options: { fontFace: F, fontSize: o.fs || 11, color: INK, bold: !!h, fill: { color: h ? HEAD : "FFFFFF" }, align: "right", valign: "middle", rtlMode: true } });
-    const R = [head.map(h => cell(h, 1)).reverse(), ...rows.map(r => r.map(t => typeof t === "object" && t !== null ? { text: String(t.text), options: { ...cell("").options, ...t.o } } : cell(t)).reverse())];
-    sl.addTable(R, { x: o.x, y: o.y, w: o.w, colW: o.colW ? [...o.colW].reverse() : undefined, border: { type: "solid", color: "C9CFC4", pt: 0.75 }, autoPage: false });
+  /** טבלה: עמודה ראשונה מימין (הופכים סדר עמודות). rowH מתאים את עצמו לגובה הפנוי כדי שהטבלה לא תצא מהשקף */
+  const table = (sl, head, rows, o) => {
+    const n = rows.length + 1, rh = o.maxH ? Math.min(o.rh || 0.36, o.maxH / n) : (o.rh || 0.36), fs = o.fs ? Math.min(o.fs, Math.max(7.5, rh * 34)) : Math.min(12, Math.max(7.5, rh * 34));
+    const cell = (t, hd) => ({ text: String(t ?? ""), options: { fontFace: F, fontSize: fs, color: INK, bold: !!hd, fill: { color: hd ? HEAD : "FFFFFF" }, align: "right", valign: "middle", rtlMode: true, lang: LANG } });
+    const R = [head.map(x => cell(x, 1)).reverse(), ...rows.map(r => r.map(t => t && t.runs ? { text: t.runs.map(u => ({ text: u.text, options: { fontFace: F, fontSize: fs, color: INK, rtlMode: true, lang: LANG, ...u.options } })), options: cell("").options }
+      : typeof t === "object" && t !== null ? { text: String(t.text), options: { ...cell("").options, ...t.o } } : cell(t)).reverse())];
+    sl.addTable(R, { x: o.x, y: o.y, w: o.w, colW: o.colW ? [...o.colW].reverse() : undefined, rowH: rh, border: { type: "solid", color: "C9CFC4", pt: 0.75 }, autoPage: false });
+    return o.y + rh * n;
   };
-  const mains = d.contractors.filter(isMain), snaps = mains.map(c => ({ c, now: snapshot(d, c, asOf), prev: snapshot(d, c, from) }));
+  const tot = t => ({ text: t, o: { bold: true, fill: { color: SUB } } }), blank = () => ({ text: "", o: { fill: { color: SUB } } });
+  const mains = d.contractors.filter(isMain), snaps = mains.map(c => ({ c, now: snapshot(d, c, asOf), prev: snapshot(d, c, from), mon: snapshot(d, c, mFrom) }));
+  const dnOf = x => (x.overall || 0) * x.km;
   const urgent = d.issues.filter(i => i.mgmt && i.status !== "סגור");
-  // 1. סיכום
-  { const sl = P.addSlide(); header(sl, "מכשול מזרחי — סטטוס שבועי", `נכון ל-${fmtD(asOf)}`);
-    const kmAll = snaps.reduce((t, s) => t + s.now.km, 0), done = snaps.reduce((t, s) => t + (s.now.overall || 0) * s.now.km, 0), donePrev = snaps.reduce((t, s) => t + (s.prev.overall || 0) * s.prev.km, 0);
+
+  // 1. סיכום — אורך / בוצע / אחוז / השבוע בעמודות נפרדות
+  { const sl = P.addSlide(); header(sl, "מכשול מזרחי — סטטוס שבועי", `נכון לתאריך ${fmtD(asOf)}`);
+    const kmAll = snaps.reduce((t, s) => t + s.now.km, 0), done = snaps.reduce((t, s) => t + dnOf(s.now), 0), donePrev = snaps.reduce((t, s) => t + dnOf(s.prev), 0), doneMon = snaps.reduce((t, s) => t + dnOf(s.mon), 0);
     const openAll = d.issues.filter(i => i.status !== "סגור");
-    kpiBox(sl, 9.0, 1.2, 3.9, "ביצוע כולל (מטר שווה-ערך)", `${n1(done)} מתוך ${n1(kmAll)}`, `${pc(kmAll ? done / kmAll : null)} · ${wk(done - donePrev)}`);
+    kpiBox(sl, 9.0, 1.2, 3.9, "ביצוע כולל — מטר שווה-ערך", of(n1(done), n1(kmAll)), `${pc(kmAll ? done / kmAll : null)} · ${wkmo(done - donePrev, done - doneMon)}`);
     kpiBox(sl, 4.9, 1.2, 3.9, "נושאים פתוחים", String(openAll.length), `HOLD: ${openAll.filter(i => i.status === "HOLD").length} · עודכנו השבוע: ${openAll.filter(i => inWeek(i.updated)).length}`);
     kpiBox(sl, 0.4, 1.2, 4.3, "נושאים להחלטת הנהלה", String(urgent.length), urgent.length ? "פירוט בשקפים האחרונים" : "אין נושאים מסומנים");
-    const secs = [...new Set(mains.map(c => c.sector).filter(Boolean))];
-    const rows = [];
+    const secs = [...new Set(mains.map(c => c.sector).filter(Boolean))], rows = [];
     for (const sec of secs) { const ss = snaps.filter(s => s.c.sector === sec);
-      ss.forEach(s => { const o = d.issues.filter(i => i.contractorId === s.c.id && i.status !== "סגור");
-        rows.push([s.c.name, sec, n1(s.now.km), `${n1((s.now.overall || 0) * s.now.km)} (${pc(s.now.overall)})`, sgn((s.now.overall || 0) * s.now.km - (s.prev.overall || 0) * s.prev.km), String(o.length), String(o.filter(i => i.status === "HOLD").length), String(o.filter(i => i.mgmt).length)]); });
-      const km = ss.reduce((t, s) => t + s.now.km, 0), dn = ss.reduce((t, s) => t + (s.now.overall || 0) * s.now.km, 0), dp = ss.reduce((t, s) => t + (s.prev.overall || 0) * s.prev.km, 0);
-      rows.push([{ text: `סה״כ ${sec}`, o: { bold: true, fill: { color: "EEF3EA" } } }, { text: "", o: { fill: { color: "EEF3EA" } } }, { text: n1(km), o: { bold: true, fill: { color: "EEF3EA" } } },
-        { text: `${n1(dn)} (${pc(km ? dn / km : null)})`, o: { bold: true, fill: { color: "EEF3EA" } } }, { text: sgn(dn - dp), o: { bold: true, fill: { color: "EEF3EA" } } }, ...[0, 0, 0].map(() => ({ text: "", o: { fill: { color: "EEF3EA" } } }))]); }
-    table(sl, ["קבלן", "גזרה", "אורך (מ׳)", "בוצע מ׳ (%)", "השבוע", "פתוחים", "HOLD", "להנהלה"], rows, { x: 0.4, y: 2.6, w: 12.5, colW: [2.6, 1.3, 1.4, 2.4, 1.3, 1.2, 1.1, 1.2], fs: 12 });
+      ss.forEach(s => { const o = d.issues.filter(i => i.contractorId === s.c.id && i.status !== "סגור"), dn = (s.now.overall || 0) * s.now.km;
+        rows.push([s.c.name, sec, n1(s.now.km), n1(dn), pc(s.now.overall), sgn(dn - dnOf(s.prev)), sgn(dn - dnOf(s.mon)), String(o.length), String(o.filter(i => i.status === "HOLD").length), String(o.filter(i => i.mgmt).length)]); });
+      const km = ss.reduce((t, s) => t + s.now.km, 0), dn = ss.reduce((t, s) => t + dnOf(s.now), 0), dp = ss.reduce((t, s) => t + dnOf(s.prev), 0), dm = ss.reduce((t, s) => t + dnOf(s.mon), 0);
+      rows.push([tot(`סה״כ ${sec}`), blank(), tot(n1(km)), tot(n1(dn)), tot(pc(km ? dn / km : null)), tot(sgn(dn - dp)), tot(sgn(dn - dm)), blank(), blank(), blank()]); }
+    table(sl, ["קבלן", "גזרה", "אורך במ׳", "בוצע במ׳", "בוצע %", "השבוע במ׳", "החודש במ׳", "פתוחים", "HOLD", "להנהלה"], rows, { x: 0.4, y: 2.6, w: 12.5, colW: [2.2, 1.1, 1.3, 1.35, 1.1, 1.3, 1.3, 1.05, 0.85, 0.95], fs: 12, rh: 0.38, maxH: 4.3 });
   }
-  // 2. שקף לכל קבלן ראשי
-  for (const s of snaps) { const c = s.c, sl = P.addSlide();
-    header(sl, c.name, `${c.sector || ""} · ק.ד. ${kdTxt(kdRange(c))} · ${c.method || ""}${c.inspector ? " · מפקח: " + c.inspector : ""}`);
-    const dn = (s.now.overall || 0) * s.now.km, dp = (s.prev.overall || 0) * s.prev.km, iss = d.issues.filter(i => i.contractorId === c.id), open = iss.filter(i => i.status !== "סגור");
-    const dl = d.deliveries.filter(x => x.contractorId === c.id && inWeek(x.date));
-    kpiBox(sl, 9.0, 1.15, 3.9, "ביצוע כולל (מטר שווה-ערך)", `${n1(dn)} מתוך ${n1(s.now.km)}`, `${pc(s.now.overall)} · ${wk(dn - dp)}`);
-    kpiBox(sl, 4.9, 1.15, 3.9, "נושאים פתוחים", String(open.length), `HOLD: ${open.filter(i => i.status === "HOLD").length} · נסגרו השבוע: ${iss.filter(i => i.status === "סגור" && inWeek(i.updated)).length}`);
-    kpiBox(sl, 0.4, 1.15, 4.3, "תוכניות שנמסרו השבוע", String(dl.length), dl.slice(0, 2).map(x => `${x.kind || ""} ${x.kdFrom}–${x.kdTo}`).join(" · ") || "—");
-    const stRows = STAGES.filter(g => s.now.st[g] !== null).map(g => [g, `${n1(s.now.st[g] * s.now.km)} (${pc(s.now.st[g])})`, sgn((s.now.st[g] - (s.prev.st[g] || 0)) * s.now.km)]);
-    if (stRows.length) table(sl, ["שלב", "בוצע מ׳ (%)", "השבוע"], stRows, { x: 7.6, y: 2.5, w: 5.3, colW: [2.3, 1.9, 1.1], fs: 10.5 });
-    const upd = iss.flatMap(i => Object.values(i.history || {}).filter(h => inWeek(h.date)).map(h => ({ i, h }))).sort((a, b) => String(b.h.date).localeCompare(String(a.h.date)));
-    const block = open.filter(i => i.status === "HOLD" || i.category === "חסם").sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
-    const bl = (arr, f) => arr.length ? arr.map(f) : [{ text: "—", options: { color: MUT } }];
-    T(sl, "עדכונים השבוע", { x: 0.4, y: 2.45, w: 7.0, h: 0.32, fontSize: 13, bold: true, color: ACC });
-    const cut = (t, n) => t.length > n ? t.slice(0, n - 1) + "…" : t, tag = i => i.code ? ` [${i.code}]` : "";
-    T(sl, bl(upd.slice(0, 5), u => ({ text: cut(`${u.i.title} — ${u.h.text.replace(/^[^:]{0,30}:\s*/, "")}`, 125) + tag(u.i), options: { bullet: { indent: 12 }, breakLine: true } })), { x: 0.4, y: 2.8, w: 7.0, h: 2.35, fontSize: 10.5, paraSpaceAfter: 4, fit: "shrink" });
-    T(sl, "חסמים / HOLD", { x: 0.4, y: 5.25, w: 7.0, h: 0.32, fontSize: 13, bold: true, color: "B5532C" });
-    T(sl, bl(block.slice(0, 4), i => ({ text: cut(`${i.title}${i.kdFrom ? ` (ק.ד. ${itemTxt(i)})` : ""} — ${i.last || ""}`, 125) + tag(i), options: { bullet: { indent: 12 }, breakLine: true } })), { x: 0.4, y: 5.6, w: 7.0, h: 1.4, fontSize: 10.5, paraSpaceAfter: 4, fit: "shrink" });
+  // 2. לכל קבלן ראשי: שקף סטטוס + שקף פריסה לפי ק.ד.
+  for (const s of snaps) { const c = s.c;
+    { const sl = P.addSlide();
+      header(sl, c.name, `${c.sector || ""} · ק.ד. ${kdTxt(kdRange(c))} · ${c.method || ""}${c.inspector ? " · מפקח: " + c.inspector : ""}`);
+      const dn = dnOf(s.now), dp = dnOf(s.prev), dm = dnOf(s.mon), iss = d.issues.filter(i => i.contractorId === c.id), open = iss.filter(i => i.status !== "סגור");
+      const dl = d.deliveries.filter(x => x.contractorId === c.id && inWeek(x.date));
+      kpiBox(sl, 9.0, 1.15, 3.9, "ביצוע כולל — מטר שווה-ערך", of(n1(dn), n1(s.now.km)), `${pc(s.now.overall)} · ${wkmo(dn - dp, dn - dm)}`);
+      kpiBox(sl, 4.9, 1.15, 3.9, "נושאים פתוחים", String(open.length), `HOLD: ${open.filter(i => i.status === "HOLD").length} · נסגרו השבוע: ${iss.filter(i => i.status === "סגור" && inWeek(i.updated)).length}`);
+      kpiBox(sl, 0.4, 1.15, 4.3, "תוכניות שנמסרו השבוע", String(dl.length), dl.slice(0, 2).map(x => `${x.kind || ""} ${x.kdFrom}–${x.kdTo}`).join(" · ") || "—");
+      // שלבים: מטרים ואחוזים בעמודות נפרדות; פריטים (ארונות שקד וכו׳) ביחידות. שלבים שטרם החלו — בשורה אחת מתחת
+      const started = [], notYet = [];
+      const du = (a, b) => a - (b || 0) > 0 ? `+${a - (b || 0)} יח׳` : "—";
+      for (const g of STAGES) { const v = s.now.st[g], inf = s.now.info[g], pv = s.prev.info[g], mv = s.mon.info[g]; if (v === null && !(inf?.u && inf.done)) continue;
+        if (inf?.u) { if (!inf.done) { notYet.push(g); continue; }
+          started.push([g, `${inf.done} יח׳`, inf.total ? `${inf.total} יח׳` : "—", pc(v), du(inf.done, pv?.done), du(inf.done, mv?.done)]); }
+        else { if (!v) { notYet.push(g); continue; }
+          started.push([g, `${n1(v * s.now.km)}`, n1(s.now.km), pc(v), sgn((v - (s.prev.st[g] || 0)) * s.now.km), sgn((v - (s.mon.st[g] || 0)) * s.now.km)]); } }
+      let yEnd = 2.5;
+      if (started.length) yEnd = table(sl, ["שלב", "בוצע", "מתוכנן", "%", "השבוע", "החודש"], started, { x: 6.85, y: 2.5, w: 6.05, colW: [1.85, 1.05, 1.05, 0.6, 0.75, 0.75], fs: 10.5, rh: 0.3, maxH: notYet.length ? 3.85 : 4.3 });
+      else T(sl, "עוד לא נרשם ביצוע מאושר", { x: 7.0, y: 2.5, w: 5.9, h: 0.4, fontSize: 12, color: MUT });
+      if (notYet.length) T(sl, `טרם החלו: ${notYet.join(" · ")}`, { x: 7.0, y: Math.min(yEnd + 0.06, 6.4), w: 5.9, h: 0.4, fontSize: 9, color: MUT, fit: "shrink" });
+      T(sl, "מטרים = אורך שבוצע מתוך האורך המתוכנן בגזרה · ארונות שקד ופריטים — ביחידות", { x: 7.0, y: 6.82, w: 5.9, h: 0.25, fontSize: 8, color: MUT });
+      const upd = iss.flatMap(i => Object.values(i.history || {}).filter(h => inWeek(h.date)).map(h => ({ i, h }))).sort((a, b) => String(b.h.date).localeCompare(String(a.h.date)));
+      const block = open.filter(i => i.status === "HOLD" || i.category === "חסם").sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
+      const bl = (arr, f) => arr.length ? arr.map(f) : [{ text: "—", options: { color: MUT } }];
+      const cut = (t, n) => t.length > n ? t.slice(0, n - 1) + "…" : t, tag = i => i.code ? ` · ${i.code}` : "";
+      T(sl, "עדכונים השבוע", { x: 0.4, y: 2.45, w: 6.25, h: 0.32, fontSize: 13, bold: true, color: ACC });
+      T(sl, bl(upd.slice(0, 5), u => ({ text: cut(`${u.i.title} — ${u.h.text.replace(/^[^:]{0,30}:\s*/, "")}`, 120) + tag(u.i), options: { bullet: { indent: 12 }, breakLine: true } })), { x: 0.4, y: 2.8, w: 6.4, h: 2.35, fontSize: 10.5, paraSpaceAfter: 4, fit: "shrink" });
+      T(sl, "חסמים / HOLD", { x: 0.4, y: 5.25, w: 6.4, h: 0.32, fontSize: 13, bold: true, color: "B5532C" });
+      T(sl, bl(block.slice(0, 4), i => ({ text: cut(`${i.title}${i.kdFrom ? ` · ק.ד. ${itemTxt(i)}` : ""} — ${i.last || ""}`, 120) + tag(i), options: { bullet: { indent: 12 }, breakLine: true } })), { x: 0.4, y: 5.6, w: 6.4, h: 1.4, fontSize: 10.5, paraSpaceAfter: 4, fit: "shrink" });
+    }
+    // פריסה לפי ק.ד. — ציר מק.ד. ההתחלה של הקבלן (מימין) עד הסוף (משמאל)
+    { const r = kdRange(c), kA = kdNum(c.kdFrom), kB = kdNum(c.kdTo); if (!r || kA === null || kB === null) continue;
+      const sl = P.addSlide(); header(sl, `${c.name} — פריסת הביצוע לפי ק.ד.`, `ק.ד. ${kd1(kA)} עד ${kd1(kB)} · מה בוצע ואושר עד ${fmtD(asOf)}`);
+      const LAB = 2.35, TXT = 3.05, barR = W - 0.4 - LAB - 0.12, barL = 0.4 + TXT + 0.12, barW = barR - barL;
+      const xOf = k => barR - (k - kA) / (kB - kA) * barW, clip = ([x, y]) => [Math.max(r.lo, x), Math.min(r.hi, y)];
+      const done = kdDone(d, c, asOf), doneW = kdDone(d, c, from), doneM = kdDone(d, c, mFrom), acts = d.activities.filter(a => a.contractorId === c.id && !isUnitAct(a)).sort(byOrder);
+      const exr = Object.fromEntries(s.now.ex.rows.map(q => [q.a.id, q])), exW = Object.fromEntries(s.prev.ex.rows.map(q => [q.a.id, q.done || 0])), exM = Object.fromEntries(s.mon.ex.rows.map(q => [q.a.id, q.done || 0]));
+      const rowsA = acts.map(a => ({ a, iv: (done[a.id] || []).map(clip).filter(([x, y]) => y > x) })).filter(x => x.iv.length);
+      const kinds = [...new Set(d.items.filter(i => i.status !== "מבוטל" && mainAt(d, i)?.id === c.id && kdNum(i.kdFrom) !== null).map(i => i.kind || "אחר"))];
+      const rowsI = kinds.map(k => ({ k, its: d.items.filter(i => (i.kind || "אחר") === k && i.status !== "מבוטל" && mainAt(d, i)?.id === c.id && kdNum(i.kdFrom) !== null) }));
+      const N = rowsA.length + rowsI.length;
+      // מקטעי תכנון + סרגל ק.ד.
+      for (const x of designInRange(d, r)) { const q = kdRange(x.s); if (!q) continue; const lo = Math.max(r.lo, q.lo), hi = Math.min(r.hi, q.hi); if (hi <= lo) continue;
+        const x1 = Math.min(xOf(lo), xOf(hi)), x2 = Math.max(xOf(lo), xOf(hi));
+        sl.addShape(P.ShapeType.rect, { x: x1, y: 1.08, w: x2 - x1, h: 0.3, fill: { color: x.office?.color ? x.office.color.replace("#", "").slice(0, 6) : "EEF0EB" }, line: { color: "FFFFFF", width: 1 } });
+        T(sl, `${x.office?.name || ""} ${x.s.num}`, { x: x1, y: 1.08, w: x2 - x1, h: 0.3, fontSize: 9, align: "center", valign: "middle", margin: 0, fit: "shrink" }); }
+      T(sl, "קטע תכנון", { x: barR + 0.12, y: 1.08, w: LAB, h: 0.3, fontSize: 9, color: MUT, valign: "middle", margin: 0 });
+      const span = Math.abs(kB - kA), step = span > 120 ? 20 : span > 60 ? 10 : 5, top = 1.95, bot = 6.72, IK = 1.55, rh = N ? Math.min(0.42, (bot - top) / (rowsA.length + rowsI.length * IK)) : 0.4, rhI = rh * IK;
+      for (let k = Math.ceil(r.lo / step) * step; k <= r.hi + 1e-9; k += step) { const xx = xOf(k);
+        sl.addShape(P.ShapeType.line, { x: xx, y: 1.75, w: 0, h: rh * rowsA.length + rhI * rowsI.length + 0.2, line: { color: "E3E6DF", width: 0.75 } });
+        T(sl, String(k), { x: xx - 0.3, y: 1.45, w: 0.6, h: 0.25, fontSize: 9, color: MUT, align: "center", margin: 0 }); }
+      T(sl, "ק.ד.", { x: barR + 0.12, y: 1.45, w: LAB, h: 0.25, fontSize: 9, color: MUT, margin: 0 });
+      if (!N) T(sl, "עוד לא נרשם ביצוע מאושר בגזרה הזו", { x: barL, y: 3.5, w: barW, h: 0.5, fontSize: 14, color: MUT, align: "center" });
+      const fs = Math.min(11, Math.max(7.5, rh * 26));
+      rowsA.forEach(({ a, iv }, i) => { const y = top + i * rh, bh = rh * 0.56, by = y + (rh - bh) / 2;
+        T(sl, svShort(a.name), { x: barR + 0.12, y, w: LAB, h: rh, fontSize: fs, valign: "middle", margin: 0, fit: "shrink" });
+        sl.addShape(P.ShapeType.rect, { x: barL, y: by, w: barW, h: bh, fill: { color: "EEF0EB" }, line: { color: "EEF0EB" } });
+        const wIv = (doneW[a.id] || []).map(clip), mIv = (doneM[a.id] || []).map(clip), newW = ivMinus(iv, wIv), newM = ivMinus(wIv.filter(([x, y]) => y > x), mIv);
+        const bar = (arr, col) => { for (const [lo, hi] of arr) { const x1 = Math.min(xOf(lo), xOf(hi)), x2 = Math.max(xOf(lo), xOf(hi)); sl.addShape(P.ShapeType.rect, { x: x1, y: by, w: Math.max(0.025, x2 - x1), h: bh, fill: { color: col }, line: { color: col, width: 0.25 } }); } };
+        bar(iv, C_OLD); bar(newM, C_MON); bar(newW, C_WK);
+        const ord = [...iv].sort((p, q) => kA > kB ? q[1] - p[1] : p[0] - q[0]).map(([lo, hi]) => kA > kB ? `${kd1(hi)}–${kd1(lo)}` : `${kd1(lo)}–${kd1(hi)}`);
+        const m = exr[a.id]?.done, mw = (m || 0) - (exW[a.id] || 0), mm = (m || 0) - (exM[a.id] || 0);
+        const tf = Math.max(7, fs - 1.5), wkRun = (t, s) => ({ text: t, options: { bold: true, color: "C25E00", fontSize: s } });
+        T(sl, [{ text: m ? m.toLocaleString("he-IL") + RLM + " מ׳" : "", options: { fontSize: tf } },
+          ...(mw > 0 ? [{ text: " · ", options: { fontSize: tf } }, wkRun(`השבוע +${mw.toLocaleString("he-IL")}`, tf + 2)] : []),
+          { text: `${mm > 0 ? ` · החודש +${mm.toLocaleString("he-IL")}` : ""} · ${ord.join(" · ")}`, options: { fontSize: tf } }], { x: 0.4, y, w: TXT, h: rh, fontSize: Math.max(7, fs - 1.5), valign: "middle", margin: 0, fit: "shrink", color: "333B35" }); });
+      const NOLAB = new Set(["מעבירי מים", "מעביר אירי"]);
+      rowsI.forEach(({ k, its }, j) => { const y = top + rowsA.length * rh + j * rhI, dot = Math.min(0.13, rhI * 0.3), cy = y + rhI / 2;
+        T(sl, KIND_PLURAL[k] || k, { x: barR + 0.12, y, w: LAB, h: rhI, fontSize: fs, valign: "middle", margin: 0, color: "2D6CB8", fit: "shrink" });
+        sl.addShape(P.ShapeType.line, { x: barL, y: cy, w: barW, h: 0, line: { color: "D5DAD0", width: 0.75, dashType: "dash" } });
+        const lab = !NOLAB.has(k), sorted = [...its].sort((p, q) => kdNum(p.kdFrom) - kdNum(q.kdFrom));
+        sorted.forEach((it, n) => { const k0 = kdNum(it.kdFrom); if (k0 < r.lo - 0.5 || k0 > r.hi + 0.5) return; const st = it.status, xx = xOf(Math.max(r.lo, Math.min(r.hi, k0)));
+          const fill = st === "הושלם" ? (inWeek(it.doneDate) ? C_WK : inMonth(it.doneDate) ? C_MON : C_OLD) : st === "בביצוע" ? "F7DC6F" : st === "HOLD" ? "C0392B" : "FFFFFF";
+          sl.addShape(P.ShapeType.ellipse, { x: xx - dot / 2, y: cy - dot / 2, w: dot, h: dot, fill: { color: fill }, line: { color: st === "הושלם" ? "1F5E3A" : "8A9088", width: 0.75 } });
+          if (lab) { const num = k === "ארון שקד" ? (String(it.name || "").match(/^ארון שקד\s+(\d+)\s*$/) || [])[1] || kd1(k0) : kd1(k0), up = n % 2 === 0;
+            T(sl, String(num), { x: xx - 0.25, y: up ? cy - dot / 2 - 0.17 : cy + dot / 2 + 0.005, w: 0.5, h: 0.16, fontSize: 6.5, align: "center", valign: up ? "bottom" : "top", margin: 0, color: st === "הושלם" ? "1F5E3A" : "555B55", bold: st === "הושלם" }); } });
+        const dn = its.filter(x => x.status === "הושלם").length, ip = its.filter(x => x.status === "בביצוע").length, dw = its.filter(x => x.status === "הושלם" && inWeek(x.doneDate)).length, dmn = its.filter(x => x.status === "הושלם" && inMonth(x.doneDate)).length;
+        const tf2 = Math.max(7, fs - 1.5);
+        T(sl, [{ text: `${of(dn, its.length)} הושלמו`, options: { fontSize: tf2 } }, ...(dw ? [{ text: " · ", options: { fontSize: tf2 } }, { text: `השבוע +${dw}`, options: { bold: true, color: "C25E00", fontSize: tf2 + 2 } }] : []), { text: `${dmn ? ` · החודש +${dmn}` : ""}${ip ? ` · ${ip} בביצוע` : ""}${k === "ארון שקד" ? (its.every(x => /^ארון שקד\s+\d+\s*$/.test(x.name || "")) ? " · המספר = מס׳ ארון" : its.some(x => /^ארון שקד\s+\d+\s*$/.test(x.name || "")) ? " · המספר = מס׳ ארון או ק.ד." : " · המספר = ק.ד.") : lab ? " · המספר = ק.ד." : ""}`, options: { fontSize: tf2 } }], { x: 0.4, y, w: TXT, h: rhI, fontSize: tf2, valign: "middle", margin: 0, color: "333B35", fit: "shrink" }); });
+      // מקרא צבעים
+      [[C_WK, "בוצע בשבוע האחרון"], [C_MON, "בחודש האחרון"], [C_OLD, "לפני כן"], ["F7DC6F", "פריט בביצוע"], ["C0392B", "HOLD"], ["FFFFFF", "פריט טרם"]].forEach(([col, t], i) => { const x = W - 0.4 - (i + 1) * 1.75;
+        sl.addShape(P.ShapeType.rect, { x: x + 1.48, y: 6.86, w: 0.2, h: 0.14, fill: { color: col }, line: { color: "8A9088", width: 0.5 } });
+        T(sl, t, { x, y: 6.82, w: 1.44, h: 0.22, fontSize: 8.5, color: MUT, margin: 0, valign: "middle" }); });
+      T(sl, "ק.ד. מחושב מהחתכים", { x: 0.4, y: 6.82, w: 1.9, h: 0.22, fontSize: 7.5, color: MUT, margin: 0, valign: "middle" });
+    }
   }
-  // 3. קבלנים ייעודיים
+  // 3. קבלנים ייעודיים — ביחידות, כל נתון בעמודה משלו
   const sp = d.contractors.filter(c => !isMain(c));
-  if (sp.length) { const sl = P.addSlide(); header(sl, "קבלנים ייעודיים", "שערים · ארונות שקד · חדרי טרפו · תט״ז · פינוי מוקשים · סבכות");
-    const rows = sp.flatMap(c => { const its = d.items.filter(i => i.contractorId === c.id && i.status !== "מבוטל");
-      return [...new Set(its.map(i => i.kind || "אחר"))].map(k => { const ii = its.filter(i => (i.kind || "אחר") === k), dn = ii.filter(i => i.status === "הושלם").length;
-        return [c.name, k, `${dn} מתוך ${ii.length}`, String(ii.filter(i => i.status === "בביצוע").length), String(ii.filter(i => i.status === "HOLD").length), String(ii.filter(i => i.status === "הושלם" && inWeek(i.doneDate)).length)]; }); });
-    table(sl, ["קבלן", "התמחות", "הושלמו", "בביצוע", "HOLD", "הושלמו השבוע"], rows, { x: 0.4, y: 1.2, w: 12.5, colW: [3.0, 3.0, 1.9, 1.5, 1.4, 1.7], fs: 12 });
+  if (sp.length) {
+    const groups = sp.flatMap(c => { const its = d.items.filter(i => i.contractorId === c.id && i.status !== "מבוטל");
+      return [...new Set(its.map(i => i.kind || "אחר"))].map(k => ({ c, k, ii: its.filter(i => (i.kind || "אחר") === k) })); });
+    { const sl = P.addSlide(); header(sl, "קבלנים ייעודיים", "שערים · ארונות שקד · חדרי טרפו · תט״ז · פינוי מוקשים · מעבירי מים — ביחידות");
+      const z = n => n ? `+${n}` : "—";
+      const rows = groups.map(({ c, k, ii }) => { const dn = ii.filter(i => i.status === "הושלם").length;
+        return [c.name, KIND_PLURAL[k] || k, String(ii.length), String(dn), pc(ii.length ? dn / ii.length : null), z(ii.filter(i => i.status === "הושלם" && inWeek(i.doneDate)).length), z(ii.filter(i => i.status === "הושלם" && inMonth(i.doneDate)).length), String(ii.filter(i => i.status === "בביצוע").length), String(ii.filter(i => i.status === "HOLD").length)]; });
+      table(sl, ["קבלן", "סוג", "סה״כ יח׳", "הושלמו", "הושלמו %", "השבוע", "החודש", "בביצוע", "HOLD"], rows, { x: 0.4, y: 1.2, w: 12.5, colW: [2.6, 2.4, 1.1, 1.05, 1.15, 1.0, 1.0, 1.1, 1.1], fs: 12, rh: 0.38, maxH: 5.6 });
+    }
+    // פירוט: באילו ק.ד. — הושלם / בביצוע / HOLD
+    const kdT = i => [i.kdFrom, i.kdTo].map(kdNum).filter(v => v !== null).map(kd1).filter((v, j, a) => a.indexOf(v) === j).join("–") || "—";
+    const kdList = (arr, colorize) => { const v = arr.map(i => ({ t: kdT(i), k: kdNum(i.kdFrom) ?? -1, c: colorize ? (inWeek(i.doneDate) ? "C25E00" : inMonth(i.doneDate) ? "2F7D4F" : null) : null })).sort((a, b) => b.k - a.k);
+      if (!v.length) return "—"; const cut = v.slice(0, 45), runs = [];
+      cut.forEach((x, j) => { runs.push({ text: x.t, options: x.c ? { bold: true, color: x.c } : {} }); if (j < cut.length - 1) runs.push({ text: ", ", options: {} }); });
+      if (v.length > 45) runs.push({ text: ` …ועוד ${v.length - 45}`, options: { color: MUT } });
+      return { runs }; };
+    const det = groups.filter(g => g.ii.some(i => ["הושלם", "בביצוע", "HOLD"].includes(i.status)));
+    for (let k = 0; k < Math.max(1, Math.ceil(det.length / 6)); k++) { const sl = P.addSlide();
+      header(sl, "קבלנים ייעודיים — פירוט לפי ק.ד.", det.length ? `מה הושלם, מה בביצוע ומה ב-HOLD${det.length > 6 ? ` · ${k + 1}/${Math.ceil(det.length / 6)}` : ""}` : "עוד אין פריטים שהושלמו או בביצוע");
+      if (det.length) table(sl, ["סוג", "הושלמו — ק.ד.", "בביצוע — ק.ד.", "HOLD — ק.ד."], det.slice(k * 6, k * 6 + 6).map(({ c, k: kk, ii }) => [`${KIND_PLURAL[kk] || kk}\n${c.name}`,
+        kdList(ii.filter(i => i.status === "הושלם"), true), kdList(ii.filter(i => i.status === "בביצוע")), kdList(ii.filter(i => i.status === "HOLD"))]), { x: 0.4, y: 1.2, w: 12.5, colW: [2.3, 4.2, 3.6, 2.4], fs: 10, rh: 0.92, maxH: 5.5 });
+      if (det.length) T(sl, [{ text: "בעמודת ״הושלמו״: ", options: { color: MUT } }, { text: "כתום מודגש", options: { bold: true, color: "C25E00" } }, { text: " = הושלם בשבוע האחרון · ", options: { color: MUT } }, { text: "ירוק מודגש", options: { bold: true, color: "2F7D4F" } }, { text: " = בחודש האחרון", options: { color: MUT } }], { x: 0.4, y: 6.8, w: 12.5, h: 0.25, fontSize: 9 });
+    }
   }
   // 4. נושאים דחופים להנהלה
   const U = [...urgent].sort((a, b) => String(a.opened).localeCompare(String(b.opened)));
   for (let k = 0; k < Math.max(1, Math.ceil(U.length / 6)); k++) { const sl = P.addSlide();
     header(sl, "נושאים לטיפול / החלטת הנהלה", U.length ? `${U.length} נושאים מסומנים${U.length > 6 ? ` · ${k + 1}/${Math.ceil(U.length / 6)}` : ""}` : "לא סומנו נושאים — מסמנים ״להנהלה״ בלשונית הנושאים הפתוחים");
     if (U.length) table(sl, ["מס׳", "קבלן", "נושא", "ק.ד.", "מצב אחרון", "נדרש מההנהלה", "פתוח"], U.slice(k * 6, k * 6 + 6).map(i => [i.code || "", d.contractors.find(c => c.id === i.contractorId)?.name || "",
-      i.title, itemTxt(i) || "—", (i.last || "").slice(0, 160), i.mgmtAsk || "—", `${daysSince(i.opened) ?? "—"} ימים`]), { x: 0.4, y: 1.15, w: 12.5, colW: [0.8, 1.4, 2.6, 0.9, 3.6, 2.4, 0.8], fs: 10.5 });
+      i.title, itemTxt(i) || "—", (i.last || "").slice(0, 160), i.mgmtAsk || "—", `${daysSince(i.opened) ?? "—"} ימים`]), { x: 0.4, y: 1.15, w: 12.5, colW: [0.8, 1.4, 2.6, 0.9, 3.6, 2.4, 0.8], fs: 10.5, rh: 0.9, maxH: 5.8 });
   }
   await P.writeFile({ fileName: `סטטוס הנהלה ${fmtD(asOf).replace(/\//g, ".")}.pptx` });
 }
@@ -2375,7 +2507,7 @@ function pageContractor(d, id) {
    הסתרת עמודה לא מוחקת את הנתונים שבה.
    ===================================================================== */
 const COL_TYPES = [["text", "טקסט"], ["number", "מספר"], ["money", "סכום ₪ (עם סה״כ)"], ["date", "תאריך"], ["link", "קישור"], ["check", "סימון ✓"]];
-const DEFAULT_HIDDEN = { orders: {}, deliveries: { contractor: true }, designSegments: { fromPlace: true, toPlace: true, kdFromUrl: true, kdToUrl: true }, contractorDesign: { place: true, map: true },
+const DEFAULT_HIDDEN = { orders: {}, deliveries: {}, designSegments: { fromPlace: true, toPlace: true, kdFromUrl: true, kdToUrl: true }, contractorDesign: { place: true, map: true },
   iecOrders: { place: true, size: true, excAdvance: true, excAdvanceDate: true, excApproved: true, parentNo: true, budgetNo: true, note: true } };
 /** הגדרות עמודות לכל קבלן בנפרד: בדף קבלן נשמרות תחת "<טבלה>__<קבלן>"; קבלן שעוד לא הגדיר — מקבל את ברירת המחדל המשותפת */
 const PER_CONTRACTOR_TABLES = new Set(["orders", "items", "issues", "progress", "deliveries", "activities", "contractorDesign"]);
@@ -2608,9 +2740,11 @@ const TABLE_DEFS = {
   ],
   deliveries: () => { const d = D(); return [
     { key: "date", label: "תאריך", cls: "nowrap", cell: x => `<input type="date" class="cell" id="f_deliveries_${x.id}_date" value="${esc(x.date)}" data-edit="deliveries|${x.id}|date">` },
-    { key: "contractor", label: "קבלן", cell: x => esc(d.contractors.find(c => c.id === x.contractorId)?.name || "—") },
+    ...(ui.page?.startsWith("c:") ? [] : [{ key: "contractor", label: "קבלן", cell: x => `<select class="inp" id="f_deliveries_${x.id}_contractorId" data-edit="deliveries|${x.id}|contractorId" title="שיוך לקבלן — המסירה תופיע בחוצץ המסירות שלו"><option value="">—</option>${d.contractors.map(c => `<option value="${esc(c.id)}" ${c.id === x.contractorId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>` }]),
     { key: "kdFrom", label: "מק.ד.", cls: "w-kd", cell: x => cellInput("deliveries", x, "kdFrom", "kdin") },
     { key: "kdTo", label: "עד ק.ד.", cls: "w-kd", cell: x => cellInput("deliveries", x, "kdTo", "kdin") },
+    { key: "secFrom", label: "מחתך", cls: "c", cell: x => cellInput("deliveries", x, "secFrom", "num", `style="width:7ch" placeholder="${esc(x.secFrom === "" || x.secFrom == null ? dlvKdToSec(d, x.contractorId, x.kdFrom)?.sec ?? "" : "")}" title="מקלידים חתך — הק.ד. מתעדכן לבד (ולהפך)"`) + (x.secFromSeg ? `<div class="small muted nowrap">${esc(segName(d, x.secFromSeg))}</div>` : "") },
+    { key: "secTo", label: "עד חתך", cls: "c", cell: x => cellInput("deliveries", x, "secTo", "num", `style="width:7ch" placeholder="${esc(x.secTo === "" || x.secTo == null ? dlvKdToSec(d, x.contractorId, x.kdTo)?.sec ?? "" : "")}" title="מקלידים חתך — הק.ד. מתעדכן לבד (ולהפך)"`) + (x.secToSeg && x.secToSeg !== x.secFromSeg ? `<div class="small muted nowrap">${esc(segName(d, x.secToSeg))}</div>` : "") },
     { key: "len", label: "אורך (מתכנון)", cls: "calc", cell: x => { const L = lenFromDesign(d, kdRange(x)); return L ? `${L.approx ? "≈" : ""}${MTR(L.km)}` : "—"; } },
     { key: "segs", label: "קטעי תכנון", cls: "small", cell: x => { const L = lenFromDesign(d, kdRange(x)); return L ? L.parts.map(p => `${esc(p.office?.name || "")} ${esc(p.s.num)}${p.full ? "" : ` (${Math.round(p.frac * 100)}%)`}`).join(", ") : "—"; } },
     { key: "title", label: "תיאור", cls: "w-place", cell: x => cellInput("deliveries", x, "title") },
@@ -3053,7 +3187,11 @@ $app.addEventListener("input", e => {
 });
 $app.addEventListener("change", async e => {
   const t = e.target;
-  if (t.dataset.df) { ui.df[t.dataset.df] = t.value; if (t.dataset.rerender) render(); return; }
+  if (t.dataset.df) { const k = t.dataset.df, v = t.value.trim();
+    if (["kdFrom", "kdTo", "secFrom", "secTo"].includes(k)) Object.assign(ui.df, dlvSync(D(), ui.df, k, /^sec/.test(k) && v !== "" ? Number(v) : v));
+    else ui.df[k] = t.value;
+    if (k === "contractorId" && ui.df.kdFrom) Object.assign(ui.df, dlvSync(D(), ui.df, "kdFrom", ui.df.kdFrom), ui.df.kdTo ? dlvSync(D(), ui.df, "kdTo", ui.df.kdTo) : {});
+    if (t.dataset.rerender) render(); return; }
   if (t.dataset.act === "kindF") { const F = (ui.kindF = ui.kindF || {}), cur = F[t.dataset.id] || [];
     F[t.dataset.id] = t.checked ? [...new Set([...cur, t.value])] : cur.filter(x => x !== t.value); render(); return; }
   if (t.dataset.act === "spec") { const c = RAW.contractors[t.dataset.id], cur = specsOf(c || {});
@@ -3106,6 +3244,11 @@ $app.addEventListener("change", async e => {
     if (key === "stage" && v !== o.stage) return api.update(col, id, { stage: v, stageDate: todayStr(), history: hist(todayStr(), `שלב: ${v}`), last: `שלב: ${v}` });
     const bump = v && key === "advanceDate" ? "מקדמה שולמה" : v && key === "completionDate" ? "משלים שולם" : null;
     if (bump && IEC_STAGES.indexOf(o.stage) < IEC_STAGES.indexOf(bump)) return api.update(col, id, { [key]: v, stage: bump, stageDate: v, history: hist(v, `שלב: ${bump}`), last: `שלב: ${bump}` });
+  }
+  if (col === "deliveries" && ["kdFrom", "kdTo", "secFrom", "secTo", "contractorId"].includes(key)) {
+    const x = RAW.deliveries?.[id]; if (!x) return;
+    if (key === "contractorId") { const y = { ...x, contractorId: v }; return api.update(col, id, { contractorId: v, ...(x.kdFrom ? dlvSync(D(), y, "kdFrom", x.kdFrom) : {}), ...(x.kdTo ? dlvSync(D(), y, "kdTo", x.kdTo) : {}) }); }
+    return api.update(col, id, dlvSync(D(), x, key, v));
   }
   if (col === "activities" && key === "order" && v !== "" && Number(RAW.activities?.[id]?.order) !== v) {
     const a = RAW.activities[id], n = Math.max(1, Math.round(v));
