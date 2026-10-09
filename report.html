@@ -153,6 +153,17 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   .tiles .agrp, .tiles .acts { display: contents; } .tiles .agh { display: none; }
   .tiles .act { height: var(--th, 44px); }
 }
+
+/* ---- חלון פירוט כיסוי ---- */
+.covbar { cursor: pointer; } .covmore { float: left; border: 1px solid #c9cdc5; background: #fff; border-radius: 8px; padding: 2px 8px; font: inherit; font-size: 12px; font-weight: 700; color: #2f6db5; cursor: pointer; margin-inline-start: 6px; }
+.ovl { position: fixed; inset: 0; z-index: 50; background: rgba(20,26,22,.45); display: flex; align-items: center; justify-content: center; padding: 14px; }
+.ovc { background: #fff; border-radius: 16px; width: min(560px, 100%); max-height: min(86vh, 86dvh); display: flex; flex-direction: column; box-shadow: 0 20px 50px -10px rgba(0,0,0,.4); }
+.ovh { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); font-size: 16px; } .ovh .btn { padding: 6px 12px; font-size: 16px; }
+.ovb { overflow: auto; padding: 10px 16px 16px; overscroll-behavior: contain; }
+.ovt { font-weight: 800; font-size: 14px; margin-bottom: 6px; }
+.ovr { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid #eef0ec; font-size: 15px; }
+.ovr small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 1px; } .ovr .btn { padding: 7px 10px; font-size: 13px; flex: none; }
+.ovr.gap b { color: #9a4b00; }
 .login { max-width: 380px; margin: 12vh auto; }
 .login input { width: 100%; margin-bottom: 10px; direction: ltr; }
 </style>
@@ -268,6 +279,23 @@ function segsOf(c) {
 /** שם בקובייה: סוגריים בשורה נפרדת; שם ארוך מתחלק לשתי שורות מאוזנות */
 const tileName = n => { n = String(n || "").trim(); const i = n.indexOf("(");
   return i > 0 ? `${esc(n.slice(0, i).trim())}<br><small class="par">${esc(n.slice(i))}</small>` : esc(n); };
+/** חלון פירוט: מה דווח (לפי סדר החתכים) ומה עוד לא — לקטע הנוכחי. לא משנה את המסך שמתחת */
+function covModal(c, seg, acts) {
+  const a = S.covOpen && acts.find(x => x.id === S.covOpen); if (!a || !seg) return "";
+  const pr = priorOf(c.id, a.id, seg.id).map(p => ({ p, iv: ivOf(p) })).sort((x, y) => x.iv[0] - y.iv[0] || x.iv[1] - y.iv[1]);
+  const all = mergeIv(pr.map(x => x.iv)), gaps = gapsIn(seg.lo, seg.hi, all), W = (seg.hi - seg.lo) * SECTION_M;
+  const done = all.reduce((s, [x, y]) => s + (y - x), 0) * SECTION_M, M = v => `${(v * SECTION_M).toLocaleString("he-IL")} מ׳`;
+  const kd = (f, t) => { const p = kdOf(seg, f), q = kdOf(seg, t); return p && q ? `ק.ד. ${p} – ${q}` : ""; };
+  const st = p => p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span>` : `<span class="pill p1">אושר</span>`;
+  return `<div class="ovl" data-covx="1"><div class="ovc" role="dialog" aria-label="פירוט דיווחים">
+    <div class="ovh"><div><b>${esc(short(a.name))}</b> · ${esc(seg.label)}<div class="hint">דווח ${done.toLocaleString("he-IL")} מ׳ מתוך ${W.toLocaleString("he-IL")} (${W ? Math.round(done / W * 100) : 0}%) · חתכים ${rng(seg.lo, seg.hi)}</div></div><button class="btn ghost" data-covx="1" aria-label="סגירה">✕</button></div>
+    <div class="ovb">
+      <div class="ovt">עוד לא דווח <span class="hint">(${gaps.length} קטעים · ${M(gaps.reduce((s, [x, y]) => s + y - x, 0))})</span></div>
+      ${gaps.map(([x, y]) => `<div class="ovr gap"><div><b dir="ltr">${rng(x, y)}</b><small>${kd(x, y)} · ${M(y - x)}</small></div><button class="btn ghost" data-fill="${x}|${y}" data-fa="${a.id}">לדווח את זה</button></div>`).join("") || `<p class="hint">הכל דווח ✓</p>`}
+      <div class="ovt" style="margin-top:12px">מה דווח <span class="hint">(${pr.length} דיווחים, לפי סדר החתכים)</span></div>
+      ${pr.map(({ p, iv: [x, y] }) => `<div class="ovr"><div><b>${rng(x, y)}</b><small>${kd(x, y)} · ${M(y - x)} · ${fmtD(p.date)} · ${esc(p.reportedByName || (p.reportedBy || "משרד").split("@")[0])}</small></div>${st(p)}</div>`).join("") || `<p class="hint">עוד אין דיווחים למלאכה הזו בקטע</p>`}
+    </div></div></div>`;
+}
 /** נייד: גובה הקוביות כך שכל הלוח ייכנס בין כרטיס החתכים לפס השליחה */
 function fitTiles() {
   const flow = document.querySelector(".tiles .flow"), bar = document.querySelector(".sendbar"); if (!flow) return;
@@ -310,8 +338,8 @@ function view() {
       const done = all.reduce((s, [x, y]) => s + (y - x), 0) * SECTION_M, gaps = gapsIn(seg.lo, seg.hi, all);
       const cur = S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? [Math.min(S.from, S.to), Math.max(S.from, S.to)] : null;
       const bars = (arr, cls) => arr.map(([x, y]) => `<i class="${cls}" style="left:${pos(x)}%;width:${Math.max(.4, pos(y) - pos(x))}%"></i>`).join("");
-      return `<div class="cov ${sel.length > 1 ? "multi" : ""}"><div class="covbar" dir="ltr">${bars(ok, "ok")}${bars(pend, "pd")}${cur ? `<i class="cur" style="left:${pos(cur[0])}%;width:${Math.max(.6, pos(cur[1]) - pos(cur[0]))}%"></i>` : ""}<span class="l">${seg.lo}</span><span class="r">${seg.hi}</span></div>
-        <div class="covtxt"><b>${esc(short(act.name))}</b> בקטע: דווח ${done.toLocaleString("he-IL")} מ׳ מתוך ${(W * SECTION_M).toLocaleString("he-IL")}${gaps.length && done ? ` · עוד לא דווח: ${gaps.slice(0, 3).map(([x, y]) => rng(x, y)).join(", ")}${gaps.length > 3 ? "…" : ""}` : ""} <span class="lg"><i class="ok"></i>אושר <i class="pd"></i>ממתין</span></div></div>`; }).join("") : ""}
+      return `<div class="cov ${sel.length > 1 ? "multi" : ""}"><div class="covbar" dir="ltr" data-cov="${act.id}" title="פירוט — מה דווח ומה עוד לא">${bars(ok, "ok")}${bars(pend, "pd")}${cur ? `<i class="cur" style="left:${pos(cur[0])}%;width:${Math.max(.6, pos(cur[1]) - pos(cur[0]))}%"></i>` : ""}<span class="l">${seg.lo}</span><span class="r">${seg.hi}</span></div>
+        <div class="covtxt"><button class="covmore" data-cov="${act.id}">פירוט ›</button><b>${esc(short(act.name))}</b> בקטע: דווח ${done.toLocaleString("he-IL")} מ׳ מתוך ${(W * SECTION_M).toLocaleString("he-IL")}${gaps.length && done ? ` · עוד לא דווח: ${gaps.slice(0, 3).map(([x, y]) => rng(x, y)).join(", ")}${gaps.length > 3 ? "…" : ""}` : ""} <span class="lg"><i class="ok"></i>אושר <i class="pd"></i>ממתין</span></div></div>`; }).join("") : ""}
     <div class="hint ${S.from !== "" && S.to !== "" ? "" : "empty"}">${seg ? `חתכי ${esc(seg.label)}: ${rng(seg.lo, seg.hi)}` : ""}${seg && S.from !== "" && S.to !== "" ? ` · <b style="color:#2f6db5">ק.ד. ${kdOf(seg, S.from)} – ${kdOf(seg, S.to)}</b>${S.byKd ? ` <span class="pill p2">הוזן לפי ק.ד.</span>` : ""}` : ""}</div>`}
   </div>
   <div class="card tiles ${sel.length ? "has" : ""}"><div class="flow">${groupActs(acts).map(({ G, acts: ga }) => `<section class="agrp" style="--g:${G.color};--gt:${G.tint}"><div class="agh"><span class="agi">${agIcon(G.key)}</span><b>${G.name}</b></div><div class="acts">${ga.map(actTile).join("")}</div></section>`).join("")}</div></div>
@@ -326,9 +354,13 @@ function view() {
   <div class="card"><b>הדיווחים שלי</b> <span class="hint">— ממתין לאישור עד שמנהל הפרויקט מאשר</span>
     ${mine.map(p => `<div class="rep"><div class="t"><b>${esc(actName(p.activityId))}</b><small>${fmtD(p.date)} · ${esc(D.contractors?.[p.contractorId]?.name || "")} · ${p.qty ? `${p.qty} יח׳` : `${esc(segName(p.segmentId))} ${rng(esc(p.secFrom), esc(p.secTo))}${(s => s ? ` · ק.ד. ${kdOf(s, p.secFrom)}–${kdOf(s, p.secTo)}` : "")(segs.find(x => x.id === p.segmentId))} (${(Math.abs(p.secTo - p.secFrom) * SECTION_M).toLocaleString("he-IL")} מ׳)`}${p.note ? " · " + esc(p.note) : ""}</small></div>
       ${p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span><button class="btn ghost" data-del="${p.id}" style="padding:6px 10px">מחיקה</button>` : p.review === "נדחה" ? `<span class="pill p2">לא אושר</span>` : `<span class="pill p1">אושר ✓</span>`}</div>`).join("") || `<p class="hint">עוד אין דיווחים</p>`}
-  </div>`;
+  </div>${covModal(c, seg, acts)}`;
   fitTiles();
   $("out").onclick = () => fb.auth().signOut();
+  app.querySelectorAll("[data-cov]").forEach(b => b.onclick = () => { S.covOpen = b.dataset.cov; view(); });
+  app.querySelectorAll("[data-covx]").forEach(b => b.onclick = e => { if (e.target === b || b.tagName === "BUTTON") { S.covOpen = null; view(); } });
+  app.querySelectorAll("[data-fill]").forEach(b => b.onclick = () => { const [f, t] = b.dataset.fill.split("|").map(Number);
+    Object.assign(S, { from: f, to: t, byKd: false, kf: "", kt: "", covOpen: null, msg: "", dup: null }); if (!S.acts.includes(b.dataset.fa)) S.acts = D.activities?.[b.dataset.fa]?.unit === "יח׳" ? [b.dataset.fa] : [...S.acts.filter(x => D.activities?.[x]?.unit !== "יח׳"), b.dataset.fa]; view(); });
   app.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { S.cid = b.dataset.c; S.acts = []; S.segId = ""; S.msg = ""; S.dup = null; view(); });
   app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { const id = b.dataset.a, isU = x => D.activities?.[x]?.unit === "יח׳";
     S.acts = isU(id) || S.acts.some(isU) ? (S.acts.includes(id) ? [] : [id]) : S.acts.includes(id) ? S.acts.filter(x => x !== id) : [...S.acts, id];
@@ -388,7 +420,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-09k";
+const VER = "2026-10-09l";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
