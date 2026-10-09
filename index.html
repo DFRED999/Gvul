@@ -33,13 +33,22 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .side .foot button { all: unset; cursor: pointer; text-decoration: underline; }
 .main { padding: 26px 30px 60px; width: 100%; min-width: 0; }
 .banner { background: #fff6e5; border: 1px solid #f0d9a8; color: #6d4b0b; border-radius: var(--radius); padding: 10px 14px; font-size: 14px; margin-bottom: 18px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.mtop, .mscrim { display: none; }
 @media (max-width: 860px) {
+  /* נייד: פס עליון עם ☰ — התפריט נפתח כמגירה מהצד */
+  .mtop { display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 30; background: var(--side); color: #fff; padding: 10px 14px; padding-top: max(10px, env(safe-area-inset-top)); }
+  .mbtn { all: unset; cursor: pointer; width: 40px; height: 40px; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; background: rgba(255,255,255,.08); }
+  .mbtn span { display: block; width: 22px; height: 2.5px; border-radius: 2px; background: #fff; }
+  .mt-brand { font-size: 17px; } .mt-page { color: var(--side-muted); font-size: 14px; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .mt-badge { all: unset; cursor: pointer; background: #c4472b; color: #fff; border-radius: 999px; font-size: 13px; font-weight: 700; padding: 3px 10px; }
+  .mscrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .mscrim.on { opacity: 1; pointer-events: auto; }
   .shell { grid-template-columns: minmax(0, 1fr); }
-  .side { flex-direction: row; flex-wrap: wrap; padding: 10px; position: sticky; top: 0; z-index: 5; }
-  .brand { width: 100%; padding: 4px 10px; font-size: 16px; }
-  .brand small { display: inline; margin-inline-start: 6px; }
-  .grp, .side .foot, .nav .soon { display: none; }
+  .side { position: fixed; top: 0; bottom: 0; inset-inline-start: 0; width: min(300px, 84vw); z-index: 50; overflow-y: auto; transform: translateX(105%); transition: transform .22s ease; padding-top: max(18px, env(safe-area-inset-top)); box-shadow: -8px 0 24px rgba(0,0,0,.3); }
+  .side.open { transform: none; }
+  .side .nav { padding: 11px 12px; font-size: 16px; }
   .main { padding: 18px 16px 60px; }
+  .svsticky { top: 60px; }
 }
 
 h1 { font-size: 26px; margin: 0 0 4px; font-weight: 800; text-wrap: balance; }
@@ -183,6 +192,16 @@ tr.msub td:first-child .msind { padding-inline-start: 18px; font-size: 13.5px; }
 .svnav { padding: 12px 16px; font-size: 16px; min-width: 92px; }
 .svrange { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #f4f7f0; border-radius: 10px; padding: 8px 10px; }
 .svrange input { width: 90px; font: inherit; font-size: 20px; font-weight: 700; text-align: center; padding: 6px; border: 1px solid #c9cdc5; border-radius: 8px; direction: ltr; }
+.svkd { font-size: 14px; font-weight: 600; color: #2f6db5; } .svrk { margin-top: 6px; background: #eef4fb; } .svrk input { font-size: 17px; width: 100px; }
+.svsticky { position: sticky; top: 0; z-index: 6; background: var(--surface); margin: -12px -12px 0; padding: 12px 12px 8px; border-radius: 14px 14px 0 0; box-shadow: 0 6px 10px -8px rgba(0,0,0,.25); }
+.agrp { margin-top: 14px; } .agh { display: flex; align-items: center; gap: 8px; color: var(--g); font-size: 16px; padding-bottom: 6px; margin-bottom: 8px; border-bottom: 2px solid var(--g); }
+.agi { display: inline-flex; width: 34px; height: 34px; border-radius: 10px; background: var(--gt); align-items: center; justify-content: center; } .agi svg { width: 22px; height: 22px; }
+.agc { margin-inline-start: auto; font-size: 12.5px; color: var(--muted); font-weight: 700; background: var(--gt); border-radius: 999px; padding: 2px 9px; }
+.svact { background: #fff; border-inline-start: 5px solid var(--g, #ccc) !important; transition: background .12s, transform .06s; } .svact:active { transform: scale(.97); }
+.svact .sb { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #d5d9d1; display: inline-flex; align-items: center; justify-content: center; font-size: 19px; flex: none; }
+.svact.stok { background: #e3f3e7; } .svact.stok .sb { background: #2e7d4f; border-color: #2e7d4f; color: #fff; }
+.svact.stno { background: #f1f1ef; color: #6b6b6b; } .svact.stno .sb { background: #8c8c8c; border-color: #8c8c8c; color: #fff; }
+.svact.sthalf { background: #fdf6db; } .svact.sthalf .sb { background: #e2b93b; border-color: #e2b93b; color: #fff; font-size: 15px; }
 .svgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
 .svact { border: 1px solid #c9cdc5; border-radius: 10px; padding: 10px; min-height: 64px; font: inherit; font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 6px; text-align: right; touch-action: manipulation; }
 .svact b { font-size: 24px; min-width: 1.2em; }
@@ -487,8 +506,12 @@ function render() {
   const body = p === "overview" ? alertsStrip(d) + pageOverview(d) : p === "alerts" ? pageAlerts(d) : p === "power" ? pageIec(d) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
     : p === "segments" ? pageSegments(d) : p === "deliveries" ? pageDeliveries(d) : p === "settings" ? pageSettings(d) : pagePlan(p);
   $app.innerHTML = `
+  <div class="mtop"><button class="mbtn" data-act="menu" aria-label="תפריט" aria-expanded="${ui.menu ? "true" : "false"}"><span></span><span></span><span></span></button>
+    <b class="mt-brand">מכשול</b><span class="mt-page">${esc(nav.flatMap(g => g.items).find(i => i[0] === p)?.[1] || "")}</span>
+    ${(n => n ? `<button class="mt-badge" data-act="nav" data-id="alerts" aria-label="לוח התראות">${n}</button>` : "")(nav.flatMap(g => g.items).find(i => i[0] === "alerts")?.[4] || 0)}</div>
+  <div class="mscrim ${ui.menu ? "on" : ""}" data-act="menu"></div>
   <div class="shell">
-    <aside class="side">
+    <aside class="side ${ui.menu ? "open" : ""}">
       <div class="brand">מכשול — בקרת ביצוע<small>עמקים · בקעה</small></div>
       ${nav.map(g => `${g.group ? `<div class="grp">${g.group}</div>` : ""}${g.items.map(([id, l, s, kind, badge]) =>
         `<button class="nav ${id === p ? "on" : ""} ${kind === "add" ? "addnav" : ""}" data-act="${kind === "add" ? "newContractor" : "nav"}" data-id="${esc(id)}">${esc(l)}${s ? `<span class="soon">בהמשך</span>` : ""}${badge ? `<span class="nbadge">${badge}</span>` : ""}</button>`).join("")}`).join("")}
@@ -843,6 +866,29 @@ function segKdSec(s) {
 const lerp = (pts, x, i, j) => { const p = [...pts].sort((a, b) => a[i] - b[i]);
   let k = p.findIndex((q, n) => n > 0 && x <= q[i]); if (k < 1) k = x < p[0][i] ? 1 : p.length - 1;
   const [a, b] = [p[k - 1], p[k]]; return b[i] === a[i] ? a[j] : a[j] + (x - a[i]) * (b[j] - a[j]) / (b[i] - a[i]); };
+const AG_ICON = {
+  prep: '<path d="M17 3l-6.5 8.5"/><path d="M8 9.5l5.5 4.2-2.6 5.6-5.6-.9z"/><path d="M3 21h8"/>',
+  fence: '<path d="M5 21V8l1.5-3L8 8v13M11.25 21V8l1.5-3 1.5 3v13M17.5 21V8L19 5l1.5 3v13"/><path d="M3 11h19M3 17h19"/>',
+  road: '<path d="M8 3L4 21M16 3l4 18"/><path d="M12 4v2.5M12 10v3M12 16.5V20"/>',
+  comm: '<path d="M12 10v11M8.5 21h7"/><circle cx="12" cy="8.5" r="1.6"/><path d="M8.8 5.6a4.5 4.5 0 0 1 6.4 0M6.3 3.2a8 8 0 0 1 11.4 0"/>',
+  fin: '<path d="M12 3s6 6.4 6 10.8a6 6 0 0 1-12 0C6 9.4 12 3 12 3z"/><path d="M9.5 14.5a2.6 2.6 0 0 0 2.5 2.4"/>',
+  other: '<circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/>' };
+const agIcon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${AG_ICON[k] || AG_ICON.other}</svg>`;
+/** קבוצות תצוגה למלאכות (סקר שטח / דף המפקחים): לפי השלב של כל מלאכה */
+const ACT_GROUPS = [
+  { key: "prep", name: "הכנות ועבודות מקדימות", color: "#8a6a3a", tint: "#f6efe4", stages: ["חישוף והכנה", "פריסת תלתליות", "פירוק גדר קיימת"] },
+  { key: "fence", name: "גדר", color: "#2e7d4f", tint: "#e8f4ec", stages: ["כלונסאות", "קורה", "עמודים", "רשתות / מודולים", "ניו ג׳רסי", "רשת סכינים", "תלתליות על הגדר"] },
+  { key: "road", name: "כביש", color: "#5f5a8c", tint: "#efeef7", stages: ["מבנה דרך", "מצעים", "אספלט", "דרך אחזקה", "מעקה בטון"] },
+  { key: "comm", name: "תקשורת ותשתיות", color: "#2f6db5", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "ארונות שקד"] },
+  { key: "fin", name: "ניקוז וגמר", color: "#13827a", tint: "#e4f3f1", stages: ["מעבירי מים וסבכות", "מעקות", "סימון כביש ושילוט"] }];
+const actGroup = a => ACT_GROUPS.find(G => G.stages.includes(a.stage || guessStage(a.name))) || { key: "other", name: "אחר", color: "#6b7280", tint: "#f1f2f3" };
+/** מלאכות מקובצות: [{G, acts}] בסדר הקבוצות, ובתוך קבוצה לפי סדר הביצוע */
+const groupActs = acts => [...ACT_GROUPS, { key: "other" }].map(G => ({ G: G.key === "other" ? actGroup({}) : G, acts: acts.filter(a => actGroup(a).key === G.key) })).filter(x => x.acts.length);
+/** חתך ↔ ק.ד. בתוך קטע תכנון. מדויק כשיש טבלת ק.ד.↔חתכים (מהוד), אחרת יחסי (≈) */
+const sec2kd = (s, sec) => { const p = segKdSec(s); return p && sec !== "" && sec != null && !isNaN(sec) ? lerp(p, Number(sec), 1, 0) : null; };
+const kd2sec = (s, kd) => { const p = segKdSec(s); if (!p || kd === null || isNaN(kd)) return null; const lo = Math.min(+s.secFrom, +s.secTo), hi = Math.max(+s.secFrom, +s.secTo); return Math.max(lo, Math.min(hi, Math.round(lerp(p, kd, 0, 1)))); };
+const kdFmt = (s, sec) => { const k = sec2kd(s, sec); return k === null ? "" : `${kdSecPts(s) ? "" : "≈"}${num(k, 1)}`; };
+const segOfKd = (arr, kd) => arr.find(x => { const r = kdRange(x.s || x); return r && kd >= r.lo - 1e-9 && kd <= r.hi + 1e-9; });
 /** בלוקים של 100 מ׳ לקטע תכנון, רק בחלק שבגזרת הקבלן */
 function svBlocks(x) {
   const s = x.s, pts = segKdSec(s); if (!pts) return [];
@@ -901,14 +947,19 @@ function pageSurvey(d) {
   <div class="svstrip">${blocks.map((q, i) => { const n = blockDone(ivs, q), bg = n === 0 ? "#fff" : n < acts.length ? "#f7e08f" : acts.some(a => svState(ivs, a.id, q.from, q.to) === "✓") ? "#a8d8b0" : "#e4e4e1";
     return `<button class="svb ${(S.multi ? S.sel.includes(i) : i === S.idx) ? "on" : ""} ${S.multi && S.sel.includes(i) ? "sel" : ""}" data-act="svJump" data-id="${i}" style="background:${bg}" title="חתכים ${q.from}–${q.to}">${q.from}</button>`; }).join("")}</div>
   <div class="svcard">
-    <div class="svhead"><button class="btn ghost svnav" data-act="svGo" data-id="-1" ${S.idx && !multi ? "" : "disabled"}>‹ הקודם</button>
+    <div class="svsticky"><div class="svhead"><button class="btn ghost svnav" data-act="svGo" data-id="-1" ${S.idx && !multi ? "" : "disabled"}>‹ הקודם</button>
       <div class="svwhere"><b>${esc(segName(x))} · ${custom ? "טווח מדויק" : multi ? `${S.sel.length} בלוקים` : `בלוק ${S.idx + 1}/${blocks.length}`}</b><span>ק.ד. ≈ ${num(lerp(segKdSec(x.s), (F + T) / 2, 1, 0), 1)} · ${num(Math.abs(T - F) * SECTION_M, 0)} מ׳</span></div>
       <button class="btn svnav" data-act="svGo" data-id="1" ${S.idx < blocks.length - 1 && !multi ? "" : "disabled"}>הבא ›</button></div>
     <div class="svrange"><span>מחתך</span><input id="svF" data-act="svRF" inputmode="numeric" value="${F}"><span>עד חתך</span><input id="svT" data-act="svRT" inputmode="numeric" value="${T}">
-      ${custom ? `<button class="btn ghost sm" data-act="svRReset">חזרה לבלוק</button>` : `<span class="small muted">אפשר לשנות לטווח מדויק, למשל 5197–5199</span>`}</div>
+      <span class="svkd">ק.ד. ${kdFmt(x.s, F)} – ${kdFmt(x.s, T)}</span>
+      ${custom ? `<button class="btn ghost sm" data-act="svRReset">חזרה לבלוק</button>` : ""}</div>
+    <div class="svrange svrk"><span>או לפי ק.ד.: מ־</span><input id="svKF" data-act="svKF" inputmode="decimal" value="${esc(S.kf ?? "")}" placeholder="${esc(kdFmt(x.s, F).replace("≈", ""))}"><span>עד</span><input id="svKT" data-act="svKT" inputmode="decimal" value="${esc(S.kt ?? "")}" placeholder="${esc(kdFmt(x.s, T).replace("≈", ""))}">
+      <span class="small muted">${kdSecPts(x.s) ? "מומר לחתכים לפי טבלת ק.ד.↔חתכים" : "מומר לחתכים בקירוב (≈) — חתך מדויק עדיף"}</span></div></div>
     <div class="row" style="gap:6px;margin:8px 0"><button class="btn ghost sm" data-act="svCopy" ${S.idx && !multi && !custom ? "" : "disabled"}>כמו הבלוק הקודם</button><button class="btn ghost sm" data-act="svAll" data-id="✓">הכל ✓</button><button class="btn ghost sm" data-act="svAll" data-id="✗">הכל ✗</button><button class="btn ghost sm" data-act="svAll" data-id="">ניקוי</button>
       <span class="spacer"></span><span class="small muted">${acts.filter(a => svState(ivs, a.id, F, T)).length}/${acts.length} סומנו</span></div>
-    <div class="svgrid">${acts.map(a => { const s = svState(ivs, a.id, F, T); return `<button class="svact" data-act="svTap" data-id="${a.id}" style="background:${SV_COLORS[s]}"><span>${esc(svShort(a.name))}</span><b>${s === "½" ? `<small style="font-size:12px;font-weight:600">חלקי</small>` : s}</b></button>`; }).join("")}</div>
+    ${groupActs(acts).map(({ G, acts: ga }) => { const n = ga.filter(a => svState(ivs, a.id, F, T)).length;
+      return `<section class="agrp" style="--g:${G.color};--gt:${G.tint}"><div class="agh"><span class="agi">${agIcon(G.key)}</span><b>${G.name}</b><span class="agc">${n}/${ga.length}</span></div>
+      <div class="svgrid">${ga.map(a => { const s = svState(ivs, a.id, F, T); return `<button class="svact st${s === "✓" ? "ok" : s === "✗" ? "no" : s === "½" ? "half" : ""}" data-act="svTap" data-id="${a.id}"><span>${esc(svShort(a.name))}</span><b class="sb">${s === "½" ? "½" : s}</b></button>`; }).join("")}</div></section>`; }).join("")}
     ${custom || multi ? "" : `<div class="row" style="gap:10px;margin-top:10px"><span class="small"><b>שוחות תקשורת</b></span><button class="btn ghost svpm" data-act="svQty" data-id="-1">−</button><b style="font-size:20px;min-width:2ch;text-align:center">${r.qty || 0}</b><button class="btn ghost svpm" data-act="svQty" data-id="1">+</button>
       <input class="inp" id="svNote" data-act="svNote" placeholder="הערה לבלוק" value="${esc(r.note || "")}" style="flex:1;min-width:160px"></div>`}
   </div>
@@ -936,7 +987,7 @@ async function svSetBlock(patch) {   // שוחות / הערה — לבלוק ה�
   await svWrite({ [id]: { ...cur, ...patch(cur), date: todayStr(), ...stamp() } });
 }
 const svSet = svSetBlock;
-const svReset = S => { S.rf = null; S.rt = null; };
+const svReset = S => { S.rf = null; S.rt = null; S.kf = null; S.kt = null; };
 async function svClick(act, b) {
   const S = ui.sv || {};
   if (act === "svC") { S.cid = b.dataset.id; S.segId = ""; S.idx = 0; S.sel = []; S.anchor = null; svReset(S); render(); }
@@ -961,6 +1012,18 @@ async function svClick(act, b) {
   else if (act === "svExport") { const now = new Date().toISOString();
     const j = { meta: { app: "border-barrier", format: 1, savedAt: now, note: `סקר שטח · ${Object.keys(RAW.survey || {}).length} רשומות` }, data: { survey: RAW.survey || {} } };
     saveFile(`survey-${todayStr()}.json`, new Blob([JSON.stringify(j, null, 1)], { type: "application/json" })); }
+}
+/** הקלדה לפי ק.ד.: מוצאים את הקטע שמכיל את הק.ד. וממירים לחתכים */
+function svKdInput(t) {
+  const S = ui.sv, v = t.value.trim() === "" ? null : kdNum(t.value);
+  if (t.dataset.act === "svKF") S.kf = v; else S.kt = v;
+  if (S.kf == null || S.kt == null) return;
+  const d = D(), c = d.contractors.find(x => x.id === S.cid), ds = designInRange(d, kdRange(c)).filter(x => segKdSec(x.s));
+  const x = segOfKd(ds, (S.kf + S.kt) / 2); if (!x) { alertMsg("הק.ד. הזה לא נמצא באף קטע תכנון של הקבלן"); return; }
+  S.segId = x.s.id; S.sel = []; S.multi = false;
+  const a = kd2sec(x.s, S.kf), b = kd2sec(x.s, S.kt); S.rf = Math.min(a, b); S.rt = Math.max(a, b); if (S.rf === S.rt) S.rt = S.rf + 1;
+  const bl = svBlocks(x); S.idx = Math.max(0, bl.findIndex(q => q.to > S.rf));
+  render();
 }
 /** הקלדת טווח מדויק (מחתך / עד חתך) — בתוך גבולות הקטע */
 function svRangeInput(t) {
@@ -1469,12 +1532,14 @@ function execTab(d, c) {
     ${isUnitAct(RAW.activities[f.actId]) ? `<label class="field">כמות (יח׳)<input id="pf_qty" inputmode="numeric" value="${esc(f.qty ?? "")}" data-pf="qty" data-num="1" placeholder="למשל 3"></label>
     <label class="field">מיקום (ק.ד. / חתכים)<input id="pf_loc" value="${esc(f.loc ?? "")}" data-pf="loc" placeholder="למשל ק.ד. 812, 815"></label>` : `<label class="field">קטע תכנון<select id="pf_seg" data-pf="segId" data-rerender="1">${st.ds.map(x => `<option value="${x.s.id}" ${x.s.id === f.segId ? "selected" : ""}>${esc(segLabel(x))}${x.full ? "" : " (חלקי)"}</option>`).join("")}</select></label>
     <label class="field">מחתך<input id="pf_from" inputmode="numeric" value="${esc(f.secFrom)}" data-pf="secFrom" data-num="1" placeholder="${esc(seg?.s.secFrom ?? "")}"></label>
-    <label class="field">עד חתך<input id="pf_to" inputmode="numeric" value="${esc(f.secTo)}" data-pf="secTo" data-num="1" placeholder="${esc(seg?.s.secTo ?? "")}"></label>`}
+    <label class="field">עד חתך<input id="pf_to" inputmode="numeric" value="${esc(f.secTo)}" data-pf="secTo" data-num="1" placeholder="${esc(seg?.s.secTo ?? "")}"></label>
+    <label class="field" title="אם לא ידוע החתך — מקלידים ק.ד. והחתכים יתמלאו לבד">או מק.ד.<input id="pf_kf" inputmode="decimal" value="${esc(f.kdFrom ?? "")}" data-pf="kdFrom" placeholder="ק.ד."></label>
+    <label class="field">עד ק.ד.<input id="pf_kt" inputmode="decimal" value="${esc(f.kdTo ?? "")}" data-pf="kdTo" placeholder="ק.ד."></label>`}
     <label class="field">הערה<input id="pf_note" value="${esc(f.note)}" data-pf="note"></label>
   </div>
   <div class="row" style="margin-top:10px">
     <label class="row small"><input type="checkbox" id="pf_base" ${f.baseline ? "checked" : ""} data-pf="baseline"> מצב קיים — בוצע לפני תחילת המעקב</label>
-    <span class="small muted" id="pf_hint">${seg?.s.secFrom !== "" && seg?.s.secFrom != null ? `חתכי הקטע: <span dir="ltr">${esc(seg.s.secFrom)}–${esc(seg.s.secTo)}</span>` : "לקטע הזה עוד אין חתכים בטבלת התכנון"}</span>
+    <span class="small muted" id="pf_hint">${seg?.s.secFrom !== "" && seg?.s.secFrom != null ? `חתכי הקטע: <span dir="ltr">${esc(seg.s.secFrom)}–${esc(seg.s.secTo)}</span>` : "לקטע הזה עוד אין חתכים בטבלת התכנון"}${seg && f.secFrom !== "" && f.secTo !== "" ? ` · <b style="color:#2f6db5">ק.ד. ${kdFmt(seg.s, f.secFrom)} – ${kdFmt(seg.s, f.secTo)}</b>` : ""}${f.byKd ? ` <span class="pill">הוזן לפי ק.ד.</span>` : ""}</span>
     <span class="spacer"></span><b id="pf_m">${m === null ? "" : num(m, 0) + " מ׳"}</b>
     <button class="btn" data-act="saveProg" data-id="${c.id}">שמירת דיווח</button>
   </div>${f.msg ? `<p class="small" style="margin:8px 0 0;color:${f.err ? "var(--warn)" : "var(--accent)"}">${esc(f.msg)}</p>` : ""}`;
@@ -2445,12 +2510,15 @@ const TABLE_DEFS = {
   progress: () => { const d = D(); return [
     { key: "date", label: "תאריך", cls: "nowrap", cell: p => `<input type="date" class="cell" id="f_progress_${p.id}_date" value="${esc(p.date || "")}" data-edit="progress|${p.id}|date">` },
     { key: "review", label: "סטטוס", cls: "c", cell: p => `<select class="inp" id="f_progress_${p.id}_review" data-edit="progress|${p.id}|review" title="רק דיווח ׳מאושר׳ נספר בביצוע">${[["", "מאושר"], ["לבדיקה", "לבדיקה"], ["נדחה", "לא להכניס"]].map(([v, l]) => `<option value="${v}" ${v === (p.review || "") ? "selected" : ""}>${l}</option>`).join("")}</select>` },
-    { key: "type", label: "סוג", cls: "c", cell: p => p.baseline ? `<span class="pill">מצב קיים</span>` : `<span class="pill ok">ביצוע</span>` },
+    { key: "type", label: "סוג", cls: "c", cell: p => (p.baseline ? `<span class="pill">מצב קיים</span>` : `<span class="pill ok">ביצוע</span>`)
+      + (p.correction ? `<div><span class="pill" style="background:#fde2c8;color:#9a4b00" title="המפקח מבקש לתקן דיווח קודם — ראה הערה">בקשת תיקון</span></div>` : "")
+      + (p.review === "לבדיקה" && p.reportedBy ? (ov => ov.length ? `<div><span class="pill" style="background:#fff0c2;color:#7a5a00" title="${esc(ov.map(q => `${ivOfP(q)[0]}–${ivOfP(q)[1]} · ${fmtD(q.date)} · ${q.review === "לבדיקה" ? "ממתין" : "מאושר"}`).join("\n"))}">חופף ל־${ov.length === 1 ? rngTxt(...ivOfP(ov[0])) : ov.length + " דיווחים"}</span></div>` : "")(progOverlaps(p)) : "") },
     { key: "act", label: "מלאכה", cell: p => `<select class="inp" id="f_progress_${p.id}_activityId" data-edit="progress|${p.id}|activityId">${d.activities.filter(a => a.contractorId === p.contractorId).sort(byOrder).map(a => `<option value="${esc(a.id)}" ${a.id === p.activityId ? "selected" : ""}>${esc(a.name)}</option>`).join("")}${d.activities.some(a => a.id === p.activityId) ? "" : `<option selected value="${esc(p.activityId)}">נמחקה</option>`}</select>` },
     { key: "seg", label: "קטע תכנון", cell: p => { const c = d.contractors.find(x => x.id === p.contractorId), ds = designInRange(d, kdRange(c));
       return `<select class="inp" id="f_progress_${p.id}_segmentId" data-edit="progress|${p.id}|segmentId"><option value="">—</option>${ds.map(x => `<option value="${esc(x.s.id)}" ${x.s.id === p.segmentId ? "selected" : ""}>${esc((x.office?.name || "") + " " + x.s.num)}</option>`).join("")}</select>`; } },
     { key: "secFrom", label: "חתך מ", cls: "c", cell: p => cellInput("progress", p, "secFrom", "num") },
     { key: "secTo", label: "חתך עד", cls: "c", cell: p => cellInput("progress", p, "secTo", "num") },
+    { key: "kd", label: "ק.ד.", cls: "c small nowrap", cell: p => { const s = d.designSegments.find(x => x.id === p.segmentId); return s && p.secFrom !== "" && p.secTo !== "" ? `${kdFmt(s, p.secFrom)} – ${kdFmt(s, p.secTo)}${p.byKd ? `<div><span class="pill" title="הוזן לפי ק.ד. והומר לחתכים">לפי ק.ד.</span></div>` : ""}` : "—"; } },
     { key: "m", label: "מטרים / כמות", cls: "c nowrap", cell: p => isUnitAct(RAW.activities[p.activityId]) ? cellInput("progress", p, "qty", "num", 'style="width:5ch"') + ` יח׳${p.loc ? `<div class="small muted">${esc(p.loc)}</div>` : ""}` : p.secFrom === "" || p.secTo === "" || p.secFrom == null ? "—" : num(Math.abs(p.secTo - p.secFrom) * SECTION_M, 0) },
     { key: "note", label: "הערה", cls: "small w-text", cell: p => cellInput("progress", p, "note") },
     { key: "by", label: "דיווח", cls: "small nowrap", cell: p => p.reportedBy ? `<span title="${esc(p.reportedBy)}">${esc(p.reportedByName || p.reportedBy.split("@")[0])}</span>` : `<span class="muted">משרד</span>` },
@@ -2580,6 +2648,15 @@ function pageSettings(d) {
   <div class="card">${body}</div>`;
 }
 
+/* ---------- כפילויות בדיווח ביצוע: אותו קבלן + מלאכה + קטע, חתכים חופפים ---------- */
+const ivOfP = p => [Math.min(+p.secFrom, +p.secTo), Math.max(+p.secFrom, +p.secTo)];
+const hasSecs = p => p.secFrom !== "" && p.secTo !== "" && p.secFrom != null && p.secTo != null && !isNaN(p.secFrom) && !isNaN(p.secTo);
+function progPrior(cid, aid, sid, exceptId) { return list("progress").filter(p => p.id !== exceptId && p.contractorId === cid && p.activityId === aid && p.segmentId === sid && p.review !== "נדחה" && hasSecs(p)); }
+function mergeIvs(ivs) { const s = ivs.slice().sort((a, b) => a[0] - b[0]), out = []; for (const [a, b] of s) { const L = out[out.length - 1]; if (L && a <= L[1]) L[1] = Math.max(L[1], b); else out.push([a, b]); } return out; }
+function gapsOf(lo, hi, cov) { const g = []; let x = lo; for (const [a, b] of cov) { if (b <= x) continue; if (a >= hi) break; if (a > x) g.push([x, Math.min(a, hi)]); x = Math.max(x, b); if (x >= hi) break; } if (x < hi) g.push([x, hi]); return g; }
+function progOverlaps(p) { if (!hasSecs(p)) return []; const [lo, hi] = ivOfP(p); return progPrior(p.contractorId, p.activityId, p.segmentId, p.id).filter(q => { const [a, b] = ivOfP(q); return a < hi && b > lo; }); }
+const rngTxt = (a, b) => `<span dir="ltr">${a}–${b}</span>`;
+
 /* ---------- חלונות: אישור מחיקה, עריכת קישור ---------- */
 function modal(html, wire) {
   const m = document.createElement("div"); m.className = "modal"; m.innerHTML = `<div class="card">${html}</div>`;
@@ -2641,6 +2718,8 @@ $app.addEventListener("click", async e => {
   const act = b.dataset.act;
   if (/^sv[A-Z]/.test(act)) return svClick(act, b);
   if (/^ins[A-Z]/.test(act)) return inspClick(act, b);
+  if (act === "menu") { ui.menu = !ui.menu; render(); return; }
+  if (ui.menu && (act === "nav" || act === "newContractor")) ui.menu = false;
   if (act === "nav") { ui.page = b.dataset.id; location.hash = ui.page; render(); window.scrollTo(0, 0); }
   else if (act === "logout") fb.auth().signOut();
   else if (act === "dlBackup") downloadJson(backupName());
@@ -2718,9 +2797,22 @@ $app.addEventListener("click", async e => {
     if (f.secFrom === f.secTo) return bad("חתך ההתחלה והסוף זהים");
     if (seg && seg.secFrom !== "" && seg.secTo !== "") { const lo = Math.min(seg.secFrom, seg.secTo), hi = Math.max(seg.secFrom, seg.secTo);
       if (Math.min(f.secFrom, f.secTo) < lo || Math.max(f.secFrom, f.secTo) > hi) return bad(`החתכים מחוץ לטווח הקטע (${lo}–${hi})`); }
-    await api.add("progress", { contractorId: b.dataset.id, date: f.date, activityId: f.actId, segmentId: f.segId, secFrom: f.secFrom, secTo: f.secTo, note: f.note, baseline: !!f.baseline });
-    Object.assign(f, { secFrom: f.secTo, secTo: "", note: "", msg: `נשמר: ${num(Math.abs(f.secTo - f.secFrom) * SECTION_M, 0)} מ׳`, err: false });
-    render(); document.getElementById("pf_to")?.focus();
+    const rec = { contractorId: b.dataset.id, date: f.date, activityId: f.actId, segmentId: f.segId, secFrom: f.secFrom, secTo: f.secTo, note: f.note, baseline: !!f.baseline, ...(f.byKd ? { byKd: true, kdFrom: f.kdFrom, kdTo: f.kdTo } : {}) };
+    const done = async (recs, extra = "") => { for (const r of recs) await api.add("progress", r);
+      const m = recs.reduce((s, r) => s + Math.abs(r.secTo - r.secFrom), 0) * SECTION_M;
+      Object.assign(f, { secFrom: f.secTo, secTo: "", kdFrom: f.byKd ? f.kdTo : "", kdTo: "", byKd: false, note: "", msg: `נשמר: ${num(m, 0)} מ׳${extra}`, err: false });
+      render(); document.getElementById("pf_to")?.focus(); };
+    const lo = Math.min(f.secFrom, f.secTo), hi = Math.max(f.secFrom, f.secTo), pr = progPrior(rec.contractorId, rec.activityId, rec.segmentId);
+    const ov = pr.filter(q => ivOfP(q)[0] < hi && ivOfP(q)[1] > lo);
+    if (!ov.length) return done([rec]);
+    const gaps = gapsOf(lo, hi, mergeIvs(pr.map(ivOfP))), full = !gaps.length;
+    modal(`<h2>${full ? "הטווח הזה כבר דווח" : "חלק מהטווח כבר דווח"}</h2>
+      <p class="small">${ov.map(q => `${rngTxt(...ivOfP(q))} · ${fmtD(q.date)} · ${esc(q.reportedByName || (q.reportedBy ? q.reportedBy.split("@")[0] : "משרד"))} · ${q.review === "לבדיקה" ? "ממתין לבדיקה" : "מאושר"}${q.baseline ? " · מצב קיים" : ""}`).join("<br>")}</p>
+      <div class="row">${full ? "" : `<button class="btn" id="mNew">לשמור רק את החדש: ${gaps.map(g => rngTxt(...g)).join(", ")}</button>`}
+        <button class="btn ghost" id="mAny" title="למשל עבודה חוזרת/תיקון בשטח — נשמר כפי שהוזן">לשמור בכל זאת</button><span class="spacer"></span><button class="btn ghost" id="mNo">ביטול</button></div>`,
+      (m, close) => { m.querySelector("#mNo").onclick = close;
+        m.querySelector("#mAny").onclick = () => { close(); done([rec], " (חופף לדיווח קודם)"); };
+        const n = m.querySelector("#mNew"); if (n) n.onclick = () => { close(); done(gaps.map(([x, y]) => ({ ...rec, secFrom: x, secTo: y, byKd: false, kdFrom: "", kdTo: "" })), " (רק החלק החדש)"); }; });
   }
   else if (act === "delContractor") {
     const c = RAW.contractors[b.dataset.id], ords = list("orders").filter(o => o.contractorId === b.dataset.id);
@@ -2794,7 +2886,8 @@ $app.addEventListener("change", async e => {
   if (t.dataset.act === "trackStart") { if (t.value && +t.value.slice(0, 4) < 1990) return; RAW.tableConfig?.settings ? await api.update("tableConfig", "settings", { trackStart: t.value }) : await api.put("tableConfig", "settings", { trackStart: t.value }); return; }
   if (t.dataset.act === "pFrom" || t.dataset.act === "pTo") { if (t.value && +t.value.slice(0, 4) < 1990) return; ui[t.dataset.act] = t.value; render(); return; }
   if (t.dataset.act === "autoSum") { await api.update("tableConfig", "issues", { autoSummary: t.checked }); return; }
-  if (t.dataset.act === "svRF" || t.dataset.act === "svRT") return svRangeInput(t);
+  if (t.dataset.act === "svRF" || t.dataset.act === "svRT") { ui.sv.kf = ui.sv.kt = null; return svRangeInput(t); }
+  if (t.dataset.act === "svKF" || t.dataset.act === "svKT") return svKdInput(t);
   if (t.dataset.ins) return inspChange(t);
   if (t.dataset.act === "svNote") { const v = t.value; await svSet(() => ({ note: v })); return; }
   if (t.dataset.act === "showClosed") { ui.showClosed = t.checked; render(); return; }
@@ -2804,7 +2897,14 @@ $app.addEventListener("change", async e => {
   if (t.dataset.act === "alDone") { ui.alDone = t.checked; render(); return; }
   if (t.dataset.act === "iecVat") { const v = Number(t.value.replace(",", ".")); if (isNaN(v) || v < 0 || v > 50) return; RAW.tableConfig?.iec ? await api.update("tableConfig", "iec", { vat: v }) : await api.put("tableConfig", "iec", { vat: v }); return; }
   if (t.dataset.act === "dfilter") { ui.dfilter = t.value; render(); return; }
-  if (t.dataset.pf) { ui.pf[t.dataset.pf] = t.type === "checkbox" ? t.checked : t.dataset.num ? (t.value.trim() === "" ? "" : Number(t.value)) : t.value; if (t.dataset.rerender) render(); return; }
+  if (t.dataset.pf) { ui.pf[t.dataset.pf] = t.type === "checkbox" ? t.checked : t.dataset.num ? (t.value.trim() === "" ? "" : Number(t.value)) : t.value;
+    if (t.dataset.pf === "secFrom" || t.dataset.pf === "secTo") { ui.pf.byKd = false; ui.pf.kdFrom = ui.pf.kdTo = ""; render(); return; }
+    if (t.dataset.pf === "kdFrom" || t.dataset.pf === "kdTo") {   // ק.ד. → קטע + חתכים
+      const f = ui.pf, a = kdNum(f.kdFrom), z = kdNum(f.kdTo); if (a === null || z === null) return;
+      const d = D(), c = d.contractors.find(x => x.id === ui.page.slice(2)), x = segOfKd(designInRange(d, kdRange(c)).filter(y => segKdSec(y.s)), (a + z) / 2);
+      if (!x) { f.msg = "הק.ד. לא נמצא באף קטע תכנון של הקבלן"; f.err = true; render(); return; }
+      const p = kd2sec(x.s, a), q = kd2sec(x.s, z); Object.assign(f, { segId: x.s.id, secFrom: Math.min(p, q), secTo: Math.max(p, q), byKd: true, msg: "", err: false }); render(); return; }
+    if (t.dataset.rerender) render(); return; }
   if (!t.dataset.edit) return;
   // שדה תאריך: בזמן הקלדת השנה הדפדפן מדווח שנים חלקיות (0002, 0020...) — לא שומרים עד שהשנה מלאה
   if (t.type === "date" && t.value && +t.value.slice(0, 4) < 1990) return;
