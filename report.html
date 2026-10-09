@@ -368,7 +368,7 @@ function view() {
 }
 /* רענון בלי לקטוע הקלדה: אם המפקח באמצע שדה — מחכים שיצא ממנו */
 let later = false;
-const VER = "2026-10-09h";
+const VER = "2026-10-09i";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
@@ -402,7 +402,8 @@ document.addEventListener("focusout", () => { if (later) { later = false; setTim
     const COLS6 = ["contractors", "activities", "designSegments", "designOffices", "kdSections", "progress"], got = new Set(), bad = [];
     for (const col of COLS6) {
       const ref = db.ref(`${ROOT}/${col}`), cb = ref.on("value", s => { D[col] = s.val() || {}; got.add(col); if (got.size === COLS6.length) soft(); },
-        err => { bad.push(col); fail("אין הרשאה לקרוא נתונים", `${col}: ${err && err.message || err}`); });
+        err => { if (col === "kdSections") { D[col] = {}; got.add(col); if (got.size === COLS6.length) soft(); return; }   // טבלת עזר — בלעדיה ההמרה ק.ד.↔חתך משוערת
+          bad.push(col); fail("אין הרשאה לקרוא נתונים", `${col}: ${err && err.message || err}`); });
       offs.push(() => ref.off("value", cb));
     }
     bootTimer = setTimeout(() => { if (got.size < COLS6.length && !bad.length) fail("הנתונים לא נטענו", "חסר: " + COLS6.filter(c => !got.has(c)).join(", ")); }, 20000);
