@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>דיווח מפקח — מכשול</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #f3f4f1; --surface: #fff; --ink: #1b2127; --muted: #646d76; --line: #dcdfd8; --accent: #2f6b4f; --warn: #b5541c; --radius: 12px; color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: Assistant, Arial, sans-serif; font-size: 16px; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 14px 16px 60px; }
+header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+header h1 { font-size: 21px; margin: 0; } header .who { margin-inline-start: auto; font-size: 13px; color: var(--muted); text-align: left; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; }
+.lbl { font-size: 13px; color: var(--muted); font-weight: 600; margin: 10px 0 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid #c9cdc5; background: #fff; border-radius: 10px; padding: 10px 14px; font: inherit; font-size: 15px; cursor: pointer; }
+.chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.acts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.act { border: 1px solid #c9cdc5; background: #fff; border-radius: 10px; padding: 10px; min-height: 52px; font: inherit; font-size: 14px; text-align: right; cursor: pointer; }
+.act.on { background: #e1efe6; border: 2px solid var(--accent); font-weight: 700; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+input, select, textarea { font: inherit; border: 1px solid #c9cdc5; border-radius: 10px; padding: 10px; background: #fff; }
+.num { width: 110px; font-size: 22px; font-weight: 700; text-align: center; direction: ltr; }
+.btn { border: 0; border-radius: 10px; padding: 14px 18px; background: var(--accent); color: #fff; font: inherit; font-weight: 700; font-size: 17px; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid #c9cdc5; font-weight: 600; font-size: 14px; padding: 8px 12px; }
+.btn:disabled { opacity: .5; }
+.msg { margin-top: 10px; font-weight: 600; } .msg.err { color: var(--warn); } .msg.ok { color: var(--accent); }
+.hint { font-size: 13px; color: var(--muted); }
+.rep { display: flex; gap: 8px; align-items: center; border-bottom: 1px solid var(--line); padding: 8px 0; font-size: 14px; }
+.rep .t { flex: 1; } .rep small { color: var(--muted); display: block; }
+.pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; white-space: nowrap; }
+.p0 { background: #fdf0d5; color: #7a5300; } .p1 { background: #e1efe6; color: #24553d; } .p2 { background: #eceee9; color: #555; }
+.login { max-width: 380px; margin: 12vh auto; }
+.login input { width: 100%; margin-bottom: 10px; direction: ltr; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="card">טוען…</div></div>
+<script>
+/* דיווח מפקח: כל מפקח רואה רק את הקבלן/ים שהוקצו לו (הגדרות ← מפקחים באתר הראשי).
+   הדיווח נשמר כ"לבדיקה" — מנהל הפרויקט מאשר באתר הראשי. אותו Firebase כמו האתר הראשי. */
+const FIREBASE_CONFIG = { apiKey: "AIzaSyDDRcdT0My1ZIhtE04GGL5silY3QYyWPDw", authDomain: "gvul-950ce.firebaseapp.com", databaseURL: "https://gvul-950ce-default-rtdb.europe-west1.firebasedatabase.app", projectId: "gvul-950ce", appId: "1:467547105884:web:1664970f7b2db52bc55499" };
+const ROOT = "border", SECTION_M = 20;
+const $ = id => document.getElementById(id), app = $("app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const fmtD = s => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "";
+const kdNum = v => { const n = parseFloat(String(v ?? "").replace(",", ".")); return isNaN(n) ? null : n; };
+const rng = (a, b) => `\u2066${a}–${b}\u2069`;   // טווח חתכים שלא מתהפך בעברית
+const emailKey = e => String(e || "").toLowerCase().replace(/\./g, ",");
+const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name).localeCompare(String(b.name), "he");
+let fb, user, me, D = {}, S = { cid: "", segId: "", actId: "", date: today(), from: "", to: "", qty: "", note: "", msg: "", err: false };
+const loadScript = src => new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+
+function login(msg = "") {
+  app.innerHTML = `<div class="card login"><h1 style="margin-top:0">דיווח מפקח</h1><p class="hint">כניסה עם המייל והסיסמה שקיבלת ממנהל הפרויקט</p>
+    <input id="em" type="email" placeholder="מייל" autocomplete="username"><input id="pw" type="password" placeholder="סיסמה" autocomplete="current-password">
+    <button class="btn" id="go" style="width:100%">כניסה</button><p class="msg err">${esc(msg)}</p></div>`;
+  $("go").onclick = async () => { try { await fb.auth().signInWithEmailAndPassword($("em").value.trim(), $("pw").value); } catch { login("מייל או סיסמה שגויים"); } };
+}
+function noAccess() {
+  app.innerHTML = `<div class="card login"><h1 style="margin-top:0">אין הרשאה</h1><p>המשתמש <b dir="ltr">${esc(user.email)}</b> לא משויך לאף קבלן.</p><p class="hint">מנהל הפרויקט משייך מפקחים באתר הראשי: הגדרות ← מפקחים.</p><button class="btn ghost" id="out">יציאה</button></div>`;
+  $("out").onclick = () => fb.auth().signOut();
+}
+const list = col => Object.entries(D[col] || {}).map(([id, v]) => ({ id, ...v }));
+function segsOf(c) {
+  const a = kdNum(c.kdFrom), b = kdNum(c.kdTo); if (a === null || b === null) return [];
+  const lo = Math.min(a, b), hi = Math.max(a, b), offices = D.designOffices || {};
+  return list("designSegments").filter(s => { const x = kdNum(s.kdFrom), y = kdNum(s.kdTo); return x !== null && y !== null && Math.min(hi, Math.max(x, y)) - Math.max(lo, Math.min(x, y)) > 0.01 && s.secFrom !== "" && s.secTo !== ""; })
+    .map(s => ({ ...s, label: `${offices[s.officeId]?.name || ""} ${s.num}`, lo: Math.min(+s.secFrom, +s.secTo), hi: Math.max(+s.secFrom, +s.secTo) }))
+    .sort((p, q) => Math.max(kdNum(q.kdFrom), kdNum(q.kdTo)) - Math.max(kdNum(p.kdFrom), kdNum(p.kdTo)));
+}
+function view() {
+  const cids = Object.keys(me.contractors || {}).filter(k => D.contractors?.[k]);
+  if (!cids.length) return noAccess();
+  if (!cids.includes(S.cid)) S.cid = cids[0];
+  const c = { id: S.cid, ...D.contractors[S.cid] }, segs = segsOf(c);
+  const acts = list("activities").filter(a => a.contractorId === c.id).sort(byOrder);
+  if (!segs.some(s => s.id === S.segId)) S.segId = segs[0]?.id || "";
+  if (!acts.some(a => a.id === S.actId)) S.actId = "";
+  const seg = segs.find(s => s.id === S.segId), act = acts.find(a => a.id === S.actId), unit = act?.unit === "יח׳";
+  const m = !unit && S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? Math.abs(S.to - S.from) * SECTION_M : null;
+  const mine = list("progress").filter(p => p.reportedBy === me.email).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, 25);
+  const actName = id => D.activities?.[id]?.name || "—", segName = id => segs.find(s => s.id === id)?.label || "";
+  app.innerHTML = `<header><h1>דיווח ביצוע</h1><div class="who">${esc(me.name || user.email)}<br><button class="btn ghost" id="out" style="padding:4px 10px">יציאה</button></div></header>
+  <div class="card">
+    ${cids.length > 1 ? `<div class="lbl">קבלן</div><div class="chips">${cids.map(k => `<button class="chip ${k === S.cid ? "on" : ""}" data-c="${k}">${esc(D.contractors[k].name)}</button>`).join("")}</div>` : `<div class="lbl">קבלן</div><b style="font-size:18px">${esc(c.name)}</b>`}
+    <div class="lbl">תאריך ביצוע</div><input type="date" id="dt" value="${esc(S.date)}">
+    <div class="lbl">מלאכה</div><div class="acts">${acts.map(a => `<button class="act ${a.id === S.actId ? "on" : ""}" data-a="${a.id}">${esc(a.name)}${a.unit === "יח׳" ? " (יח׳)" : ""}</button>`).join("")}</div>
+    ${unit ? `<div class="lbl">כמות (יח׳)</div><div class="row"><input class="num" id="qty" inputmode="numeric" value="${esc(S.qty)}"><input id="loc" placeholder="מיקום (ק.ד. / חתך)" style="flex:1" value="${esc(S.loc || "")}"></div>`
+      : `<div class="lbl">קטע תכנון</div><div class="chips">${segs.map(s => `<button class="chip ${s.id === S.segId ? "on" : ""}" data-s="${s.id}">${esc(s.label)}</button>`).join("")}</div>
+    <div class="lbl">חתכים</div><div class="row"><span>מחתך</span><input class="num" id="f" inputmode="numeric" value="${esc(S.from)}" placeholder="${seg?.lo ?? ""}"><span>עד</span><input class="num" id="t" inputmode="numeric" value="${esc(S.to)}" placeholder="${seg?.hi ?? ""}"><b id="m">${m === null ? "" : m.toLocaleString("he-IL") + " מ׳"}</b></div>
+    <div class="hint" style="margin-top:6px">${seg ? `חתכי הקטע: ${rng(seg.lo, seg.hi)}` : ""}</div>`}
+    <div class="lbl">הערה (לא חובה)</div><textarea id="note" rows="2" style="width:100%">${esc(S.note)}</textarea>
+    <div style="margin-top:12px"><button class="btn" id="send" style="width:100%">שליחת דיווח</button></div>
+    ${S.msg ? `<div class="msg ${S.err ? "err" : "ok"}">${esc(S.msg)}</div>` : ""}
+  </div>
+  <div class="card"><b>הדיווחים שלי</b> <span class="hint">— ממתין לאישור עד שמנהל הפרויקט מאשר</span>
+    ${mine.map(p => `<div class="rep"><div class="t"><b>${esc(actName(p.activityId))}</b><small>${fmtD(p.date)} · ${esc(D.contractors?.[p.contractorId]?.name || "")} · ${p.qty ? `${p.qty} יח׳` : `${esc(segName(p.segmentId))} ${rng(esc(p.secFrom), esc(p.secTo))} (${(Math.abs(p.secTo - p.secFrom) * SECTION_M).toLocaleString("he-IL")} מ׳)`}${p.note ? " · " + esc(p.note) : ""}</small></div>
+      ${p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span><button class="btn ghost" data-del="${p.id}" style="padding:6px 10px">מחיקה</button>` : p.review === "נדחה" ? `<span class="pill p2">לא אושר</span>` : `<span class="pill p1">אושר ✓</span>`}</div>`).join("") || `<p class="hint">עוד אין דיווחים</p>`}
+  </div>`;
+  $("out").onclick = () => fb.auth().signOut();
+  app.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { S.cid = b.dataset.c; S.actId = ""; S.segId = ""; S.msg = ""; view(); });
+  app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { S.actId = b.dataset.a; S.msg = ""; view(); });
+  app.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { S.segId = b.dataset.s; view(); });
+  app.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "בטוח?"; return; } await fb.database().ref(`${ROOT}/progress/${b.dataset.del}`).remove(); });
+  $("dt").onchange = e => { if (e.target.value && +e.target.value.slice(0, 4) > 1990) S.date = e.target.value; };
+  $("note").oninput = e => S.note = e.target.value;
+  const numIn = (id, k) => { const el = $(id); if (!el) return; el.oninput = () => { S[k] = el.value.trim() === "" ? "" : Number(el.value); const mm = $("m"); if (mm) { const v = S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? Math.abs(S.to - S.from) * SECTION_M : null; mm.textContent = v === null ? "" : v.toLocaleString("he-IL") + " מ׳"; } }; };
+  numIn("f", "from"); numIn("t", "to"); numIn("qty", "qty");
+  if ($("loc")) $("loc").oninput = e => S.loc = e.target.value;
+  $("send").onclick = async () => {
+    const bad = t => { S.msg = t; S.err = true; view(); };
+    if (!S.actId) return bad("צריך לבחור מלאכה");
+    if (!S.date) return bad("חסר תאריך");
+    const rec = { contractorId: c.id, date: S.date, activityId: S.actId, note: S.note.trim(), review: "לבדיקה", baseline: false, reportedBy: me.email, reportedByName: me.name || "", updatedAt: new Date().toISOString(), updatedBy: me.email };
+    if (unit) { if (!(S.qty > 0)) return bad("צריך כמות"); Object.assign(rec, { segmentId: "", secFrom: "", secTo: "", qty: Number(S.qty), loc: S.loc || "" }); }
+    else {
+      if (!seg) return bad("צריך לבחור קטע תכנון");
+      if (S.from === "" || S.to === "" || isNaN(S.from) || isNaN(S.to) || S.from === S.to) return bad("צריך חתך התחלה וחתך סוף (שונים)");
+      if (Math.min(S.from, S.to) < seg.lo || Math.max(S.from, S.to) > seg.hi) return bad(`החתכים מחוץ לקטע (${rng(seg.lo, seg.hi)})`);
+      Object.assign(rec, { segmentId: seg.id, secFrom: S.from, secTo: S.to });
+    }
+    $("send").disabled = true;
+    try { await fb.database().ref(`${ROOT}/progress`).push(rec);
+      const len = unit ? `${S.qty} יח׳` : `${(Math.abs(S.to - S.from) * SECTION_M).toLocaleString("he-IL")} מ׳`;
+      Object.assign(S, { from: unit ? S.from : S.to, to: "", qty: "", note: "", msg: `נשלח ✓ ${len} — ממתין לאישור`, err: false });
+    } catch (e) { S.msg = "השליחה נכשלה — אין הרשאה לקבלן הזה או אין חיבור"; S.err = true; }
+    view();
+  };
+}
+/* רענון בלי לקטוע הקלדה: אם המפקח באמצע שדה — מחכים שיצא ממנו */
+let later = false;
+const soft = () => { const el = document.activeElement; if (el && /INPUT|TEXTAREA/.test(el.tagName) && app.contains(el)) { later = true; return; } view(); };
+document.addEventListener("focusout", () => { if (later) { later = false; setTimeout(view); } });
+(async () => {
+  const base = "https://www.gstatic.com/firebasejs/10.12.2/";
+  await loadScript(base + "firebase-app-compat.js");
+  await Promise.all([loadScript(base + "firebase-auth-compat.js"), loadScript(base + "firebase-database-compat.js")]);
+  fb = firebase; fb.initializeApp(FIREBASE_CONFIG);
+  let offs = [];
+  fb.auth().onAuthStateChanged(async u => {
+    offs.forEach(f => f()); offs = []; user = u; D = {};
+    if (!u) return login();
+    app.innerHTML = `<div class="card">טוען…</div>`;
+    const db = fb.database(), acc = await db.ref(`${ROOT}/tableConfig/inspectorAccess/${emailKey(u.email)}`).get().catch(() => null);
+    me = acc?.val(); if (!me) return noAccess();
+    me.email = String(u.email).toLowerCase();
+    let pending = 6;
+    for (const col of ["contractors", "activities", "designSegments", "designOffices", "progress"]) {
+      const ref = db.ref(`${ROOT}/${col}`), cb = ref.on("value", s => { D[col] = s.val() || {}; if (pending > 0) pending--; if (pending <= 1) soft(); }, () => {});
+      offs.push(() => ref.off("value", cb));
+    }
+  });
+})();
+</script>
+</body>
+</html>
