@@ -85,7 +85,7 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
     grid-template-areas: "top tiles" "where tiles" "note tiles" "dup tiles" "send tiles" "x tiles"; grid-template-rows: auto auto auto auto auto 1fr; }
   .board > .top { grid-area: top; } .board > .where { grid-area: where; position: static; box-shadow: none; } .board > .side-note { grid-area: note; }
   .board > .dup { grid-area: dup; position: static; } .board > .sendbar { grid-area: send; position: static; box-shadow: none; }
-  .board > .tiles { grid-area: tiles; position: sticky; top: 8px; max-height: calc(100vh - 16px); overflow: auto; }
+  .board > .tiles { grid-area: tiles; }
   .where .num { width: 92px; font-size: 20px; } .kd .num { width: 80px; }
 }
 
@@ -368,11 +368,13 @@ function view() {
 }
 /* רענון בלי לקטוע הקלדה: אם המפקח באמצע שדה — מחכים שיצא ממנו */
 let later = false;
-const VER = "2026-10-09i";
+try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
+let firstView = true;
+const VER = "2026-10-09j";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
-const safeView = () => { try { view(); } catch (e) { console.error(e); fail("שגיאה בהצגת הדף", (e && e.message || e) + ""); } };
+const safeView = () => { try { view(); if (firstView) { firstView = false; window.scrollTo(0, 0); } } catch (e) { console.error(e); fail("שגיאה בהצגת הדף", (e && e.message || e) + ""); } };
 const withTimeout = (pr, ms) => Promise.race([pr, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
 const soft = () => { const el = document.activeElement; if (el && /INPUT|TEXTAREA/.test(el.tagName) && app.contains(el)) { later = true; return; } safeView(); };
 document.addEventListener("focusout", () => { if (later) { later = false; setTimeout(safeView); } });
