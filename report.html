@@ -78,7 +78,6 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .act.on .tick { display: inline-flex; position: absolute; top: -7px; left: -7px; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 2px solid var(--g); color: var(--g); font-size: 13px; font-style: normal; font-weight: 800; align-items: center; justify-content: center; }
 .tiles.has .act:not(.on) { opacity: .6; filter: saturate(.7); }
 .side-note textarea { width: 100%; }
-@media (max-width: 520px) { .tiles .flow { column-width: 140px; } .act { font-size: 13.5px; border-radius: 14px; } .act .ico { width: 22px; height: 22px; } }
 @media (min-width: 900px) {
   .wrap { max-width: 1440px; padding: 10px 14px 40px; }
   header { margin-bottom: 8px; } header h1 { font-size: 19px; }
@@ -88,6 +87,30 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
   .board > .dup { grid-area: dup; position: static; } .board > .sendbar { grid-area: send; position: static; box-shadow: none; }
   .board > .tiles { grid-area: tiles; position: sticky; top: 8px; max-height: calc(100vh - 16px); overflow: auto; }
   .where .num { width: 92px; font-size: 20px; } .kd .num { width: 80px; }
+}
+
+/* ---- נייד ---- */
+.kdbtn { display: none; }
+@media (max-width: 600px) {
+  .wrap { padding: 8px 10px 30px; }
+  header { margin-bottom: 8px; } header h1 { font-size: 18px; } header .who { display: flex; align-items: center; gap: 8px; font-size: 12.5px; } header .who br { display: none; }
+  .card { padding: 10px; border-radius: 14px; } .board > * { margin-bottom: 8px; }
+  .top .row { flex-wrap: nowrap; flex-direction: column; align-items: stretch; gap: 6px !important; }
+  .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin: 0 -10px; padding: 0 10px 2px; }
+  .chips::-webkit-scrollbar { display: none; } .chip { flex: none; padding: 8px 12px; font-size: 14px; }
+  .date { margin: 0; font-size: 13px; } .date input { padding: 6px 8px; flex: 1; }
+  .where { position: static; box-shadow: none; border-width: 1.5px; }
+  .sec { flex-wrap: nowrap; gap: 6px; } .sec .num { width: auto; flex: 1; min-width: 0; font-size: 20px; padding: 8px 4px; } .len { font-size: 15px; white-space: nowrap; }
+  .kdbtn { display: inline-block; flex: none; font-size: 12.5px !important; padding: 7px 8px !important; } .kdbtn.on { background: #eef4fb; border-color: #2f6db5; }
+  .kd:not(.open) { display: none; } .kd { flex-wrap: nowrap; gap: 6px; } .kd .num { width: auto; flex: 1; min-width: 0; font-size: 16px; padding: 8px 4px; }
+  .cov { margin-top: 8px; } .covtxt { font-size: 12px; }
+  .tiles { padding: 10px 8px; } .tiles .flow { column-width: 96px; column-gap: 6px; }
+  .agh { font-size: 12.5px; margin-bottom: 5px; }
+  .act { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px; min-height: 76px; padding: 8px 4px 7px; margin-bottom: 6px; font-size: 12.5px; line-height: 1.15; border-radius: 16px; }
+  .act > span { flex: none; } .act .ico { width: 32px; height: 32px; border-radius: 10px; } .act .ico svg { width: 20px; height: 20px; }
+  .act.on .tick { top: -5px; left: -5px; width: 21px; height: 21px; font-size: 12px; }
+  .sendbar { padding: 8px 10px; border-radius: 14px; } .sendbar .sum { font-size: 13px; } .sendbar .btn { padding: 12px 16px; font-size: 16px; }
+  .dup { bottom: 70px; }
 }
 .login { max-width: 380px; margin: 12vh auto; }
 .login input { width: 100%; margin-bottom: 10px; direction: ltr; }
@@ -227,8 +250,8 @@ function view() {
   <div class="card where">
     ${unit ? `<div class="lbl" style="margin-top:0">${esc(short(act.name))} — כמות (יח׳)</div><div class="row"><input class="num" id="qty" inputmode="numeric" value="${esc(S.qty)}"><input id="loc" placeholder="מיקום (ק.ד. / חתך)" style="flex:1" value="${esc(S.loc || "")}"></div>`
       : `<div class="chips">${segs.map(s => `<button class="chip sm ${s.id === S.segId ? "on" : ""}" data-s="${s.id}">${esc(s.label)}</button>`).join("")}</div>
-    <div class="row sec"><span>מחתך</span><input class="num" id="f" inputmode="numeric" value="${esc(S.from)}" placeholder="${seg?.lo ?? ""}"><span>עד</span><input class="num" id="t" inputmode="numeric" value="${esc(S.to)}" placeholder="${seg?.hi ?? ""}"><b id="m" class="len">${m === null ? "" : m.toLocaleString("he-IL") + " מ׳"}</b></div>
-    <div class="row kd"><span>או ק.ד.</span><input class="num" id="kf" inputmode="decimal" value="${esc(S.kf ?? "")}" placeholder="${seg && S.from !== "" ? esc(kdOf(seg, S.from).replace("≈", "")) : "ק.ד."}"><span>עד</span><input class="num" id="kt" inputmode="decimal" value="${esc(S.kt ?? "")}" placeholder="${seg && S.to !== "" ? esc(kdOf(seg, S.to).replace("≈", "")) : "ק.ד."}"><button class="btn ghost" id="kgo">המרה</button></div>
+    <div class="row sec"><span>מחתך</span><input class="num" id="f" inputmode="numeric" value="${esc(S.from)}" placeholder="${seg?.lo ?? ""}"><span>עד</span><input class="num" id="t" inputmode="numeric" value="${esc(S.to)}" placeholder="${seg?.hi ?? ""}"><b id="m" class="len">${m === null ? "" : m.toLocaleString("he-IL") + " מ׳"}</b><button class="btn ghost kdbtn ${S.kdOpen ? "on" : ""}" id="kdt">לפי ק.ד.</button></div>
+    <div class="row kd ${S.kdOpen || S.kf || S.kt ? "open" : ""}"><span>או ק.ד.</span><input class="num" id="kf" inputmode="decimal" value="${esc(S.kf ?? "")}" placeholder="${seg && S.from !== "" ? esc(kdOf(seg, S.from).replace("≈", "")) : "ק.ד."}"><span>עד</span><input class="num" id="kt" inputmode="decimal" value="${esc(S.kt ?? "")}" placeholder="${seg && S.to !== "" ? esc(kdOf(seg, S.to).replace("≈", "")) : "ק.ד."}"><button class="btn ghost" id="kgo">המרה</button></div>
     ${act && seg ? (() => { const pr = priorOf(c.id, act.id, seg.id), W = seg.hi - seg.lo, pos = v => ((v - seg.lo) / W * 100).toFixed(2);
       const ok = mergeIv(pr.filter(p => !p.review).map(ivOf)), pend = mergeIv(pr.filter(p => p.review === "לבדיקה").map(ivOf)), all = mergeIv(pr.map(ivOf));
       const done = all.reduce((s, [x, y]) => s + (y - x), 0) * SECTION_M, gaps = gapsIn(seg.lo, seg.hi, all);
@@ -261,6 +284,7 @@ function view() {
   numIn("f", "from"); numIn("t", "to"); numIn("qty", "qty");
   ["f", "t"].forEach(id => { const el = $(id); if (el) el.addEventListener("input", () => { S.byKd = false; S.kf = S.kt = ""; }); });   // בלי רינדור — כדי לא לאבד את הפוקוס בין השדות
   ["kf", "kt"].forEach(id => { const el = $(id); if (el) el.oninput = () => S[id] = el.value; });
+  if ($("kdt")) $("kdt").onclick = () => { S.kdOpen = !S.kdOpen; view(); };
   if ($("kgo")) $("kgo").onclick = () => {   // ק.ד. → קטע + חתכים
     const a = kdNum(S.kf), z = kdNum(S.kt); if (a === null || z === null) { S.msg = "צריך ק.ד. התחלה וסוף"; S.err = true; return view(); }
     const mid = (a + z) / 2, s = segs.find(x => { const p = kdNum(x.kdFrom), q = kdNum(x.kdTo); return mid >= Math.min(p, q) && mid <= Math.max(p, q); });
@@ -301,7 +325,7 @@ function view() {
 }
 /* רענון בלי לקטוע הקלדה: אם המפקח באמצע שדה — מחכים שיצא ממנו */
 let later = false;
-const VER = "2026-10-09e";
+const VER = "2026-10-09f";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
