@@ -420,7 +420,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-09l";
+const VER = "2026-10-09m";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
@@ -447,7 +447,7 @@ document.addEventListener("focusout", () => { if (later) { later = false; setTim
     me = acc?.val();
     if (!me) {   // מנהל פעיל באתר הראשי — גישה לכל הקבלנים הראשיים
       const adm = (await withTimeout(db.ref(`${ROOT}_access/${u.uid}`).get(), 15000).catch(() => null))?.val();
-      if (adm?.active) me = { name: adm.name || "", admin: true, contractors: {} };
+      if (adm?.active && adm.role !== "צופה" && adm.role !== "חיבורי חשמל") me = { name: adm.name || "", admin: true, contractors: {} };
     }
     if (!me) return noAccess();
     me.email = String(u.email).toLowerCase();
