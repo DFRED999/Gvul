@@ -181,6 +181,8 @@ tr.msub td:first-child .msind { padding-inline-start: 18px; font-size: 13.5px; }
 .svcard { background: var(--surface); border: 2px solid var(--accent); border-radius: 14px; padding: 12px; margin: 6px 0 10px; }
 .svhead { display: flex; align-items: center; gap: 8px; } .svwhere { flex: 1; text-align: center; display: flex; flex-direction: column; } .svwhere b { font-size: 17px; } .svwhere span { font-size: 13px; color: var(--muted); }
 .svnav { padding: 12px 16px; font-size: 16px; min-width: 92px; }
+.svrange { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #f4f7f0; border-radius: 10px; padding: 8px 10px; }
+.svrange input { width: 90px; font: inherit; font-size: 20px; font-weight: 700; text-align: center; padding: 6px; border: 1px solid #c9cdc5; border-radius: 8px; direction: ltr; }
 .svgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
 .svact { border: 1px solid #c9cdc5; border-radius: 10px; padding: 10px; min-height: 64px; font: inherit; font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 6px; text-align: right; touch-action: manipulation; }
 .svact b { font-size: 24px; min-width: 1.2em; }
@@ -824,7 +826,7 @@ function alertCloseModal(id) {
 
 /* =====================================================================
    סקר שטח (אייפד / טלפון) — מה בוצע בפועל, בלוק של 100 מ׳ (5 חתכים) בכל פעם.
-   לחיצה על מלאכה מחליפה מצב: ריק → ✓ בוצע → ½ חלקי → ✗ לא בוצע → ריק.
+   לחיצה על מלאכה מחליפה מצב בטווח שנבחר: ✓ בוצע → ✗ לא בוצע → מחיקה. נשמר כטווחי חתכים מדויקים.
    נשמר אוטומטית במכשיר (אוסף survey), בנפרד מהדיווחים — כדי להשוות אחר כך. בסיום: "ייצוא הסקר".
    ===================================================================== */
 const SV_BLOCK = 5;
@@ -851,6 +853,24 @@ function svBlocks(x) {
   return out;
 }
 const svId = (cid, segId, from) => `b_${cid}_${segId}_${from}`;
+/** רשומות הסקר נשמרות כטווחים מדויקים: מלאכה + מחתך עד חתך + מצב (✓ / ✗ / "" = מחיקה). האחרונה גוברת.
+ *  (רשומות ישנות בפורמט "בלוק" — נקראות גם הן, כטווח של הבלוק) */
+function svIntervals(cid, segId) {
+  return Object.values(RAW.survey || {}).flatMap(r => {
+    if (r.contractorId !== cid || r.segmentId !== segId) return [];
+    const f = Math.min(+r.secFrom, +r.secTo), t = Math.max(+r.secFrom, +r.secTo), at = r.updatedAt || "";
+    if (r.activityId) return [{ a: r.activityId, f, t, st: r.st || "", at }];
+    if (r.v) return Object.entries(r.v).filter(([, s]) => s && s !== "~").map(([a, s]) => ({ a, f, t, st: s, at }));
+    return [];
+  }).sort((x, y) => String(x.at).localeCompare(String(y.at)));
+}
+/** מצב מלאכה בטווח [f,t): ✓ = כולו בוצע · ✗ = כולו לא בוצע · ½ = חלקי / מעורב · "" = לא נבדק */
+function svState(ivs, a, f, t) {
+  const my = ivs.filter(iv => iv.a === a && iv.f < t && iv.t > f); if (!my.length) return "";
+  let ok = 0, no = 0, n = 0;
+  for (let k = Math.floor(f); k < t; k++) { n++; let s = ""; for (const iv of my) if (iv.f <= k && k < iv.t) s = iv.st; if (s === "✓") ok++; else if (s === "✗") no++; else if (s === "½") { ok += .5; no += .5; } }
+  return ok === n ? "✓" : no === n ? "✗" : ok + no === 0 ? "" : ok === 0 && no > 0 && no < n ? "✗" : "½";
+}
 function pageSurvey(d) {
   const mains = d.contractors.filter(isMain);
   const S = ui.sv = ui.sv || {}; if (!mains.some(c => c.id === S.cid)) S.cid = mains[0]?.id;
@@ -859,95 +879,97 @@ function pageSurvey(d) {
   if (!ds.some(x => x.s.id === S.segId)) S.segId = ds[0]?.s.id;
   const x = ds.find(y => y.s.id === S.segId), blocks = x ? svBlocks(x) : [];
   S.idx = Math.max(0, Math.min(S.idx || 0, blocks.length - 1));
-  S.sel = (S.sel || []).filter(i => i < blocks.length); const multi = !!S.multi && S.sel.length > 0, tg = multi ? S.sel : [S.idx];
+  S.sel = (S.sel || []).filter(i => i < blocks.length); const multi = !!S.multi && S.sel.length > 0;
   const acts = d.activities.filter(a => a.contractorId === c.id && !isUnitAct(a) && !/ארונות שקד/.test(a.name)).sort(byOrder);
-  const SV = RAW.survey || {}, rec = (sid, f) => SV[svId(c.id, sid, f)] || {};
-  const filled = (sid, f) => { const v = rec(sid, f).v || {}; return acts.filter(a => v[a.id]).length; };
-  const allBlocks = ds.map(y => ({ y, bl: svBlocks(y) })), tot = allBlocks.reduce((t, q) => t + q.bl.length, 0);
-  const done = allBlocks.reduce((t, q) => t + q.bl.filter(b => filled(q.y.s.id, b.from) === acts.length).length, 0);
-  const segName = y => `${y.office?.name || ""} ${y.s.num}`;
-  const b = blocks[S.idx], r = b ? rec(x.s.id, b.from) : {};
-  /** מצב משותף לכל הבלוקים שנבחרו: אם שונה ביניהם — "~" (מעורב) */
-  const v = Object.fromEntries(acts.map(a => { const ss = [...new Set(tg.map(i => (blocks[i] ? rec(x.s.id, blocks[i].from).v || {} : {})[a.id] || ""))]; return [a.id, ss.length === 1 ? ss[0] : "~"]; }));
-  const tgFrom = multi ? blocks[S.sel[0]]?.from : b?.from, tgTo = multi ? blocks[S.sel[S.sel.length - 1]]?.to : b?.to;
+  const SV = RAW.survey || {}, segName = y => `${y.office?.name || ""} ${y.s.num}`;
+  const ivsOf = sid => svIntervals(c.id, sid);
+  const blockDone = (ivs, q) => acts.filter(a => svState(ivs, a.id, q.from, q.to)).length;
+  const segStat = y => { const iv = ivsOf(y.s.id), bl = svBlocks(y); return [bl.filter(q => blockDone(iv, q) === acts.length).length, bl.length]; };
   const chips = (arr, cur, act) => `<div class="svchips">${arr.map(([id, l, sub]) => `<button class="svchip ${id === cur ? "on" : ""}" data-act="${act}" data-id="${esc(id)}">${esc(l)}${sub ? `<small>${sub}</small>` : ""}</button>`).join("")}</div>`;
   const items = d.items.filter(i => i.status !== "מבוטל" && mainAt(d, i)?.id === c.id).sort((p, q) => String(p.kind).localeCompare(String(q.kind), "he") || (kdNum(q.kdFrom) ?? 0) - (kdNum(p.kdFrom) ?? 0));
-  return `<h1>סקר שטח</h1><p class="sub">מה בוצע בפועל — שורה לכל 100 מ׳. לחיצה על מלאכה: ✓ בוצע → ½ חלקי → ✗ לא בוצע. נשמר אוטומטית במכשיר הזה; לא משנה את הדיווחים באתר.</p>
-  ${chips(mains.map(m => [m.id, m.name, `${allBlocks.length && m.id === c.id ? `${done}/${tot}` : ""}`]), c.id, "svC")}
-  ${chips(ds.map(y => [y.s.id, segName(y), `${svBlocks(y).filter(q => filled(y.s.id, q.from) === acts.length).length}/${svBlocks(y).length}`]), S.segId, "svS")}
-  ${!b ? `<p class="muted">אין חתכים לקטע הזה בטבלת קטעי התכנון.</p>` : `
-  <div class="row" style="gap:6px;margin:4px 0 6px"><button class="btn sm ${S.multi ? "" : "ghost"}" data-act="svMulti">${S.multi ? "✓ בחירת טווח פעילה" : "בחירת טווח בלוקים"}</button>
-    ${S.multi ? `<span class="small">${S.sel.length ? `נבחרו ${S.sel.length} — לחץ על ריבוע אחר כדי לשנות את סוף הטווח` : "לחץ על ריבוע ההתחלה ואז על ריבוע הסוף"}</span>${S.sel.length ? `<button class="btn ghost sm" data-act="svSelClear">ניקוי בחירה</button>` : ""}<button class="btn ghost sm" data-act="svSelAll">כל הקטע</button>` : ""}</div>
-  <div class="svstrip">${blocks.map((q, i) => { const n = filled(x.s.id, q.from), rv = rec(x.s.id, q.from).v || {}, bg = n === 0 ? "#fff" : n < acts.length ? "#f7e08f" : Object.values(rv).includes("✓") ? "#a8d8b0" : "#e4e4e1";
+  const b = blocks[S.idx]; if (!b) return `<h1>סקר שטח</h1>${chips(mains.map(m => [m.id, m.name]), c.id, "svC")}${chips(ds.map(y => [y.s.id, segName(y)]), S.segId, "svS")}<p class="muted">אין חתכים לקטע הזה בטבלת קטעי התכנון.</p>`;
+  // הטווח שעליו פועלות הלחיצות: בלוק / בחירת בלוקים — או טווח מדויק שהוקלד
+  const defF = multi ? blocks[S.sel[0]].from : b.from, defT = multi ? blocks[S.sel[S.sel.length - 1]].to : b.to;
+  const F = S.rf ?? defF, T = S.rt ?? defT, custom = S.rf != null || S.rt != null;
+  const ivs = ivsOf(x.s.id), r = SV[svId(c.id, x.s.id, b.from)] || {};
+  const tot = ds.reduce((t, y) => t + svBlocks(y).length, 0), done = ds.reduce((t, y) => t + segStat(y)[0], 0);
+  return `<h1>סקר שטח</h1><p class="sub">מה בוצע בפועל. בוחרים בלוק (100 מ׳), כמה בלוקים, או מקלידים טווח חתכים מדויק — ואז לוחצים על המלאכה: ✓ בוצע → ✗ לא בוצע → מחיקה. נשמר אוטומטית.</p>
+  ${chips(mains.map(m => [m.id, m.name, m.id === c.id ? `${done}/${tot}` : ""]), c.id, "svC")}
+  ${chips(ds.map(y => { const [a, n] = segStat(y); return [y.s.id, segName(y), `${a}/${n}`]; }), S.segId, "svS")}
+  <div class="row" style="gap:6px;margin:4px 0 6px"><button class="btn sm ${S.multi ? "" : "ghost"}" data-act="svMulti">${S.multi ? "✓ בחירת טווח בלוקים פעילה" : "בחירת טווח בלוקים"}</button>
+    ${S.multi ? `<span class="small">${S.sel.length ? `נבחרו ${S.sel.length} — לחיצה על ריבוע אחר משנה את סוף הטווח` : "לחץ על ריבוע ההתחלה ואז על ריבוע הסוף"}</span>${S.sel.length ? `<button class="btn ghost sm" data-act="svSelClear">ניקוי בחירה</button>` : ""}<button class="btn ghost sm" data-act="svSelAll">כל הקטע</button>` : ""}</div>
+  <div class="svstrip">${blocks.map((q, i) => { const n = blockDone(ivs, q), bg = n === 0 ? "#fff" : n < acts.length ? "#f7e08f" : acts.some(a => svState(ivs, a.id, q.from, q.to) === "✓") ? "#a8d8b0" : "#e4e4e1";
     return `<button class="svb ${(S.multi ? S.sel.includes(i) : i === S.idx) ? "on" : ""} ${S.multi && S.sel.includes(i) ? "sel" : ""}" data-act="svJump" data-id="${i}" style="background:${bg}" title="חתכים ${q.from}–${q.to}">${q.from}</button>`; }).join("")}</div>
-  <p class="small muted" style="margin:4px 0 0">ריבוע ירוק = כל המלאכות סומנו · צהוב = חלק · לבן = עוד לא נבדק. לחיצה קופצת לבלוק. ״בחירת טווח״ — מסמנים כמה בלוקים רצופים ואז כל מלאכה בלחיצה אחת לכולם.</p>
   <div class="svcard">
     <div class="svhead"><button class="btn ghost svnav" data-act="svGo" data-id="-1" ${S.idx && !multi ? "" : "disabled"}>‹ הקודם</button>
-      <div class="svwhere">${multi ? `<b>נבחרו ${S.sel.length} בלוקים · חתכים <span dir="ltr">${tgFrom}–${tgTo}</span></b><span>${num((tgTo - tgFrom) * SECTION_M, 0)} מ׳ · כל לחיצה על מלאכה חלה על כולם</span>`
-        : `<b>${esc(segName(x))} · חתכים <span dir="ltr">${b.from}–${b.to}</span></b><span>ק.ד. ≈ ${num(b.kd, 1)} · בלוק ${S.idx + 1} מתוך ${blocks.length}</span>`}</div>
+      <div class="svwhere"><b>${esc(segName(x))} · ${custom ? "טווח מדויק" : multi ? `${S.sel.length} בלוקים` : `בלוק ${S.idx + 1}/${blocks.length}`}</b><span>ק.ד. ≈ ${num(lerp(segKdSec(x.s), (F + T) / 2, 1, 0), 1)} · ${num(Math.abs(T - F) * SECTION_M, 0)} מ׳</span></div>
       <button class="btn svnav" data-act="svGo" data-id="1" ${S.idx < blocks.length - 1 && !multi ? "" : "disabled"}>הבא ›</button></div>
-    <div class="row" style="gap:6px;margin:8px 0"><button class="btn ghost sm" data-act="svCopy" ${S.idx && !multi ? "" : "disabled"}>כמו הבלוק הקודם</button><button class="btn ghost sm" data-act="svAll" data-id="✓">הכל ✓</button><button class="btn ghost sm" data-act="svAll" data-id="✗">הכל ✗</button><button class="btn ghost sm" data-act="svAll" data-id="">ניקוי</button>
-      <span class="spacer"></span><span class="small muted">${acts.filter(a => v[a.id]).length}/${acts.length} סומנו</span></div>
-    <div class="svgrid">${acts.map(a => `<button class="svact" data-act="svTap" data-id="${a.id}" style="background:${v[a.id] === "~" ? "repeating-linear-gradient(45deg,#fff,#fff 6px,#eef2ea 6px,#eef2ea 12px)" : SV_COLORS[v[a.id] || ""]}"><span>${esc(svShort(a.name))}</span><b>${v[a.id] === "~" ? `<small style="font-size:12px;font-weight:400">מעורב</small>` : v[a.id] || ""}</b></button>`).join("")}</div>
-    <div class="row" style="gap:10px;margin-top:10px"><span class="small"><b>שוחות תקשורת</b></span><button class="btn ghost svpm" data-act="svQty" data-id="-1">−</button><b style="font-size:20px;min-width:2ch;text-align:center">${r.qty || 0}</b><button class="btn ghost svpm" data-act="svQty" data-id="1">+</button>
-      <input class="inp" id="svNote" data-act="svNote" placeholder="הערה (למשל: ½ = 5240–5243)" value="${esc(r.note || "")}" style="flex:1;min-width:160px"></div>
+    <div class="svrange"><span>מחתך</span><input id="svF" data-act="svRF" inputmode="numeric" value="${F}"><span>עד חתך</span><input id="svT" data-act="svRT" inputmode="numeric" value="${T}">
+      ${custom ? `<button class="btn ghost sm" data-act="svRReset">חזרה לבלוק</button>` : `<span class="small muted">אפשר לשנות לטווח מדויק, למשל 5197–5199</span>`}</div>
+    <div class="row" style="gap:6px;margin:8px 0"><button class="btn ghost sm" data-act="svCopy" ${S.idx && !multi && !custom ? "" : "disabled"}>כמו הבלוק הקודם</button><button class="btn ghost sm" data-act="svAll" data-id="✓">הכל ✓</button><button class="btn ghost sm" data-act="svAll" data-id="✗">הכל ✗</button><button class="btn ghost sm" data-act="svAll" data-id="">ניקוי</button>
+      <span class="spacer"></span><span class="small muted">${acts.filter(a => svState(ivs, a.id, F, T)).length}/${acts.length} סומנו</span></div>
+    <div class="svgrid">${acts.map(a => { const s = svState(ivs, a.id, F, T); return `<button class="svact" data-act="svTap" data-id="${a.id}" style="background:${SV_COLORS[s]}"><span>${esc(svShort(a.name))}</span><b>${s === "½" ? `<small style="font-size:12px;font-weight:600">חלקי</small>` : s}</b></button>`; }).join("")}</div>
+    ${custom || multi ? "" : `<div class="row" style="gap:10px;margin-top:10px"><span class="small"><b>שוחות תקשורת</b></span><button class="btn ghost svpm" data-act="svQty" data-id="-1">−</button><b style="font-size:20px;min-width:2ch;text-align:center">${r.qty || 0}</b><button class="btn ghost svpm" data-act="svQty" data-id="1">+</button>
+      <input class="inp" id="svNote" data-act="svNote" placeholder="הערה לבלוק" value="${esc(r.note || "")}" style="flex:1;min-width:160px"></div>`}
   </div>
-  <details class="card" style="margin-top:12px"><summary><b>סימון מהיר לטווח חתכים</b> <span class="small muted">— למשל ״חישוף ✓ מחתך 5322 עד 5600״</span></summary>
-    <div class="pform" style="margin-top:10px"><label class="field">מלאכה<select id="svRA"><option value="*">כל המלאכות</option>${acts.map(a => `<option value="${a.id}">${esc(svShort(a.name))}</option>`).join("")}</select></label>
-      <label class="field">מחתך<input id="svRF" inputmode="numeric" value="${b.from}"></label><label class="field">עד חתך<input id="svRT" inputmode="numeric" value="${blocks[blocks.length - 1].to}"></label>
-      <label class="field">מצב<select id="svRV">${SV_STATES.map(s => `<option value="${s}">${s || "ניקוי"}</option>`).join("")}</select></label>
-      <button class="btn" data-act="svRange">סימון</button></div></details>`}
-  <details class="card"><summary><b>פריטים בגזרה</b> (${items.length}) <span class="small muted">— שערים, ארונות שקד, תט״זים, מעבירי מים</span></summary>
+  <p class="small muted" style="margin:4px 0 0">ריבוע ירוק = כל המלאכות סומנו · צהוב = חלק · לבן = עוד לא נבדק. ״חלקי״ על מלאכה = רק חלק מהטווח סומן ✓.</p>
+  <details class="card" style="margin-top:12px"><summary><b>פריטים בגזרה</b> (${items.length}) <span class="small muted">— שערים, ארונות שקד, תט״זים, מעבירי מים</span></summary>
     <div class="svitems">${items.map(i => { const s = SV["i_" + i.id]?.status || ""; return `<div class="svitem"><span><b>${esc(i.name || i.kind)}</b><small>${esc(i.kind || "")} · ק.ד. ${esc(i.kdFrom || "")} · באתר: ${esc(i.status || "")}</small></span>
       <span class="svist">${["טרם", "בביצוע", "הושלם"].map(k => `<button class="${k === s ? "on" : ""}" data-act="svItem" data-id="${i.id}" data-v="${k}" style="${k === s ? `background:${ITEM_COLORS[k]}` : ""}">${k}</button>`).join("")}</span></div>`; }).join("") || `<p class="muted small">אין פריטים</p>`}</div></details>
-  <div class="row" style="margin-top:14px;gap:8px"><button class="btn" data-act="svExport">ייצוא הסקר (קובץ)</button><span class="small muted">${Object.keys(SV).length} רשומות סקר במכשיר. את הקובץ שולחים / טוענים במחשב דרך ״הוספת נתונים מקובץ״.</span></div>`;
-}
-async function svSet(patch) {
-  const S = ui.sv, d = D(), c = d.contractors.find(x => x.id === S.cid), x = designInRange(d, kdRange(c)).find(y => y.s.id === S.segId);
-  const bl = svBlocks(x), idx = S.multi && S.sel?.length ? S.sel : [S.idx], recs = {};
-  for (const i of idx) { const b = bl[i]; if (!b) continue;
-    const id = svId(S.cid, S.segId, b.from), cur = RAW.survey?.[id] || { contractorId: S.cid, segmentId: S.segId, secFrom: b.from, secTo: b.to, v: {} };
-    recs[id] = { ...cur, ...patch(cur), date: todayStr(), ...stamp() }; }
-  await svWrite(recs);
+  <div class="row" style="margin-top:14px;gap:8px"><button class="btn ghost" data-act="svExport">ייצוא הסקר (קובץ)</button><span class="small muted">${Object.keys(SV).length} רשומות סקר.${LOCAL ? " נשמר במכשיר הזה — בסיום מייצאים." : " נשמר ב-Firebase."}</span></div>`;
 }
 /** כתיבה של כמה רשומות סקר בבת אחת (רינדור אחד / עדכון Firebase אחד) */
 async function svWrite(recs) {
   if (LOCAL) { RAW.survey = { ...(RAW.survey || {}), ...recs }; touched(); render(); return; }
-  const up = {}; for (const [id, v] of Object.entries(recs)) up[`survey/${fbKey(id)}`] = fbSafe(v); await fb.database().ref(DB_ROOT).update(up);
+  const up = {}; for (const [id, v] of Object.entries(recs)) up[`survey/${fbKey(id)}`] = v === null ? null : fbSafe(v); await fb.database().ref(DB_ROOT).update(up);
 }
+function svCtx() {
+  const S = ui.sv, d = D(), c = d.contractors.find(x => x.id === S.cid), x = designInRange(d, kdRange(c)).find(y => y.s.id === S.segId), bl = svBlocks(x);
+  const multi = S.multi && S.sel?.length, b = bl[S.idx];
+  const F = S.rf ?? (multi ? bl[S.sel[0]].from : b.from), T = S.rt ?? (multi ? bl[S.sel[S.sel.length - 1]].to : b.to);
+  const acts = d.activities.filter(a => a.contractorId === S.cid && !isUnitAct(a) && !/ארונות שקד/.test(a.name));
+  return { S, x, bl, b, F: Math.min(F, T), T: Math.max(F, T), acts, seg: x.s };
+}
+const svRec = (S, a, f, t, st) => [`r_${newId()}`, { contractorId: S.cid, segmentId: S.segId, activityId: a, secFrom: f, secTo: t, st, date: todayStr(), ...stamp() }];
+async function svSetBlock(patch) {   // שוחות / הערה — לבלוק הנוכחי
+  const { S, b } = svCtx(); const id = svId(S.cid, S.segId, b.from), cur = RAW.survey?.[id] || { contractorId: S.cid, segmentId: S.segId, secFrom: b.from, secTo: b.to };
+  await svWrite({ [id]: { ...cur, ...patch(cur), date: todayStr(), ...stamp() } });
+}
+const svSet = svSetBlock;
+const svReset = S => { S.rf = null; S.rt = null; };
 async function svClick(act, b) {
   const S = ui.sv || {};
-  if (act === "svC") { S.cid = b.dataset.id; S.segId = ""; S.idx = 0; S.sel = []; S.anchor = null; render(); }
-  else if (act === "svS") { S.segId = b.dataset.id; S.idx = 0; S.sel = []; S.anchor = null; render(); }
-  else if (act === "svGo") { S.idx += Number(b.dataset.id); render(); window.scrollTo(0, 0); }
-  else if (act === "svJump") { const i = Number(b.dataset.id);
-    if (S.multi) { const a = S.anchor ?? i; if (!S.sel?.length) { S.anchor = i; S.sel = [i]; } else { S.sel = Array.from({ length: Math.abs(i - a) + 1 }, (_, k) => Math.min(a, i) + k); } S.idx = Math.min(...S.sel); render(); }
-    else { S.idx = i; render(); window.scrollTo(0, 0); } }
-  else if (act === "svMulti") { S.multi = !S.multi; S.sel = []; S.anchor = null; render(); }
-  else if (act === "svSelClear") { S.sel = []; S.anchor = null; render(); }
-  else if (act === "svSelAll") { const d = D(), c = d.contractors.find(x => x.id === S.cid), x = designInRange(d, kdRange(c)).find(y => y.s.id === S.segId), n = svBlocks(x).length; S.sel = Array.from({ length: n }, (_, k) => k); S.anchor = 0; render(); }
-  else if (act === "svTap") { const aid = b.dataset.id, d = D(), c = d.contractors.find(x => x.id === S.cid), x = designInRange(d, kdRange(c)).find(y => y.s.id === S.segId), bl = svBlocks(x);
-    const idx = S.multi && S.sel?.length ? S.sel : [S.idx], ss = [...new Set(idx.map(i => RAW.survey?.[svId(S.cid, S.segId, bl[i]?.from)]?.v?.[aid] || ""))];
-    const nx = ss.length === 1 ? SV_STATES[(SV_STATES.indexOf(ss[0]) + 1) % SV_STATES.length] : "✓";   // מעורב → ✓ לכולם
-    await svSet(cur => ({ v: { ...cur.v, [aid]: nx } })); }
-  else if (act === "svAll") { const acts = list("activities").filter(a => a.contractorId === S.cid && !isUnitAct(a) && !/ארונות שקד/.test(a.name)); await svSet(() => ({ v: Object.fromEntries(acts.map(a => [a.id, b.dataset.id])) })); }
-  else if (act === "svCopy") { const d = D(), c = d.contractors.find(x => x.id === S.cid), x = designInRange(d, kdRange(c)).find(y => y.s.id === S.segId), p = svBlocks(x)[S.idx - 1];
-    const prev = p && RAW.survey?.[svId(S.cid, S.segId, p.from)]; if (prev) await svSet(() => ({ v: { ...prev.v } })); }
-  else if (act === "svQty") await svSet(cur => ({ qty: Math.max(0, (Number(cur.qty) || 0) + Number(b.dataset.id)) }));
-  else if (act === "svItem") { const id = "i_" + b.dataset.id, cur = RAW.survey?.[id]; await api.put("survey", id, cur?.status === b.dataset.v ? null : { itemId: b.dataset.id, status: b.dataset.v, date: todayStr(), ...stamp() }); }
-  else if (act === "svRange") { const d = D(), c = d.contractors.find(x => x.id === S.cid), x = designInRange(d, kdRange(c)).find(y => y.s.id === S.segId);
-    const a = Number(document.getElementById("svRF").value), z = Number(document.getElementById("svRT").value), aid = document.getElementById("svRA").value, val = document.getElementById("svRV").value;
-    if (isNaN(a) || isNaN(z) || a === z) return alertMsg("צריך חתך התחלה וחתך סוף");
-    const lo = Math.min(a, z), hi = Math.max(a, z), acts = list("activities").filter(q => q.contractorId === S.cid && !isUnitAct(q) && !/ארונות שקד/.test(q.name));
-    const bl = svBlocks(x).filter(q => q.from >= lo && q.to <= hi); if (!bl.length) return alertMsg("אין בלוקים שלמים בטווח הזה");
-    const recs = {};
-    for (const q of bl) { const id = svId(S.cid, S.segId, q.from), cur = RAW.survey?.[id] || { contractorId: S.cid, segmentId: S.segId, secFrom: q.from, secTo: q.to, v: {} };
-      const v = { ...cur.v }; (aid === "*" ? acts.map(q => q.id) : [aid]).forEach(k => v[k] = val); recs[id] = { ...cur, v, date: todayStr(), ...stamp() }; }
-    await svWrite(recs);
-    alertMsg(`סומנו ${bl.length} בלוקים (${bl.length * SV_BLOCK * SECTION_M} מ׳)`); }
+  if (act === "svC") { S.cid = b.dataset.id; S.segId = ""; S.idx = 0; S.sel = []; S.anchor = null; svReset(S); render(); }
+  else if (act === "svS") { S.segId = b.dataset.id; S.idx = 0; S.sel = []; S.anchor = null; svReset(S); render(); }
+  else if (act === "svGo") { S.idx += Number(b.dataset.id); svReset(S); render(); }   // בלי קפיצה — המסך נשאר במקום
+  else if (act === "svJump") { const i = Number(b.dataset.id); svReset(S);
+    if (S.multi) { const a = S.anchor ?? i; if (!S.sel?.length) { S.anchor = i; S.sel = [i]; } else { S.sel = Array.from({ length: Math.abs(i - a) + 1 }, (_, k) => Math.min(a, i) + k); } S.idx = Math.min(...S.sel); }
+    else S.idx = i; render(); }
+  else if (act === "svMulti") { S.multi = !S.multi; S.sel = []; S.anchor = null; svReset(S); render(); }
+  else if (act === "svSelClear") { S.sel = []; S.anchor = null; svReset(S); render(); }
+  else if (act === "svSelAll") { const { bl } = svCtx(); S.sel = bl.map((_, k) => k); S.anchor = 0; svReset(S); render(); }
+  else if (act === "svRReset") { svReset(S); render(); }
+  else if (act === "svTap") { const { F, T } = svCtx(), a = b.dataset.id, cur = svState(svIntervals(S.cid, S.segId), a, F, T);
+    const nx = cur === "✓" ? "✗" : cur === "✗" ? "" : "✓";   // ריק/חלקי → ✓ → ✗ → מחיקה
+    await svWrite(Object.fromEntries([svRec(S, a, F, T, nx)])); }
+  else if (act === "svAll") { const { F, T, acts } = svCtx(); await svWrite(Object.fromEntries(acts.map(a => svRec(S, a.id, F, T, b.dataset.id)))); }
+  else if (act === "svCopy") { const { bl, F, T, acts } = svCtx(), p = bl[S.idx - 1]; if (!p) return; const ivs = svIntervals(S.cid, S.segId);
+    const recs = acts.map(a => [a.id, svState(ivs, a.id, p.from, p.to)]).filter(([, s]) => s === "✓" || s === "✗").map(([a, s]) => svRec(S, a, F, T, s));
+    if (recs.length) await svWrite(Object.fromEntries(recs)); }
+  else if (act === "svQty") await svSetBlock(cur => ({ qty: Math.max(0, (Number(cur.qty) || 0) + Number(b.dataset.id)) }));
+  else if (act === "svItem") { const id = "i_" + b.dataset.id, cur = RAW.survey?.[id]; await svWrite({ [id]: cur?.status === b.dataset.v ? null : { itemId: b.dataset.id, status: b.dataset.v, date: todayStr(), ...stamp() } }); }
   else if (act === "svExport") { const now = new Date().toISOString();
     const j = { meta: { app: "border-barrier", format: 1, savedAt: now, note: `סקר שטח · ${Object.keys(RAW.survey || {}).length} רשומות` }, data: { survey: RAW.survey || {} } };
     saveFile(`survey-${todayStr()}.json`, new Blob([JSON.stringify(j, null, 1)], { type: "application/json" })); }
+}
+/** הקלדת טווח מדויק (מחתך / עד חתך) — בתוך גבולות הקטע */
+function svRangeInput(t) {
+  const S = ui.sv, { seg } = svCtx(), lo = Math.min(+seg.secFrom, +seg.secTo), hi = Math.max(+seg.secFrom, +seg.secTo), v = Number(t.value);
+  if (t.value.trim() === "" || isNaN(v)) return;
+  const c = Math.max(lo, Math.min(hi, Math.round(v)));
+  if (t.dataset.act === "svRF") S.rf = c; else S.rt = c;
+  const { F, T } = svCtx(); if (F === T) { if (t.dataset.act === "svRF") S.rt = Math.min(hi, c + 1); else S.rf = Math.max(lo, c - 1); }
+  render();
 }
 
 /* ---------- סקירה כללית ---------- */
@@ -2682,6 +2704,7 @@ $app.addEventListener("change", async e => {
   if (t.dataset.act === "trackStart") { if (t.value && +t.value.slice(0, 4) < 1990) return; RAW.tableConfig?.settings ? await api.update("tableConfig", "settings", { trackStart: t.value }) : await api.put("tableConfig", "settings", { trackStart: t.value }); return; }
   if (t.dataset.act === "pFrom" || t.dataset.act === "pTo") { if (t.value && +t.value.slice(0, 4) < 1990) return; ui[t.dataset.act] = t.value; render(); return; }
   if (t.dataset.act === "autoSum") { await api.update("tableConfig", "issues", { autoSummary: t.checked }); return; }
+  if (t.dataset.act === "svRF" || t.dataset.act === "svRT") return svRangeInput(t);
   if (t.dataset.act === "svNote") { const v = t.value; await svSet(() => ({ note: v })); return; }
   if (t.dataset.act === "showClosed") { ui.showClosed = t.checked; render(); return; }
   if (t.dataset.act === "iecKind") { ui.iec.kind = t.value; render(); return; }
