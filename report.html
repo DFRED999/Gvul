@@ -225,31 +225,44 @@ function view() {
 }
 /* רענון בלי לקטוע הקלדה: אם המפקח באמצע שדה — מחכים שיצא ממנו */
 let later = false;
-const soft = () => { const el = document.activeElement; if (el && /INPUT|TEXTAREA/.test(el.tagName) && app.contains(el)) { later = true; return; } view(); };
-document.addEventListener("focusout", () => { if (later) { later = false; setTimeout(view); } });
+const VER = "2026-10-09b";
+const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
+  <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
+  <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
+const safeView = () => { try { view(); } catch (e) { console.error(e); fail("שגיאה בהצגת הדף", (e && e.message || e) + ""); } };
+const withTimeout = (pr, ms) => Promise.race([pr, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
+const soft = () => { const el = document.activeElement; if (el && /INPUT|TEXTAREA/.test(el.tagName) && app.contains(el)) { later = true; return; } safeView(); };
+document.addEventListener("focusout", () => { if (later) { later = false; setTimeout(safeView); } });
 (async () => {
   const base = "https://www.gstatic.com/firebasejs/10.12.2/";
-  await loadScript(base + "firebase-app-compat.js");
-  await Promise.all([loadScript(base + "firebase-auth-compat.js"), loadScript(base + "firebase-database-compat.js")]);
-  fb = firebase; fb.initializeApp(FIREBASE_CONFIG);
+  try {
+    await withTimeout(loadScript(base + "firebase-app-compat.js"), 20000);
+    await withTimeout(Promise.all([loadScript(base + "firebase-auth-compat.js"), loadScript(base + "firebase-database-compat.js")]), 20000);
+    fb = firebase; fb.initializeApp(FIREBASE_CONFIG);
+  } catch (e) { return fail("לא ניתן להתחבר לשרת (Firebase)", "בדוק חיבור לאינטרנט. אם יש חוסם פרסומות / VPN / סינון תוכן באייפד — לכבות ולנסות שוב."); }
+  let bootTimer = null;
   let offs = [];
   fb.auth().onAuthStateChanged(async u => {
     offs.forEach(f => f()); offs = []; user = u; D = {};
     if (!u) return login();
     app.innerHTML = `<div class="card">טוען…</div>`;
-    const db = fb.database(), acc = await db.ref(`${ROOT}/tableConfig/inspectorAccess/${emailKey(u.email)}`).get().catch(() => null);
+    clearTimeout(bootTimer);
+    let hung = false; const db = fb.database(), acc = await withTimeout(db.ref(`${ROOT}/tableConfig/inspectorAccess/${emailKey(u.email)}`).get(), 15000).catch(e => { hung = !!(e && e.message === "timeout"); return null; });
+    if (hung) { return fail("השרת לא עונה", "החיבור למסד הנתונים נתקע. לנסות שוב; אם חוזר — לכבות VPN / חוסם תוכן, או לנסות ברשת אחרת."); }
     me = acc?.val();
     if (!me) {   // מנהל פעיל באתר הראשי — גישה לכל הקבלנים הראשיים
-      const adm = (await db.ref(`${ROOT}_access/${u.uid}`).get().catch(() => null))?.val();
+      const adm = (await withTimeout(db.ref(`${ROOT}_access/${u.uid}`).get(), 15000).catch(() => null))?.val();
       if (adm?.active) me = { name: adm.name || "", admin: true, contractors: {} };
     }
     if (!me) return noAccess();
     me.email = String(u.email).toLowerCase();
-    let pending = 7;
-    for (const col of ["contractors", "activities", "designSegments", "designOffices", "kdSections", "progress"]) {
-      const ref = db.ref(`${ROOT}/${col}`), cb = ref.on("value", s => { D[col] = s.val() || {}; if (pending > 0) pending--; if (pending <= 1) soft(); }, () => {});
+    const COLS6 = ["contractors", "activities", "designSegments", "designOffices", "kdSections", "progress"], got = new Set(), bad = [];
+    for (const col of COLS6) {
+      const ref = db.ref(`${ROOT}/${col}`), cb = ref.on("value", s => { D[col] = s.val() || {}; got.add(col); if (got.size === COLS6.length) soft(); },
+        err => { bad.push(col); fail("אין הרשאה לקרוא נתונים", `${col}: ${err && err.message || err}`); });
       offs.push(() => ref.off("value", cb));
     }
+    bootTimer = setTimeout(() => { if (got.size < COLS6.length && !bad.length) fail("הנתונים לא נטענו", "חסר: " + COLS6.filter(c => !got.has(c)).join(", ")); }, 20000);
   });
 })();
 </script>
