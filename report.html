@@ -54,6 +54,41 @@ input, select, textarea { font: inherit; border: 1px solid #c9cdc5; border-radiu
 .covtxt { font-size: 13px; margin-top: 4px; } .lg { color: var(--muted); white-space: nowrap; } .lg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 6px; vertical-align: -1px; } .lg i.ok { background: #8fcf9f; } .lg i.pd { background: #f7e08f; }
 .dup { position: sticky; bottom: 84px; z-index: 6; background: #fff4ea; border: 2px solid #e59a3c; border-radius: 14px; padding: 12px; margin-bottom: 8px; }
 .dup .btn { font-size: 14px; padding: 10px 14px; } .small { font-size: 13px; }
+
+/* ---- קוביות בצבע מלא + פריסה למסך אחד ---- */
+button { color: inherit; -webkit-tap-highlight-color: transparent; }
+.board > * { margin-bottom: 12px; }
+.tiles { padding: 12px; }
+.tiles .flow { column-width: 168px; column-gap: 8px; }
+.agrp { display: contents; }
+.agh { break-after: avoid; border: 0; padding: 0; margin: 0 2px 6px; font-size: 13.5px; gap: 6px; }
+.agi { width: 22px; height: 22px; border-radius: 7px; } .agi svg { width: 15px; height: 15px; }
+.acts { display: contents; } .gstart { break-inside: avoid; -webkit-column-break-inside: avoid; } .gstart:not(:first-child) { padding-top: 4px; }
+.act { position: relative; width: 100%; break-inside: avoid; margin-bottom: 8px; border: 0; border-radius: 16px; color: #fff; font-weight: 700; font-size: 14.5px; line-height: 1.18;
+  min-height: 54px; padding: 7px 9px; justify-content: flex-start; gap: 8px;
+  background: var(--g); background: linear-gradient(155deg, color-mix(in srgb, var(--g) 72%, #fff) 0%, var(--g) 62%, color-mix(in srgb, var(--g) 88%, #000) 100%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 4px 10px -4px color-mix(in srgb, var(--g) 70%, transparent); transition: transform .08s, opacity .15s, filter .15s, box-shadow .15s; }
+.act > span { flex: 1; text-shadow: 0 1px 1px rgba(0,0,0,.18); text-wrap: balance; }
+.act small { color: rgba(255,255,255,.85); font-weight: 600; }
+.act { color: var(--fg, #fff); } .act.lt > span { text-shadow: none; } .act.lt small { color: inherit; opacity: .75; } .act.lt .ico { background: rgba(0,0,0,.09); }
+.act .ico { flex: none; width: 30px; height: 30px; border-radius: 10px; background: rgba(255,255,255,.2); display: inline-flex; align-items: center; justify-content: center; }
+.act .ico svg { width: 19px; height: 19px; }
+.act .tick { display: none; }
+.act.on { background: var(--g); font-weight: 800; box-shadow: 0 0 0 3px #fff, 0 0 0 5.5px var(--g), 0 8px 16px -6px rgba(0,0,0,.4); }
+.act.on .tick { display: inline-flex; position: absolute; top: -7px; left: -7px; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 2px solid var(--g); color: var(--g); font-size: 13px; font-style: normal; font-weight: 800; align-items: center; justify-content: center; }
+.tiles.has .act:not(.on) { opacity: .6; filter: saturate(.7); }
+.side-note textarea { width: 100%; }
+@media (max-width: 520px) { .tiles .flow { column-width: 140px; } .act { font-size: 13.5px; border-radius: 14px; } .act .ico { width: 22px; height: 22px; } }
+@media (min-width: 900px) {
+  .wrap { max-width: 1440px; padding: 10px 14px 40px; }
+  header { margin-bottom: 8px; } header h1 { font-size: 19px; }
+  .board { display: grid; grid-template-columns: 380px 1fr; column-gap: 14px; align-items: start;
+    grid-template-areas: "top tiles" "where tiles" "note tiles" "dup tiles" "send tiles" "x tiles"; grid-template-rows: auto auto auto auto auto 1fr; }
+  .board > .top { grid-area: top; } .board > .where { grid-area: where; position: static; box-shadow: none; } .board > .side-note { grid-area: note; }
+  .board > .dup { grid-area: dup; position: static; } .board > .sendbar { grid-area: send; position: static; box-shadow: none; }
+  .board > .tiles { grid-area: tiles; position: sticky; top: 8px; max-height: calc(100vh - 16px); overflow: auto; }
+  .where .num { width: 92px; font-size: 20px; } .kd .num { width: 80px; }
+}
 .login { max-width: 380px; margin: 12vh auto; }
 .login input { width: 100%; margin-bottom: 10px; direction: ltr; }
 </style>
@@ -81,14 +116,51 @@ const AG_ICON = {
   other: '<circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/>' };
 const agIcon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${AG_ICON[k] || AG_ICON.other}</svg>`;
 const ACT_GROUPS = [
-  { key: "prep", name: "הכנות ועבודות מקדימות", color: "#8a6a3a", tint: "#f6efe4", stages: ["חישוף והכנה", "פריסת תלתליות", "פירוק גדר קיימת"], re: /חישוף|הכנה|פריס|פריש|פירוק/ },
-  { key: "fence", name: "גדר", color: "#2e7d4f", tint: "#e8f4ec", stages: ["כלונסאות", "קורה", "עמודים", "רשתות / מודולים", "ניו ג׳רסי", "רשת סכינים", "תלתליות על הגדר"], re: /גדר|כלונס|קלונס|קור|עמוד|רשת|מודול|ניו|ג.ר[סז]י|סכינ|תלתל|קלמר|ריתוך|בטון רזה/ },
-  { key: "road", name: "כביש", color: "#5f5a8c", tint: "#efeef7", stages: ["מבנה דרך", "מצעים", "אספלט", "דרך אחזקה", "מעקה בטון"], re: /מבנה דרך|מצע|אספלט|אחזקה|מעקה בטון/ },
-  { key: "comm", name: "תקשורת ותשתיות", color: "#2f6db5", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "ארונות שקד"], re: /תשתי|תקשור|חשמל|שוח|צנר|גוב|שקד/ },
-  { key: "fin", name: "ניקוז וגמר", color: "#13827a", tint: "#e4f3f1", stages: ["מעבירי מים וסבכות", "מעקות", "סימון כביש ושילוט"], re: /מעביר|סבכ|מעקות|סימון|שילוט/ }];
-const OTHER_G = { key: "other", name: "אחר", color: "#6b7280", tint: "#f1f2f3" };
+  { key: "prep", name: "הכנות ועבודות מקדימות", color: "#9a6a2f", tint: "#f6efe4", stages: ["חישוף והכנה", "פריסת תלתליות", "פירוק גדר קיימת"], re: /חישוף|הכנה|פריס|פריש|פירוק/ },
+  { key: "fence", name: "גדר", color: "#2f7d4f", tint: "#e8f4ec", stages: ["כלונסאות", "קורה", "עמודים", "רשתות / מודולים", "ניו ג׳רסי", "רשת סכינים", "תלתליות על הגדר"], re: /גדר|כלונס|קלונס|קור|עמוד|רשת|מודול|ניו|ג.ר[סז]י|סכינ|תלתל|קלמר|ריתוך|בטון רזה/ },
+  { key: "road", name: "כביש", color: "#5a55b0", tint: "#efeef7", stages: ["מבנה דרך", "מצעים", "אספלט", "דרך אחזקה", "מעקה בטון"], re: /מבנה דרך|מצע|אספלט|אחזקה|מעקה בטון/ },
+  { key: "comm", name: "תקשורת ותשתיות", color: "#2d6cb8", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "ארונות שקד"], re: /תשתי|תקשור|חשמל|שוח|צנר|גוב|שקד/ },
+  { key: "fin", name: "ניקוז וגמר", color: "#127c76", tint: "#e4f3f1", stages: ["מעבירי מים וסבכות", "מעקות", "סימון כביש ושילוט"], re: /מעביר|סבכ|מעקות|סימון|שילוט/ }];
+const OTHER_G = { key: "other", name: "אחר", color: "#5f6670", tint: "#f1f2f3" };
 const actGroup = a => ACT_GROUPS.find(G => G.stages.includes(a.stage)) || (a.stage ? null : ACT_GROUPS.find(G => G.re.test(a.name))) || OTHER_G;
 const groupActs = acts => [...ACT_GROUPS, OTHER_G].map(G => ({ G, acts: acts.filter(a => actGroup(a).key === G.key) })).filter(x => x.acts.length);
+/* ---- צבע ואייקון לכל מלאכה — לפי החומר בשטח (אספלט שחור, מצעים צהוב, בטון אפור…) ---- */
+const SV = (d, extra = "") => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ELL = (y, rx, ry) => [7, 12, 17].map(x => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/>`).join("");
+const MATS = [
+  { re: /אספלט/, c: "#26282c", i: '<path d="M9 3L5 21M15 3l4 18"/><path d="M12 4v2.5M12 10v3M12 16.5V20"/>' },
+  { re: /מצע/, c: "#e8b931", ink: "#33290a", i: '<path d="M2 17h20M2 21h20"/><circle cx="5.5" cy="13.5" r="1.6"/><circle cx="11" cy="13" r="1.9"/><circle cx="17" cy="13.6" r="1.6"/><circle cx="8.3" cy="9" r="1.4"/><circle cx="14.2" cy="8.6" r="1.5"/><circle cx="19.5" cy="9.8" r="1.1"/>' },
+  { re: /מבנה דרך/, c: "#a8743c", i: '<path d="M3 8l9-4 9 4-9 4z"/><path d="M3 12.5l9 4 9-4M3 17l9 4 9-4"/>' },
+  { re: /אחזקה/, c: "#9a7f55", i: '<path d="M5 21c1-6 7-6 7-11S9.5 4 9 3"/><path d="M12.5 21c1-6 7-6 7-11S17 4 16.5 3"/>' },
+  { re: /חשמל/, c: "#d9681a", i: '<path d="M2 7h4v13h12V7h4"/><path d="M13.2 8.5L10.5 13h3l-2.4 4.5"/>' },
+  { re: /חפיר.*(תקשור|תקשר)|(תקשור|תקשר).*חפיר/, c: "#2d6cb8", i: '<path d="M2 7h4v13h12V7h4"/><circle cx="12" cy="16" r="1.1"/><path d="M9.6 13.4a3.4 3.4 0 0 1 4.8 0M7.8 11a6 6 0 0 1 8.4 0"/>' },
+  { re: /שוח/, c: "#24508a", i: '<ellipse cx="12" cy="7.5" rx="8" ry="3"/><path d="M4 7.5v9c0 1.7 3.6 3 8 3s8-1.3 8-3v-9"/><path d="M9 7.5h6"/>' },
+  { re: /צנר|גוב/, c: "#4b6584", i: '<circle cx="7" cy="12" r="4.5"/><circle cx="7" cy="12" r="1.8"/><path d="M7 7.5h14M7 16.5h14M21 7.5v9"/>' },
+  { re: /שקד|ארון/, c: "#34557a", i: '<rect x="6" y="3" width="12" height="17" rx="1.5"/><path d="M12 3v17M10 10.5v2.5M14 10.5v2.5M4 21h16"/>' },
+  { re: /מעביר|סבכ/, c: "#1c7fb5", i: '<path d="M2 20h20"/><path d="M5 20v-6a7 7 0 0 1 14 0v6"/><path d="M8 17c1-.8 1.9-.8 2.9 0s1.9.8 2.9 0 1.9-.8 2.9 0"/>' },
+  { re: /מעקה בטון/, c: "#8a8377", i: '<path d="M8.5 5h7l.8 6.5L20 19H4l3.7-7.5z"/><path d="M2 19h20"/>' },
+  { re: /מעק/, c: "#5c6f7e", i: '<path d="M2 8h20v5H2z"/><path d="M2 10.5h20"/><path d="M5 13v7M12 13v7M19 13v7"/>' },
+  { re: /סימון|שילוט/, c: "#c0392b", i: '<path d="M12 21V12"/><path d="M12 2.5l8.5 9.5h-17z"/><path d="M12 6.5v2.5"/><path d="M3 21h4M10 21h4M17 21h4"/>' },
+  { re: /חישוף/, c: "#7a5230", i: '<path d="M18.5 2.5l-7 9"/><path d="M16.5 2l4 3"/><path d="M8.6 9.8l5 3.9-2.7 4.4a2.5 2.5 0 0 1-3.6.7l-1.4-1a2.5 2.5 0 0 1-.5-3.6z"/><path d="M2 21h20"/>' },
+  { re: /פריס.*תלתל/, c: "#64707d", i: ELL(12.5, 3.4, 5) + '<path d="M2 20.5h20"/>' },
+  { re: /פירוק/, c: "#b5541c", i: '<path d="M3 21V7M9 21V7M3 11h6M3 16h6"/><path d="M14 10l7 7M21 10l-7 7"/>' },
+  { re: /כלונס.*עמוד|עמוד.*כלונס/, c: "#5d6b78", i: '<path d="M2 13h20"/><path d="M6 4v9M12 4v9M18 4v9"/><path d="M6 13v8M12 13v8M18 13v8" stroke-dasharray="1.6 2.2"/>' },
+  { re: /כלונס/, c: "#6b7076", i: '<path d="M2 7h20"/><path d="M6 3v4M12 3v4M18 3v4"/><path d="M6 7v12M12 7v12M18 7v12" stroke-dasharray="1.6 2.2"/><path d="M4.5 20.5h3M10.5 20.5h3M16.5 20.5h3"/>' },
+  { re: /עמוד/, c: "#4f6475", i: '<path d="M2 21h20"/><path d="M6 21V5M12 21V5M18 21V5"/><path d="M6 5l2-1.5M12 5l2-1.5M18 5l2-1.5"/>' },
+  { re: /ברזל/, c: "#8c4a2f", i: '<rect x="3" y="6" width="18" height="12" rx="1.5"/><path d="M6 6v12M10 6v12M14 6v12M18 6v12" opacity=".55"/><circle cx="6.5" cy="9.5" r="1"/><circle cx="17.5" cy="9.5" r="1"/><circle cx="6.5" cy="14.5" r="1"/><circle cx="17.5" cy="14.5" r="1"/>' },
+  { re: /בטון רזה/, c: "#a3a8ad", ink: "#1f2328", i: '<path d="M2 15h20v4H2z"/><path d="M14 11l5-5M17.5 4.5l3 3"/><path d="M8 12.5c1.5-1 3-1 4.5 0"/>' },
+  { re: /קורה|קורת/, c: "#7b8087", i: '<rect x="2.5" y="8" width="19" height="6" rx="1"/><path d="M6 14v6M18 14v6M2 20h20"/>' },
+  { re: /ניו|ג.ר[סז]י/, c: "#8a8377", i: '<path d="M8.5 5h7l.8 6.5L20 19H4l3.7-7.5z"/><path d="M2 19h20"/>' },
+  { re: /קווי מי/, c: "#1f7a8c", i: '<path d="M2 15h20M2 19.5h20"/><path d="M12 3s3.2 3.5 3.2 5.8a3.2 3.2 0 0 1-6.4 0C8.8 6.5 12 3 12 3z"/>' },
+  { re: /סכינ/, c: "#37414b", i: '<path d="M2 13l2.5-3.5L7 13l2.5-3.5L12 13l2.5-3.5L17 13l2.5-3.5L22 13"/><path d="M2 18h20M2 6h20" opacity=".5"/>' },
+  { re: /תלתל/, c: "#64707d", i: ELL(7, 2.6, 3.6) + '<path d="M5 21V11M19 21V11M5 15h14"/>' },
+  { re: /קלמר|ריתוך/, c: "#c2410c", i: '<path d="M3.5 20.5l7-7"/><path d="M8.5 11.5l4 4"/><path d="M15 3v3M19.5 4.5l-2 2M21 9h-3M13.2 5.3l1.4 1.4"/>' },
+  { re: /תחתונה/, c: "#2f7d4f", i: '<rect x="3" y="3.5" width="18" height="17" rx="1.2"/><path d="M3 12h18" /><path d="M3 15l3-3M3 19l7-7M7 20.5l8.5-8.5M12 20.5l8.5-8.5M17 20.5l4-4M6 12l8.5 8.5M10.5 12l8.5 8.5M15 12l6 6M19 12l2 2M3 16l4.5 4.5"/>' },
+  { re: /עליונה/, c: "#2f7d4f", i: '<rect x="3" y="3.5" width="18" height="17" rx="1.2"/><path d="M3 12h18"/><path d="M3 7l3.5-3.5M3 11.5l8-8M7.5 12l8.5-8.5M12.5 12l8.5-8.5M17 12l4-4M6.5 3.5L15 12M11 3.5l8.5 8.5M15.5 3.5L21 9M3 4l8 8M20 3.5l1 1"/>' },
+  { re: /מודול/, c: "#2f7d4f", i: '<rect x="3" y="4" width="18" height="15" rx="1"/><path d="M7.5 4v15M12 4v15M16.5 4v15M3 9h18M3 14h18"/><path d="M2 21h20"/>' },
+  { re: /רשת/, c: "#2f7d4f", i: '<rect x="3" y="3.5" width="18" height="17" rx="1.2"/><path d="M3 9l5.5-5.5M3 15l11.5-11.5M5 20.5l16-16M11 20.5l10-10M17 20.5l4-4M9 3.5l12 12M3 3.5l17 17M3 9.5l11 11M3 15.5l5 5"/>' },
+];
+const matOf = a => MATS.find(m => m.re.test(a.name || "")) || null;
 /* כפילויות: מה כבר דווח לאותה מלאכה באותו קטע (מאושר + ממתין; "לא להכניס" לא נחשב) */
 const mergeIv = ivs => { const a = ivs.map(([x, y]) => [Math.min(x, y), Math.max(x, y)]).sort((p, q) => p[0] - q[0]), o = []; for (const [x, y] of a) { const l = o[o.length - 1]; if (l && x <= l[1]) l[1] = Math.max(l[1], y); else o.push([x, y]); } return o; };
 const gapsIn = (lo, hi, cov) => { const g = []; let cur = lo; for (const [x, y] of cov) { if (y <= cur || x >= hi) { if (y > cur && x < hi) cur = y; continue; } if (x > cur) g.push([cur, Math.min(x, hi)]); cur = Math.max(cur, y); } if (cur < hi) g.push([cur, hi]); return g.filter(([x, y]) => y - x > 0); };
@@ -129,6 +201,9 @@ function segsOf(c) {
     .map(s => ({ ...s, label: `${offices[s.officeId]?.name || ""} ${s.num}`, lo: Math.min(+s.secFrom, +s.secTo), hi: Math.max(+s.secFrom, +s.secTo) }))
     .sort((p, q) => Math.max(kdNum(q.kdFrom), kdNum(q.kdTo)) - Math.max(kdNum(p.kdFrom), kdNum(p.kdTo)));
 }
+/** שם בקובייה: סוגריים בשורה נפרדת; שם ארוך מתחלק לשתי שורות מאוזנות */
+const tileName = n => { n = String(n || "").trim(); const i = n.indexOf("(");
+  return i > 0 ? `${esc(n.slice(0, i).trim())}<br>${esc(n.slice(i))}` : esc(n); };
 function view() {
   const cids = me.admin ? Object.keys(D.contractors || {}).filter(k => D.contractors[k].kind !== "ייעודי").sort((a, b) => (D.contractors[a].order ?? 0) - (D.contractors[b].order ?? 0))
     : Object.keys(me.contractors || {}).filter(k => D.contractors?.[k]);
@@ -142,8 +217,9 @@ function view() {
   const m = !unit && S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? Math.abs(S.to - S.from) * SECTION_M : null;
   const mine = list("progress").filter(p => p.reportedBy === me.email).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, 25);
   const actName = id => D.activities?.[id]?.name || "—", segName = id => segs.find(s => s.id === id)?.label || "";
-  const actTile = a => { const G = actGroup(a); return `<button class="act ${a.id === S.actId ? "on" : ""}" data-a="${a.id}" style="--g:${G.color};--gt:${G.tint}"><span>${esc(short(a.name))}${a.unit === "יח׳" ? ` <small>(יח׳)</small>` : ""}</span><i class="tick">${a.id === S.actId ? "✓" : ""}</i></button>`; };
+  const actTile = a => { const G = actGroup(a), M = matOf(a); return `<button class="act ${a.id === S.actId ? "on" : ""} ${M?.ink ? "lt" : ""}" data-a="${a.id}" style="--g:${M?.c || G.color};--gt:${G.tint}${M?.ink ? `;--fg:${M.ink}` : ""}"><i class="ico">${M ? SV(M.i) : agIcon(G.key)}</i><span>${tileName(short(a.name))}${a.unit === "יח׳" ? ` <small>(יח׳)</small>` : ""}</span><i class="tick">${a.id === S.actId ? "✓" : ""}</i></button>`; };
   app.innerHTML = `<header><h1>דיווח ביצוע</h1><div class="who">${esc(me.name || user.email)}<br><button class="btn ghost" id="out" style="padding:4px 10px">יציאה</button></div></header>
+  <div class="board">
   <div class="card top">
     <div class="row" style="gap:8px">${cids.length > 1 ? `<div class="chips">${cids.map(k => `<button class="chip ${k === S.cid ? "on" : ""}" data-c="${k}">${esc(D.contractors[k].name)}</button>`).join("")}</div>` : `<b style="font-size:18px">${esc(c.name)}</b>`}
       <label class="date"><span>תאריך</span><input type="date" id="dt" value="${esc(S.date)}"></label></div>
@@ -162,14 +238,14 @@ function view() {
         <div class="covtxt"><b>${esc(short(act.name))}</b> בקטע: דווח ${done.toLocaleString("he-IL")} מ׳ מתוך ${(W * SECTION_M).toLocaleString("he-IL")}${gaps.length && done ? ` · עוד לא דווח: ${gaps.slice(0, 3).map(([x, y]) => rng(x, y)).join(", ")}${gaps.length > 3 ? "…" : ""}` : ""} <span class="lg"><i class="ok"></i>אושר <i class="pd"></i>ממתין</span></div></div>`; })() : ""}
     <div class="hint">${seg ? `חתכי ${esc(seg.label)}: ${rng(seg.lo, seg.hi)}` : ""}${seg && S.from !== "" && S.to !== "" ? ` · <b style="color:#2f6db5">ק.ד. ${kdOf(seg, S.from)} – ${kdOf(seg, S.to)}</b>${S.byKd ? ` <span class="pill p2">הוזן לפי ק.ד.</span>` : ""}` : ""}</div>`}
   </div>
-  <div class="card">${groupActs(acts).map(({ G, acts: ga }) => `<section class="agrp" style="--g:${G.color};--gt:${G.tint}"><div class="agh"><span class="agi">${agIcon(G.key)}</span><b>${G.name}</b></div><div class="acts">${ga.map(actTile).join("")}</div></section>`).join("")}
-    <div class="lbl">הערה (לא חובה)</div><textarea id="note" rows="2" style="width:100%">${esc(S.note)}</textarea>
-  </div>
+  <div class="card tiles ${act ? "has" : ""}"><div class="flow">${groupActs(acts).map(({ G, acts: ga }) => `<section class="agrp" style="--g:${G.color};--gt:${G.tint}"><div class="acts"><div class="gstart"><div class="agh"><span class="agi">${agIcon(G.key)}</span><b>${G.name}</b></div>${actTile(ga[0])}</div>${ga.slice(1).map(actTile).join("")}</div></section>`).join("")}</div></div>
+  <div class="card side-note"><div class="lbl" style="margin-top:0">הערה (לא חובה)</div><textarea id="note" rows="2">${esc(S.note)}</textarea></div>
   ${S.dup ? `<div class="dup"><b>${S.dup.full ? "הטווח הזה כבר דווח" : "חלק מהטווח כבר דווח"}</b>
     <div class="small">${S.dup.overl.map(o => `${rng(o.f, o.t)} · ${fmtD(o.date)} · ${esc(o.by)} · ${o.st}`).join("<br>")}</div>
     <div class="row" style="margin-top:8px;gap:6px">${S.dup.full ? "" : `<button class="btn" id="dupNew">שליחת החדש בלבד: ${S.dup.gaps.map(([x, y]) => rng(x, y)).join(", ")}</button>`}
       <button class="btn ghost" id="dupFix" title="כשהדיווח הקודם שגוי — נשלח עם הערה לבדיקת מנהל הפרויקט">בקשת תיקון</button><button class="btn ghost" id="dupNo">ביטול</button></div></div>` : ""}
   <div class="sendbar"><div class="sum">${S.msg ? `<div class="msg ${S.err ? "err" : "ok"}" style="margin:0 0 2px">${esc(S.msg)}</div>` : ""}${act ? `<b>${esc(short(act.name))}</b> · ${unit ? (S.qty ? S.qty + " יח׳" : "כמות?") : m !== null ? `${rng(S.from, S.to)} · ${m.toLocaleString("he-IL")} מ׳` : "חתכים?"}` : "בחר מלאכה"}</div><button class="btn" id="send">שליחת דיווח</button></div>
+  </div>
   <div class="card"><b>הדיווחים שלי</b> <span class="hint">— ממתין לאישור עד שמנהל הפרויקט מאשר</span>
     ${mine.map(p => `<div class="rep"><div class="t"><b>${esc(actName(p.activityId))}</b><small>${fmtD(p.date)} · ${esc(D.contractors?.[p.contractorId]?.name || "")} · ${p.qty ? `${p.qty} יח׳` : `${esc(segName(p.segmentId))} ${rng(esc(p.secFrom), esc(p.secTo))}${(s => s ? ` · ק.ד. ${kdOf(s, p.secFrom)}–${kdOf(s, p.secTo)}` : "")(segs.find(x => x.id === p.segmentId))} (${(Math.abs(p.secTo - p.secFrom) * SECTION_M).toLocaleString("he-IL")} מ׳)`}${p.note ? " · " + esc(p.note) : ""}</small></div>
       ${p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span><button class="btn ghost" data-del="${p.id}" style="padding:6px 10px">מחיקה</button>` : p.review === "נדחה" ? `<span class="pill p2">לא אושר</span>` : `<span class="pill p1">אושר ✓</span>`}</div>`).join("") || `<p class="hint">עוד אין דיווחים</p>`}
@@ -225,7 +301,7 @@ function view() {
 }
 /* רענון בלי לקטוע הקלדה: אם המפקח באמצע שדה — מחכים שיצא ממנו */
 let later = false;
-const VER = "2026-10-09b";
+const VER = "2026-10-09e";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
