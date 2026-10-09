@@ -34,6 +34,26 @@ input, select, textarea { font: inherit; border: 1px solid #c9cdc5; border-radiu
 .rep .t { flex: 1; } .rep small { color: var(--muted); display: block; }
 .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; white-space: nowrap; }
 .p0 { background: #fdf0d5; color: #7a5300; } .p1 { background: #e1efe6; color: #24553d; } .p2 { background: #eceee9; color: #555; }
+.top { padding: 10px 14px; } .date { display: flex; align-items: center; gap: 6px; margin-inline-start: auto; font-size: 14px; color: var(--muted); } .date input { padding: 8px; }
+.where { position: sticky; top: 0; z-index: 5; border: 2px solid var(--accent); box-shadow: 0 8px 14px -10px rgba(0,0,0,.35); }
+.chip.sm { padding: 7px 11px; font-size: 14px; } .sec, .kd { margin-top: 8px; } .kd { background: #eef4fb; border-radius: 10px; padding: 6px 8px; } .kd .num { font-size: 17px; width: 96px; }
+.len { font-size: 18px; color: var(--accent); } .where .hint { margin-top: 6px; }
+.agrp { margin-bottom: 14px; } .agh { display: flex; align-items: center; gap: 8px; color: var(--g); font-size: 16px; padding-bottom: 6px; margin-bottom: 8px; border-bottom: 2px solid var(--g); }
+.agi { display: inline-flex; width: 34px; height: 34px; border-radius: 10px; background: var(--gt); align-items: center; justify-content: center; } .agi svg { width: 22px; height: 22px; }
+.acts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.act { display: flex; justify-content: space-between; align-items: center; gap: 6px; border: 1px solid #d5d9d1; border-inline-start: 5px solid var(--g); background: #fff; border-radius: 10px; padding: 10px; min-height: 58px; font: inherit; font-size: 14.5px; text-align: right; cursor: pointer; transition: background .12s, transform .06s; }
+.act:active { transform: scale(.97); } .act small { color: var(--muted); }
+.act .tick { font-style: normal; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #d5d9d1; display: inline-flex; align-items: center; justify-content: center; flex: none; font-weight: 800; }
+.act.on { background: var(--gt); border-color: var(--g); font-weight: 700; } .act.on .tick { background: var(--g); border-color: var(--g); color: #fff; }
+.sendbar { position: sticky; bottom: 0; z-index: 6; display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin-bottom: 12px; box-shadow: 0 -6px 14px -10px rgba(0,0,0,.35); }
+.sendbar .sum { flex: 1; font-size: 14px; } .sendbar .btn { padding: 14px 22px; }
+.cov { margin-top: 10px; } .covbar { position: relative; height: 22px; background: #fff; border: 1px solid #c9cdc5; border-radius: 6px; overflow: hidden; }
+.covbar i { position: absolute; top: 0; bottom: 0; } .covbar i.ok { background: #8fcf9f; } .covbar i.pd { background: repeating-linear-gradient(45deg, #f7e08f, #f7e08f 5px, #fbeec0 5px, #fbeec0 10px); }
+.covbar i.cur { border: 2.5px solid #2f6db5; border-radius: 4px; background: rgba(47,109,181,.12); }
+.covbar .l, .covbar .r { position: absolute; top: 3px; font-size: 10.5px; color: #555; } .covbar .l { left: 4px; } .covbar .r { right: 4px; }
+.covtxt { font-size: 13px; margin-top: 4px; } .lg { color: var(--muted); white-space: nowrap; } .lg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 6px; vertical-align: -1px; } .lg i.ok { background: #8fcf9f; } .lg i.pd { background: #f7e08f; }
+.dup { position: sticky; bottom: 84px; z-index: 6; background: #fff4ea; border: 2px solid #e59a3c; border-radius: 14px; padding: 12px; margin-bottom: 8px; }
+.dup .btn { font-size: 14px; padding: 10px 14px; } .small { font-size: 13px; }
 .login { max-width: 380px; margin: 12vh auto; }
 .login input { width: 100%; margin-bottom: 10px; direction: ltr; }
 </style>
@@ -51,6 +71,29 @@ const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOff
 const fmtD = s => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "";
 const kdNum = v => { const n = parseFloat(String(v ?? "").replace(",", ".")); return isNaN(n) ? null : n; };
 const rng = (a, b) => `\u2066${a}–${b}\u2069`;   // טווח חתכים שלא מתהפך בעברית
+const short = n => String(n || "").replace(/^(גדר|כביש|תקשורת)\s*-\s*/, "").replace(/^(גדר|כביש)-\s*/, "");
+const AG_ICON = {
+  prep: '<path d="M17 3l-6.5 8.5"/><path d="M8 9.5l5.5 4.2-2.6 5.6-5.6-.9z"/><path d="M3 21h8"/>',
+  fence: '<path d="M5 21V8l1.5-3L8 8v13M11.25 21V8l1.5-3 1.5 3v13M17.5 21V8L19 5l1.5 3v13"/><path d="M3 11h19M3 17h19"/>',
+  road: '<path d="M8 3L4 21M16 3l4 18"/><path d="M12 4v2.5M12 10v3M12 16.5V20"/>',
+  comm: '<path d="M12 10v11M8.5 21h7"/><circle cx="12" cy="8.5" r="1.6"/><path d="M8.8 5.6a4.5 4.5 0 0 1 6.4 0M6.3 3.2a8 8 0 0 1 11.4 0"/>',
+  fin: '<path d="M12 3s6 6.4 6 10.8a6 6 0 0 1-12 0C6 9.4 12 3 12 3z"/><path d="M9.5 14.5a2.6 2.6 0 0 0 2.5 2.4"/>',
+  other: '<circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/>' };
+const agIcon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${AG_ICON[k] || AG_ICON.other}</svg>`;
+const ACT_GROUPS = [
+  { key: "prep", name: "הכנות ועבודות מקדימות", color: "#8a6a3a", tint: "#f6efe4", stages: ["חישוף והכנה", "פריסת תלתליות", "פירוק גדר קיימת"], re: /חישוף|הכנה|פריס|פריש|פירוק/ },
+  { key: "fence", name: "גדר", color: "#2e7d4f", tint: "#e8f4ec", stages: ["כלונסאות", "קורה", "עמודים", "רשתות / מודולים", "ניו ג׳רסי", "רשת סכינים", "תלתליות על הגדר"], re: /גדר|כלונס|קלונס|קור|עמוד|רשת|מודול|ניו|ג.ר[סז]י|סכינ|תלתל|קלמר|ריתוך|בטון רזה/ },
+  { key: "road", name: "כביש", color: "#5f5a8c", tint: "#efeef7", stages: ["מבנה דרך", "מצעים", "אספלט", "דרך אחזקה", "מעקה בטון"], re: /מבנה דרך|מצע|אספלט|אחזקה|מעקה בטון/ },
+  { key: "comm", name: "תקשורת ותשתיות", color: "#2f6db5", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "ארונות שקד"], re: /תשתי|תקשור|חשמל|שוח|צנר|גוב|שקד/ },
+  { key: "fin", name: "ניקוז וגמר", color: "#13827a", tint: "#e4f3f1", stages: ["מעבירי מים וסבכות", "מעקות", "סימון כביש ושילוט"], re: /מעביר|סבכ|מעקות|סימון|שילוט/ }];
+const OTHER_G = { key: "other", name: "אחר", color: "#6b7280", tint: "#f1f2f3" };
+const actGroup = a => ACT_GROUPS.find(G => G.stages.includes(a.stage)) || (a.stage ? null : ACT_GROUPS.find(G => G.re.test(a.name))) || OTHER_G;
+const groupActs = acts => [...ACT_GROUPS, OTHER_G].map(G => ({ G, acts: acts.filter(a => actGroup(a).key === G.key) })).filter(x => x.acts.length);
+/* כפילויות: מה כבר דווח לאותה מלאכה באותו קטע (מאושר + ממתין; "לא להכניס" לא נחשב) */
+const mergeIv = ivs => { const a = ivs.map(([x, y]) => [Math.min(x, y), Math.max(x, y)]).sort((p, q) => p[0] - q[0]), o = []; for (const [x, y] of a) { const l = o[o.length - 1]; if (l && x <= l[1]) l[1] = Math.max(l[1], y); else o.push([x, y]); } return o; };
+const gapsIn = (lo, hi, cov) => { const g = []; let cur = lo; for (const [x, y] of cov) { if (y <= cur || x >= hi) { if (y > cur && x < hi) cur = y; continue; } if (x > cur) g.push([cur, Math.min(x, hi)]); cur = Math.max(cur, y); } if (cur < hi) g.push([cur, hi]); return g.filter(([x, y]) => y - x > 0); };
+const priorOf = (cid, aid, sid) => list("progress").filter(p => p.contractorId === cid && p.activityId === aid && p.segmentId === sid && p.review !== "נדחה" && p.secFrom !== "" && p.secTo !== "" && p.secFrom != null);
+const ivOf = p => [Math.min(+p.secFrom, +p.secTo), Math.max(+p.secFrom, +p.secTo)];
 const emailKey = e => String(e || "").toLowerCase().replace(/\./g, ",");
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name).localeCompare(String(b.name), "he");
 let fb, user, me, D = {}, S = { cid: "", segId: "", actId: "", date: today(), from: "", to: "", qty: "", note: "", msg: "", err: false };
@@ -69,6 +112,16 @@ function noAccess() {
   $("out").onclick = () => fb.auth().signOut();
 }
 const list = col => Object.entries(D[col] || {}).map(([id, v]) => ({ id, ...v }));
+/* חתך ↔ ק.ד.: לפי טבלת ק.ד.↔חתכים אם יש (מדויק), אחרת קו ישר בין קצוות הקטע (≈) */
+function kdPts(s) {
+  const pts = Object.values(D.kdSections || {}).filter(r => r.officeId === s.officeId && Number(r.seg) === Number(s.num)).map(r => [parseFloat(r.kd), Number(r.secFrom), Number(r.secTo)]).filter(p => !p.some(isNaN)).sort((a, b) => a[0] - b[0]);
+  if (pts.length >= 2) { const l = pts[pts.length - 1]; return { exact: true, p: [...pts.map(q => [q[0], q[1]]), [l[0] + 1, l[2] + 1]] }; }
+  const ka = kdNum(s.kdFrom), kb = kdNum(s.kdTo); if (ka === null || kb === null || ka === kb) return null;
+  return { exact: false, p: [[ka, +s.secFrom], [kb, +s.secTo]].sort((a, b) => a[0] - b[0]) };
+}
+const lerp = (pts, x, i, j) => { const p = [...pts].sort((a, b) => a[i] - b[i]); let k = p.findIndex((q, n) => n > 0 && x <= q[i]); if (k < 1) k = x < p[0][i] ? 1 : p.length - 1; const [a, b] = [p[k - 1], p[k]]; return b[i] === a[i] ? a[j] : a[j] + (x - a[i]) * (b[j] - a[j]) / (b[i] - a[i]); };
+const kdOf = (s, sec) => { const k = kdPts(s); return k && sec !== "" && !isNaN(sec) ? `${k.exact ? "" : "≈"}${(Math.round(lerp(k.p, +sec, 1, 0) * 10) / 10).toLocaleString("he-IL")}` : ""; };
+const secOf = (s, kd) => { const k = kdPts(s); return k ? Math.max(s.lo, Math.min(s.hi, Math.round(lerp(k.p, kd, 0, 1)))) : null; };
 function segsOf(c) {
   const a = kdNum(c.kdFrom), b = kdNum(c.kdTo); if (a === null || b === null) return [];
   const lo = Math.min(a, b), hi = Math.max(a, b), offices = D.designOffices || {};
@@ -89,32 +142,54 @@ function view() {
   const m = !unit && S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? Math.abs(S.to - S.from) * SECTION_M : null;
   const mine = list("progress").filter(p => p.reportedBy === me.email).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, 25);
   const actName = id => D.activities?.[id]?.name || "—", segName = id => segs.find(s => s.id === id)?.label || "";
+  const actTile = a => { const G = actGroup(a); return `<button class="act ${a.id === S.actId ? "on" : ""}" data-a="${a.id}" style="--g:${G.color};--gt:${G.tint}"><span>${esc(short(a.name))}${a.unit === "יח׳" ? ` <small>(יח׳)</small>` : ""}</span><i class="tick">${a.id === S.actId ? "✓" : ""}</i></button>`; };
   app.innerHTML = `<header><h1>דיווח ביצוע</h1><div class="who">${esc(me.name || user.email)}<br><button class="btn ghost" id="out" style="padding:4px 10px">יציאה</button></div></header>
-  <div class="card">
-    ${cids.length > 1 ? `<div class="lbl">קבלן</div><div class="chips">${cids.map(k => `<button class="chip ${k === S.cid ? "on" : ""}" data-c="${k}">${esc(D.contractors[k].name)}</button>`).join("")}</div>` : `<div class="lbl">קבלן</div><b style="font-size:18px">${esc(c.name)}</b>`}
-    <div class="lbl">תאריך ביצוע</div><input type="date" id="dt" value="${esc(S.date)}">
-    <div class="lbl">מלאכה</div><div class="acts">${acts.map(a => `<button class="act ${a.id === S.actId ? "on" : ""}" data-a="${a.id}">${esc(a.name)}${a.unit === "יח׳" ? " (יח׳)" : ""}</button>`).join("")}</div>
-    ${unit ? `<div class="lbl">כמות (יח׳)</div><div class="row"><input class="num" id="qty" inputmode="numeric" value="${esc(S.qty)}"><input id="loc" placeholder="מיקום (ק.ד. / חתך)" style="flex:1" value="${esc(S.loc || "")}"></div>`
-      : `<div class="lbl">קטע תכנון</div><div class="chips">${segs.map(s => `<button class="chip ${s.id === S.segId ? "on" : ""}" data-s="${s.id}">${esc(s.label)}</button>`).join("")}</div>
-    <div class="lbl">חתכים</div><div class="row"><span>מחתך</span><input class="num" id="f" inputmode="numeric" value="${esc(S.from)}" placeholder="${seg?.lo ?? ""}"><span>עד</span><input class="num" id="t" inputmode="numeric" value="${esc(S.to)}" placeholder="${seg?.hi ?? ""}"><b id="m">${m === null ? "" : m.toLocaleString("he-IL") + " מ׳"}</b></div>
-    <div class="hint" style="margin-top:6px">${seg ? `חתכי הקטע: ${rng(seg.lo, seg.hi)}` : ""}</div>`}
-    <div class="lbl">הערה (לא חובה)</div><textarea id="note" rows="2" style="width:100%">${esc(S.note)}</textarea>
-    <div style="margin-top:12px"><button class="btn" id="send" style="width:100%">שליחת דיווח</button></div>
-    ${S.msg ? `<div class="msg ${S.err ? "err" : "ok"}">${esc(S.msg)}</div>` : ""}
+  <div class="card top">
+    <div class="row" style="gap:8px">${cids.length > 1 ? `<div class="chips">${cids.map(k => `<button class="chip ${k === S.cid ? "on" : ""}" data-c="${k}">${esc(D.contractors[k].name)}</button>`).join("")}</div>` : `<b style="font-size:18px">${esc(c.name)}</b>`}
+      <label class="date"><span>תאריך</span><input type="date" id="dt" value="${esc(S.date)}"></label></div>
   </div>
+  <div class="card where">
+    ${unit ? `<div class="lbl" style="margin-top:0">${esc(short(act.name))} — כמות (יח׳)</div><div class="row"><input class="num" id="qty" inputmode="numeric" value="${esc(S.qty)}"><input id="loc" placeholder="מיקום (ק.ד. / חתך)" style="flex:1" value="${esc(S.loc || "")}"></div>`
+      : `<div class="chips">${segs.map(s => `<button class="chip sm ${s.id === S.segId ? "on" : ""}" data-s="${s.id}">${esc(s.label)}</button>`).join("")}</div>
+    <div class="row sec"><span>מחתך</span><input class="num" id="f" inputmode="numeric" value="${esc(S.from)}" placeholder="${seg?.lo ?? ""}"><span>עד</span><input class="num" id="t" inputmode="numeric" value="${esc(S.to)}" placeholder="${seg?.hi ?? ""}"><b id="m" class="len">${m === null ? "" : m.toLocaleString("he-IL") + " מ׳"}</b></div>
+    <div class="row kd"><span>או ק.ד.</span><input class="num" id="kf" inputmode="decimal" value="${esc(S.kf ?? "")}" placeholder="${seg && S.from !== "" ? esc(kdOf(seg, S.from).replace("≈", "")) : "ק.ד."}"><span>עד</span><input class="num" id="kt" inputmode="decimal" value="${esc(S.kt ?? "")}" placeholder="${seg && S.to !== "" ? esc(kdOf(seg, S.to).replace("≈", "")) : "ק.ד."}"><button class="btn ghost" id="kgo">המרה</button></div>
+    ${act && seg ? (() => { const pr = priorOf(c.id, act.id, seg.id), W = seg.hi - seg.lo, pos = v => ((v - seg.lo) / W * 100).toFixed(2);
+      const ok = mergeIv(pr.filter(p => !p.review).map(ivOf)), pend = mergeIv(pr.filter(p => p.review === "לבדיקה").map(ivOf)), all = mergeIv(pr.map(ivOf));
+      const done = all.reduce((s, [x, y]) => s + (y - x), 0) * SECTION_M, gaps = gapsIn(seg.lo, seg.hi, all);
+      const cur = S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? [Math.min(S.from, S.to), Math.max(S.from, S.to)] : null;
+      const bars = (arr, cls) => arr.map(([x, y]) => `<i class="${cls}" style="left:${pos(x)}%;width:${Math.max(.4, pos(y) - pos(x))}%"></i>`).join("");
+      return `<div class="cov"><div class="covbar" dir="ltr">${bars(ok, "ok")}${bars(pend, "pd")}${cur ? `<i class="cur" style="left:${pos(cur[0])}%;width:${Math.max(.6, pos(cur[1]) - pos(cur[0]))}%"></i>` : ""}<span class="l">${seg.lo}</span><span class="r">${seg.hi}</span></div>
+        <div class="covtxt"><b>${esc(short(act.name))}</b> בקטע: דווח ${done.toLocaleString("he-IL")} מ׳ מתוך ${(W * SECTION_M).toLocaleString("he-IL")}${gaps.length && done ? ` · עוד לא דווח: ${gaps.slice(0, 3).map(([x, y]) => rng(x, y)).join(", ")}${gaps.length > 3 ? "…" : ""}` : ""} <span class="lg"><i class="ok"></i>אושר <i class="pd"></i>ממתין</span></div></div>`; })() : ""}
+    <div class="hint">${seg ? `חתכי ${esc(seg.label)}: ${rng(seg.lo, seg.hi)}` : ""}${seg && S.from !== "" && S.to !== "" ? ` · <b style="color:#2f6db5">ק.ד. ${kdOf(seg, S.from)} – ${kdOf(seg, S.to)}</b>${S.byKd ? ` <span class="pill p2">הוזן לפי ק.ד.</span>` : ""}` : ""}</div>`}
+  </div>
+  <div class="card">${groupActs(acts).map(({ G, acts: ga }) => `<section class="agrp" style="--g:${G.color};--gt:${G.tint}"><div class="agh"><span class="agi">${agIcon(G.key)}</span><b>${G.name}</b></div><div class="acts">${ga.map(actTile).join("")}</div></section>`).join("")}
+    <div class="lbl">הערה (לא חובה)</div><textarea id="note" rows="2" style="width:100%">${esc(S.note)}</textarea>
+  </div>
+  ${S.dup ? `<div class="dup"><b>${S.dup.full ? "הטווח הזה כבר דווח" : "חלק מהטווח כבר דווח"}</b>
+    <div class="small">${S.dup.overl.map(o => `${rng(o.f, o.t)} · ${fmtD(o.date)} · ${esc(o.by)} · ${o.st}`).join("<br>")}</div>
+    <div class="row" style="margin-top:8px;gap:6px">${S.dup.full ? "" : `<button class="btn" id="dupNew">שליחת החדש בלבד: ${S.dup.gaps.map(([x, y]) => rng(x, y)).join(", ")}</button>`}
+      <button class="btn ghost" id="dupFix" title="כשהדיווח הקודם שגוי — נשלח עם הערה לבדיקת מנהל הפרויקט">בקשת תיקון</button><button class="btn ghost" id="dupNo">ביטול</button></div></div>` : ""}
+  <div class="sendbar"><div class="sum">${S.msg ? `<div class="msg ${S.err ? "err" : "ok"}" style="margin:0 0 2px">${esc(S.msg)}</div>` : ""}${act ? `<b>${esc(short(act.name))}</b> · ${unit ? (S.qty ? S.qty + " יח׳" : "כמות?") : m !== null ? `${rng(S.from, S.to)} · ${m.toLocaleString("he-IL")} מ׳` : "חתכים?"}` : "בחר מלאכה"}</div><button class="btn" id="send">שליחת דיווח</button></div>
   <div class="card"><b>הדיווחים שלי</b> <span class="hint">— ממתין לאישור עד שמנהל הפרויקט מאשר</span>
-    ${mine.map(p => `<div class="rep"><div class="t"><b>${esc(actName(p.activityId))}</b><small>${fmtD(p.date)} · ${esc(D.contractors?.[p.contractorId]?.name || "")} · ${p.qty ? `${p.qty} יח׳` : `${esc(segName(p.segmentId))} ${rng(esc(p.secFrom), esc(p.secTo))} (${(Math.abs(p.secTo - p.secFrom) * SECTION_M).toLocaleString("he-IL")} מ׳)`}${p.note ? " · " + esc(p.note) : ""}</small></div>
+    ${mine.map(p => `<div class="rep"><div class="t"><b>${esc(actName(p.activityId))}</b><small>${fmtD(p.date)} · ${esc(D.contractors?.[p.contractorId]?.name || "")} · ${p.qty ? `${p.qty} יח׳` : `${esc(segName(p.segmentId))} ${rng(esc(p.secFrom), esc(p.secTo))}${(s => s ? ` · ק.ד. ${kdOf(s, p.secFrom)}–${kdOf(s, p.secTo)}` : "")(segs.find(x => x.id === p.segmentId))} (${(Math.abs(p.secTo - p.secFrom) * SECTION_M).toLocaleString("he-IL")} מ׳)`}${p.note ? " · " + esc(p.note) : ""}</small></div>
       ${p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span><button class="btn ghost" data-del="${p.id}" style="padding:6px 10px">מחיקה</button>` : p.review === "נדחה" ? `<span class="pill p2">לא אושר</span>` : `<span class="pill p1">אושר ✓</span>`}</div>`).join("") || `<p class="hint">עוד אין דיווחים</p>`}
   </div>`;
   $("out").onclick = () => fb.auth().signOut();
-  app.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { S.cid = b.dataset.c; S.actId = ""; S.segId = ""; S.msg = ""; view(); });
-  app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { S.actId = b.dataset.a; S.msg = ""; view(); });
-  app.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { S.segId = b.dataset.s; view(); });
+  app.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { S.cid = b.dataset.c; S.actId = ""; S.segId = ""; S.msg = ""; S.dup = null; view(); });
+  app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { S.actId = b.dataset.a; S.msg = ""; S.dup = null; view(); });
+  app.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { S.segId = b.dataset.s; S.dup = null; view(); });
   app.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "בטוח?"; return; } await fb.database().ref(`${ROOT}/progress/${b.dataset.del}`).remove(); });
   $("dt").onchange = e => { if (e.target.value && +e.target.value.slice(0, 4) > 1990) S.date = e.target.value; };
   $("note").oninput = e => S.note = e.target.value;
-  const numIn = (id, k) => { const el = $(id); if (!el) return; el.oninput = () => { S[k] = el.value.trim() === "" ? "" : Number(el.value); const mm = $("m"); if (mm) { const v = S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? Math.abs(S.to - S.from) * SECTION_M : null; mm.textContent = v === null ? "" : v.toLocaleString("he-IL") + " מ׳"; } }; };
+  const numIn = (id, k) => { const el = $(id); if (!el) return; el.oninput = () => { if (S.dup) { S.dup = null; document.querySelector(".dup")?.remove(); } S[k] = el.value.trim() === "" ? "" : Number(el.value); const mm = $("m"); if (mm) { const v = S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? Math.abs(S.to - S.from) * SECTION_M : null; mm.textContent = v === null ? "" : v.toLocaleString("he-IL") + " מ׳"; } }; };
   numIn("f", "from"); numIn("t", "to"); numIn("qty", "qty");
+  ["f", "t"].forEach(id => { const el = $(id); if (el) el.addEventListener("input", () => { S.byKd = false; S.kf = S.kt = ""; }); });   // בלי רינדור — כדי לא לאבד את הפוקוס בין השדות
+  ["kf", "kt"].forEach(id => { const el = $(id); if (el) el.oninput = () => S[id] = el.value; });
+  if ($("kgo")) $("kgo").onclick = () => {   // ק.ד. → קטע + חתכים
+    const a = kdNum(S.kf), z = kdNum(S.kt); if (a === null || z === null) { S.msg = "צריך ק.ד. התחלה וסוף"; S.err = true; return view(); }
+    const mid = (a + z) / 2, s = segs.find(x => { const p = kdNum(x.kdFrom), q = kdNum(x.kdTo); return mid >= Math.min(p, q) && mid <= Math.max(p, q); });
+    if (!s) { S.msg = "הק.ד. לא נמצא באף קטע של הקבלן"; S.err = true; return view(); }
+    const p = secOf(s, a), q = secOf(s, z); Object.assign(S, { segId: s.id, from: Math.min(p, q), to: Math.max(p, q), byKd: true, msg: "", err: false }); view(); };
   if ($("loc")) $("loc").oninput = e => S.loc = e.target.value;
   $("send").onclick = async () => {
     const bad = t => { S.msg = t; S.err = true; view(); };
@@ -126,15 +201,27 @@ function view() {
       if (!seg) return bad("צריך לבחור קטע תכנון");
       if (S.from === "" || S.to === "" || isNaN(S.from) || isNaN(S.to) || S.from === S.to) return bad("צריך חתך התחלה וחתך סוף (שונים)");
       if (Math.min(S.from, S.to) < seg.lo || Math.max(S.from, S.to) > seg.hi) return bad(`החתכים מחוץ לקטע (${rng(seg.lo, seg.hi)})`);
-      Object.assign(rec, { segmentId: seg.id, secFrom: S.from, secTo: S.to });
+      Object.assign(rec, { segmentId: seg.id, secFrom: S.from, secTo: S.to }, S.byKd ? { byKd: true, kdFrom: S.kf, kdTo: S.kt } : {});
+      const lo = Math.min(S.from, S.to), hi = Math.max(S.from, S.to), pr = priorOf(c.id, S.actId, seg.id), overl = pr.filter(p => ivOf(p)[0] < hi && ivOf(p)[1] > lo);
+      if (overl.length) {   // כפילות — לא שולחים; מציעים לשלוח רק את החדש / בקשת תיקון
+        S.dup = { rec, full: !gapsIn(lo, hi, mergeIv(pr.map(ivOf))).length, gaps: gapsIn(lo, hi, mergeIv(pr.map(ivOf))),
+          overl: overl.map(p => ({ f: ivOf(p)[0], t: ivOf(p)[1], date: p.date, by: p.reportedByName || (p.reportedBy || "משרד").split("@")[0], st: p.review === "לבדיקה" ? "ממתין" : "אושר" })) };
+        S.msg = ""; S.err = false; return view(); }
     }
+    await sendRecs([rec]);
+  };
+  const sendRecs = async (recs, extra = "") => {
     $("send").disabled = true;
-    try { await fb.database().ref(`${ROOT}/progress`).push(rec);
-      const len = unit ? `${S.qty} יח׳` : `${(Math.abs(S.to - S.from) * SECTION_M).toLocaleString("he-IL")} מ׳`;
-      Object.assign(S, { from: unit ? S.from : S.to, to: "", qty: "", note: "", msg: `נשלח ✓ ${len}${me.admin ? " — נקלט כמאושר" : " — ממתין לאישור"}`, err: false });
+    try { for (const r of recs) await fb.database().ref(`${ROOT}/progress`).push(r);
+      const len = unit ? `${S.qty} יח׳` : `${recs.reduce((s, r) => s + Math.abs(r.secTo - r.secFrom), 0) * SECTION_M} מ׳`.replace(/^(\d+)/, n => Number(n).toLocaleString("he-IL")); S.dup = null;
+      Object.assign(S, { from: unit ? S.from : S.to, to: "", qty: "", note: "", byKd: false, kf: S.byKd ? S.kt : "", kt: "", msg: `נשלח ✓ ${len}${extra}${recs.every(r => r.review === "") ? " — נקלט כמאושר" : " — ממתין לאישור"}`, err: false });
     } catch (e) { S.msg = "השליחה נכשלה — אין הרשאה לקבלן הזה או אין חיבור"; S.err = true; }
     view();
   };
+  if ($("dupNo")) $("dupNo").onclick = () => { S.dup = null; view(); };
+  if ($("dupNew")) $("dupNew").onclick = () => sendRecs(S.dup.gaps.map(([x, y]) => ({ ...S.dup.rec, secFrom: x, secTo: y, byKd: false })), " (רק החלק החדש)");
+  if ($("dupFix")) $("dupFix").onclick = () => { if (!S.note.trim()) { S.msg = "בבקשת תיקון — כתוב בהערה מה שגוי בדיווח הקודם"; S.err = true; return view(); }
+    sendRecs([{ ...S.dup.rec, note: S.note.trim(), correction: true, review: "לבדיקה" }], " — בקשת תיקון"); };
 }
 /* רענון בלי לקטוע הקלדה: אם המפקח באמצע שדה — מחכים שיצא ממנו */
 let later = false;
@@ -158,8 +245,8 @@ document.addEventListener("focusout", () => { if (later) { later = false; setTim
     }
     if (!me) return noAccess();
     me.email = String(u.email).toLowerCase();
-    let pending = 6;
-    for (const col of ["contractors", "activities", "designSegments", "designOffices", "progress"]) {
+    let pending = 7;
+    for (const col of ["contractors", "activities", "designSegments", "designOffices", "kdSections", "progress"]) {
       const ref = db.ref(`${ROOT}/${col}`), cb = ref.on("value", s => { D[col] = s.val() || {}; if (pending > 0) pending--; if (pending <= 1) soft(); }, () => {});
       offs.push(() => ref.off("value", cb));
     }
