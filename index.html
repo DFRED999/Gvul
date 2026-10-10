@@ -103,6 +103,7 @@ h2 { font-size: 17px; margin: 0 0 12px; font-weight: 700; }
 .tablewrap { overflow: auto; max-height: calc(100vh - 80px); }
 .sheet thead { position: sticky; top: 0; z-index: 3; box-shadow: 0 2px 0 #c3d9e6; }
 .sheet { border-collapse: collapse; width: 100%; font-size: 14px; }
+.sheet th[data-act="sortCol"] { cursor: pointer; user-select: none; } .sheet th[data-act="sortCol"]:hover { background: #cfe4f2; } .sheet th.sorted { background: #c6def0; } .sarr { font-size: 10px; color: #2d6cb8; }
 .sheet th { background: var(--head); color: var(--head-ink); font-weight: 700; font-size: 13px; padding: 7px 6px; border: 1px solid #c3d9e6; white-space: nowrap; text-align: center; }
 .sheet td { border: 1px solid var(--line); padding: 3px 4px; vertical-align: middle; }
 .sheet td.c { text-align: center; }
@@ -741,7 +742,7 @@ function render() {
       ${body}
     </main>
   </div>`;
-  applyFilters();
+  applyFilters(); applySorts();
   document.querySelectorAll("details").forEach(el => { if (openDet.has(keyOf(el))) el.open = true; });
   const wraps = [...document.querySelectorAll(".tablewrap")];
   wrapScroll.forEach(([t, top, left], i) => { const w = (t && wraps.find(x => x.querySelector("table")?.dataset.table === t)) || wraps[i]; if (w) { w.scrollTop = top; w.scrollLeft = left; } });
@@ -3080,7 +3081,7 @@ function renderSheet(table, rows, emptyText, { store = table, del = true } = {})
   const filtRow = F.open ? `<tr class="filtrow">${cols.map(c => `<th><input class="finp ${fv[c.key] ? "on" : ""}" id="flt_${table}_${c.key}" list="dl_${table}_${c.key}" data-filt="${table}|${c.key}" value="${esc(fv[c.key] || "")}" placeholder="סינון…" aria-label="סינון ${esc(c.label)}"><datalist id="dl_${table}_${c.key}"></datalist></th>`).join("")}
     <th><span class="fcount"></span>${nOn ? ` <button class="btn ghost sm" data-act="filtClear" data-table="${table}">ניקוי</button>` : ""}</th></tr>` : "";
   return `<div class="tablewrap"><table class="sheet" data-table="${table}">
-    <thead><tr>${cols.map(c => `<th data-k="${c.key}">${esc(c.label)}</th>`).join("")}<th class="colbtn"><span class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn ghost sm ${nOn ? "on" : ""}" data-act="filt" data-table="${table}" title="סינון לפי עמודה">סינון${nOn ? ` (${nOn})` : ""}</button><button class="btn ghost sm" data-act="cols" data-table="${table}" title="ניהול עמודות">עמודות</button><button class="btn ghost sm" data-act="xlsx" title="הפקת אקסל של הטבלה כפי שהיא מוצגת (כולל סינון)">אקסל</button></span></th></tr>${filtRow}</thead>
+    <thead><tr>${cols.map(c => `<th data-k="${c.key}" data-act="sortCol" data-table="${table}" title="לחיצה ממיינת לפי העמודה (עולה / יורד / ברירת מחדל)">${esc(c.label)}<span class="sarr"></span></th>`).join("")}<th class="colbtn"><span class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn ghost sm ${nOn ? "on" : ""}" data-act="filt" data-table="${table}" title="סינון לפי עמודה">סינון${nOn ? ` (${nOn})` : ""}</button><button class="btn ghost sm" data-act="cols" data-table="${table}" title="ניהול עמודות">עמודות</button><button class="btn ghost sm" data-act="xlsx" title="הפקת אקסל של הטבלה כפי שהיא מוצגת (כולל סינון)">אקסל</button></span></th></tr>${filtRow}</thead>
     <tbody>${rows.map(r => `<tr${(bg => bg ? ` style="background:${bg}"` : "")(rowTint(table, r))}>${cols.map(c => `<td data-k="${c.key}" class="${c.cls || ""}" ${c.style ? `style="${c.style(r)}"` : ""}>${c.cell(r)}</td>`).join("")}<td>${del ? `<button class="btn del" data-act="del" data-col="${store}" data-id="${r.id}">מחיקה</button>` : ""}</td></tr>`).join("")
       || `<tr><td colspan="${cols.length + 1}" class="c muted">${emptyText}</td></tr>`}</tbody>${foot}
   </table></div>`;
@@ -3098,6 +3099,31 @@ const cellText = td => {
 const shownText = td => { const sel = td.querySelector("select"); if (sel) return sel.options[sel.selectedIndex]?.text || "";
   const inp = td.querySelector("input:not([type=checkbox]), textarea"); if (inp) { const m = inp.type === "date" && inp.value.match(/^(\d{4})-(\d\d)-(\d\d)$/); return m ? `${m[3]}/${m[2]}/${m[1]}` : inp.value; }
   return (td.innerText || "").split("\n")[0]; };
+/* ---------- מיון לפי עמודה (לכל טבלה) ----------
+   לחיצה על כותרת: עולה → יורד → ברירת מחדל. נשמר במכשיר. ברירת מחדל: טבלאות עם ק.ד. — לפי ק.ד. (גבוה למעלה, כמו בקו) */
+const SORT_DEF = { designSegments: { k: "kdFrom", dir: -1 }, orders: { k: "kdFrom", dir: -1 }, items: { k: "kdFrom", dir: -1 } };
+let SORTS = (() => { try { return JSON.parse(localStorage.getItem("sheetSort") || "{}"); } catch (e) { return {}; } })();
+const saveSorts = () => { try { localStorage.setItem("sheetSort", JSON.stringify(SORTS)); } catch (e) {} };
+const sortKeyOf = txt => { const t = String(txt || "").trim(); if (!t || t === "—") return null;
+  const iso = t.match(/(\d{4})-(\d\d)-(\d\d)/); if (iso) return { n: +iso[1] * 1e4 + +iso[2] * 100 + +iso[3] };
+  const dmy = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (dmy) { const y = dmy[3].length === 2 ? 2000 + +dmy[3] : +dmy[3]; return { n: y * 1e4 + +dmy[2] * 100 + +dmy[1] }; }
+  const num = t.replace(/[,\s₪≈]/g, "").match(/^[-+]?\d+(\.\d+)?/); if (num) return { n: parseFloat(num[0]) };
+  const code = t.match(/^([A-Za-z\u0590-\u05FF]+)[-\s]?(\d+)/); if (code) return { s: code[1], n: +code[2] };
+  return { s: t }; };
+const cmpKeys = (a, b) => { if (a === null) return b === null ? 0 : 1; if (b === null) return -1;
+  if (a.s !== undefined || b.s !== undefined) { const c = String(a.s ?? "").localeCompare(String(b.s ?? ""), "he", { numeric: true }); if (c) return c; }
+  return (a.n ?? 0) - (b.n ?? 0); };
+function applySorts() {
+  document.querySelectorAll("table.sheet[data-table]").forEach(tb => {
+    const t = tb.dataset.table, sp = SORTS[t] === "off" ? null : SORTS[t] || SORT_DEF[t];
+    tb.querySelectorAll("thead th[data-k]").forEach(th => { th.classList.toggle("sorted", !!sp && th.dataset.k === sp.k); const a = th.querySelector(".sarr"); if (a) a.textContent = sp && th.dataset.k === sp.k ? (sp.dir > 0 ? " ▲" : " ▼") : ""; });
+    if (!sp || !tb.querySelector(`thead th[data-k="${CSS.escape(sp.k)}"]`)) return;
+    const body = tb.tBodies[0], rows = [...body.rows].filter(tr => !tr.querySelector("td[colspan]"));
+    const keyed = rows.map((tr, i) => { const td = tr.querySelector(`td[data-k="${CSS.escape(sp.k)}"]`); return { tr, i, k: td ? sortKeyOf(shownText(td)) : null }; });
+    keyed.sort((a, b) => { if (a.k === null || b.k === null) return a.k === b.k ? a.i - b.i : a.k === null ? 1 : -1; return cmpKeys(a.k, b.k) * sp.dir || a.i - b.i; });
+    keyed.forEach(x => body.appendChild(x.tr));
+  });
+}
 function applyFilters() {
   document.querySelectorAll("table.sheet[data-table]").forEach(tb => {
     const t = tb.dataset.table, fv = ui.filt[t]?.v || {}, keys = Object.keys(fv).filter(k => fv[k]);
@@ -3704,6 +3730,9 @@ $app.addEventListener("click", async e => {
     const iid = await api.add("issues", { contractorId: r.contractorId, title: t.length > 90 ? t.slice(0, 88) + "…" : t, category: r.kind === "בעיה בשטח" ? "חסם" : "תכנון", kdFrom: r.kdFrom || "", kdTo: r.kdTo || r.kdFrom || "", owner: "", status: "פתוח", opened: r.date || todayStr(), updated: todayStr(),
       last: `פנייה מהשטח (${r.reportedByName || r.reportedBy || ""}): ${t}`, history: {}, fromRequest: b.dataset.id });
     await api.update("requests", b.dataset.id, { status: "הפך לנושא", issueId: iid || "", reply: txt || "נפתח נושא מעקב — נעדכן כאן", replyByName: me?.name || "מנהל הפרויקט", replyAt: new Date().toISOString() }); }
+  else if (act === "sortCol") { const t = b.dataset.table, k = b.dataset.k, cur = SORTS[t] === "off" ? null : SORTS[t] || SORT_DEF[t];
+    const isDef = !SORTS[t] && !!SORT_DEF[t], nx = !cur || cur.k !== k ? { k, dir: 1 } : isDef ? { k, dir: -cur.dir } : cur.dir > 0 ? { k, dir: -1 } : SORT_DEF[t] ? SORT_DEF[t] : "off";   // עולה → יורד → בלי מיון (הסדר המקורי)
+    if (nx !== "off" && SORT_DEF[t] && SORT_DEF[t].k === nx.k && SORT_DEF[t].dir === nx.dir) delete SORTS[t]; else SORTS[t] = nx; saveSorts(); render(); }
   else if (act === "segAsg") { segAsgModal(b.dataset.id); }
   else if (act === "deckTheme") { ui.deckTheme = b.dataset.id; render(); }
   else if (act === "pDays") { ui.pDays = Number(b.dataset.id) || 7; render(); }
