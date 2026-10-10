@@ -172,6 +172,7 @@ body.ro .side .foot::after { content: " · צפייה בלבד"; color: #f2c66d;
 .alrt.rq-al { background: #fff3e2; border-inline-start-color: #d0701a; }
 .nav.rqnav { font-weight: 700; } .nav.rqnav.has { background: linear-gradient(150deg, #f6a945, #d0701a); color: #fff; font-size: 15.5px; padding: 10px 12px; margin: 4px 0; box-shadow: 0 6px 14px -8px rgba(208,112,26,.9); }
 .nav.rqnav.has .nbadge { background: #fff; color: #c0392b; font-weight: 800; }
+.rq-cl { max-width: 380px; white-space: normal; line-height: 1.35; }
 .rq-box { margin: 0 0 18px; padding: 14px 16px; border-radius: 16px; background: linear-gradient(170deg, #fff8ec, #fff); border: 1px solid #f2d7a8; }
 .rq-c { background: #fff; border: 1px solid #e8e2d4; border-radius: 12px; padding: 10px 12px; margin-top: 10px; } .rq-c.open { border-inline-start: 5px solid #e08a1e; } .rq-c.urg { border-inline-start-color: #c0392b; }
 .rq-h { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .rq-t { margin: 6px 0; white-space: pre-wrap; font-size: 15px; }
@@ -751,7 +752,7 @@ function render() {
       ${body}
     </main>
   </div>`;
-  applyFilters(); applySorts();
+  applyFilters(); applyGSearch(); applySorts();
   document.querySelectorAll("details").forEach(el => { if (openDet.has(keyOf(el))) el.open = true; });
   const wraps = [...document.querySelectorAll(".tablewrap")];
   wrapScroll.forEach(([t, top, left], i) => { const w = (t && wraps.find(x => x.querySelector("table")?.dataset.table === t)) || wraps[i]; if (w) { w.scrollTop = top; w.scrollLeft = left; } });
@@ -2162,9 +2163,12 @@ const daysSince = s => s ? Math.floor((Date.now() - new Date(s + "T12:00:00")) /
 function pageRequests(d) {
   const o = d.requests.filter(r => r.status === "פתוח"), u = o.filter(r => r.urgent).length;
   return `<div class="ch-banner" style="--cc:#d0701a"><div><h1>✉ פניות מהשטח</h1><span>טקסט חופשי שמפקחים שולחים מאתר הדיווח · ${o.length ? `${o.length} מחכות להתייחסות${u ? ` · ${u} דחופות` : ""}` : "אין פניות פתוחות ✓"} · התשובה שלך מופיעה למפקח מיד</span></div></div>
-    <div style="margin-top:14px">${requestsBlock(d, null, { always: true })}</div>`;
+    <div style="margin-top:14px">${requestsBlock(d, null, { always: true, openOnly: true })}</div>
+    <div class="card" style="margin-top:16px"><div class="row" style="gap:10px;align-items:center;margin-bottom:8px"><h2 style="margin:0">ארכיון פניות</h2><span class="muted small">${d.requests.length} פניות · כל מה שנשלח ונענה נשמר כאן. לחיצה על כותרת עמודה ממיינת · ״סינון״ לסינון לפי עמודה (גם תאריך)</span>
+      <span class="spacer"></span><input class="inp" id="rqSearch" data-gsearch="requests" placeholder="🔍 חיפוש חופשי בכל הפניות…" style="min-width:240px" value="${esc(ui.gsearch?.requests || "")}"></div>
+      ${renderSheet("requests", [...d.requests].sort((a, b) => String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date))), "עוד לא נשלחו פניות")}</div>`;
 }
-function requestsBlock(d, c, { always = false } = {}) {
+function requestsBlock(d, c, { always = false, openOnly = false } = {}) {
   const all = d.requests.filter(r => !c || r.contractorId === c.id).sort((a, b) => (a.status === "פתוח" ? 0 : 1) - (b.status === "פתוח" ? 0 : 1) || String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date)));
   const open = all.filter(r => r.status === "פתוח"), rest = all.filter(r => r.status !== "פתוח");
   if (!all.length && !always) return "";
@@ -2182,7 +2186,7 @@ function requestsBlock(d, c, { always = false } = {}) {
         : `<div class="row" style="gap:6px;margin-top:6px"><button class="btn ghost sm" data-act="rqReopen" data-id="${r.id}">פתיחה מחדש</button><span class="spacer"></span><button class="btn del" data-act="del" data-col="requests" data-id="${r.id}">מחיקה</button></div>`}</div>`; };
   return `<div class="rq-box"><div class="row" style="gap:8px;align-items:baseline"><h2 style="margin:0">✉ פניות מהשטח</h2><span class="muted small">טקסט חופשי שמפקחים שלחו מאתר הדיווח. ההתייחסות שלך מופיעה להם שם.</span></div>
     ${open.map(card).join("") || `<p class="muted small" style="margin:6px 0">אין פניות פתוחות ✓</p>`}
-    ${rest.length ? `<details class="rq-old"><summary class="small">${rest.length} פניות שטופלו</summary>${rest.map(card).join("")}</details>` : ""}</div>`;
+    ${rest.length && !openOnly ? `<details class="rq-old"><summary class="small">${rest.length} פניות שטופלו</summary>${rest.map(card).join("")}</details>` : ""}</div>`;
 }
 function issuesTab(d, c) {
   const all = d.issues.filter(x => x.contractorId === c.id);
@@ -3119,7 +3123,7 @@ const shownText = td => { const sel = td.querySelector("select"); if (sel) retur
   return (td.innerText || "").split("\n")[0]; };
 /* ---------- מיון לפי עמודה (לכל טבלה) ----------
    לחיצה על כותרת: עולה → יורד → ברירת מחדל. נשמר במכשיר. ברירת מחדל: טבלאות עם ק.ד. — לפי ק.ד. (גבוה למעלה, כמו בקו) */
-const SORT_DEF = { designSegments: { k: "kdFrom", dir: -1 }, orders: { k: "kdFrom", dir: -1 }, items: { k: "kdFrom", dir: -1 } };
+const SORT_DEF = { requests: { k: "date", dir: -1 }, designSegments: { k: "kdFrom", dir: -1 }, orders: { k: "kdFrom", dir: -1 }, items: { k: "kdFrom", dir: -1 } };
 let SORTS = (() => { try { return JSON.parse(localStorage.getItem("sheetSort") || "{}"); } catch (e) { return {}; } })();
 const saveSorts = () => { try { localStorage.setItem("sheetSort", JSON.stringify(SORTS)); } catch (e) {} };
 const sortKeyOf = txt => { const t = String(txt || "").trim(); if (!t || t === "—") return null;
@@ -3141,6 +3145,10 @@ function applySorts() {
     keyed.sort((a, b) => { if (a.k === null || b.k === null) return a.k === b.k ? a.i - b.i : a.k === null ? 1 : -1; return cmpKeys(a.k, b.k) * sp.dir || a.i - b.i; });
     keyed.forEach(x => body.appendChild(x.tr));
   });
+}
+function applyGSearch() {
+  document.querySelectorAll("[data-gsearch]").forEach(inp => { const t = inp.dataset.gsearch, q = (ui.gsearch?.[t] || "").trim().toLowerCase(); if (!q) return;
+    document.querySelectorAll(`table.sheet[data-table="${t}"] tbody tr`).forEach(tr => { if (!tr.querySelector("td[colspan]") && !tr.innerText.toLowerCase().includes(q)) tr.hidden = true; }); });
 }
 function applyFilters() {
   document.querySelectorAll("table.sheet[data-table]").forEach(tb => {
@@ -3236,7 +3244,21 @@ function colsModal(table) {
 }
 
 /* ---------- הגדרת העמודות הקבועות של כל טבלה ---------- */
+const RQ_ST = r => r.status === "פתוח" ? "מחכה להתייחסות" : r.status === "סגור" && !r.reply ? "נסגר בלי מענה" : r.status || "";
 const TABLE_DEFS = {
+  requests: () => { const d = D(), cn = id => d.contractors.find(c => c.id === id); return [
+    { key: "date", label: "תאריך", cls: "c nowrap", cell: r => fmtD(r.date) },
+    { key: "contractor", label: "קבלן", cls: "nowrap", cell: r => { const c = cn(r.contractorId); return c ? `<span class="sa-chip" style="--cc:${cColor(d, c)}">${esc(c.name)}</span>` : "—"; } },
+    { key: "who", label: "פונה", cls: "nowrap", cell: r => esc(r.reportedByName || String(r.reportedBy || "").split("@")[0]) },
+    { key: "kind", label: "סוג", cls: "nowrap", cell: r => `${esc(r.kind || "פנייה")}${r.urgent ? ` <span class="pill warn">דחוף</span>` : ""}` },
+    { key: "kd", label: "ק.ד.", cls: "c nowrap", cell: r => r.kdFrom ? esc(r.kdFrom) + (r.kdTo && r.kdTo !== r.kdFrom ? "–" + esc(r.kdTo) : "") : "—" },
+    { key: "text", label: "הפנייה", cls: "w-place", cell: r => `<div class="rq-cl">${esc(r.text)}</div>` },
+    { key: "status", label: "מצב", cls: "nowrap", cell: r => `<span class="pill ${r.status === "פתוח" ? "warn" : "ok"}">${esc(RQ_ST(r))}</span>` },
+    { key: "reply", label: "התייחסות", cls: "w-place", cell: r => r.reply ? `<div class="rq-cl">${esc(r.reply)}</div>` : "—" },
+    { key: "replyAt", label: "תאריך מענה", cls: "c nowrap", cell: r => r.replyAt ? fmtD(r.replyAt.slice(0, 10)) : "—" },
+    { key: "replyBy", label: "ענה", cls: "nowrap", cell: r => esc(r.replyByName || "—") },
+    { key: "issue", label: "נושא שנפתח", cls: "nowrap", cell: r => { const i = r.issueId && RAW.issues?.[r.issueId]; return i ? `<button class="lnk" data-act="nav" data-id="c:${esc(i.contractorId)}">${esc(i.code || "")}</button>` : "—"; } },
+  ]; },
   iecOrders: () => { const d = D(), C = "iecOrders";
     const its = d.items.filter(i => i.contractorId === "sp-iec").sort((a, b) => String(a.kind).localeCompare(String(b.kind), "he") || (kdNum(a.kdFrom) ?? 0) - (kdNum(b.kdFrom) ?? 0));
     const sel = (o, key, opts, style = "") => `<select class="inp" id="f_${C}_${o.id}_${key}" data-edit="${C}|${o.id}|${key}" ${style}>${opts}</select>`;
@@ -3817,6 +3839,7 @@ $app.addEventListener("input", e => {
   const f = ui.pf, m = f.secFrom !== "" && f.secTo !== "" && !isNaN(f.secFrom) && !isNaN(f.secTo) ? Math.abs(f.secTo - f.secFrom) * SECTION_M : null;
   const el = document.getElementById("pf_m"); if (el) el.textContent = m === null ? "" : num(m, 0) + " מ׳";
 });
+$app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.gsearch) return; (ui.gsearch = ui.gsearch || {})[t.dataset.gsearch] = t.value; applyFilters(); applyGSearch(); });
 $app.addEventListener("change", async e => {
   const t = e.target;
   if (t.dataset.csec) { const [cid, sid, k] = t.dataset.csec.split("|"), v = t.value.trim(); if (v !== "" && isNaN(Number(v))) { t.style.borderColor = "var(--warn)"; return; }
