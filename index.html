@@ -164,6 +164,14 @@ body.ro .side .foot::after { content: " · צפייה בלבד"; color: #f2c66d;
 .sa-t .sa-in { width: 90px; text-align: center; } .sa-mt td:first-child { white-space: nowrap; } .sa-mt { width: auto; } .sa-t input::placeholder { color: #a7ada6; } .sa-tot td { background: #eef4f0; border-top: 2px solid #cfdcd3; }
 .sa-cell { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; } .sa-chip { font-size: 12px; font-weight: 700; color: #fff; background: var(--cc); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
 .sa-chip.g { background: #eef0eb; color: #6b7064; font-weight: 500; border: 1px dashed #c9cfc4; }
+.rq-big { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 14px; width: 100%; margin: 6px 0 14px; padding: 14px 18px; border-radius: 18px; background: #fff; border: 2px solid #f2d7a8; position: relative; }
+.rq-big.has { background: linear-gradient(150deg, #f6a945, #d0701a); border-color: #d0701a; color: #fff; box-shadow: 0 10px 22px -12px rgba(160,70,0,.7); } .rq-big.on { outline: 3px solid #8e2f1d; outline-offset: 2px; }
+.rq-big .rq-ic { font-size: 30px; line-height: 1; } .rq-big b { font-size: 21px; display: block; } .rq-big small { font-size: 14px; opacity: .92; }
+.rq-big i { margin-inline-start: auto; font-style: normal; font-weight: 800; font-size: 22px; background: #fff; color: #c0392b; border-radius: 999px; min-width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; padding: 0 8px; }
+.rq-big.has i { animation: rqp 1.8s ease-in-out infinite; } @keyframes rqp { 0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,.7); } 50% { box-shadow: 0 0 0 8px rgba(255,255,255,0); } }
+.alrt.rq-al { background: #fff3e2; border-inline-start-color: #d0701a; }
+.nav.rqnav { font-weight: 700; } .nav.rqnav.has { background: linear-gradient(150deg, #f6a945, #d0701a); color: #fff; font-size: 15.5px; padding: 10px 12px; margin: 4px 0; box-shadow: 0 6px 14px -8px rgba(208,112,26,.9); }
+.nav.rqnav.has .nbadge { background: #fff; color: #c0392b; font-weight: 800; }
 .rq-box { margin: 0 0 18px; padding: 14px 16px; border-radius: 16px; background: linear-gradient(170deg, #fff8ec, #fff); border: 1px solid #f2d7a8; }
 .rq-c { background: #fff; border: 1px solid #e8e2d4; border-radius: 12px; padding: 10px 12px; margin-top: 10px; } .rq-c.open { border-inline-start: 5px solid #e08a1e; } .rq-c.urg { border-inline-start-color: #c0392b; }
 .rq-h { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .rq-t { margin: 6px 0; white-space: pre-wrap; font-size: 15px; }
@@ -676,7 +684,8 @@ function dataBar() {
    ===================================================================== */
 const NAV = () => isIecOnly() ? [{ group: "חיבורי חשמל", items: [["power", "חיבורי חח״י"], ...list("contractors").filter(c => c.id === IEC_CID).map(c => ["c:" + c.id, c.name])] }] : NAV_ALL().filter(g => !isViewer() || g.items.length).map(g => isViewer() ? { ...g, items: g.items.filter(i => i[3] !== "add" && i[0] !== "settings") } : g).filter(g => g.items.length);
 const NAV_ALL = () => [
-  { group: "", items: [["overview", "סקירה כללית"], ["alerts", "לוח התראות", "", "", (() => { try { return allAlerts(D()).filter(a => !a.done).length; } catch { return 0; } })()]] },
+  { group: "", items: [["overview", "סקירה כללית"], ["alerts", "לוח התראות", "", "", (() => { try { return allAlerts(D()).filter(a => !a.done).length; } catch { return 0; } })()],
+    ["requests", "✉ פניות מהשטח", "", "rq", (() => { try { return list("requests").filter(r => r.status === "פתוח").length; } catch { return 0; } })()]] },
   { group: "קבלנים", box: true, items: [["#h1", "קבלנים ראשיים", "", "head"],
     ...(cs => cs.map(c => ["c:" + c.id, c.name, "", "", 0, cColor({ contractors: cs }, c)]))(list("contractors").filter(isMain)),
     ["#h2", "קבלנים ייעודיים", "", "head"],
@@ -721,7 +730,7 @@ function render() {
   if (!nav.flatMap(g => g.items).some(i => i[0] === ui.page)) ui.page = nav[0]?.items[0]?.[0] || "overview";
   document.body.classList.toggle("ro", isViewer());
   const p = ui.page;
-  const body = p === "overview" ? alertsStrip(d) + pageOverview(d) : p === "alerts" ? pageAlerts(d) : p === "power" ? pageIec(d) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
+  const body = p === "overview" ? alertsStrip(d) + pageOverview(d) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "power" ? pageIec(d) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
     : p === "segments" ? pageSegments(d) : p === "deliveries" ? pageDeliveries(d) : p === "settings" ? pageSettings(d) : p === "mreport" ? pageMreport(d) : pagePlan(p);
   $app.innerHTML = `
   <div class="mtop"><button class="mbtn" data-act="menu" aria-label="תפריט" aria-expanded="${ui.menu ? "true" : "false"}"><span></span><span></span><span></span></button>
@@ -732,7 +741,7 @@ function render() {
     <aside class="side ${ui.menu ? "open" : ""}">
       <div class="brand">מכשול — בקרת ביצוע<small>עמקים · בקעה</small></div>
       ${nav.map(g => { const its = g.items.map(([id, l, s, kind, badge, dot]) => kind === "head" ? `<div class="nb-sub">${esc(l)}</div>` :
-        `<button class="nav ${id === p ? "on" : ""} ${kind === "add" ? "addnav" : ""}" data-act="${kind === "add" ? "newContractor" : "nav"}" data-id="${esc(id)}">${dot ? `<span class="ndot" style="--d:${esc(dot)}"></span>` : ""}<span class="nl">${esc(l)}</span>${s ? `<span class="soon">בהמשך</span>` : ""}${badge ? `<span class="nbadge">${badge}</span>` : ""}</button>`).join("");
+        `<button class="nav ${id === p ? "on" : ""} ${kind === "add" ? "addnav" : ""} ${kind === "rq" ? "rqnav" + (badge ? " has" : "") : ""}" data-act="${kind === "add" ? "newContractor" : "nav"}" data-id="${esc(id)}">${dot ? `<span class="ndot" style="--d:${esc(dot)}"></span>` : ""}<span class="nl">${esc(l)}</span>${s ? `<span class="soon">בהמשך</span>` : ""}${badge ? `<span class="nbadge">${badge}</span>` : ""}</button>`).join("");
         return g.box ? `<div class="navbox"><div class="nb-h"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg>${esc(g.group)}</div>${its}</div>`
           : `${g.group ? `<div class="grp">${g.group}</div>` : ""}${its}`; }).join("")}
       <div class="foot">${esc(LOCAL ? "עבודה מקומית" : (me?.name || user.email))}${LOCAL ? "" : ` · <button data-act="logout">יציאה</button>`}</div>
@@ -1111,7 +1120,7 @@ function autoAlerts(d) {
   // פניות מהשטח (אתר הדיווח) שמחכות להתייחסות
   const rq = d.requests.filter(r => r.status === "פתוח");
   [...new Set(rq.map(r => r.contractorId))].forEach(cid => { const a = rq.filter(r => r.contractorId === cid), urg = a.some(r => r.urgent);
-    add({ key: `req:${cid}:${a.map(r => r.id).join()}`, cat: "החלטה", sev: urg ? "red" : "orange", title: `${a.length} פניות מהשטח של ${cname(cid) || "ללא קבלן"} מחכות להתייחסות`,
+    add({ key: `req:${cid}:${a.map(r => r.id).join()}`, cat: "החלטה", rq: true, sev: urg ? "red" : "orange", title: `${a.length} פניות מהשטח של ${cname(cid) || "ללא קבלן"} מחכות להתייחסות`,
       lines: a.map(r => `${r.reportedByName || String(r.reportedBy || "").split("@")[0]} · ${fmtD(r.date)} · ${r.kind || "פנייה"}: ${String(r.text || "").slice(0, 90)}`), hint: "לענות לפונה, להפוך לנושא פתוח או לסגור — באותו מסך.", go: { page: "c:" + cid, ctab: "issues" } }); });
   // דיווחי ביצוע שממתינים לבדיקה
   const pend = d.progress.filter(p => p.review === "לבדיקה");
@@ -1133,9 +1142,9 @@ function alertsStrip(d) {
 }
 function pageAlerts(d) {
   const all = allAlerts(d), cat = ui.alCat || "", showDone = !!ui.alDone;
-  const rows = all.filter(a => (!cat || a.cat === cat) && (showDone || !a.done)).sort((a, b) => (a.done - b.done) || AL_SEV[a.sev] - AL_SEV[b.sev] || String(a.date || "9").localeCompare(String(b.date || "9")));
+  const rows = all.filter(a => (!cat || a.cat === cat) && (showDone || !a.done)).sort((a, b) => (a.done - b.done) || (!!b.rq - !!a.rq) || AL_SEV[a.sev] - AL_SEV[b.sev] || String(a.date || "9").localeCompare(String(b.date || "9")));
   const cnt = c => all.filter(a => !a.done && (!c || a.cat === c)).length;
-  const card = a => `<div class="alrt sev-${a.sev} ${a.done ? "done" : ""}">
+  const card = a => `<div class="alrt sev-${a.sev} ${a.done ? "done" : ""} ${a.rq ? "rq-al" : ""}">
     <div class="row" style="gap:8px"><span class="pill">${esc(a.cat)}</span>${a.auto ? `<span class="pill" title="נוצרה מהנתונים — תיעלם לבד כשהבעיה תתוקן">אוטומטית</span>` : ""}<b style="flex:1;min-width:200px">${esc(a.title)}</b>${a.date ? `<span class="small nowrap">${a.cat === "החלטה" ? "עד " : ""}${fmtD(a.date)}</span>` : ""}</div>
     ${a.sub ? `<div class="small">${esc(a.sub)}</div>` : ""}${a.note ? `<p class="small" style="margin:4px 0 0">${esc(a.note)}</p>` : ""}${a.hint && !a.done ? `<p class="small muted" style="margin:4px 0 0">${esc(a.hint)}</p>` : ""}
     ${a.lines.length ? `<details><summary class="small">${a.lines.length} פריטים</summary><ul class="small" style="margin:4px 0;padding-inline-start:18px">${a.lines.slice(0, 80).map(l => `<li>${esc(l)}</li>`).join("")}</ul></details>` : ""}
@@ -1144,7 +1153,10 @@ function pageAlerts(d) {
       ${a.manual ? (a.done ? `<button class="btn ghost sm" data-act="alReopen" data-id="${a.id}">פתיחה מחדש</button>` : `<button class="btn sm" data-act="alClose" data-id="${a.id}">${a.cat === "החלטה" ? "רישום החלטה וסגירה" : "טופל"}</button><button class="btn ghost sm" data-act="alEdit" data-id="${a.id}">עריכה</button>`)
         : `<button class="btn ghost sm" data-act="alAck" data-id="${esc(a.key)}">${a.done ? "החזרה ללוח" : "סמן כטופל"}</button>`}
       ${a.manual ? `<span class="spacer"></span><button class="btn del" data-act="del" data-col="alerts" data-id="${a.id}">מחיקה</button>` : ""}</div></div>`;
-  return `<h1>לוח התראות</h1><p class="sub">מה דורש החלטה, מה באיחור ומה עומד לפוג. התראות אוטומטיות נעלמות לבד כשמתקנים את הנתונים; אפשר גם לסמן אותן כטופלו.</p>
+  const rqOpen = d.requests.filter(r => r.status === "פתוח"), rqUrg = rqOpen.filter(r => r.urgent).length;
+  const rqBtn = `<button class="rq-big ${cat === "פנייה" ? "on" : ""} ${rqOpen.length ? "has" : ""}" data-act="alCat" data-id="פנייה"><span class="rq-ic">✉</span><span><b>פניות מהשטח</b><small>${rqOpen.length ? `${rqOpen.length} מחכות להתייחסות${rqUrg ? ` · ${rqUrg} דחופות` : ""}` : "אין פניות פתוחות"}</small></span>${rqOpen.length ? `<i>${rqOpen.length}</i>` : ""}</button>`;
+  if (cat === "פנייה") return `<h1>לוח התראות</h1>${rqBtn}<div class="row" style="margin:6px 0 12px"><button class="btn ghost sm" data-act="alCat" data-id="">← חזרה לכל ההתראות</button></div>${requestsBlock(d, null, { always: true })}`;
+  return `<h1>לוח התראות</h1>${rqBtn}<p class="sub">מה דורש החלטה, מה באיחור ומה עומד לפוג. התראות אוטומטיות נעלמות לבד כשמתקנים את הנתונים; אפשר גם לסמן אותן כטופלו.</p>
   <div class="row" style="margin-bottom:12px"><div class="viewtabs" style="margin:0">${[["", "הכל"], ["החלטה", "דורש החלטה"], ["תאריך", "תאריכים ותוקף"], ["מעקב", "מעקב"]].map(([k, l]) => `<button class="btn ghost sm ${cat === k ? "on" : ""}" data-act="alCat" data-id="${k}">${l} (${cnt(k)})</button>`).join("")}</div>
     <span class="spacer"></span><label class="row small"><input type="checkbox" data-act="alDone" ${showDone ? "checked" : ""}> הצג גם שטופלו</label><button class="btn sm" data-act="alNew">+ החלטה / תזכורת</button></div>
   ${rows.map(card).join("") || `<div class="card"><p class="muted" style="margin:0">אין התראות פתוחות.</p></div>`}
@@ -2147,14 +2159,20 @@ const issueHist = x => Object.values(x.history || {}).sort((a, b) => String(a.da
 const daysSince = s => s ? Math.floor((Date.now() - new Date(s + "T12:00:00")) / 864e5) : null;
 
 /** פניות מהשטח: טקסט חופשי ממפקח באתר הדיווח → כאן עונים / הופכים לנושא / סוגרים. התשובה מופיעה למפקח באתר הדיווח */
-function requestsBlock(d, c) {
-  const all = d.requests.filter(r => r.contractorId === c.id).sort((a, b) => (a.status === "פתוח" ? 0 : 1) - (b.status === "פתוח" ? 0 : 1) || String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date)));
+function pageRequests(d) {
+  const o = d.requests.filter(r => r.status === "פתוח"), u = o.filter(r => r.urgent).length;
+  return `<div class="ch-banner" style="--cc:#d0701a"><div><h1>✉ פניות מהשטח</h1><span>טקסט חופשי שמפקחים שולחים מאתר הדיווח · ${o.length ? `${o.length} מחכות להתייחסות${u ? ` · ${u} דחופות` : ""}` : "אין פניות פתוחות ✓"} · התשובה שלך מופיעה למפקח מיד</span></div></div>
+    <div style="margin-top:14px">${requestsBlock(d, null, { always: true })}</div>`;
+}
+function requestsBlock(d, c, { always = false } = {}) {
+  const all = d.requests.filter(r => !c || r.contractorId === c.id).sort((a, b) => (a.status === "פתוח" ? 0 : 1) - (b.status === "פתוח" ? 0 : 1) || String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date)));
   const open = all.filter(r => r.status === "פתוח"), rest = all.filter(r => r.status !== "פתוח");
-  if (!all.length) return "";
+  if (!all.length && !always) return "";
+  const cn = r => !c ? `<span class="pill" style="background:${cColor(d, d.contractors.find(x => x.id === r.contractorId) || {})};color:#fff">${esc(d.contractors.find(x => x.id === r.contractorId)?.name || "ללא קבלן")}</span>` : "";
   const who = r => r.reportedByName || String(r.reportedBy || "").split("@")[0];
   const card = r => { const iss = r.issueId && RAW.issues?.[r.issueId];
     return `<div class="rq-c ${r.status === "פתוח" ? "open" : ""} ${r.urgent ? "urg" : ""}">
-      <div class="rq-h"><span class="pill ${r.urgent ? "warn" : ""}">${esc(r.kind || "פנייה")}${r.urgent ? " · דחוף" : ""}</span><b>${esc(who(r))}</b><span class="muted small">${fmtD(r.date)}${r.kdFrom ? ` · ק.ד. ${esc(r.kdFrom)}${r.kdTo && r.kdTo !== r.kdFrom ? "–" + esc(r.kdTo) : ""}` : ""}</span><span class="spacer"></span>
+      <div class="rq-h">${cn(r)}<span class="pill ${r.urgent ? "warn" : ""}">${esc(r.kind || "פנייה")}${r.urgent ? " · דחוף" : ""}</span><b>${esc(who(r))}</b><span class="muted small">${fmtD(r.date)}${r.kdFrom ? ` · ק.ד. ${esc(r.kdFrom)}${r.kdTo && r.kdTo !== r.kdFrom ? "–" + esc(r.kdTo) : ""}` : ""}</span><span class="spacer"></span>
         <span class="pill ${r.status === "פתוח" ? "warn" : "ok"}">${r.status === "פתוח" ? "מחכה להתייחסות" : esc(r.status)}</span></div>
       <p class="rq-t">${esc(r.text)}</p>
       ${r.reply ? `<div class="rq-r"><b>התייחסות${r.replyByName ? " — " + esc(r.replyByName) : ""}${r.replyAt ? " · " + fmtD(r.replyAt.slice(0, 10)) : ""}:</b> ${esc(r.reply)}</div>` : ""}
