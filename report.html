@@ -172,6 +172,9 @@ button { color: inherit; -webkit-tap-highlight-color: transparent; }
 .rqf .row { flex-wrap: nowrap; } .rqf .row input.num { width: 84px; min-width: 0; flex: none; font-size: 17px; padding: 8px; } .rqf .urg { display: flex; align-items: center; gap: 6px; margin: 10px 0; font-size: 15px; }
 .rqi { border-bottom: 1px solid var(--line); padding: 9px 0; font-size: 14px; } .rqi .tx { white-space: pre-wrap; margin: 3px 0; } .rqi small { color: var(--muted); }
 .rqi .ans { background: #eaf5ee; border-radius: 10px; padding: 7px 10px; margin-top: 5px; } .rqi .ans b { color: #24553d; } .rqi.new .ans { box-shadow: 0 0 0 2px #2f7d4f inset; }
+.rqtog { border: 1px solid #f0c27a; background: #fff6e8; color: #9a5300; border-radius: 10px; padding: 6px 12px; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap; } .rqtog.wide { width: 100%; margin-top: 8px; padding: 9px; }
+.rqtools { background: #f7f8f5; border-radius: 12px; padding: 10px; margin: 8px 0; display: flex; flex-direction: column; gap: 7px; } .rqtools input[type=search] { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; padding: 8px 10px; border-radius: 10px; border: 1px solid #cfd3cc; }
+.rqrow { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-size: 13.5px; } .rqrow > span { color: var(--muted); } .rqrow input[type=date] { font: inherit; font-size: 14px; padding: 4px 6px; border-radius: 8px; border: 1px solid #cfd3cc; }
 .login { max-width: 380px; margin: 12vh auto; }
 .login input { width: 100%; margin-bottom: 10px; direction: ltr; }
 </style>
@@ -333,15 +336,34 @@ function rqModal(c) {
       ${S.rqMsg ? `<p class="msg err">${esc(S.rqMsg)}</p>` : ""}
       <button class="btn" id="rqsend" style="width:100%">שליחה</button></div></div></div>`;
 }
+const RQ_SORTS = [["new", "החדשות קודם"], ["old", "הישנות קודם"], ["kind", "לפי סוג"], ["status", "לפי מצב"], ["kd", "לפי ק.ד."]];
 function rqList() {
   const all = myRq();
   if (S.rqErr) return `<div class="card" id="rqcard"><b>הפניות שלי</b><p class="msg err" style="margin:6px 0 0">${esc(S.rqErr)}</p></div>`;
   if (!all.length) return "";
-  const seen = rqSeen(), st = r => r.status === "פתוח" ? `<span class="pill p0">ממתין להתייחסות</span>` : r.status === "סגור" && !r.reply ? `<span class="pill p2">נסגר</span>` : `<span class="pill p1">${r.status === "הפך לנושא" ? "נפתח נושא" : "נענה"}</span>`;
-  return `<div class="card" id="rqcard"><b>הפניות שלי</b> <span class="hint">— מה ששלחת למנהל הפרויקט והתשובות</span>
-    ${all.slice(0, 20).map(r => `<div class="rqi ${r.reply && !seen[r.id] ? "new" : ""}"><div class="row" style="gap:6px;justify-content:space-between"><small>${fmtD(r.date)} · ${esc(r.kind || "פנייה")}${r.urgent ? " · דחוף" : ""}${r.kdFrom ? ` · ק.ד. ${esc(r.kdFrom)}${r.kdTo && r.kdTo !== r.kdFrom ? "–" + esc(r.kdTo) : ""}` : ""} · ${esc(D.contractors?.[r.contractorId]?.name || "")}</small>${st(r)}</div>
-      <div class="tx">${esc(r.text)}</div>${r.reply ? `<div class="ans"><b>תשובה${r.replyByName ? " — " + esc(r.replyByName) : ""}:</b> ${esc(r.reply)}</div>` : ""}
-      ${r.status === "פתוח" ? `<button class="btn ghost" data-rqdel="${r.id}" style="padding:5px 10px;margin-top:4px">ביטול הפנייה</button>` : ""}</div>`).join("")}</div>`;
+  const seen = rqSeen(), stTxt = r => r.status === "פתוח" ? "ממתין להתייחסות" : r.status === "סגור" && !r.reply ? "נסגר" : r.status === "הפך לנושא" ? "נפתח נושא" : "נענה";
+  const st = r => `<span class="pill ${r.status === "פתוח" ? "p0" : r.status === "סגור" && !r.reply ? "p2" : "p1"}">${stTxt(r)}</span>`;
+  const F = S.rqF = S.rqF || { sort: "new", st: "", from: "", to: "" };
+  let rows = all.filter(r => (!F.st || (F.st === "open" ? r.status === "פתוח" : r.status !== "פתוח")) && (!F.from || (r.date || "") >= F.from) && (!F.to || (r.date || "") <= F.to));
+  const kdv = r => parseFloat(String(r.kdFrom || "").replace(",", ".")), by = {
+    new: (a, b) => String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date)), old: (a, b) => String(a.createdAt || a.date).localeCompare(String(b.createdAt || b.date)),
+    kind: (a, b) => String(a.kind || "").localeCompare(String(b.kind || ""), "he") || by.new(a, b), status: (a, b) => stTxt(a).localeCompare(stTxt(b), "he") || by.new(a, b),
+    kd: (a, b) => (isNaN(kdv(b)) ? -1e9 : kdv(b)) - (isNaN(kdv(a)) ? -1e9 : kdv(a)) || by.new(a, b) };
+  rows.sort(by[F.sort] || by.new);
+  const open = !!S.rqAll, shown = open ? rows : all.sort(by.new).slice(0, 3);
+  const item = r => `<div class="rqi ${r.reply && !seen[r.id] ? "new" : ""}" data-rqs="${esc([r.text, r.reply, r.kind, r.kdFrom, r.kdTo, fmtD(r.date), stTxt(r), D.contractors?.[r.contractorId]?.name].join(" ").toLowerCase())}"><div class="row" style="gap:6px;justify-content:space-between"><small>${fmtD(r.date)} · ${esc(r.kind || "פנייה")}${r.urgent ? " · דחוף" : ""}${r.kdFrom ? ` · ק.ד. ${esc(r.kdFrom)}${r.kdTo && r.kdTo !== r.kdFrom ? "–" + esc(r.kdTo) : ""}` : ""} · ${esc(D.contractors?.[r.contractorId]?.name || "")}</small>${st(r)}</div>
+      <div class="tx">${esc(r.text)}</div>${r.reply ? `<div class="ans"><b>תשובה${r.replyByName ? " — " + esc(r.replyByName) : ""}${r.replyAt ? " · " + fmtD(String(r.replyAt).slice(0, 10)) : ""}:</b> ${esc(r.reply)}</div>` : ""}
+      ${r.status === "פתוח" ? `<button class="btn ghost" data-rqdel="${r.id}" style="padding:5px 10px;margin-top:4px">ביטול הפנייה</button>` : ""}</div>`;
+  const tools = open ? `<div class="rqtools">
+      <input id="rqq" type="search" placeholder="🔍 חיפוש בפניות ובתשובות…" value="${esc(S.rqQ || "")}">
+      <div class="rqrow"><span>מצב:</span>${[["", "הכל"], ["open", "ממתין"], ["done", "נענה / נסגר"]].map(([k, l]) => `<button class="chip sm ${F.st === k ? "on" : ""}" data-rqst="${k}">${l}</button>`).join("")}</div>
+      <div class="rqrow"><span>מיון:</span>${RQ_SORTS.map(([k, l]) => `<button class="chip sm ${F.sort === k ? "on" : ""}" data-rqsort="${k}">${l}</button>`).join("")}</div>
+      <div class="rqrow"><span>מתאריך</span><input type="date" id="rqfrom" value="${esc(F.from)}"><span>עד</span><input type="date" id="rqto" value="${esc(F.to)}">${F.from || F.to ? `<button class="chip sm" data-rqclr="1">ניקוי</button>` : ""}</div>
+      <div class="hint" id="rqcnt">${rows.length} פניות</div></div>` : "";
+  return `<div class="card" id="rqcard"><div class="row" style="justify-content:space-between;gap:8px"><div><b>הפניות שלי</b> <span class="hint">— ${all.length} פניות · מה ששלחת למנהל הפרויקט והתשובות</span></div>
+      <button class="rqtog" data-rqtog="1">${open ? "▴ סגירה" : `▾ כל הפניות (${all.length})`}</button></div>
+    ${tools}${shown.map(item).join("") || `<p class="hint">אין פניות שמתאימות לסינון</p>`}
+    ${!open && all.length > 3 ? `<button class="rqtog wide" data-rqtog="1">▾ להצגת כל ${all.length} הפניות, חיפוש ומיון</button>` : ""}</div>`;
 }
 function view() {
   const cids = me.admin ? Object.keys(D.contractors || {}).filter(k => D.contractors[k].kind !== "ייעודי").sort((a, b) => (D.contractors[a].order ?? 0) - (D.contractors[b].order ?? 0))
@@ -407,6 +429,13 @@ function view() {
       try { await fb.database().ref(`${ROOT}/requests`).push(rec); S.rq = null; S.rqOpen = false; S.msg = "הפנייה נשלחה ✓ — התשובה תופיע ב״הפניות שלי״"; S.err = false; }
       catch (e) { S.rqMsg = "השליחה נכשלה — אין הרשאה (צריך לעדכן את כללי Firebase) או אין חיבור"; }
       view(); }; }
+  app.querySelectorAll("[data-rqtog]").forEach(b => b.onclick = () => { S.rqAll = !S.rqAll; view(); if (S.rqAll) setTimeout(() => $("rqcard")?.scrollIntoView({ behavior: "smooth" }), 30); });
+  app.querySelectorAll("[data-rqst]").forEach(b => b.onclick = () => { S.rqF.st = b.dataset.rqst; view(); });
+  app.querySelectorAll("[data-rqsort]").forEach(b => b.onclick = () => { S.rqF.sort = b.dataset.rqsort; view(); });
+  app.querySelectorAll("[data-rqclr]").forEach(b => b.onclick = () => { S.rqF.from = S.rqF.to = ""; view(); });
+  if ($("rqfrom")) { $("rqfrom").onchange = e => { S.rqF.from = e.target.value; view(); }; $("rqto").onchange = e => { S.rqF.to = e.target.value; view(); }; }
+  const rqFilter = () => { const q = (S.rqQ || "").trim().toLowerCase(); let n = 0; app.querySelectorAll("#rqcard .rqi").forEach(el => { const ok = !q || el.dataset.rqs.includes(q); el.hidden = !ok; if (ok) n++; }); if ($("rqcnt")) $("rqcnt").textContent = `${n} פניות`; };
+  if ($("rqq")) { $("rqq").oninput = e => { S.rqQ = e.target.value; rqFilter(); }; rqFilter(); }
   app.querySelectorAll("[data-rqdel]").forEach(b => b.onclick = async () => { if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "בטוח?"; return; } await fb.database().ref(`${ROOT}/requests/${b.dataset.rqdel}`).remove(); });
   app.querySelectorAll("[data-cov]").forEach(b => b.onclick = () => { S.covOpen = b.dataset.cov; view(); });
   app.querySelectorAll("[data-covx]").forEach(b => b.onclick = e => { if (e.target === b || b.tagName === "BUTTON") { S.covOpen = null; view(); } });
@@ -471,7 +500,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-10b";
+const VER = "2026-10-10c";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
