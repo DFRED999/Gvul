@@ -163,6 +163,11 @@ body.ro .side .foot::after { content: " · צפייה בלבד"; color: #f2c66d;
 .sa-t .sa-in { width: 90px; text-align: center; } .sa-mt td:first-child { white-space: nowrap; } .sa-mt { width: auto; } .sa-t input::placeholder { color: #a7ada6; } .sa-tot td { background: #eef4f0; border-top: 2px solid #cfdcd3; }
 .sa-cell { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; } .sa-chip { font-size: 12px; font-weight: 700; color: #fff; background: var(--cc); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
 .sa-chip.g { background: #eef0eb; color: #6b7064; font-weight: 500; border: 1px dashed #c9cfc4; }
+.rq-box { margin: 0 0 18px; padding: 14px 16px; border-radius: 16px; background: linear-gradient(170deg, #fff8ec, #fff); border: 1px solid #f2d7a8; }
+.rq-c { background: #fff; border: 1px solid #e8e2d4; border-radius: 12px; padding: 10px 12px; margin-top: 10px; } .rq-c.open { border-inline-start: 5px solid #e08a1e; } .rq-c.urg { border-inline-start-color: #c0392b; }
+.rq-h { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .rq-t { margin: 6px 0; white-space: pre-wrap; font-size: 15px; }
+.rq-r { background: #eef6f0; border-radius: 10px; padding: 7px 10px; font-size: 14px; margin: 4px 0; } .rq-a textarea { width: 100%; box-sizing: border-box; margin: 4px 0 6px; font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid #d9dcd5; }
+.ch-pend.rq { background: #fdecea; border-color: #eab1a8; color: #8e2f1d; }
 .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: #1f2a24; color: #fff; padding: 10px 18px; border-radius: 12px; z-index: 999; font-size: 14px; box-shadow: 0 8px 20px -8px rgba(0,0,0,.5); }
 .clogo { flex: none; display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 12px; padding: 6px 10px; box-shadow: 0 2px 8px -4px rgba(0,0,0,.35); } .clogo img { display: block; max-height: 100%; max-width: 100%; object-fit: contain; }
 .clogo.ban { height: 64px; max-width: 170px; } .clogo.card { height: 34px; max-width: 110px; padding: 4px 8px; border-radius: 9px; align-self: flex-start; margin-bottom: 6px; } .clogo.sm { height: 38px; max-width: 120px; padding: 3px 6px; border: 1px solid #e3e6df; box-shadow: none; }
@@ -451,7 +456,7 @@ const SECTION_M = 20;          // מרחק בין חתכים (מ׳) — קבוע
 /* =====================================================================
    עזרים
    ===================================================================== */
-const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "tableConfig", "users"];
+const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "requests", "tableConfig", "users"];
 /* קבלנים ייעודיים — עובדים לרוחב הקו לפי התמחות (שערים, מבני חשמל, פינוי מוקשים, סבכות…) ומנוהלים לפי "פריטי עבודה" */
 const SPECIALTIES = ["ארון שקד", "חדר טרפו", "תט״ז", "שערים", "פינוי מוקשים", "סבכות למעבירי מים", "תקשורת", "מעבירי מים", "מעביר אירי", "אחר"];
 const ITEM_STATUS = ["טרם", "מתוכנן", "בביצוע", "הושלם", "HOLD", "מבוטל"];
@@ -1102,6 +1107,11 @@ function autoAlerts(d) {
   [...new Set(dueIss.map(x => x.contractorId))].forEach(cid => { const a = dueIss.filter(x => x.contractorId === cid), red = a.some(x => daysTo(x.due) < 0);
     add({ key: `issdue:${cid}:${a.map(x => x.id + x.due).join()}`, cat: "תאריך", sev: red ? "red" : "orange", title: `${a.length} נושאים פתוחים של ${cname(cid)} ${red ? "עברו את תאריך היעד" : "מגיעים לתאריך היעד השבוע"}`,
       lines: a.map(x => `${x.code || ""} ${x.title} · יעד ${fmtD(x.due)}`), go: { page: "c:" + cid, ctab: "issues" } }); });
+  // פניות מהשטח (אתר הדיווח) שמחכות להתייחסות
+  const rq = d.requests.filter(r => r.status === "פתוח");
+  [...new Set(rq.map(r => r.contractorId))].forEach(cid => { const a = rq.filter(r => r.contractorId === cid), urg = a.some(r => r.urgent);
+    add({ key: `req:${cid}:${a.map(r => r.id).join()}`, cat: "החלטה", sev: urg ? "red" : "orange", title: `${a.length} פניות מהשטח של ${cname(cid) || "ללא קבלן"} מחכות להתייחסות`,
+      lines: a.map(r => `${r.reportedByName || String(r.reportedBy || "").split("@")[0]} · ${fmtD(r.date)} · ${r.kind || "פנייה"}: ${String(r.text || "").slice(0, 90)}`), hint: "לענות לפונה, להפוך לנושא פתוח או לסגור — באותו מסך.", go: { page: "c:" + cid, ctab: "issues" } }); });
   // דיווחי ביצוע שממתינים לבדיקה
   const pend = d.progress.filter(p => p.review === "לבדיקה");
   if (pend.length) { const cids = [...new Set(pend.map(p => p.contractorId))];
@@ -1531,6 +1541,7 @@ function contractorHero(d, c, { ords, cov }) {
       ${tile("t6", "תוכניות נמסרו", dv === null ? "—" : Math.round(dv * 100) + "%", "מהגזרה", `data-act="ctab" data-id="deliveries" role="button"`)}
     </div>
     ${pend ? `<button class="ch-pend" data-act="ctab" data-id="progress">${pend} דיווחים של מפקחים ממתינים לאישור ←</button>` : ""}
+    ${(n => n ? `<button class="ch-pend rq" data-act="ctab" data-id="issues">✉ ${n} פניות מהשטח מחכות להתייחסות שלך ←</button>` : "")(d.requests.filter(r => r.contractorId === c.id && r.status === "פתוח").length)}
     <div class="ch-ms">${STAGE_GROUPS.map(G => { const vs = G.stages.map(g => now.st[g]).filter(v => v !== null && v !== undefined), v = vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null;
       const ws = G.stages.map(g => (now.st[g] ?? 0) - (wk.st[g] ?? 0)).reduce((a, b) => a + b, 0) / Math.max(1, vs.length);
       return `<div class="ch-m ${v === null ? "na" : ""}" style="--c:${G.color};--t:${G.tint}" title="${esc(G.stages.join(" · "))}"><i><em style="height:${v === null ? 0 : Math.max(3, Math.round(v * 100))}%"></em></i>
@@ -2134,6 +2145,26 @@ const ISSUE_OWNERS = ["מנה״פ", "מתאם הנדסי", "פיקוח", "קבל
 const issueHist = x => Object.values(x.history || {}).sort((a, b) => String(a.date).localeCompare(String(b.date)));
 const daysSince = s => s ? Math.floor((Date.now() - new Date(s + "T12:00:00")) / 864e5) : null;
 
+/** פניות מהשטח: טקסט חופשי ממפקח באתר הדיווח → כאן עונים / הופכים לנושא / סוגרים. התשובה מופיעה למפקח באתר הדיווח */
+function requestsBlock(d, c) {
+  const all = d.requests.filter(r => r.contractorId === c.id).sort((a, b) => (a.status === "פתוח" ? 0 : 1) - (b.status === "פתוח" ? 0 : 1) || String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date)));
+  const open = all.filter(r => r.status === "פתוח"), rest = all.filter(r => r.status !== "פתוח");
+  if (!all.length) return "";
+  const who = r => r.reportedByName || String(r.reportedBy || "").split("@")[0];
+  const card = r => { const iss = r.issueId && RAW.issues?.[r.issueId];
+    return `<div class="rq-c ${r.status === "פתוח" ? "open" : ""} ${r.urgent ? "urg" : ""}">
+      <div class="rq-h"><span class="pill ${r.urgent ? "warn" : ""}">${esc(r.kind || "פנייה")}${r.urgent ? " · דחוף" : ""}</span><b>${esc(who(r))}</b><span class="muted small">${fmtD(r.date)}${r.kdFrom ? ` · ק.ד. ${esc(r.kdFrom)}${r.kdTo && r.kdTo !== r.kdFrom ? "–" + esc(r.kdTo) : ""}` : ""}</span><span class="spacer"></span>
+        <span class="pill ${r.status === "פתוח" ? "warn" : "ok"}">${r.status === "פתוח" ? "מחכה להתייחסות" : esc(r.status)}</span></div>
+      <p class="rq-t">${esc(r.text)}</p>
+      ${r.reply ? `<div class="rq-r"><b>התייחסות${r.replyByName ? " — " + esc(r.replyByName) : ""}${r.replyAt ? " · " + fmtD(r.replyAt.slice(0, 10)) : ""}:</b> ${esc(r.reply)}</div>` : ""}
+      ${iss ? `<div class="small">הפך לנושא פתוח: <b>${esc(iss.code || "")} ${esc(iss.title)}</b></div>` : ""}
+      ${r.status === "פתוח" ? `<div class="rq-a"><textarea rows="2" id="rqr_${r.id}" placeholder="התייחסות למפקח — תופיע לו באתר הדיווח"></textarea>
+        <div class="row" style="gap:6px"><button class="btn sm" data-act="rqReply" data-id="${r.id}">שליחת התייחסות</button><button class="btn ghost sm" data-act="rqIssue" data-id="${r.id}">הפוך לנושא פתוח</button><button class="btn ghost sm" data-act="rqClose" data-id="${r.id}">סגירה בלי מענה</button></div></div>`
+        : `<div class="row" style="gap:6px;margin-top:6px"><button class="btn ghost sm" data-act="rqReopen" data-id="${r.id}">פתיחה מחדש</button><span class="spacer"></span><button class="btn del" data-act="del" data-col="requests" data-id="${r.id}">מחיקה</button></div>`}</div>`; };
+  return `<div class="rq-box"><div class="row" style="gap:8px;align-items:baseline"><h2 style="margin:0">✉ פניות מהשטח</h2><span class="muted small">טקסט חופשי שמפקחים שלחו מאתר הדיווח. ההתייחסות שלך מופיעה להם שם.</span></div>
+    ${open.map(card).join("") || `<p class="muted small" style="margin:6px 0">אין פניות פתוחות ✓</p>`}
+    ${rest.length ? `<details class="rq-old"><summary class="small">${rest.length} פניות שטופלו</summary>${rest.map(card).join("")}</details>` : ""}</div>`;
+}
 function issuesTab(d, c) {
   const all = d.issues.filter(x => x.contractorId === c.id);
   const showClosed = !!ui.showClosed;
@@ -2142,7 +2173,7 @@ function issuesTab(d, c) {
   const rows = all.filter(x => showClosed || x.status !== "סגור").sort((a, b) =>
     codeN(a) - codeN(b) || String(a.code || "").localeCompare(String(b.code || "")) || String(a.opened || "").localeCompare(String(b.opened || "")));
   const cnt = s => all.filter(x => x.status === s).length;
-  return `<div class="row" style="margin-bottom:10px">
+  return `${requestsBlock(d, c)}<div class="row" style="margin-bottom:10px">
       ${ISSUE_STATUS.map(s => `<span class="pill ${s === "סגור" ? "ok" : s === "HOLD" ? "warn" : ""}">${s}: ${cnt(s)}</span>`).join("")}
       <span class="spacer"></span>
       <label class="row small"><input type="checkbox" id="autoSum" data-act="autoSum" ${RAW.tableConfig?.issues?.autoSummary !== false ? "checked" : ""}> עדכון אוטומטי מסיכום</label>
@@ -3664,6 +3695,15 @@ $app.addEventListener("click", async e => {
         m.querySelector("#mAny").onclick = () => { close(); done([rec], " (חופף לדיווח קודם)"); };
         const n = m.querySelector("#mNew"); if (n) n.onclick = () => { close(); done(gaps.map(([x, y]) => ({ ...rec, secFrom: x, secTo: y, byKd: false, kdFrom: "", kdTo: "" })), " (רק החלק החדש)"); }; });
   }
+  else if (act === "rqReply" || act === "rqClose" || act === "rqReopen") { const id = b.dataset.id, txt = document.getElementById("rqr_" + id)?.value.trim() || "";
+    if (act === "rqReply" && !txt) { const t = document.getElementById("rqr_" + id); if (t) { t.style.borderColor = "var(--warn)"; t.focus(); } return; }
+    const meName = me?.name || (LOCAL ? "מנהל הפרויקט" : user?.email || "");
+    await api.update("requests", id, act === "rqReopen" ? { status: "פתוח" } : act === "rqReply" ? { status: "נענה", reply: txt, replyByName: meName, replyAt: new Date().toISOString() } : { status: "סגור", replyAt: new Date().toISOString(), replyByName: meName }); }
+  else if (act === "rqIssue") { const r = RAW.requests[b.dataset.id]; if (!r) return;
+    const txt = document.getElementById("rqr_" + b.dataset.id)?.value.trim() || "", t = String(r.text || "").trim();
+    const iid = await api.add("issues", { contractorId: r.contractorId, title: t.length > 90 ? t.slice(0, 88) + "…" : t, category: r.kind === "בעיה בשטח" ? "חסם" : "תכנון", kdFrom: r.kdFrom || "", kdTo: r.kdTo || r.kdFrom || "", owner: "", status: "פתוח", opened: r.date || todayStr(), updated: todayStr(),
+      last: `פנייה מהשטח (${r.reportedByName || r.reportedBy || ""}): ${t}`, history: {}, fromRequest: b.dataset.id });
+    await api.update("requests", b.dataset.id, { status: "הפך לנושא", issueId: iid || "", reply: txt || "נפתח נושא מעקב — נעדכן כאן", replyByName: me?.name || "מנהל הפרויקט", replyAt: new Date().toISOString() }); }
   else if (act === "segAsg") { segAsgModal(b.dataset.id); }
   else if (act === "deckTheme") { ui.deckTheme = b.dataset.id; render(); }
   else if (act === "pDays") { ui.pDays = Number(b.dataset.id) || 7; render(); }
