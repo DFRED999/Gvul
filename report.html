@@ -318,7 +318,7 @@ addEventListener("resize", () => requestAnimationFrame(fitTiles));
 const RQ_KINDS = ["בקשת התייחסות", "שאלה", "בעיה בשטח", "עדכון"];
 const rqSeen = () => { try { return JSON.parse(localStorage.getItem("rqSeen") || "{}"); } catch (e) { return {}; } };
 const rqMarkSeen = ids => { try { const o = rqSeen(); ids.forEach(i => o[i] = 1); localStorage.setItem("rqSeen", JSON.stringify(o)); } catch (e) {} };
-const myRq = () => Object.entries(RQ).map(([id, v]) => ({ id, ...v })).filter(r => me.admin ? r.reportedBy === me.email : true).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+const myRq = () => Object.entries(RQ).map(([id, v]) => ({ id, ...v })).filter(r => String(r.reportedBy || "").toLowerCase() === me.email).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 const rqNew = () => { const seen = rqSeen(); return myRq().filter(r => r.reply && !seen[r.id]); };
 function rqModal(c) {
   if (!S.rqOpen) return "";
@@ -334,7 +334,9 @@ function rqModal(c) {
       <button class="btn" id="rqsend" style="width:100%">שליחה</button></div></div></div>`;
 }
 function rqList() {
-  const all = myRq(); if (!all.length) return "";
+  const all = myRq();
+  if (S.rqErr) return `<div class="card" id="rqcard"><b>הפניות שלי</b><p class="msg err" style="margin:6px 0 0">${esc(S.rqErr)}</p></div>`;
+  if (!all.length) return "";
   const seen = rqSeen(), st = r => r.status === "פתוח" ? `<span class="pill p0">ממתין להתייחסות</span>` : r.status === "סגור" && !r.reply ? `<span class="pill p2">נסגר</span>` : `<span class="pill p1">${r.status === "הפך לנושא" ? "נפתח נושא" : "נענה"}</span>`;
   return `<div class="card" id="rqcard"><b>הפניות שלי</b> <span class="hint">— מה ששלחת למנהל הפרויקט והתשובות</span>
     ${all.slice(0, 20).map(r => `<div class="rqi ${r.reply && !seen[r.id] ? "new" : ""}"><div class="row" style="gap:6px;justify-content:space-between"><small>${fmtD(r.date)} · ${esc(r.kind || "פנייה")}${r.urgent ? " · דחוף" : ""}${r.kdFrom ? ` · ק.ד. ${esc(r.kdFrom)}${r.kdTo && r.kdTo !== r.kdFrom ? "–" + esc(r.kdTo) : ""}` : ""} · ${esc(D.contractors?.[r.contractorId]?.name || "")}</small>${st(r)}</div>
@@ -469,7 +471,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-10a";
+const VER = "2026-10-10b";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
@@ -494,10 +496,10 @@ document.addEventListener("focusout", () => { if (later) { later = false; setTim
     let hung = false; const db = fb.database(), acc = await withTimeout(db.ref(`${ROOT}/tableConfig/inspectorAccess/${emailKey(u.email)}`).get(), 15000).catch(e => { hung = !!(e && e.message === "timeout"); return null; });
     if (hung) { return fail("השרת לא עונה", "החיבור למסד הנתונים נתקע. לנסות שוב; אם חוזר — לכבות VPN / חוסם תוכן, או לנסות ברשת אחרת."); }
     me = acc?.val();
-    if (!me) {   // מנהל פעיל באתר הראשי — גישה לכל הקבלנים הראשיים
-      const adm = (await withTimeout(db.ref(`${ROOT}_access/${u.uid}`).get(), 15000).catch(() => null))?.val();
-      if (adm?.active && adm.role !== "צופה" && adm.role !== "חיבורי חשמל") me = { name: adm.name || "", admin: true, contractors: {} };
-    }
+    const adm = (await withTimeout(db.ref(`${ROOT}_access/${u.uid}`).get(), 15000).catch(() => null))?.val();
+    const isAdm = !!(adm?.active && adm.role !== "צופה" && adm.role !== "חיבורי חשמל");
+    if (!me && isAdm) me = { name: adm.name || "", admin: true, contractors: {} };   // מנהל פעיל באתר הראשי — גישה לכל הקבלנים הראשיים
+    if (me) me.fullRead = isAdm;
     if (!me) return noAccess();
     me.email = String(u.email).toLowerCase();
     const COLS6 = ["contractors", "activities", "designSegments", "designOffices", "kdSections", "progress"], got = new Set(), bad = [];
@@ -507,8 +509,10 @@ document.addEventListener("focusout", () => { if (later) { later = false; setTim
           bad.push(col); fail("אין הרשאה לקרוא נתונים", `${col}: ${err && err.message || err}`); });
       offs.push(() => ref.off("value", cb));
     }
-    { const q = me.admin ? db.ref(`${ROOT}/requests`) : db.ref(`${ROOT}/requests`).orderByChild("reportedBy").equalTo(me.email);   // מפקח רואה רק את הפניות שלו
-      const cbq = q.on("value", s => { RQ = s.val() || {}; if (got.size === COLS6.length) soft(); }, () => { RQ = {}; });
+    { // מנהל — קורא הכל ומסנן לפי המייל שלו; מפקח — רק את הפניות שלו (שאילתה לפי reportedBy, כך מתירים כללי Firebase)
+      const q = me.fullRead ? db.ref(`${ROOT}/requests`) : db.ref(`${ROOT}/requests`).orderByChild("reportedBy").equalTo(me.email);
+      const cbq = q.on("value", s => { RQ = s.val() || {}; S.rqErr = ""; if (got.size === COLS6.length) soft(); },
+        err => { RQ = {}; S.rqErr = "לא ניתן לקרוא את הפניות והתשובות — צריך לפרסם את כללי Firebase המעודכנים (database.rules.json)"; console.error(err); if (got.size === COLS6.length) soft(); });
       offs.push(() => q.off("value", cbq)); }
     bootTimer = setTimeout(() => { if (got.size < COLS6.length && !bad.length) fail("הנתונים לא נטענו", "חסר: " + COLS6.filter(c => !got.has(c)).join(", ")); }, 20000);
   });
