@@ -1394,7 +1394,8 @@ function pageSurvey(d) {
       <button class="btn svnav" data-act="svGo" data-id="1" ${S.idx < blocks.length - 1 && !multi ? "" : "disabled"}>הבא ›</button></div>
     <div class="svrange"><span>מחתך</span><input id="svF" data-act="svRF" inputmode="numeric" value="${F}"><span>עד חתך</span><input id="svT" data-act="svRT" inputmode="numeric" value="${T}">
       <span class="svkd">ק.ד. ${kdFmt(x.s, F)} – ${kdFmt(x.s, T)}</span>
-      ${custom ? `<button class="btn ghost sm" data-act="svRReset">חזרה לבלוק</button>` : ""}</div>
+      ${custom ? `<button class="btn ghost sm" data-act="svRReset">חזרה לבלוק</button>` : ""}
+      <span class="small" style="color:var(--accent);flex-basis:100%">הקלדת הטווח רק בוחרת את המקום — השמירה קורית כשלוחצים על המלאכה למטה (✓ בוצע / ✗ לא בוצע)</span></div>
     <div class="svrange svrk"><span>או לפי ק.ד.: מ־</span><input id="svKF" data-act="svKF" inputmode="decimal" value="${esc(S.kf ?? "")}" placeholder="${esc(kdFmt(x.s, F).replace("≈", ""))}"><span>עד</span><input id="svKT" data-act="svKT" inputmode="decimal" value="${esc(S.kt ?? "")}" placeholder="${esc(kdFmt(x.s, T).replace("≈", ""))}">
       <span class="small muted">${kdSecPts(x.s) ? "מומר לחתכים לפי טבלת ק.ד.↔חתכים" : "מומר לחתכים בקירוב (≈) — חתך מדויק עדיף"}</span></div></div>
     <div class="row" style="gap:6px;margin:8px 0"><button class="btn ghost sm" data-act="svCopy" ${S.idx && !multi && !custom ? "" : "disabled"}>כמו הבלוק הקודם</button><button class="btn ghost sm" data-act="svAll" data-id="✓">הכל ✓</button><button class="btn ghost sm" data-act="svAll" data-id="✗">הכל ✗</button><button class="btn ghost sm" data-act="svAll" data-id="">ניקוי</button>
@@ -1415,8 +1416,9 @@ function pageSurvey(d) {
 /** כתיבה של כמה רשומות סקר בבת אחת (רינדור אחד / עדכון Firebase אחד) */
 async function svWrite(recs) {
   if (denyWrite("survey")) return;
-  if (LOCAL) { RAW.survey = { ...(RAW.survey || {}), ...recs }; touched(); render(); return; }
-  const up = {}; for (const [id, v] of Object.entries(recs)) up[`survey/${fbKey(id)}`] = v === null ? null : fbSafe(v); await fb.database().ref(DB_ROOT).update(up);
+  if (LOCAL) { RAW.survey = { ...(RAW.survey || {}), ...recs }; touched(); render(); toast("נשמר בסקר ✓"); return; }
+  const up = {}; for (const [id, v] of Object.entries(recs)) up[`survey/${fbKey(id)}`] = v === null ? null : fbSafe(v);
+  try { await fb.database().ref(DB_ROOT).update(up); toast("נשמר בסקר ✓"); } catch (e) { writeFail("survey")(e); }
 }
 function svCtx() {
   const S = ui.sv, d = D(), c = d.contractors.find(x => x.id === S.cid), x = designInRange(d, kdRange(c)).find(y => y.s.id === S.segId), bl = svBlocks(x);
