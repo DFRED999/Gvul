@@ -498,8 +498,9 @@ function rqList() {
     ${!open && all.length > 3 ? `<button class="rqtog wide" data-rqtog="1">▾ להצגת כל ${all.length} הפניות, חיפוש ומיון</button>` : ""}</div>`;
 }
 function view() {
-  const cids = me.admin ? Object.keys(D.contractors || {}).filter(k => D.contractors[k].kind !== "ייעודי").sort((a, b) => (D.contractors[a].order ?? 0) - (D.contractors[b].order ?? 0))
-    : Object.keys(me.contractors || {}).filter(k => D.contractors?.[k]);
+  const north = k => { const c = D.contractors[k] || {}, a = kdNum(c.kdFrom), b = kdNum(c.kdTo); return a === null && b === null ? -1e9 : Math.max(a ?? -1e9, b ?? -1e9); };   // מצפון לדרום
+  const cids = (me.admin ? Object.keys(D.contractors || {}).filter(k => D.contractors[k].kind !== "ייעודי")
+    : Object.keys(me.contractors || {}).filter(k => D.contractors?.[k])).sort((a, b) => north(b) - north(a));
   if (!cids.length) return noAccess();
   if (!cids.includes(S.cid)) S.cid = cids[0];
   const c = { id: S.cid, ...D.contractors[S.cid] }, segs = segsOf(c);
@@ -633,7 +634,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-11b";
+const VER = "2026-10-11c";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
@@ -682,4 +683,3 @@ document.addEventListener("focusout", () => { if (later) { later = false; setTim
 </script>
 </body>
 </html>
-
