@@ -494,6 +494,21 @@ a.btn { text-decoration: none; }
 .svmc.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
 .modal .svrange .svkd { white-space: normal; flex-basis: 100%; font-size: 13px; }
 .modal .sheet td, .modal .sheet th { padding: 5px 6px; }
+.tk-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+.tk-col{background:#f4f6f3;border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.tk-ch{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.tk-ch .btn{margin-inline-start:auto}
+.tk-card{background:#fff;border:1px solid var(--line);border-inline-start:5px solid var(--tc);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tk-top{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}.tk-t{font-size:14.5px;line-height:1.3}
+.tk-st{width:auto;font-size:12px;padding:3px 6px;flex:none}.tk-last{font-size:13px;background:#f7f8f5;border-radius:6px;padding:5px 7px}
+.dash-t tr.mg td{background-image:linear-gradient(var(--ga),var(--ga))}
+.dash-t tr.mg td:first-child{box-shadow:inset -3px 0 0 var(--gc)}
+.dash-t tr.mg td:last-child{box-shadow:inset 3px 0 0 var(--gc)}
+.dash-t tr.mg-top td{box-shadow:inset 0 3px 0 var(--gc)}
+.dash-t tr.mg-top td:first-child{box-shadow:inset -3px 3px 0 var(--gc)}
+.dash-t tr.mg-top td:last-child{box-shadow:inset 3px 3px 0 var(--gc)}
+.dash-t tr.mg-bot td{box-shadow:inset 0 -3px 0 var(--gc)}
+.dash-t tr.mg-bot td:first-child{box-shadow:inset -3px -3px 0 var(--gc)}
+.dash-t tr.mg-bot td:last-child{box-shadow:inset 3px -3px 0 var(--gc)}
 </style>
 </head>
 <body>
@@ -513,7 +528,7 @@ const SECTION_M = 20;          // מרחק בין חתכים (מ׳) — קבוע
 /* =====================================================================
    עזרים
    ===================================================================== */
-const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "requests", "snapshots", "tableConfig", "users"];
+const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "requests", "snapshots", "tasks", "mtgs", "tableConfig", "users"];
 /* קבלנים ייעודיים — עובדים לרוחב הקו לפי התמחות (שערים, מבני חשמל, פינוי מוקשים, סבכות…) ומנוהלים לפי "פריטי עבודה" */
 const SPECIALTIES = ["ארון שקד", "חדר טרפו", "תט״ז", "שערים", "פינוי מוקשים", "סבכות למעבירי מים", "תקשורת", "מעבירי מים", "מעביר אירי", "אחר"];
 const ITEM_STATUS = ["טרם", "מתוכנן", "בביצוע", "הושלם", "HOLD", "מבוטל"];
@@ -553,7 +568,10 @@ let NEWER_FILE = null;            // data.json חדש יותר שנמצא באת
 let fb = null, user = null, me = null;
 
 const D = () => Object.fromEntries(COLS.map(c => [c, list(c)]));
-const list = col => { const L = Object.entries(RAW[col] || {}).map(([id, v]) => ({ id, ...v })).sort(byOrder); if (col === "orders") L.forEach(ordBySecs); return L; };
+/** קבלנים ראשיים תמיד מצפון לדרום (ק.ד. גבוה → נמוך): אבידן, לביב, בראשי, ערן; אחריהם הייעודיים */
+const cNorth = c => { const a = kdNum(c.kdFrom), b = kdNum(c.kdTo); return a === null && b === null ? -1e9 : Math.max(a ?? -1e9, b ?? -1e9); };
+const byNorth = (a, b) => ((a.kind === "ייעודי") - (b.kind === "ייעודי")) || (a.kind !== "ייעודי" ? cNorth(b) - cNorth(a) : 0) || byOrder(a, b);
+const list = col => { const L = Object.entries(RAW[col] || {}).map(([id, v]) => ({ id, ...v })).sort(col === "contractors" ? byNorth : byOrder); if (col === "orders") L.forEach(ordBySecs); return L; };
 /** הזמנה שהוגדרה לפי חתכים הנדסיים (מחתך–עד חתך): האורך = מספר החתכים × 20 מ׳ בקטעי התכנון של הקבלן, והק.ד. נגזר מהחתכים */
 function ordSecKeys(cid) { const out = { f: "secFrom", t: "secTo" };
   for (const k of ["orders__" + cid, "orders"]) { const cu = RAW.tableConfig?.[k]?.custom || {};
@@ -757,6 +775,8 @@ const NAV_ALL = () => [
     ["map", "🗺 מפת הקו"],
     ["approvals", "✔ אישור דיווחים", "", "", (() => { try { return list("progress").filter(p => p.review === "לבדיקה").length; } catch { return 0; } })()],
     ["requests", "✉ פניות מהשטח", "", "rq", (() => { try { return list("requests").filter(r => r.status === "פתוח").length; } catch { return 0; } })()]] },
+  { group: "הנהלה", items: [["meeting", "📋 ישיבה שבועית", "", "", (() => { try { return isMgr() ? list("tasks").filter(t => t.reviewed === false).length : 0; } catch { return 0; } })()],
+    ["mytasks", "✅ המשימות שלי", "", "", (() => { try { return list("tasks").filter(t => t.status !== "סגור" && (LOCAL || tkMe(t)) && tkLate(t)).length; } catch { return 0; } })()]] },
   { group: "קבלנים", box: true, items: [["#h1", "קבלנים ראשיים", "", "head"],
     ...(cs => cs.map(c => ["c:" + c.id, c.name, "", "", 0, cColor({ contractors: cs }, c)]))(list("contractors").filter(isMain)),
     ["#h2", "קבלנים ייעודיים", "", "head"],
@@ -810,7 +830,7 @@ function render() {
   document.body.classList.toggle("ro", isViewer());
   document.body.classList.toggle("dark", !!ui.dark); document.body.classList.toggle("present", !!ui.present);
   const p = ui.page;
-  const body = p === "overview" ? (weeklySnapshot(d), sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "power" ? pageIec(d) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
+  const body = p === "overview" ? (weeklySnapshot(d), sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "meeting" ? pageMeeting(d) : p === "mytasks" ? pageMyTasks(d) : p === "mtgarch" ? pageMtgArchive(d) : p === "power" ? pageIec(d) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
     : p === "segments" ? pageSegments(d) : p === "deliveries" ? pageDeliveries(d) : p === "settings" ? pageSettings(d) : p === "mreport" ? pageMreport(d) : pagePlan(p);
   $app.innerHTML = `
   <div class="mtop"><button class="mbtn" data-act="menu" aria-label="תפריט" aria-expanded="${ui.menu ? "true" : "false"}"><span></span><span></span><span></span></button>
@@ -1674,7 +1694,7 @@ function logoData(file) {
       cv.width = Math.max(1, Math.round(w0 * k)); cv.height = Math.max(1, Math.round(h0 * k)); cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); res(cv.toDataURL("image/png")); };
     im.src = fr.result; }; fr.readAsDataURL(file); });
 }
-const cColor = (d, c) => c.color || C_COLORS[Math.max(0, d.contractors.filter(isMain).findIndex(x => x.id === c.id)) % C_COLORS.length];
+const cColor = (d, c) => c.color || C_COLORS[Math.max(0, d.contractors.filter(isMain).sort(byOrder).findIndex(x => x.id === c.id)) % C_COLORS.length];   // צבע קבוע לקבלן — לא תלוי בסדר התצוגה
 /** ראש צבעוני לעמוד קבלן ראשי: באנר, אריחי מספרים, 7 אבני דרך */
 function contractorHero(d, c, { ords, cov }) {
   const today = todayStr(), col = cColor(d, c), now = snapshot(d, c, today), wk = snapshot(d, c, addDays(today, -7)), mo = snapshot(d, c, addDays(today, -30));
@@ -1928,7 +1948,8 @@ function dashboard(d, cs) {
   const stRows = STAGE_GROUPS.filter(G => per.some(p => gv(p, G) !== null || G.stages.some(g => p.cnt[g]))).map(G => {
     HC = G.color; const t = tot(p => gv(p, G)), cov = per.filter(p => gv(p, G) !== null).reduce((a, p) => a + p.km, 0), on = !!open[G.name];
     const subs = G.stages.filter(g => per.some(p => p.st[g] !== null || p.cnt[g]));
-    return `<tr class="mrow" data-act="msTog" data-id="${esc(G.name)}" style="background:${G.tint}" title="לחיצה מציגה את השלבים המפורטים"><td style="border-inline-start:6px solid ${G.color}"><b style="color:${G.color}">${on ? "▾" : "▸"} ${G.name}</b><div class="small muted">${subs.length} שלבים</div></td>${per.map(p => cell(gv(p, G), p.km)).join("")}<td class="c" style="${heatBg(t)}"><b style="font-size:15px">${t === null ? "—" : ofT(M(t * cov), M(cov))}</b>${pcs(t)}</td></tr>${on ? subs.map(stRow).join("") : ""}`;
+    const gv_ = `--gc:${G.color};--ga:${G.color}1a`;
+    return `<tr class="mrow${on ? " mg mg-top" : ""}" data-act="msTog" data-id="${esc(G.name)}" style="background:${G.tint};${gv_}" title="לחיצה מציגה את השלבים המפורטים"><td style="border-inline-start:6px solid ${G.color}"><b style="color:${G.color}">${on ? "▾" : "▸"} ${G.name}</b><div class="small muted">${subs.length} שלבים</div></td>${per.map(p => cell(gv(p, G), p.km)).join("")}<td class="c" style="${heatBg(t)}"><b style="font-size:15px">${t === null ? "—" : ofT(M(t * cov), M(cov))}</b>${pcs(t)}</td></tr>${on ? subs.map((g, i) => stRow(g).replace('<tr class="msub"', `<tr class="msub mg${i === subs.length - 1 ? " mg-bot" : ""}" style="${gv_}"`)).join("") : ""}`;
   }).join("");
   const unmapped = per.filter(p => p.ex.rows.length && !p.ex.rows.some(r => STAGES.includes(r.a.stage))).map(p => p.c.name);
   return `<div class="card"><div class="row" style="margin-bottom:10px"><h2 style="margin:0">תמונת מצב — ${S === "הכל" ? "כל הפרויקט" : "גזרת " + esc(S)}</h2><span class="spacer"></span><div class="viewtabs" style="margin:0">${tabs}</div>
@@ -2653,6 +2674,194 @@ const WK_CSS = `.wk-ovl{position:fixed;inset:0;background:rgba(20,26,22,.45);dis
 .wk-f{display:flex;flex-direction:column;gap:4px;font-size:13px;margin:8px 0}.wk-f input,.wk-f select{font:inherit;font-size:16px;padding:8px;border:1px solid #c9cdc5;border-radius:8px}
 .wk-b{font:inherit;font-weight:700;padding:10px 16px;border-radius:10px;border:1px solid #2f6b4f;background:#2f6b4f;color:#fff;cursor:pointer}.wk-b.ghost{background:#fff;color:#1f2a24;border-color:#c9cdc5}`;
 (() => { const st = document.createElement("style"); st.textContent = WK_CSS; document.head.appendChild(st); })();
+
+/* =====================================================================
+   משימות הנהלה + ישיבה שבועית
+   מנהל־על (סופר מנהל / מנהל) נותן משימות למתאמי שטח. המתאם מעדכן בעצמו — כל שינוי שלו מסומן "לאישור",
+   ומנהל־העל עובר ומאשר (בישיבה או בכל זמן). "בוצע" של מתאם → "בוצע — לאישור" → מנהל מאשר → "סגור".
+   ישיבה שבועית: תמונת קבלנים, משימות לפי אחראי, נושאים שהוסלמו להנהלה, סיכום ישיבה נשמר בארכיון.
+   ===================================================================== */
+const TK_ST = ["פתוח", "בטיפול", "תקוע", "בוצע — לאישור", "סגור"], TK_PRI = ["רגילה", "גבוהה"];
+const TK_CLR = { "פתוח": "#4a6d93", "בטיפול": "#2f6b4f", "תקוע": "#b8452f", "בוצע — לאישור": "#c96a12", "סגור": "#7a857f" };
+const isMgr = () => LOCAL || ["סופר מנהל", "מנהל"].includes(me?.role);
+const tkWho = () => me?.name || user?.email || "מקומי";
+const tkMe = t => !!me && ((t.ownerEmail && user?.email && t.ownerEmail.toLowerCase() === user.email.toLowerCase()) || (t.ownerName && t.ownerName === me.name));
+const tkLast = t => Object.values(t.log || {}).sort((a, b) => String(a.at || a.date).localeCompare(String(b.at || b.date))).pop();
+const tkLate = t => t.due && t.status !== "סגור" && t.status !== "בוצע — לאישור" && t.due < todayStr();
+const tkOwners = () => { const us = Object.values(RAW.users || {}).filter(u => u.active && !["צופה", "חיבורי חשמל"].includes(u.role)).map(u => ({ email: u.email || "", name: u.name || (u.email || "").split("@")[0], role: u.role }));
+  const fromTasks = list("tasks").filter(t => t.ownerName && !us.some(u => u.name === t.ownerName)).map(t => ({ email: t.ownerEmail || "", name: t.ownerName, role: "" }));
+  const seen = new Set(); return [...us, ...fromTasks].filter(u => !seen.has(u.name) && seen.add(u.name)).sort((a, b) => (a.role === "מתאם" ? 0 : 1) - (b.role === "מתאם" ? 0 : 1) || a.name.localeCompare(b.name, "he")); };
+const tkLastMtg = () => list("mtgs").sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+/** כתיבה: שינוי של מי שאינו מנהל־על מסומן "לאישור" */
+async function tkSave(id, patch, logText) {
+  const t = RAW.tasks?.[id] || {}, by = tkWho(), at = new Date().toISOString(), p = { ...patch };
+  if (logText) p.log = { ...(t.log || {}), [newId()]: { date: todayStr(), at, text: logText, by } };
+  if (!isMgr()) { p.reviewed = false; if (p.status === "סגור") p.status = "בוצע — לאישור"; }
+  if (p.status === "סגור" && t.status !== "סגור") p.closedAt = todayStr();
+  await api.update("tasks", id, p);
+}
+async function tkApprove(id) {
+  const t = RAW.tasks?.[id]; if (!t) return;
+  const p = { reviewed: true, reviewedAt: new Date().toISOString(), reviewedBy: tkWho() };
+  if (t.status === "בוצע — לאישור") Object.assign(p, { status: "סגור", closedAt: todayStr() });
+  await api.update("tasks", id, p); toast(p.status === "סגור" ? "המשימה נסגרה ✓" : "אושר ✓");
+}
+function tkCard(d, t, opt = {}) {
+  const c = d.contractors.find(x => x.id === t.contractorId), L = tkLast(t), since = opt.since || "";
+  const kd = t.kdFrom || t.kdTo ? `ק.ד. ${esc(t.kdFrom || "")}${t.kdTo && t.kdTo !== t.kdFrom ? "–" + esc(t.kdTo) : ""}` : "";
+  const stale = since && t.status !== "סגור" && (!L || String(L.date) < since);
+  const badges = [tkLate(t) ? `<span class="pill warn">באיחור · יעד ${fmtD(t.due)}</span>` : t.due ? `<span class="pill">יעד ${fmtD(t.due)}</span>` : "",
+    t.priority === "גבוהה" ? `<span class="pill warn">עדיפות גבוהה</span>` : "",
+    t.reviewed === false ? `<span class="pill" style="background:#fdf0dc;color:#9a5410">עודכן — לאישור</span>` : "",
+    stale ? `<span class="pill" style="background:#eef1ec">לא עודכן מאז הישיבה</span>` : ""].join(" ");
+  const canEdit = isMgr() || tkMe(t);
+  return `<div class="tk-card" style="--tc:${TK_CLR[t.status] || "#4a6d93"}">
+    <div class="tk-top"><b class="tk-t">${esc(t.title || "—")}</b>
+      <select class="inp tk-st" data-tkst="${t.id}" ${canEdit ? "" : "disabled"}>${TK_ST.filter(s => isMgr() || s !== "סגור").map(s => `<option ${s === t.status ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+    <div class="small muted">${opt.owner ? `<b>${esc(t.ownerName || "—")}</b> · ` : ""}${c ? esc(c.name) : "כללי"}${kd ? " · " + kd : ""}${t.issueCode ? ` · נושא ${esc(t.issueCode)}` : ""}</div>
+    <div>${badges}</div>
+    ${L ? `<div class="tk-last"><span class="muted">${fmtD(L.date)} · ${esc(L.by || "")}:</span> ${esc(L.text)}</div>` : `<div class="tk-last muted">עוד אין עדכונים</div>`}
+    <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">
+      ${canEdit ? `<button class="btn ghost sm" data-act="tkUpd" data-id="${t.id}">✎ עדכון</button>` : ""}
+      ${isMgr() && t.reviewed === false ? `<button class="btn sm" data-act="tkOk" data-id="${t.id}">✓ ${t.status === "בוצע — לאישור" ? "אישור וסגירה" : "ראיתי — מאושר"}</button>` : ""}
+      <button class="btn ghost sm" data-act="tkHist" data-id="${t.id}">היסטוריה (${Object.keys(t.log || {}).length})</button>
+      ${isMgr() ? `<button class="btn ghost sm" data-act="tkEdit" data-id="${t.id}">פרטים</button>` : ""}</div></div>`;
+}
+/** מסך הישיבה השבועית */
+function pageMeeting(d) {
+  const lm = tkLastMtg(), since = lm?.date || addDays(todayStr(), -7), T = d.tasks || [];
+  const open = T.filter(t => t.status !== "סגור"), closedSince = T.filter(t => t.status === "סגור" && (t.closedAt || "") >= since);
+  const review = T.filter(t => t.reviewed === false), late = open.filter(tkLate);
+  const mains = d.contractors.filter(isMain);
+  const rows = mains.map(c => { const f = forecast(d, c), now = snapshot(d, c, todayStr()), prev = snapshot(d, c, since), dn = x => (x.overall || 0) * x.km;
+    const add = (dn(now) - dn(prev)) * 1000, late = f.lateDays;
+    return `<tr><td><b>${esc(c.name)}</b></td><td class="c"><b>${num(dn(now) * 1000, 0)}</b> מ׳ <span class="muted small">${Math.round((now.overall || 0) * 100)}%</span></td>
+      <td class="c">${add > 0.5 ? `<b style="color:var(--accent)">+${num(add, 0)}</b> מ׳` : `<span class="muted">—</span>`}</td>
+      <td class="c">${f.pace ? `${num(f.pace * 1000, 0)} מ׳` : "—"}</td><td class="c">${f.eta ? fmtD(f.eta) : "—"}</td><td class="c">${c.targetDate ? fmtD(c.targetDate) : "—"}</td>
+      <td class="c">${late == null ? "—" : late > 0 ? `<span class="pill warn">${late} ימים פיגור</span>` : `<span class="pill ok">בזמן</span>`}</td>
+      <td class="c">${open.filter(t => t.contractorId === c.id).length || "—"}</td></tr>`; }).join("");
+  const owners = [...new Set([...tkOwners().filter(o => o.role === "מתאם" || o.role === "מתאם איסוף").map(o => o.name), ...open.map(t => t.ownerName || "ללא אחראי")])];
+  const sortT = arr => arr.sort((a, b) => (tkLate(b) - tkLate(a)) || ((b.reviewed === false) - (a.reviewed === false)) || ((b.priority === "גבוהה") - (a.priority === "גבוהה")) || String(a.due || "9999").localeCompare(String(b.due || "9999")));
+  const cols = owners.map(o => { const mine = sortT(open.filter(t => (t.ownerName || "ללא אחראי") === o)), done = closedSince.filter(t => t.ownerName === o);
+    return `<div class="tk-col"><div class="tk-ch"><b>${esc(o)}</b><span class="muted small">${mine.length} פתוחות${mine.filter(tkLate).length ? ` · <b style="color:var(--warn)">${mine.filter(tkLate).length} באיחור</b>` : ""}</span>
+      <button class="btn ghost sm" data-act="tkNew" data-id="${esc(o)}">+ משימה</button></div>
+      ${mine.map(t => tkCard(d, t, { since })).join("") || `<p class="muted small">אין משימות פתוחות</p>`}
+      ${done.length ? `<details class="small"><summary>נסגרו מאז הישיבה (${done.length})</summary>${done.map(t => `<div>✓ ${esc(t.title)}</div>`).join("")}</details>` : ""}</div>`; }).join("");
+  const esc_ = d.issues.filter(i => i.mgmt && i.status !== "סגור");
+  return `<div class="ch-banner" style="--cc:#34557a"><div><h1>ישיבה שבועית</h1><span>${lm ? `ישיבה קודמת: ${fmtD(lm.date)} · ` : ""}מה השתנה, מה תקוע, מה צריך החלטה</span></div>
+    <div class="row" style="gap:6px"><button class="btn" data-act="tkNew">+ משימה</button><button class="btn" data-act="tkSum">📝 סיכום ישיבה</button><button class="btn ghost" data-act="nav" data-id="mtgarch">ארכיון ישיבות</button></div></div>
+  <div class="ch-tiles sg-tiles" style="--cc:#34557a">
+    <div class="ch-t t1"><span>משימות פתוחות</span><b>${open.length}</b><small>${owners.length} אחראים</small></div>
+    <div class="ch-t ${late.length ? "t2" : ""}"><span>באיחור</span><b>${late.length}</b><small>עבר תאריך היעד</small></div>
+    <div class="ch-t ${review.length ? "t2" : ""}"><span>ממתין לאישור שלך</span><b>${review.length}</b><small>עדכונים של מתאמים</small></div>
+    <div class="ch-t t3"><span>נסגרו מאז הישיבה</span><b>${closedSince.length}</b><small>מ־${fmtD(since)}</small></div></div>
+  <div class="card"><h2 style="margin-top:0">קבלנים — מאז הישיבה הקודמת (${fmtD(since)})</h2><div class="tablewrap"><table class="sheet"><thead><tr><th>קבלן</th><th>ביצוע מצטבר</th><th>נוסף מאז</th><th>קצב לשבוע</th><th>תחזית סיום</th><th>יעד</th><th>מצב</th><th>משימות</th></tr></thead><tbody>${rows}</tbody></table></div></div>
+  <h2>משימות לפי אחראי</h2><div class="tk-cols">${cols || `<p class="muted">אין משימות. לחיצה על ״+ משימה״ כדי להתחיל.</p>`}</div>
+  <div class="card" style="margin-top:14px"><h2 style="margin-top:0">הוסלם להנהלה <span class="muted small">— נושאים פתוחים שסומנו ״להנהלה״ (${esc_.length})</span></h2>
+    ${esc_.length ? `<div class="tablewrap"><table class="sheet"><thead><tr><th>קוד</th><th>קבלן</th><th>נושא</th><th>נדרש מההנהלה</th><th>עדכון אחרון</th><th></th></tr></thead><tbody>${esc_.map(i => `<tr><td>${esc(i.code || "")}</td><td>${esc(d.contractors.find(c => c.id === i.contractorId)?.name || "")}</td><td><b>${esc(i.title || "")}</b></td><td>${esc(i.mgmtAsk || "")}</td><td class="small">${esc(i.last || "")}${i.updated ? `<div class="muted">${fmtD(i.updated)}</div>` : ""}</td>
+      <td>${T.some(t => t.issueId === i.id && t.status !== "סגור") ? `<span class="pill ok">יש משימה</span>` : `<button class="btn ghost sm" data-act="tkFromIssue" data-id="${i.id}">→ משימה</button>`}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted small" style="margin:0">אין נושאים מסומנים ״להנהלה״. מסמנים בדף הקבלן ← נושאים פתוחים ← עמודה ״להנהלה״.</p>`}</div>`;
+}
+function pageMyTasks(d) {
+  const T = (d.tasks || []).filter(t => LOCAL ? true : tkMe(t)), open = T.filter(t => t.status !== "סגור"), closed = T.filter(t => t.status === "סגור");
+  return `<div class="ch-banner" style="--cc:#2f6b4f"><div><h1>המשימות שלי</h1><span>${LOCAL ? "(עבודה מקומית — מוצגות כל המשימות)" : esc(me?.name || "")} · כל עדכון שלך נשלח לאישור מנהל־העל</span></div><button class="btn" data-act="tkNew">+ משימה</button></div>
+  <div class="tk-cols">${open.sort((a, b) => (tkLate(b) - tkLate(a)) || String(a.due || "9999").localeCompare(String(b.due || "9999"))).map(t => tkCard(d, t, { owner: LOCAL })).join("") || `<p class="muted">אין משימות פתוחות 👍</p>`}</div>
+  ${closed.length ? `<details style="margin-top:14px"><summary>משימות שנסגרו (${closed.length})</summary><div class="tk-cols">${closed.map(t => tkCard(d, t, { owner: LOCAL })).join("")}</div></details>` : ""}`;
+}
+function pageMtgArchive(d) {
+  const M = (d.mtgs || []).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  return `<div class="ch-banner" style="--cc:#34557a"><div><h1>ארכיון ישיבות</h1><span>כל סיכומי הישיבות השבועיות — החלטות, משימות שנפתחו ונסגרו</span></div><button class="btn ghost" data-act="nav" data-id="meeting">← לישיבה הנוכחית</button></div>
+  <div class="card">${M.length ? `<div class="tablewrap"><table class="sheet"><thead><tr><th>תאריך</th><th>משתתפים</th><th>החלטות / הערות</th><th>נפתחו</th><th>נסגרו</th><th>פתוחות</th><th></th></tr></thead><tbody>${M.map(m => `<tr><td><b>${fmtD(m.date)}</b></td><td class="small">${esc(m.attendees || "")}</td><td class="small" style="white-space:pre-wrap;max-width:60ch">${esc(m.notes || "")}</td>
+    <td class="c">${(m.opened || []).length}</td><td class="c">${(m.closed || []).length}</td><td class="c">${(m.open || []).length}</td><td><button class="btn ghost sm" data-act="tkPrint" data-id="${m.id}">פתיחה / PDF</button></td></tr>`).join("")}</tbody></table></div>` : `<p class="muted" style="margin:0">עוד אין סיכומי ישיבות. בסוף ישיבה לוחצים ״📝 סיכום ישיבה״.</p>`}</div>`;
+}
+/** חלון משימה חדשה / עריכת פרטים */
+function tkForm(t = {}, preset = {}) {
+  const d = D(), owners = tkOwners(), cs = d.contractors, v = { ...preset, ...t };
+  modal(`<h2>${t.id ? "פרטי משימה" : "משימה חדשה"}</h2>
+    <label class="field">מה צריך לעשות<input class="inp" id="tk_title" value="${esc(v.title || "")}" placeholder="למשל: פגישה עם רשות העתיקות לפתרון בק.ד. 880–885"></label>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><label class="field" style="flex:1">אחראי<input class="inp" id="tk_owner" list="tk_ol" value="${esc(v.ownerName || "")}" placeholder="שם"><datalist id="tk_ol">${owners.map(o => `<option value="${esc(o.name)}">${esc(o.role || "")}</option>`).join("")}</datalist></label>
+      <label class="field" style="flex:1">תאריך יעד<input class="inp" type="date" id="tk_due" value="${esc(v.due || "")}"></label></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><label class="field" style="flex:2">קבלן<select class="inp" id="tk_c"><option value="">כללי</option>${cs.map(c => `<option value="${c.id}" ${c.id === v.contractorId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
+      <label class="field" style="flex:1">ק.ד. מ־<input class="inp" id="tk_k1" inputmode="decimal" value="${esc(v.kdFrom || "")}"></label><label class="field" style="flex:1">עד<input class="inp" id="tk_k2" inputmode="decimal" value="${esc(v.kdTo || "")}"></label></div>
+    <label class="field">עדיפות<select class="inp" id="tk_pri">${TK_PRI.map(p => `<option ${p === (v.priority || "רגילה") ? "selected" : ""}>${p}</option>`).join("")}</select></label>
+    ${t.id ? "" : `<label class="field">הערה ראשונה (לא חובה)<input class="inp" id="tk_note"></label>`}
+    <p class="small" id="tk_msg"></p>
+    <div class="row">${t.id && isMgr() ? `<button class="btn ghost" id="tk_del" style="color:var(--warn)">מחיקה</button>` : ""}<span class="spacer"></span><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    const q = s => m.querySelector(s); q("#mNo").onclick = close; q("#tk_title").focus();
+    if (q("#tk_del")) q("#tk_del").onclick = async () => { if (q("#tk_del").dataset.sure) { await api.remove("tasks", t.id); close(); toast("נמחק"); } else { q("#tk_del").dataset.sure = 1; q("#tk_del").textContent = "ללחוץ שוב למחיקה"; } };
+    q("#mYes").onclick = async () => {
+      const title = q("#tk_title").value.trim(); if (!title) { q("#tk_msg").textContent = "צריך לכתוב מה המשימה"; q("#tk_msg").style.color = "var(--warn)"; return; }
+      const ownerName = q("#tk_owner").value.trim(), o = owners.find(x => x.name === ownerName);
+      const rec = { title, ownerName, ownerEmail: o?.email || "", due: q("#tk_due").value, contractorId: q("#tk_c").value, kdFrom: q("#tk_k1").value.trim(), kdTo: q("#tk_k2").value.trim(), priority: q("#tk_pri").value };
+      if (t.id) await tkSave(t.id, rec, "עודכנו פרטי המשימה");
+      else { const note = q("#tk_note").value.trim(), at = new Date().toISOString();
+        const log = { [newId()]: { date: todayStr(), at, text: note || "המשימה נפתחה", by: tkWho() } };
+        await api.add("tasks", { ...rec, status: "פתוח", createdAt: todayStr(), createdBy: tkWho(), reviewed: isMgr(), log, ...(preset.issueId ? { issueId: preset.issueId, issueCode: preset.issueCode || "" } : {}) }); }
+      close(); toast("נשמר ✓");
+    };
+  });
+}
+function tkUpdForm(t) {
+  modal(`<h2 style="margin:0">עדכון: ${esc(t.title)}</h2>
+    <label class="field">מה נעשה / מה המצב<textarea class="inp" id="tk_txt" rows="3" placeholder="למשל: נקבעה פגישה עם רשות העתיקות ל־20/10"></textarea></label>
+    <label class="field">מצב<select class="inp" id="tk_s">${TK_ST.filter(s => isMgr() || s !== "סגור").map(s => `<option ${s === t.status ? "selected" : ""}>${s}</option>`).join("")}</select></label>
+    ${isMgr() ? "" : `<p class="small muted" style="margin:0">העדכון יסומן ״לאישור״ עד שמנהל־העל יעבור עליו.</p>`}
+    <div class="row"><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    const q = s => m.querySelector(s); q("#mNo").onclick = close; q("#tk_txt").focus();
+    q("#mYes").onclick = async () => { const txt = q("#tk_txt").value.trim(), st = q("#tk_s").value;
+      if (!txt && st === t.status) return close();
+      await tkSave(t.id, st !== t.status ? { status: st } : {}, (txt || "") + (st !== t.status ? `${txt ? " · " : ""}מצב: ${st}` : "")); close(); toast("עודכן ✓"); };
+  });
+}
+function tkHistory(t) {
+  const L = Object.values(t.log || {}).sort((a, b) => String(b.at || b.date).localeCompare(String(a.at || a.date)));
+  modal(`<h2 style="margin:0">${esc(t.title)}</h2><p class="small muted" style="margin:0">אחראי: ${esc(t.ownerName || "—")} · נפתחה ${fmtD(t.createdAt)} ע״י ${esc(t.createdBy || "")}${t.reviewedAt ? ` · אושר לאחרונה ${fmtD(t.reviewedAt.slice(0, 10))} ע״י ${esc(t.reviewedBy || "")}` : ""}</p>
+    <div style="max-height:50vh;overflow:auto">${L.map(x => `<div style="border-bottom:1px solid var(--line);padding:6px 0"><b>${fmtD(x.date)}</b> · <span class="muted">${esc(x.by || "")}</span><div>${esc(x.text)}</div></div>`).join("") || `<p class="muted">אין עדכונים</p>`}</div>
+    <div class="row"><button class="btn ghost" id="mNo">סגירה</button></div>`, (m, close) => { m.querySelector("#mNo").onclick = close; });
+}
+/** סיכום ישיבה: נשמר בארכיון ונפתח להדפסה / PDF */
+function tkSummary() {
+  const d = D(), lm = tkLastMtg(), since = lm?.date || addDays(todayStr(), -7), T = d.tasks || [];
+  const opened = T.filter(t => (t.createdAt || "") >= since), closed = T.filter(t => t.status === "סגור" && (t.closedAt || "") >= since), open = T.filter(t => t.status !== "סגור");
+  const names = [...new Set(tkOwners().filter(o => ["סופר מנהל", "מנהל", "מתאם"].includes(o.role)).map(o => o.name))].join(", ");
+  modal(`<h2 style="margin:0">סיכום ישיבה — ${fmtD(todayStr())}</h2>
+    <p class="small muted" style="margin:0">מאז ${fmtD(since)}: ${opened.length} משימות נפתחו · ${closed.length} נסגרו · ${open.length} פתוחות${T.filter(t => t.reviewed === false).length ? ` · <b style="color:var(--warn)">${T.filter(t => t.reviewed === false).length} עדיין לא אושרו</b>` : ""}</p>
+    <label class="field">משתתפים<input class="inp" id="mt_who" value="${esc(names)}"></label>
+    <label class="field">החלטות והערות מהישיבה<textarea class="inp" id="mt_notes" rows="6" placeholder="שורה לכל החלטה"></textarea></label>
+    <div class="row"><button class="btn" id="mYes">שמירה בארכיון + PDF</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close;
+    m.querySelector("#mYes").onclick = async () => {
+      const w = window.open("", "_blank"), sn = t => ({ id: t.id, title: t.title || "", owner: t.ownerName || "", status: t.status || "", due: t.due || "", c: d.contractors.find(c => c.id === t.contractorId)?.name || "", last: tkLast(t)?.text || "" });
+      const rec = { date: todayStr(), since, attendees: m.querySelector("#mt_who").value.trim(), notes: m.querySelector("#mt_notes").value.trim(), by: tkWho(), opened: opened.map(sn), closed: closed.map(sn), open: open.map(sn) };
+      const id = await api.add("mtgs", rec); close(); toast("הסיכום נשמר בארכיון ✓"); tkPrint({ id, ...rec }, w);
+    };
+  });
+}
+function tkPrint(m, w) {
+  w = w || window.open("", "_blank"); if (!w) return alertMsg("הדפדפן חסם חלון חדש — יש לאפשר חלונות קופצים");
+  const tb = (arr, extra) => arr.length ? `<table><tr><th>משימה</th><th>אחראי</th><th>קבלן</th><th>יעד</th><th>מצב</th>${extra ? "<th>עדכון אחרון</th>" : ""}</tr>${arr.map(t => `<tr><td><b>${esc(t.title)}</b></td><td>${esc(t.owner)}</td><td>${esc(t.c)}</td><td>${fmtD(t.due)}</td><td>${esc(t.status)}</td>${extra ? `<td>${esc(t.last)}</td>` : ""}</tr>`).join("")}</table>` : `<p class="mut">אין</p>`;
+  w.document.open(); w.document.write(`<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>סיכום ישיבה ${fmtD(m.date)}</title><style>
+    @page{size:A4;margin:12mm}body{font-family:Heebo,Arial,sans-serif;color:#1f2a24;font-size:12px}h1{font-size:20px;margin:0}h2{font-size:14px;color:#34557a;margin:16px 0 6px}
+    .mut{color:#5a665f}table{width:100%;border-collapse:collapse}th{background:#34557a;color:#fff;text-align:right;padding:5px}td{border:1px solid #d5dbe3;padding:5px;vertical-align:top}
+    .notes{white-space:pre-wrap;border:1px solid #d5dbe3;padding:8px;border-radius:6px}.np{margin:8px 0}@media print{.np{display:none}}</style></head><body>
+    <div class="np"><button onclick="print()">הדפסה / שמירה כ־PDF</button></div>
+    <h1>סיכום ישיבה שבועית — ${fmtD(m.date)}</h1><div class="mut">משתתפים: ${esc(m.attendees || "")} · תקופה: ${fmtD(m.since)}–${fmtD(m.date)} · נרשם ע״י ${esc(m.by || "")}</div>
+    <h2>החלטות והערות</h2><div class="notes">${esc(m.notes || "—")}</div>
+    <h2>משימות שנפתחו (${(m.opened || []).length})</h2>${tb(m.opened || [])}
+    <h2>משימות שנסגרו (${(m.closed || []).length})</h2>${tb(m.closed || [])}
+    <h2>משימות פתוחות (${(m.open || []).length})</h2>${tb(m.open || [], true)}</body></html>`); w.document.close();
+}
+async function tkClick(act, b) {
+  const id = b.dataset.id, t = id && RAW.tasks?.[id] ? { id, ...RAW.tasks[id] } : null;
+  if (act === "tkNew") tkForm({}, id ? { ownerName: id === "ללא אחראי" ? "" : id } : {});
+  else if (act === "tkEdit" && t) tkForm(t);
+  else if (act === "tkUpd" && t) tkUpdForm(t);
+  else if (act === "tkHist" && t) tkHistory(t);
+  else if (act === "tkOk") await tkApprove(id);
+  else if (act === "tkSum") tkSummary();
+  else if (act === "tkPrint") { const m = RAW.mtgs?.[id]; if (m) tkPrint({ id, ...m }); }
+  else if (act === "tkFromIssue") { const i = RAW.issues?.[id]; if (i) tkForm({}, { title: `${i.title || ""}${i.mgmtAsk ? " — " + i.mgmtAsk : ""}`, contractorId: i.contractorId, kdFrom: i.kdFrom || "", kdTo: i.kdTo || "", issueId: id, issueCode: i.code || "" }); }
+}
+document.addEventListener("change", async e => { const s = e.target.closest?.("[data-tkst]"); if (!s) return; const id = s.dataset.tkst, t = RAW.tasks?.[id]; if (!t || s.value === t.status) return; await tkSave(id, { status: s.value }, `מצב: ${s.value}`); toast("עודכן ✓"); });
 
 function pageSvCmp(d) {
   const R = svCompare(d), M = n => `${num(n * SECTION_M, 0)} מ׳`, len = rs => rs.reduce((t, [a, b]) => t + b - a, 0);
@@ -4324,6 +4533,7 @@ $app.addEventListener("click", async e => {
   const b = e.target.closest("[data-act]"); if (!b) return;
   const act = b.dataset.act;
   if (/^sv[A-Z]/.test(act) && !["svFill", "svAddRep", "svCutRep", "svSync"].includes(act)) return svClick(act, b);
+  if (/^tk[A-Z]/.test(act)) return tkClick(act, b);
   if (/^ins[A-Z]/.test(act)) return inspClick(act, b);
   if (act === "menu") { ui.menu = !ui.menu; render(); return; }
   if (ui.menu && (act === "nav" || act === "newContractor")) ui.menu = false;
