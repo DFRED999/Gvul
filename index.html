@@ -2204,10 +2204,13 @@ function execTab(d, c) {
     <button class="btn" data-act="saveProg" data-id="${c.id}">שמירת דיווח</button>
   </div>${f.msg ? `<p class="small" style="margin:8px 0 0;color:${f.err ? "var(--warn)" : "var(--accent)"}">${esc(f.msg)}</p>` : ""}`;
 
-  const hist = d.progress.filter(p => p.contractorId === c.id).sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  // סדר: לפי קטע תכנון ורצף החתכים (מק.ד. נמוך לגבוה), ובאותו טווח — לפי תאריך
+  const segOrd = id => { const s = d.designSegments.find(x => x.id === id), k = s ? Math.min(kdNum(s.kdFrom) ?? 1e9, kdNum(s.kdTo) ?? 1e9) : 1e9; return k; };
+  const actOrd = id => { const x = RAW.activities?.[id]; return (Number(x?.order) || 0) * 1000 + (x?.name || "").charCodeAt(0) || 0; };
+  const hist = d.progress.filter(p => p.contractorId === c.id).sort((a, b) => segOrd(a.segmentId) - segOrd(b.segmentId) || actOrd(a.activityId) - actOrd(b.activityId) || String(a.activityId).localeCompare(String(b.activityId)) || (hasSecs(a) ? ivOfP(a)[0] : 1e9) - (hasSecs(b) ? ivOfP(b)[0] : 1e9) || (hasSecs(a) ? ivOfP(a)[1] : 0) - (hasSecs(b) ? ivOfP(b)[1] : 0) || String(a.date).localeCompare(String(b.date)));
   return `<h2>תמונת ביצוע</h2>${views}${V === "ord" ? ordBlock : V === "both" ? segBlock + ordBlock : segBlock}
     <h2>דיווח ביצוע</h2>${form}
-    <h2 style="margin-top:22px">היסטוריית דיווחים</h2>${(() => {
+    <div class="row" style="margin-top:22px;align-items:center;gap:8px"><h2 style="margin:0">היסטוריית דיווחים</h2><span class="spacer"></span>${(() => { const n = mergePlan(d, c.id).touched; return n ? `<button class="btn sm" data-act="progMerge" data-id="${c.id}" title="דיווחים מצטברים שחופפים זה לזה — הופכים לתוספות בלבד. הסה״כ לא משתנה.">איחוד דיווחים חופפים (${n})</button>` : `<span class="pill ok">אין דיווחים חופפים</span>`; })()}</div>${(() => {
       // ברירת מחדל: רק מה שדורש טיפול (ממתינים לבדיקה). מאושרים מוסתרים — נפתחים בלחיצה
       const grp = { pend: hist.filter(p => p.review === "לבדיקה"), ok: hist.filter(p => !p.review), rej: hist.filter(p => p.review === "נדחה"), all: hist };
       const v = grp[ui.progView] ? ui.progView : grp.pend.length ? "pend" : "ok";
@@ -2444,6 +2447,59 @@ function svSyncModal(kind, id) {
           else { await api.update("progress", p.id, { ...fix, secFrom: lo, secTo: o.a });
             const { id: _i, updatedAt: _u, updatedBy: _b, ...rest } = RAW.progress?.[p.id] || p; await api.add("progress", { ...rest, ...fix, secFrom: o.z, secTo: hi }); } } }
       close(); render(); toast(`סונכרן לפי הסקר: ${adds.length ? `${adds.length} נוספו` : ""}${adds.length && cuts.length ? " · " : ""}${cuts.length ? `${affected} תוקנו` : ""}`);
+    };
+  });
+}
+/** איחוד דיווחים חופפים: דיווחים מאושרים שכל אחד מהם הוא "מצב מצטבר" (4243–4315, אחר כך 4243–4346...) הופכים לתוספות בלבד
+ *  (4243–4315 ב־31/05, 4315–4346 ב־14/06...). לכל מלאכה בכל קטע: עוברים מהישן לחדש, ומכל דיווח נשאר רק מה שלא כוסה קודם.
+ *  הסה״כ לא משתנה (כל חתך נספר פעם אחת גם היום) — רק ההיסטוריה מתנקה. דיווחים ממתינים / נדחים לא נוגעים בהם. */
+function mergePlan(d, cid) {
+  const groups = {};
+  d.progress.filter(p => p.contractorId === cid && !p.review && p.segmentId && hasSecs(p)).forEach(p => (groups[p.segmentId + "|" + p.activityId] = groups[p.segmentId + "|" + p.activityId] || []).push(p));
+  const ops = []; let touched = 0;
+  for (const list of Object.values(groups)) {
+    if (list.length < 2) continue;
+    list.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.createdAt || a.updatedAt || "").localeCompare(String(b.createdAt || b.updatedAt || "")));
+    const cov = []; // מקטעים מכוסים [lo,hi) ממוינים
+    const minus = (lo, hi) => { let parts = [[lo, hi]]; for (const [a, b] of cov) parts = parts.flatMap(([x, y]) => b <= x || a >= y ? [[x, y]] : [[x, Math.min(y, a)], [Math.max(x, b), y]].filter(([u, v]) => v > u)); return parts; };
+    const add = (lo, hi) => { cov.push([lo, hi]); cov.sort((a, b) => a[0] - b[0]); for (let i = 1; i < cov.length; i++) if (cov[i][0] <= cov[i - 1][1]) { cov[i - 1][1] = Math.max(cov[i - 1][1], cov[i][1]); cov.splice(i--, 1); } };
+    for (const p of list) {
+      const [lo, hi] = ivOfP(p), rest = minus(lo, hi);
+      add(lo, hi);
+      if (rest.length === 1 && rest[0][0] === lo && rest[0][1] === hi) continue;
+      touched++;
+      if (!rest.length) { ops.push({ t: "del", p }); continue; }
+      ops.push({ t: "upd", p, f: rest[0][0], z: rest[0][1] });
+      rest.slice(1).forEach(([f, z]) => ops.push({ t: "add", p, f, z }));
+    }
+  }
+  return { ops, touched, del: ops.filter(o => o.t === "del").length, upd: ops.filter(o => o.t === "upd").length, add: ops.filter(o => o.t === "add").length };
+}
+function progMergeModal(cid) {
+  const d = D(), c = d.contractors.find(x => x.id === cid), P = mergePlan(d, cid);
+  if (!P.ops.length) return alertMsg("אין דיווחים חופפים — ההיסטוריה כבר נקייה.");
+  const segN = id => { const s = d.designSegments.find(x => x.id === id); return s ? `${d.designOffices.find(o => o.id === s.officeId)?.name || ""} ${s.num}` : id; };
+  const ex = P.ops.filter(o => o.t !== "add").slice(0, 8).map(o => `<li>${esc(segN(o.p.segmentId))} · ${esc(svShort(RAW.activities?.[o.p.activityId]?.name || ""))} · ${fmtD(o.p.date)}: ${rngTxt(...ivOfP(o.p))} → ${o.t === "del" ? "<b>יימחק</b> (כולו כבר דווח קודם)" : rngTxt(o.f, o.z)}</li>`).join("");
+  modal(`<h2 style="margin:0">איחוד דיווחים חופפים — ${esc(c.name)}</h2>
+    <p class="small" style="margin:0">כל דיווח יכיל רק את מה שנוסף מאז הדיווח הקודם באותה מלאכה ובאותו קטע. <b>הסה״כ והאחוזים לא משתנים</b> — רק ההיסטוריה מתנקה, וההתקדמות לפי תקופה נשארת לפי התאריכים המקוריים.</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap"><span class="pill">${P.touched} דיווחים ישתנו</span><span class="pill">${P.upd} יקוצרו</span><span class="pill warn">${P.del} יימחקו (כפילות מלאה)</span>${P.add ? `<span class="pill">${P.add} יפוצלו</span>` : ""}</div>
+    <ul class="small" style="margin:0;padding-inline-start:18px;max-height:180px;overflow:auto">${ex}${P.touched > 8 ? `<li class="muted">ועוד ${P.touched - 8}…</li>` : ""}</ul>
+    <p class="small muted" style="margin:0">דיווחים ממתינים לאישור ודיווחים שנדחו — לא משתנים. לפני האיחוד יורד אוטומטית קובץ גיבוי של כל הנתונים.</p>
+    <p class="small" id="mg_msg"></p>
+    <div class="row"><button class="btn" id="mYes">איחוד</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close;
+    m.querySelector("#mYes").onclick = async () => {
+      const bt = m.querySelector("#mYes"); bt.disabled = true; const msg = m.querySelector("#mg_msg");
+      try { downloadJson(backupName()); } catch (e) {}
+      msg.textContent = "מאחד…"; const today = todayStr(); let n = 0;
+      for (const o of P.ops) {
+        const tag = `אוחד ${fmtD(today)} (היה ${ivOfP(o.p).join("–")})`, note = o.p.note ? `${o.p.note} · ${tag}` : tag, clr = { byKd: null, kdFrom: null, kdTo: null };
+        if (o.t === "del") await api.remove("progress", o.p.id);
+        else if (o.t === "upd") await api.update("progress", o.p.id, { ...clr, secFrom: o.f, secTo: o.z, note });
+        else { const { id: _i, updatedAt: _u, updatedBy: _b, ...rest } = o.p; await api.add("progress", { ...rest, ...clr, secFrom: o.f, secTo: o.z, note }); }
+        if (++n % 10 === 0) msg.textContent = `מאחד… ${n}/${P.ops.length}`;
+      }
+      close(); render(); toast(`אוחד: ${P.upd} קוצרו · ${P.del} נמחקו${P.add ? ` · ${P.add} פוצלו` : ""}`);
     };
   });
 }
@@ -4119,6 +4175,7 @@ $app.addEventListener("click", async e => {
     ui.page = b.dataset.id; location.hash = ui.page; render(); window.scrollTo(0, 0); }
   else if (act === "logout") fb.auth().signOut();
   else if (act === "dlBackup") downloadJson(backupName());
+  else if (act === "progMerge") progMergeModal(b.dataset.id);
   else if (act === "dlPublish") downloadJson("data.json");
   else if (act === "upBackup") pickBackupFile();
   else if (act === "useNewerFile") confirmReplace(NEWER_FILE, "data.json מהאתר");
