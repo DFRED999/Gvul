@@ -489,6 +489,9 @@ a.btn { text-decoration: none; }
 .modal { grid-template-columns: minmax(0, 1fr); }
 .modal .card { min-width: 0; justify-self: center; }
 .modal .svrange { flex-wrap: wrap; }
+.svmc-wrap { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; max-height: 128px; overflow-y: auto; }
+.svmc { font: inherit; font-size: 12.5px; padding: 4px 9px; border-radius: 99px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
+.svmc.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
 .modal .svrange .svkd { white-space: normal; flex-basis: 100%; font-size: 13px; }
 .modal .sheet td, .modal .sheet th { padding: 5px 6px; }
 </style>
@@ -1441,7 +1444,8 @@ const svSet = svSetBlock;
 const svReset = S => { S.rf = null; S.rt = null; S.kf = null; S.kt = null; };
 /** לחיצה על מלאכה בסקר: חלון שבו מקלידים כמה טווחי חתכים שרוצים (מחתך–עד חתך), כל טווח נשמר מיד */
 function svActModal(aid) {
-  const { S, x, bl, F, T } = svCtx(), a = RAW.activities?.[aid]; if (!x || !a || !bl.length) return;
+  const { S, x, bl, F, T, acts } = svCtx(), a = RAW.activities?.[aid]; if (!x || !a || !bl.length) return;
+  const sel = new Set([aid]), shortN = n => svShort(n);
   const lo = bl[0].from, hi = bl[bl.length - 1].to, seg = x.s, segName = `${x.office?.name || ""} ${seg.num}`;
   const runs = () => { const my = svIntervals(S.cid, S.segId).filter(iv => iv.a === aid && iv.t > lo && iv.f < hi), out = [];
     for (let k = lo; k < hi; k++) { let st = ""; for (const iv of my) if (iv.f <= k && k < iv.t) st = iv.st;
@@ -1449,6 +1453,8 @@ function svActModal(aid) {
     return out; };
   modal(`<h2 style="margin:0 0 2px">${esc(a.name)}</h2>
     <p class="small muted" style="margin:0 0 10px">${esc(segName)} · חתכים ${lo}–${hi} · כל טווח נשמר מיד, ואפשר להוסיף כמה שרוצים</p>
+    <div><span class="small"><b>לשמור גם למלאכות:</b> (אפשר לסמן כמה — הטווח יישמר לכולן)</span>
+      <div class="svmc-wrap">${acts.map(y => `<button type="button" class="svmc ${y.id === aid ? "on" : ""}" data-a="${y.id}">${esc(shortN(y.name))}</button>`).join("")}</div></div>
     <div id="sva_list"></div>
     <div class="svrange" style="margin-top:10px;flex-wrap:wrap"><span>מחתך</span><input id="sva_f" inputmode="numeric" autocomplete="off" style="width:90px"><span>עד חתך</span><input id="sva_t" inputmode="numeric" autocomplete="off" style="width:90px">
       <span class="svkd" id="sva_kd"></span></div>
@@ -1471,14 +1477,16 @@ function svActModal(aid) {
       const f = Math.min(f0, t0), t = Math.max(f0, t0);
       if (f === t) return say("חתך ההתחלה והסוף זהים — צריך טווח", true);
       if (f < lo || t > hi) return say(`הטווח צריך להיות בתוך הקטע: חתכים ${lo}–${hi}`, true);
-      await svWrite(Object.fromEntries([svRec(S, aid, f, t, st)])); draw();
-      say(`נשמר ${f}–${t} ${st === "✓" ? "✓ בוצע" : "✗ לא בוצע"} — אפשר להקליד את הטווח הבא`);
+      const ids = [...sel]; await svWrite(Object.fromEntries(ids.map(id => svRec(S, id, f, t, st)))); draw();
+      say(`נשמר ${f}–${t} ${st === "✓" ? "✓ בוצע" : "✗ לא בוצע"}${ids.length > 1 ? ` ל־${ids.length} מלאכות` : ""} — אפשר להקליד את הטווח הבא`);
       q("#sva_f").value = ""; q("#sva_t").value = ""; kdHint(); q("#sva_f").focus(); };
     q("#sva_f").oninput = q("#sva_t").oninput = kdHint;
     q("#sva_t").onkeydown = e => { if (e.key === "Enter") save("✓"); };
     q("#sva_f").onkeydown = e => { if (e.key === "Enter") q("#sva_t").focus(); };
     q("#sva_ok").onclick = () => save("✓"); q("#sva_no").onclick = () => save("✗");
-    q("#sva_blk").onclick = async () => { await svWrite(Object.fromEntries([svRec(S, aid, F, T, "✓")])); draw(); say(`נשמר ${F}–${T} ✓ בוצע`); };
+    q("#sva_blk").onclick = async () => { await svWrite(Object.fromEntries([...sel].map(id => svRec(S, id, F, T, "✓")))); draw(); say(`נשמר ${F}–${T} ✓ בוצע`); };
+    m.querySelectorAll(".svmc").forEach(bt => bt.onclick = () => { const id = bt.dataset.a; if (id === aid) return; sel.has(id) ? sel.delete(id) : sel.add(id); bt.classList.toggle("on", sel.has(id));
+      q("#sva_ok").textContent = sel.size > 1 ? `✓ בוצע — שמירה ל־${sel.size} מלאכות` : "✓ בוצע — שמירה"; });
     q("#sva_close").onclick = () => { close(); render(); };
     draw(); setTimeout(() => q("#sva_f").focus(), 50);
   });
