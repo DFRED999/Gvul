@@ -2407,11 +2407,51 @@ function svCompare(d) {
     } }
   return out;
 }
+/** סנכרון דיווחים לפי סקר השטח (הסקר = הנתון הנכון):
+ *  "בוצע בסקר — לא דווח" → נוסף דיווח מאושר · "דווח — בסקר לא בוצע" → החתכים האלה נחתכים מהדיווחים הקיימים (דיווח שכולו בטווח → נדחה) */
+function svSyncOps(kind, id) {
+  const R = svCompare(D()), ops = [];
+  if (kind === "svSync") { for (const r of R.filter(x => x.c.id === id)) { r.notRep.forEach(([a, z]) => ops.push({ t: "add", cid: r.c.id, sid: r.s.id, aid: r.a, a, z, r })); r.repNo.forEach(([a, z]) => ops.push({ t: "cut", cid: r.c.id, sid: r.s.id, aid: r.a, a, z, r })); } }
+  else { const [cid, sid, aid, a, z] = id.split("|"); const r = R.find(x => x.c.id === cid && x.s.id === sid && x.a === aid); ops.push({ t: kind === "svAddRep" ? "add" : "cut", cid, sid, aid, a: +a, z: +z, r }); }
+  return ops;
+}
+function svSyncModal(kind, id) {
+  const ops = svSyncOps(kind, id); if (!ops.length) return alertMsg("אין מה לסנכרן — הסקר והדיווחים תואמים.");
+  const d = D(), adds = ops.filter(o => o.t === "add"), cuts = ops.filter(o => o.t === "cut"), M = n => `${num(n * SECTION_M, 0)} מ׳`;
+  const segN = s => `${d.designOffices.find(o => o.id === s.officeId)?.name || ""} ${s.num}`;
+  const line = o => `<li>${esc(segN(o.r.s))} · <b>${esc(svShort(o.r.act?.name || ""))}</b> · חתכים ${rngTxt(o.a, o.z)} · ${M(o.z - o.a)}</li>`;
+  const affected = cuts.reduce((n, o) => n + d.progress.filter(p => p.contractorId === o.cid && p.segmentId === o.sid && p.activityId === o.aid && hasSecs(p) && p.review !== "נדחה" && ivOfP(p)[0] < o.z && ivOfP(p)[1] > o.a).length, 0);
+  modal(`<h2 style="margin:0">סנכרון לפי סקר השטח</h2>
+    ${adds.length ? `<div><b style="color:var(--accent)">יתווספו ${adds.length} דיווחים מאושרים (${M(adds.reduce((n, o) => n + o.z - o.a, 0))})</b> — בוצע בשטח ולא דווח:<ul class="small" style="margin:4px 0;padding-inline-start:18px;max-height:140px;overflow:auto">${adds.map(line).join("")}</ul>
+      <label class="field small">תאריך לדיווחים שיתווספו<input class="inp" type="date" id="svs_date" value="${todayStr()}"></label>
+      <p class="small muted" style="margin:2px 0 0">התאריך קובע באיזה שבוע זה ייספר כהתקדמות. אם העבודה בוצעה מזמן — כדאי לבחור תאריך ישן, כדי שלא תופיע כ״התקדמות השבוע״.</p></div>` : ""}
+    ${cuts.length ? `<div><b style="color:var(--warn)">יתוקנו ${affected} דיווחים קיימים — יוסרו ${M(cuts.reduce((n, o) => n + o.z - o.a, 0))}</b> שדווחו אבל בסקר לא בוצעו:<ul class="small" style="margin:4px 0;padding-inline-start:18px;max-height:140px;overflow:auto">${cuts.map(line).join("")}</ul>
+      <p class="small muted" style="margin:2px 0 0">דיווח שכולו בתוך הטווח מסומן ״נדחה״ (לא נמחק). דיווח שחלקו בטווח — מקוצר. בכל דיווח שמשתנה נרשמת הערה ״תוקן לפי סקר״.</p></div>` : ""}
+    <p class="small" id="svs_msg"></p>
+    <div class="row"><button class="btn" id="mYes">סנכרון</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close;
+    m.querySelector("#mYes").onclick = async () => {
+      const bt = m.querySelector("#mYes"); bt.disabled = true; m.querySelector("#svs_msg").textContent = "מסנכרן…";
+      const date = m.querySelector("#svs_date")?.value || todayStr(), who = me?.name || user?.email || "משרד", today = todayStr();
+      for (const o of adds) await api.add("progress", { contractorId: o.cid, segmentId: o.sid, activityId: o.aid, secFrom: o.a, secTo: o.z, date, note: `השלמה לפי סקר שטח ${fmtD(today)}`, source: "survey", baseline: false, reportedByName: who });
+      for (const o of cuts) {
+        const hits = D().progress.filter(p => p.contractorId === o.cid && p.segmentId === o.sid && p.activityId === o.aid && hasSecs(p) && p.review !== "נדחה" && ivOfP(p)[0] < o.z && ivOfP(p)[1] > o.a);
+        for (const p of hits) { const [lo, hi] = ivOfP(p), tag = `תוקן לפי סקר ${fmtD(today)}: הוסרו חתכים ${o.a}–${o.z}`, note = p.note ? `${p.note} · ${tag}` : tag;
+          const fix = { byKd: null, kdFrom: null, kdTo: null, note };
+          if (o.a <= lo && o.z >= hi) await api.update("progress", p.id, { review: "נדחה", reviewedAt: new Date().toISOString(), reviewedBy: who, note });
+          else if (o.a <= lo) await api.update("progress", p.id, { ...fix, secFrom: o.z, secTo: hi });
+          else if (o.z >= hi) await api.update("progress", p.id, { ...fix, secFrom: lo, secTo: o.a });
+          else { await api.update("progress", p.id, { ...fix, secFrom: lo, secTo: o.a });
+            const { id: _i, updatedAt: _u, updatedBy: _b, ...rest } = RAW.progress?.[p.id] || p; await api.add("progress", { ...rest, ...fix, secFrom: o.z, secTo: hi }); } } }
+      close(); render(); toast(`סונכרן לפי הסקר: ${adds.length ? `${adds.length} נוספו` : ""}${adds.length && cuts.length ? " · " : ""}${cuts.length ? `${affected} תוקנו` : ""}`);
+    };
+  });
+}
 function pageSvCmp(d) {
   const R = svCompare(d), M = n => `${num(n * SECTION_M, 0)} מ׳`, len = rs => rs.reduce((t, [a, b]) => t + b - a, 0);
   const tot = { ch: R.reduce((t, r) => t + r.checked, 0), ag: R.reduce((t, r) => t + r.agree, 0), nr: R.reduce((t, r) => t + len(r.notRep), 0), rn: R.reduce((t, r) => t + len(r.repNo), 0) };
   const segN = s => `${d.designOffices.find(o => o.id === s.officeId)?.name || ""} ${s.num}`;
-  const rng = (r, x, fill) => r.map(([a, b]) => `<span class="cmp-r">${rngTxt(a, b)} · ${M(b - a)}${fill ? ` <button class="lnk" data-act="svFill" data-id="${x.c.id}|${x.s.id}|${x.a}|${a}|${b}">לדווח</button>` : ""}</span>`).join(" ");
+  const rng = (r, x, fill) => r.map(([a, b]) => `<span class="cmp-r">${rngTxt(a, b)} · ${M(b - a)} <button class="lnk" data-act="${fill ? "svAddRep" : "svCutRep"}" data-id="${x.c.id}|${x.s.id}|${x.a}|${a}|${b}">${fill ? "להוסיף כדיווח" : "לתקן לפי הסקר"}</button></span>`).join(" ");
   const cs = [...new Set(R.map(r => r.c))];
   return `<div class="ch-banner" style="--cc:#127c76"><div><h1>סקר שטח מול דיווחים</h1><span>היכן מה שנמצא בסקר השטח שונה ממה שדווח. בקרה על הקבלנים ועל הדיווחים — לפי חתכים.</span></div></div>
   <div class="ch-tiles sg-tiles" style="--cc:#127c76">
@@ -2419,11 +2459,13 @@ function pageSvCmp(d) {
     <div class="ch-t t3"><span>תואם</span><b>${tot.ch ? Math.round(tot.ag / tot.ch * 100) : 0}%</b><small>${M(tot.ag)}</small></div>
     <div class="ch-t ${tot.rn ? "t2" : ""}"><span>דווח — אבל בסקר לא בוצע</span><b>${num(tot.rn * SECTION_M, 0)}</b><small>מ׳ לבדיקה מול המפקח</small></div>
     <div class="ch-t"><span>בוצע בסקר — לא דווח</span><b>${num(tot.nr * SECTION_M, 0)}</b><small>מ׳ שחסרים בדיווח</small></div></div>
-  ${!R.length ? `<div class="card"><p style="margin:0">עוד אין נתוני סקר שטח. ממלאים במסך ״סקר שטח״ — ואז ההשוואה תופיע כאן.</p></div>` : cs.map(c => `<div class="card ap-g" style="--cc:${cColor(d, c)}"><div class="ap-cn" style="margin-bottom:8px">${esc(c.name)}</div>
+  ${!R.length ? `<div class="card"><p style="margin:0">עוד אין נתוני סקר שטח. ממלאים במסך ״סקר שטח״ — ואז ההשוואה תופיע כאן.</p></div>` : cs.map(c => { const rs = R.filter(r => r.c === c), nfix = rs.reduce((n, r) => n + r.notRep.length + r.repNo.length, 0);
+    return `<div class="card ap-g" style="--cc:${cColor(d, c)}"><div class="row" style="align-items:center;margin-bottom:8px;gap:8px"><div class="ap-cn">${esc(c.name)}</div><span class="spacer"></span>
+    ${nfix ? `<button class="btn sm" data-act="svSync" data-id="${c.id}" title="הסקר הוא הנתון הנכון: מוסיף את מה שבוצע ולא דווח, ומתקן את מה שדווח ולא בוצע">סנכרון הדיווחים לפי הסקר (${nfix})</button>` : `<span class="pill ok">הדיווחים תואמים לסקר</span>`}</div>
     <div class="tablewrap"><table class="sheet"><thead><tr><th>קטע</th><th>מלאכה</th><th>נבדק</th><th>תואם</th><th>דווח — בסקר לא בוצע</th><th>בוצע בסקר — לא דווח</th></tr></thead><tbody>
     ${R.filter(r => r.c === c).map(r => `<tr><td class="nowrap">${esc(segN(r.s))}</td><td><b>${esc(svShort(r.act?.name || "—"))}</b></td><td class="c nowrap">${M(r.checked)}</td><td class="c"><b>${Math.round(r.agree / r.checked * 100)}%</b></td>
       <td>${r.repNo.length ? `<span class="pill warn">${M(len(r.repNo))}</span> ${rng(r.repNo, r)}` : `<span class="pill ok">אין</span>`}</td>
-      <td>${r.notRep.length ? `<span class="pill">${M(len(r.notRep))}${r.notRepPend ? ` · ${M(r.notRepPend)} ממתינים לאישור` : ""}</span> ${rng(r.notRep, r, true)}` : `<span class="pill ok">אין</span>`}</td></tr>`).join("")}</tbody></table></div></div>`).join("")}`;
+      <td>${r.notRep.length ? `<span class="pill">${M(len(r.notRep))}${r.notRepPend ? ` · ${M(r.notRepPend)} ממתינים לאישור` : ""}</span> ${rng(r.notRep, r, true)}` : `<span class="pill ok">אין</span>`}</td></tr>`).join("")}</tbody></table></div></div>`; }).join("")}`;
 }
 function pageApprovals(d) {
   const pend = d.progress.filter(p => p.review === "לבדיקה"), F = ui.apF = ui.apF || { c: "", who: "", show: "" };
@@ -4069,7 +4111,7 @@ function editLink(col, id, key) {
 $app.addEventListener("click", async e => {
   const b = e.target.closest("[data-act]"); if (!b) return;
   const act = b.dataset.act;
-  if (/^sv[A-Z]/.test(act)) return svClick(act, b);
+  if (/^sv[A-Z]/.test(act) && !["svFill", "svAddRep", "svCutRep", "svSync"].includes(act)) return svClick(act, b);
   if (/^ins[A-Z]/.test(act)) return inspClick(act, b);
   if (act === "menu") { ui.menu = !ui.menu; render(); return; }
   if (ui.menu && (act === "nav" || act === "newContractor")) ui.menu = false;
@@ -4200,6 +4242,7 @@ $app.addEventListener("click", async e => {
         m.querySelector("#mAny").onclick = () => { close(); done([rec], " (חופף לדיווח קודם)"); };
         const n = m.querySelector("#mNew"); if (n) n.onclick = () => { close(); done(gaps.map(([x, y]) => ({ ...rec, secFrom: x, secTo: y, byKd: false, kdFrom: "", kdTo: "" })), " (רק החלק החדש)"); }; });
   }
+  else if (act === "svAddRep" || act === "svCutRep" || act === "svSync") svSyncModal(act, b.dataset.id);
   else if (act === "svFill") { const [cid, sid, aid, a, z] = b.dataset.id.split("|"); Object.assign(ui.pf, { actId: aid, segId: sid, secFrom: Number(a), secTo: Number(z), msg: "" }); ui.page = "c:" + cid; ui.ctab = "progress"; render(); setTimeout(() => document.getElementById("pf_from")?.scrollIntoView({ block: "center" }), 50); }
   else if (act === "dqGo") { const c = dqChecks(D()).find(x => x.key === b.dataset.id); if (c?.go) { Object.assign(ui, c.go.setTab ? { setTab: c.go.setTab } : {}, c.go.ctab ? { ctab: c.go.ctab } : {}); ui.page = c.go.page; location.hash = c.go.page; render(); scrollTo(0, 0); } }
   else if (act === "darkTog") { ui.dark = !ui.dark; try { localStorage.setItem("dark", ui.dark ? "1" : "0"); } catch (e) {} render(); }
