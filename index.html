@@ -2210,7 +2210,7 @@ function execTab(d, c) {
   const hist = d.progress.filter(p => p.contractorId === c.id).sort((a, b) => segOrd(a.segmentId) - segOrd(b.segmentId) || actOrd(a.activityId) - actOrd(b.activityId) || String(a.activityId).localeCompare(String(b.activityId)) || (hasSecs(a) ? ivOfP(a)[0] : 1e9) - (hasSecs(b) ? ivOfP(b)[0] : 1e9) || (hasSecs(a) ? ivOfP(a)[1] : 0) - (hasSecs(b) ? ivOfP(b)[1] : 0) || String(a.date).localeCompare(String(b.date)));
   return `<h2>תמונת ביצוע</h2>${views}${V === "ord" ? ordBlock : V === "both" ? segBlock + ordBlock : segBlock}
     <h2>דיווח ביצוע</h2>${form}
-    <div class="row" style="margin-top:22px;align-items:center;gap:8px"><h2 style="margin:0">היסטוריית דיווחים</h2><span class="spacer"></span>${(() => { const n = mergePlan(d, c.id).touched; return n ? `<button class="btn sm" data-act="progMerge" data-id="${c.id}" title="דיווחים מצטברים שחופפים זה לזה — הופכים לתוספות בלבד. הסה״כ לא משתנה.">איחוד דיווחים חופפים (${n})</button>` : `<span class="pill ok">אין דיווחים חופפים</span>`; })()}</div>${(() => {
+    <div class="row" style="margin-top:22px;align-items:center;gap:8px"><h2 style="margin:0">היסטוריית דיווחים</h2><span class="spacer"></span><button class="btn sm ghost" data-act="wkRep" data-id="${c.id}" title="דוח ביצוע שבועי — Excel או PDF">📄 דוח שבועי</button>${(() => { const n = mergePlan(d, c.id).touched; return n ? `<button class="btn sm" data-act="progMerge" data-id="${c.id}" title="דיווחים מצטברים שחופפים זה לזה — הופכים לתוספות בלבד. הסה״כ לא משתנה.">איחוד דיווחים חופפים (${n})</button>` : `<span class="pill ok">אין דיווחים חופפים</span>`; })()}</div>${(() => {
       // ברירת מחדל: רק מה שדורש טיפול (ממתינים לבדיקה). מאושרים מוסתרים — נפתחים בלחיצה
       const grp = { pend: hist.filter(p => p.review === "לבדיקה"), ok: hist.filter(p => !p.review), rej: hist.filter(p => p.review === "נדחה"), all: hist };
       const v = grp[ui.progView] ? ui.progView : grp.pend.length ? "pend" : "ok";
@@ -2503,6 +2503,138 @@ function progMergeModal(cid) {
     };
   });
 }
+/* ===== דוח שבועי לקבלן (Excel / PDF) — אותו קוד באתר הראשי ובאתר הדיווח =====
+   טבלה 1: מה בוצע השבוע (7 ימים עד התאריך) — קטע, עבודה, ק.ד., חתכים, מטרים, סה״כ לכל עבודה.
+   טבלה 2: פירוט מלא לכל קטע ועבודה — מה בוצע (לפי סדר החתכים, עם תאריך) ומה עוד לא בוצע, וסיכום.
+   חתך נספר פעם אחת: מכל דיווח נלקח רק מה שלא דווח לפניו. דיווחים שנדחו לא נכללים. */
+const WK_M = 20;
+function wkData(data, cid, asOf) {
+  const V = o => Object.entries(o || {}).map(([id, v]) => ({ id, ...v })), num = x => { const m = String(x ?? "").match(/\d+(\.\d+)?/); return m ? +m[0] : null; };
+  const C = (data.contractors || {})[cid]; if (!C) return null;
+  const offices = data.designOffices || {}, acts = V(data.activities).filter(a => a.contractorId === cid && !/ארונות|תט["״׳']?ז|טרפו/.test(a.name || ""))
+    .sort((a, b) => (+a.order || 0) - (+b.order || 0) || String(a.name).localeCompare(String(b.name), "he"));
+  const hs = p => p.secFrom !== "" && p.secTo !== "" && p.secFrom != null && p.secTo != null && !isNaN(p.secFrom) && !isNaN(p.secTo);
+  const prog = V(data.progress).filter(p => p.contractorId === cid && p.review !== "נדחה" && p.segmentId && hs(p) && String(p.date || "") <= asOf);
+  const cLo = Math.min(num(C.kdFrom) ?? -1e9, num(C.kdTo) ?? -1e9), cHi = Math.max(num(C.kdFrom) ?? 1e9, num(C.kdTo) ?? 1e9);
+  const withRep = new Set(prog.map(p => p.segmentId));
+  const allSegs = V(data.designSegments).filter(s => s.secFrom !== "" && s.secTo !== "" && num(s.kdFrom) !== null && num(s.kdTo) !== null).map(s => {
+    const klo = Math.min(num(s.kdFrom), num(s.kdTo)), khi = Math.max(num(s.kdFrom), num(s.kdTo)), s0 = Math.min(+s.secFrom, +s.secTo), s1 = Math.max(+s.secFrom, +s.secTo);
+    let pts = V(data.kdSections).filter(k => k.officeId === s.officeId && String(k.seg) === String(s.num)).map(k => [num(k.kd), +k.secFrom]).filter(([k, x]) => k !== null && !isNaN(x) && k >= klo - 2 && k <= khi + 2).sort((a, b) => a[1] - b[1]);
+    pts = pts.filter((p, i) => pts.slice(0, i).every(q => p[0] >= q[0]));
+    const kd = sec => { if (pts.length >= 2) { if (sec <= pts[0][1]) return pts[0][0]; for (let i = 1; i < pts.length; i++) if (sec <= pts[i][1]) { const [k0, a] = pts[i - 1], [k1, b] = pts[i]; return k0 + (sec - a) / ((b - a) || 1) * (k1 - k0); } return pts[pts.length - 1][0]; }
+      return klo + (sec - s0) / ((s1 - s0) || 1) * (khi - klo); };
+    const asg = C.secs?.[s.id]; let w0 = s0, w1 = s1;
+    if (asg && asg.from !== "" && asg.to !== "" && asg.from != null) { w0 = Math.max(s0, Math.min(+asg.from, +asg.to)); w1 = Math.min(s1, Math.max(+asg.from, +asg.to)); }
+    else { const inw = []; for (let x = s0; x <= s1; x++) { const k = kd(x); if (k >= cLo - .01 && k <= cHi + .01) inw.push(x); } if (inw.length) { w0 = inw[0]; w1 = inw[inw.length - 1]; } else w1 = w0; }
+    return { id: s.id, num: s.num, label: `${offices[s.officeId]?.name || ""} ${s.num}`.trim(), klo, khi, w0, w1, kd };
+  });
+  const hdr = allSegs.filter(s => s.w1 - s.w0 >= 1).sort((a, b) => (+a.num || 0) - (+b.num || 0) || b.khi - a.khi)
+    .map(s => `קטע ${s.num}: חתכים ${s.w0}–${s.w1} (ק.ד. ${Math.round(s.kd(s.w0))}–${Math.round(s.kd(s.w1))})`).join(" · ");
+  const segs = allSegs.filter(s => withRep.has(s.id) || (s.w1 - s.w0 >= 5 && !withRep.size)).sort((a, b) => a.klo - b.klo);
+  const kdt = (s, x) => { const k = s.kd(x); return Math.round(k * 10) / 10; };
+  // תוספות: לפי סדר הדיווחים, מכל דיווח רק החלק החדש
+  const inc = []; const key = (s, a) => s + "|" + a, groups = {};
+  prog.forEach(p => (groups[key(p.segmentId, p.activityId)] = groups[key(p.segmentId, p.activityId)] || []).push(p));
+  for (const [k, L] of Object.entries(groups)) {
+    L.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.createdAt || a.updatedAt || "").localeCompare(String(b.createdAt || b.updatedAt || "")));
+    const cov = [];
+    for (const p of L) { const lo = Math.min(+p.secFrom, +p.secTo), hi = Math.max(+p.secFrom, +p.secTo);
+      let parts = [[lo, hi]]; for (const [a, b] of cov) parts = parts.flatMap(([x, y]) => b <= x || a >= y ? [[x, y]] : [[x, Math.min(y, a)], [Math.max(x, b), y]].filter(([u, v]) => v > u));
+      cov.push([lo, hi]); cov.sort((a, b) => a[0] - b[0]); for (let i = 1; i < cov.length; i++) if (cov[i][0] <= cov[i - 1][1]) { cov[i - 1][1] = Math.max(cov[i - 1][1], cov[i][1]); cov.splice(i--, 1); }
+      parts.forEach(([f, t]) => inc.push({ seg: p.segmentId, act: p.activityId, f, t, date: p.date, who: p.reportedByName || (p.reportedBy ? String(p.reportedBy).split("@")[0] : "משרד"), pend: p.review === "לבדיקה" })); }
+  }
+  const d0 = new Date(asOf + "T12:00:00"); d0.setDate(d0.getDate() - 6); const from = d0.toISOString().slice(0, 10);
+  const segBy = Object.fromEntries(segs.map(s => [s.id, s])), actBy = Object.fromEntries(acts.map((a, i) => [a.id, { ...a, i }]));
+  const week = inc.filter(x => x.date >= from && x.date <= asOf && segBy[x.seg] && actBy[x.act])
+    .sort((a, b) => actBy[a.act].i - actBy[b.act].i || segBy[a.seg].klo - segBy[b.seg].klo || a.f - b.f);
+  const t1 = []; let cur = null, sub = 0, n = 0;
+  const flush = () => { if (cur && n > 1) t1.push({ sub: true, act: actBy[cur].name, m: sub }); };
+  for (const x of week) { if (x.act !== cur) { flush(); cur = x.act; sub = 0; n = 0; } const s = segBy[x.seg], lo = Math.max(x.f, s.w0), hi = Math.min(x.t, s.w1); if (hi <= lo) continue;
+    const m = (hi - lo) * WK_M; sub += m; n++; t1.push({ seg: s.label, act: actBy[x.act].name, k1: kdt(s, lo), k2: kdt(s, hi), f: lo, t: hi, m, date: x.date, pend: x.pend }); }
+  flush();
+  const t2 = [];
+  for (const s of segs) for (const a of acts) {
+    const done = inc.filter(x => x.seg === s.id && x.act === a.id).map(x => ({ ...x, f: Math.max(x.f, s.w0), t: Math.min(x.t, s.w1) })).filter(x => x.t > x.f).sort((p, q) => p.f - q.f);
+    const merged = []; done.forEach(x => { const L = merged[merged.length - 1]; if (L && x.f <= L[1]) L[1] = Math.max(L[1], x.t); else merged.push([x.f, x.t]); });
+    const gaps = []; let c = s.w0; for (const [p, q] of merged) { if (p > c) gaps.push([c, p]); c = Math.max(c, q); } if (s.w1 > c) gaps.push([c, s.w1]);
+    const dm = merged.reduce((t, [p, q]) => t + q - p, 0) * WK_M, W = (s.w1 - s.w0) * WK_M;
+    const rows = [...done.map(x => ({ st: "בוצע", f: x.f, t: x.t, date: x.date, who: x.who, pend: x.pend })), ...gaps.map(([f, t]) => ({ st: "לא בוצע", f, t }))].sort((p, q) => p.f - q.f);
+    t2.push({ seg: s.label, act: a.name, W, dm, pct: W ? Math.round(dm / W * 100) : 0, rows: rows.map(r => ({ ...r, k1: kdt(s, r.f), k2: kdt(s, r.t), m: (r.t - r.f) * WK_M })) });
+  }
+  return { C, asOf, from, segs, hdr, t1, t2 };
+}
+const wkD = s => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "";
+const wkE = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const wkK = (a, b) => `${a}–${b}`, wkN = n => Number(n || 0).toLocaleString("he-IL");
+function wkTitle(R) { return `דוח ביצוע שבועי — ${R.C.name} — ${wkD(R.from)} עד ${wkD(R.asOf)}`; }
+function wkHtml(R, who) {
+  const t1 = R.t1.length ? R.t1.map(r => r.sub ? `<tr class="sub"><td colspan="5">סה״כ ${wkE(r.act)}</td><td>${wkN(r.m)}</td><td></td></tr>`
+    : `<tr><td>${wkE(r.seg)}</td><td>${wkE(r.act)}</td><td dir="ltr">${wkK(r.k1, r.k2)}</td><td dir="ltr">${wkK(r.f, r.t)}</td><td>${wkD(r.date)}</td><td><b>${wkN(r.m)}</b></td><td>${r.pend ? "ממתין לאישור" : ""}</td></tr>`).join("")
+    : `<tr><td colspan="7" style="text-align:center;color:#777">לא דווח ביצוע בשבוע הזה</td></tr>`;
+  const t2 = R.t2.map(b => `<tr class="hd"><td>${wkE(b.seg)}</td><td>${wkE(b.act)}</td><td colspan="6">בוצע <b>${wkN(b.dm)} מ׳</b> מתוך ${wkN(b.W)} מ׳ (${b.pct}%) · לא בוצע ${wkN(b.W - b.dm)} מ׳</td></tr>`
+    + b.rows.map(r => `<tr class="${r.st === "בוצע" ? "ok" : "no"}"><td></td><td>${r.st}</td><td dir="ltr">${wkK(r.k1, r.k2)}</td><td dir="ltr">${wkK(r.f, r.t)}</td><td>${wkN(r.m)}</td><td>${r.date ? wkD(r.date) : ""}</td><td>${wkE(r.who || "")}</td><td>${r.pend ? "ממתין" : ""}</td></tr>`).join("")).join("");
+  return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>${wkE(wkTitle(R))}</title><style>
+  @page{size:A4 landscape;margin:10mm}body{font-family:Heebo,Arial,sans-serif;color:#1f2a24;font-size:11px;margin:0}
+  h1{font-size:18px;margin:0 0 2px}.segs{margin-top:4px;font-weight:700;color:#1f2a24;font-size:12px}h2{font-size:14px;margin:14px 0 6px;color:#2f6b4f}.mut{color:#5a665f}
+  table{width:100%;border-collapse:collapse}th{background:#2f6b4f;color:#fff;font-weight:600;padding:5px;text-align:right}
+  td{border:1px solid #cfd7cd;padding:4px 5px;vertical-align:top}tr.sub td{background:#e6f0ea;font-weight:700}
+  tr.hd td{background:#eef1ec;font-weight:600;border-top:2px solid #2f6b4f}tr.no td:nth-child(2){color:#a33}tr.ok td:nth-child(2){color:#2f6b4f}
+  tr{page-break-inside:avoid}.sig{margin-top:18px;display:flex;gap:40px}.noprint{margin:10px 0}@media print{.noprint{display:none}}</style></head><body>
+  <div class="noprint"><button onclick="print()">הדפסה / שמירה כ־PDF</button></div>
+  <h1>${wkE(wkTitle(R))}</h1><div class="mut">גזרת ${wkE(R.C.sector || "")} · ק.ד. ${wkE(R.C.kdFrom)}–${wkE(R.C.kdTo)} · מפקח: ${wkE(R.C.inspector || "")} · הופק ${wkD(new Date().toISOString().slice(0, 10))}${who ? " ע״י " + wkE(who) : ""} · חתך = ${WK_M} מ׳</div>${R.hdr ? `<div class="segs">${wkE(R.hdr)}</div>` : ""}
+  <h2>1. בוצע השבוע</h2><table><tr><th>קטע</th><th>סוג העבודה</th><th>מק.ד.–עד ק.ד.</th><th>מחתך–עד חתך</th><th>תאריך דיווח</th><th>מטרים</th><th>הערה</th></tr>${t1}</table>
+  <h2>2. פירוט מלא — מה בוצע ומה עוד לא, נכון ל־${wkD(R.asOf)}</h2><table><tr><th>קטע</th><th>סוג העבודה / מצב</th><th>מק.ד.–עד ק.ד.</th><th>מחתך–עד חתך</th><th>מטרים</th><th>תאריך דיווח</th><th>מדווח</th><th>סטטוס</th></tr>${t2}</table>
+  <div class="sig"><div>מפקח: ____________________</div><div>חתימה: ____________________</div><div>תאריך: ____________</div></div></body></html>`;
+}
+function wkPdf(R, who) {
+  const w = window.open("", "_blank"); if (!w) { alert("הדפדפן חסם חלון חדש — יש לאפשר חלונות קופצים לאתר"); return; }
+  w.document.open(); w.document.write(wkHtml(R, who)); w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 600);
+}
+async function wkXlsx(R) {
+  if (!window.ExcelJS) await new Promise((ok, no) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"; s.onload = ok; s.onerror = () => no(new Error("טעינת ספריית האקסל נכשלה — בדוק חיבור לאינטרנט")); document.head.appendChild(s); });
+  const wb = new ExcelJS.Workbook(), F = { name: "Arial", size: 10 }, HF = { name: "Arial", size: 10, bold: true, color: { argb: "FFFFFFFF" } };
+  const fill = c => ({ type: "pattern", pattern: "solid", fgColor: { argb: c } }), bd = { style: "thin", color: { argb: "FFCFD7CD" } }, B = { top: bd, left: bd, bottom: bd, right: bd };
+  const sheet = (name, heads, widths, title) => { const ws = wb.addWorksheet(name, { views: [{ rightToLeft: true, state: "frozen", ySplit: R.hdr ? 4 : 3 }], pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 } });
+    ws.addRow([title]).font = { name: "Arial", size: 14, bold: true }; ws.addRow([`גזרת ${R.C.sector || ""} · ק.ד. ${R.C.kdFrom}–${R.C.kdTo} · מפקח: ${R.C.inspector || ""} · חתך = ${WK_M} מ׳`]).font = { name: "Arial", size: 9, color: { argb: "FF5A665F" } };
+    if (R.hdr) ws.addRow([R.hdr]).font = { name: "Arial", size: 10, bold: true };
+    const h = ws.addRow(heads); h.eachCell(c => { c.font = HF; c.fill = fill("FF2F6B4F"); c.border = B; c.alignment = { horizontal: "right", vertical: "middle", wrapText: true }; }); h.height = 22;
+    widths.forEach((w, i) => ws.getColumn(i + 1).width = w); return ws; };
+  const put = (ws, vals, f, bold) => { const r = ws.addRow(vals); r.eachCell({ includeEmpty: true }, c => { c.font = { ...F, bold: !!bold }; c.border = B; c.alignment = { horizontal: "right", vertical: "top", wrapText: true }; if (f) c.fill = fill(f); }); return r; };
+  const ws1 = sheet("בוצע השבוע", ["קטע", "סוג העבודה", "מק.ד.", "עד ק.ד.", "מחתך", "עד חתך", "תאריך דיווח", "מטרים", "הערה"], [12, 30, 9, 9, 9, 9, 12, 11, 14], wkTitle(R));
+  if (!R.t1.length) put(ws1, ["לא דווח ביצוע בשבוע הזה"]);
+  let first = 0, lastAct = null;
+  for (const r of R.t1) { if (r.sub) { const row = put(ws1, ["", `סה״כ ${r.act}`, "", "", "", "", "", null, ""], "FFE6F0EA", true); row.getCell(8).value = { formula: `SUM(H${first}:H${row.number - 1})`, result: r.m }; row.getCell(8).numFmt = "#,##0"; lastAct = null; continue; }
+    const row = put(ws1, [r.seg, r.act, r.k1, r.k2, r.f, r.t, wkD(r.date), r.m, r.pend ? "ממתין לאישור" : ""]); row.getCell(8).numFmt = "#,##0"; if (r.act !== lastAct) { first = row.number; lastAct = r.act; } }
+  const ws2 = sheet("פירוט מלא", ["קטע", "סוג העבודה", "מצב", "מק.ד.", "עד ק.ד.", "מחתך", "עד חתך", "מטרים", "תאריך דיווח", "מדווח", "סטטוס"], [12, 30, 9, 9, 9, 9, 9, 10, 12, 14, 10], `פירוט מלא — מה בוצע ומה עוד לא, נכון ל־${wkD(R.asOf)}`);
+  for (const b of R.t2) { put(ws2, [b.seg, b.act, `בוצע ${wkN(b.dm)} מ׳ מתוך ${wkN(b.W)} מ׳ (${b.pct}%) · לא בוצע ${wkN(b.W - b.dm)} מ׳`], "FFEEF1EC", true); ws2.mergeCells(ws2.rowCount, 3, ws2.rowCount, 11);
+    for (const r of b.rows) { const row = put(ws2, ["", "", r.st, r.k1, r.k2, r.f, r.t, r.m, r.date ? wkD(r.date) : "", r.who || "", r.pend ? "ממתין" : ""], r.st === "בוצע" ? null : "FFFBEDED"); row.getCell(8).numFmt = "#,##0"; row.getCell(3).font = { ...F, bold: true, color: { argb: r.st === "בוצע" ? "FF2F6B4F" : "FFA33333" } }; } }
+  const buf = await wb.xlsx.writeBuffer(), a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  a.download = `weekly-report_${String(R.C.code || "").replace(/[^A-Za-z0-9]/g, "") || "contractor"}_${R.asOf.slice(8, 10)}.${R.asOf.slice(5, 7)}.${R.asOf.slice(2, 4)}.xlsx`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+/** חלון בחירה: קבלן + תאריך → Excel / PDF */
+function wkModal(data, cids, cid, who) {
+  const names = c => (data.contractors || {})[c]?.name || c, t = new Date(), tday = new Date(t - t.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  const m = document.createElement("div"); m.className = "wk-ovl";
+  m.innerHTML = `<div class="wk-card" role="dialog" aria-label="דוח שבועי"><h2 style="margin:0 0 4px">📄 דוח ביצוע שבועי</h2>
+    <p style="margin:0 0 10px;color:#5a665f;font-size:13px">טבלה 1: מה בוצע ב־7 הימים עד התאריך. טבלה 2: פירוט מלא — מה בוצע ומה עוד לא, לכל קטע ועבודה.</p>
+    ${cids.length > 1 ? `<label class="wk-f">קבלן<select id="wk_c">${cids.map(c => `<option value="${wkE(c)}" ${c === cid ? "selected" : ""}>${wkE(names(c))}</option>`).join("")}</select></label>` : ""}
+    <label class="wk-f">נכון לתאריך (סוף השבוע)<input type="date" id="wk_d" value="${tday}"></label>
+    <p id="wk_msg" style="min-height:1.2em;font-size:13px;margin:6px 0"></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="wk-b" id="wk_x">⬇ Excel</button><button class="wk-b" id="wk_p">⬇ PDF</button><span style="flex:1"></span><button class="wk-b ghost" id="wk_n">סגירה</button></div></div>`;
+  document.body.appendChild(m);
+  const q = s => m.querySelector(s), say = (s, e) => { q("#wk_msg").textContent = s; q("#wk_msg").style.color = e ? "#a33" : "#2f6b4f"; };
+  const get = () => { const R = wkData(data, q("#wk_c")?.value || cid, q("#wk_d").value || tday); if (!R) say("לא נמצאו נתונים לקבלן", true); return R; };
+  q("#wk_n").onclick = () => m.remove(); m.onclick = e => { if (e.target === m) m.remove(); };
+  q("#wk_p").onclick = () => { const R = get(); if (R) wkPdf(R, who); };
+  q("#wk_x").onclick = async () => { const R = get(); if (!R) return; say("מכין קובץ Excel…"); try { await wkXlsx(R); say("הקובץ ירד ✓"); } catch (e) { say(e.message || String(e), true); } };
+}
+const WK_CSS = `.wk-ovl{position:fixed;inset:0;background:rgba(20,26,22,.45);display:grid;place-items:center;z-index:90;padding:16px}
+.wk-card{background:#fff;color:#1f2a24;border-radius:14px;padding:18px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25);font-family:inherit}
+.wk-f{display:flex;flex-direction:column;gap:4px;font-size:13px;margin:8px 0}.wk-f input,.wk-f select{font:inherit;font-size:16px;padding:8px;border:1px solid #c9cdc5;border-radius:8px}
+.wk-b{font:inherit;font-weight:700;padding:10px 16px;border-radius:10px;border:1px solid #2f6b4f;background:#2f6b4f;color:#fff;cursor:pointer}.wk-b.ghost{background:#fff;color:#1f2a24;border-color:#c9cdc5}`;
+(() => { const st = document.createElement("style"); st.textContent = WK_CSS; document.head.appendChild(st); })();
+
 function pageSvCmp(d) {
   const R = svCompare(d), M = n => `${num(n * SECTION_M, 0)} מ׳`, len = rs => rs.reduce((t, [a, b]) => t + b - a, 0);
   const tot = { ch: R.reduce((t, r) => t + r.checked, 0), ag: R.reduce((t, r) => t + r.agree, 0), nr: R.reduce((t, r) => t + len(r.notRep), 0), rn: R.reduce((t, r) => t + len(r.repNo), 0) };
@@ -4176,6 +4308,7 @@ $app.addEventListener("click", async e => {
   else if (act === "logout") fb.auth().signOut();
   else if (act === "dlBackup") downloadJson(backupName());
   else if (act === "progMerge") progMergeModal(b.dataset.id);
+  else if (act === "wkRep") wkModal(RAW, [b.dataset.id], b.dataset.id, me?.name || user?.email || "");
   else if (act === "dlPublish") downloadJson("data.json");
   else if (act === "upBackup") pickBackupFile();
   else if (act === "useNewerFile") confirmReplace(NEWER_FILE, "data.json מהאתר");
@@ -4565,3 +4698,4 @@ start();
 </script>
 </body>
 </html>
+
