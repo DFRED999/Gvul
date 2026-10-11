@@ -486,6 +486,11 @@ a.btn { text-decoration: none; }
 .login .card { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 14px; margin: 0; }
 .modal { position: fixed; inset: 0; background: rgba(20,26,22,.45); display: grid; place-items: center; z-index: 50; padding: 16px; }
 .modal .card { max-width: 420px; width: 100%; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.modal { grid-template-columns: minmax(0, 1fr); }
+.modal .card { min-width: 0; justify-self: center; }
+.modal .svrange { flex-wrap: wrap; }
+.modal .svrange .svkd { white-space: normal; flex-basis: 100%; font-size: 13px; }
+.modal .sheet td, .modal .sheet th { padding: 5px 6px; }
 </style>
 </head>
 <body>
@@ -1381,7 +1386,7 @@ function pageSurvey(d) {
   const F = S.rf ?? defF, T = S.rt ?? defT, custom = S.rf != null || S.rt != null;
   const ivs = ivsOf(x.s.id), r = SV[svId(c.id, x.s.id, b.from)] || {};
   const tot = ds.reduce((t, y) => t + svBlocks(y).length, 0), done = ds.reduce((t, y) => t + segStat(y)[0], 0);
-  return `<div class="row" style="align-items:center"><h1 style="margin:0">סקר שטח</h1><span class="spacer"></span><a class="btn ghost sm" href="report.html" target="_blank" rel="noopener" title="דיווח ביצוע שוטף (שבועי) — אתר המפקחים">אתר הדיווח ↗</a></div><p class="sub">מה בוצע בפועל. בוחרים בלוק (100 מ׳), כמה בלוקים, או מקלידים טווח חתכים מדויק — ואז לוחצים על המלאכה: ✓ בוצע → ✗ לא בוצע → מחיקה. נשמר אוטומטית.</p>
+  return `<div class="row" style="align-items:center"><h1 style="margin:0">סקר שטח</h1><span class="spacer"></span><a class="btn ghost sm" href="report.html" target="_blank" rel="noopener" title="דיווח ביצוע שוטף (שבועי) — אתר המפקחים">אתר הדיווח ↗</a></div><p class="sub">מה בוצע בפועל. בוחרים בלוק (100 מ׳), כמה בלוקים, או מקלידים טווח חתכים מדויק — ואז לוחצים על המלאכה — נפתח חלון שבו מקלידים מחתך עד חתך, כמה טווחים שרוצים. כל טווח נשמר מיד.</p>
   ${chips(mains.map(m => [m.id, m.name, m.id === c.id ? `${done}/${tot}` : ""]), c.id, "svC")}
   ${chips(ds.map(y => { const [a, n] = segStat(y); return [y.s.id, segName(y), `${a}/${n}`]; }), S.segId, "svS")}
   <div class="row" style="gap:6px;margin:4px 0 6px"><button class="btn sm ${S.multi ? "" : "ghost"}" data-act="svMulti">${S.multi ? "✓ בחירת טווח בלוקים פעילה" : "בחירת טווח בלוקים"}</button>
@@ -1394,8 +1399,8 @@ function pageSurvey(d) {
       <button class="btn svnav" data-act="svGo" data-id="1" ${S.idx < blocks.length - 1 && !multi ? "" : "disabled"}>הבא ›</button></div>
     <div class="svrange"><span>מחתך</span><input id="svF" data-act="svRF" inputmode="numeric" value="${F}"><span>עד חתך</span><input id="svT" data-act="svRT" inputmode="numeric" value="${T}">
       <span class="svkd">ק.ד. ${kdFmt(x.s, F)} – ${kdFmt(x.s, T)}</span>
-      ${custom ? `<button class="btn ghost sm" data-act="svRReset">חזרה לבלוק</button>` : ""}
-      <span class="small" style="color:var(--accent);flex-basis:100%">הקלדת הטווח רק בוחרת את המקום — השמירה קורית כשלוחצים על המלאכה למטה (✓ בוצע / ✗ לא בוצע)</span></div>
+      ${custom ? `<button class="btn ghost sm" data-act="svRReset">חזרה לבלוק</button>` : ""}</div>
+    <div class="small" style="color:var(--accent);margin:2px 4px 0">לוחצים על מלאכה למטה כדי להקליד לה טווחי חתכים — כמה שרוצים. כל טווח נשמר מיד.</div>
     <div class="svrange svrk"><span>או לפי ק.ד.: מ־</span><input id="svKF" data-act="svKF" inputmode="decimal" value="${esc(S.kf ?? "")}" placeholder="${esc(kdFmt(x.s, F).replace("≈", ""))}"><span>עד</span><input id="svKT" data-act="svKT" inputmode="decimal" value="${esc(S.kt ?? "")}" placeholder="${esc(kdFmt(x.s, T).replace("≈", ""))}">
       <span class="small muted">${kdSecPts(x.s) ? "מומר לחתכים לפי טבלת ק.ד.↔חתכים" : "מומר לחתכים בקירוב (≈) — חתך מדויק עדיף"}</span></div></div>
     <div class="row" style="gap:6px;margin:8px 0"><button class="btn ghost sm" data-act="svCopy" ${S.idx && !multi && !custom ? "" : "disabled"}>כמו הבלוק הקודם</button><button class="btn ghost sm" data-act="svAll" data-id="✓">הכל ✓</button><button class="btn ghost sm" data-act="svAll" data-id="✗">הכל ✗</button><button class="btn ghost sm" data-act="svAll" data-id="">ניקוי</button>
@@ -1434,6 +1439,50 @@ async function svSetBlock(patch) {   // שוחות / הערה — לבלוק ה�
 }
 const svSet = svSetBlock;
 const svReset = S => { S.rf = null; S.rt = null; S.kf = null; S.kt = null; };
+/** לחיצה על מלאכה בסקר: חלון שבו מקלידים כמה טווחי חתכים שרוצים (מחתך–עד חתך), כל טווח נשמר מיד */
+function svActModal(aid) {
+  const { S, x, bl, F, T } = svCtx(), a = RAW.activities?.[aid]; if (!x || !a || !bl.length) return;
+  const lo = bl[0].from, hi = bl[bl.length - 1].to, seg = x.s, segName = `${x.office?.name || ""} ${seg.num}`;
+  const runs = () => { const my = svIntervals(S.cid, S.segId).filter(iv => iv.a === aid && iv.t > lo && iv.f < hi), out = [];
+    for (let k = lo; k < hi; k++) { let st = ""; for (const iv of my) if (iv.f <= k && k < iv.t) st = iv.st;
+      const L = out[out.length - 1]; if (st && L && L.st === st && L.t === k) L.t = k + 1; else if (st) out.push({ f: k, t: k + 1, st }); }
+    return out; };
+  modal(`<h2 style="margin:0 0 2px">${esc(a.name)}</h2>
+    <p class="small muted" style="margin:0 0 10px">${esc(segName)} · חתכים ${lo}–${hi} · כל טווח נשמר מיד, ואפשר להוסיף כמה שרוצים</p>
+    <div id="sva_list"></div>
+    <div class="svrange" style="margin-top:10px;flex-wrap:wrap"><span>מחתך</span><input id="sva_f" inputmode="numeric" autocomplete="off" style="width:90px"><span>עד חתך</span><input id="sva_t" inputmode="numeric" autocomplete="off" style="width:90px">
+      <span class="svkd" id="sva_kd"></span></div>
+    <div class="row" style="gap:6px;margin:8px 0"><button class="btn" id="sva_ok">✓ בוצע — שמירה</button><button class="btn ghost" id="sva_no">✗ לא בוצע — שמירה</button></div>
+    <p class="small" id="sva_msg" style="min-height:1.2em;margin:4px 0"></p>
+    <div class="row" style="gap:6px;border-top:1px solid var(--line);padding-top:8px"><button class="btn ghost sm" id="sva_blk">✓ לכל הטווח שבחרת במסך (${F}–${T})</button><span class="spacer"></span><button class="btn" id="sva_close">סיום</button></div>`, (m, close) => {
+    const q = id => m.querySelector(id), say = (t, err) => { q("#sva_msg").textContent = t; q("#sva_msg").style.color = err ? "var(--warn)" : "var(--accent)"; };
+    const draw = () => { const R = runs();
+      q("#sva_list").innerHTML = R.length ? `<div style="overflow-x:auto"><table class="sheet" style="width:100%"><thead><tr><th>מחתך–עד חתך</th><th>ק.ד.</th><th>מטרים</th><th>מצב</th><th></th></tr></thead><tbody>${R.map((r, i) => `<tr>
+        <td><b dir="ltr">${r.f}–${r.t}</b></td><td class="small" dir="ltr">${esc(kdFmt(seg, r.f))} – ${esc(kdFmt(seg, r.t))}</td><td>${num((r.t - r.f) * SECTION_M, 0)} מ׳</td>
+        <td>${r.st === "✓" ? `<b style="color:var(--accent)">✓ בוצע</b>` : r.st === "✗" ? `<b style="color:var(--warn)">✗ לא בוצע</b>` : "½"}</td>
+        <td><button class="btn ghost sm" data-del="${i}">מחיקה</button></td></tr>`).join("")}</tbody></table></div>
+        <p class="small muted" style="margin:4px 0 0">סה״כ בוצע: <b>${num(R.filter(r => r.st === "✓").reduce((n, r) => n + r.t - r.f, 0) * SECTION_M, 0)} מ׳</b></p>`
+        : `<p class="small muted">עוד לא סומן כלום למלאכה הזו בקטע.</p>`;
+      m.querySelectorAll("[data-del]").forEach(bt => bt.onclick = async () => { const r = R[+bt.dataset.del]; await svWrite(Object.fromEntries([svRec(S, aid, r.f, r.t, "")])); draw(); say(`נמחק ${r.f}–${r.t}`); }); };
+    const kdHint = () => { const f = parseInt(q("#sva_f").value), t = parseInt(q("#sva_t").value);
+      q("#sva_kd").textContent = !isNaN(f) && !isNaN(t) ? `ק.ד. ${kdFmt(seg, Math.min(f, t))} – ${kdFmt(seg, Math.max(f, t))} · ${num(Math.abs(t - f) * SECTION_M, 0)} מ׳` : ""; };
+    const save = async st => { const f0 = parseInt(q("#sva_f").value), t0 = parseInt(q("#sva_t").value);
+      if (isNaN(f0) || isNaN(t0)) return say("צריך להקליד חתך התחלה וחתך סוף", true);
+      const f = Math.min(f0, t0), t = Math.max(f0, t0);
+      if (f === t) return say("חתך ההתחלה והסוף זהים — צריך טווח", true);
+      if (f < lo || t > hi) return say(`הטווח צריך להיות בתוך הקטע: חתכים ${lo}–${hi}`, true);
+      await svWrite(Object.fromEntries([svRec(S, aid, f, t, st)])); draw();
+      say(`נשמר ${f}–${t} ${st === "✓" ? "✓ בוצע" : "✗ לא בוצע"} — אפשר להקליד את הטווח הבא`);
+      q("#sva_f").value = ""; q("#sva_t").value = ""; kdHint(); q("#sva_f").focus(); };
+    q("#sva_f").oninput = q("#sva_t").oninput = kdHint;
+    q("#sva_t").onkeydown = e => { if (e.key === "Enter") save("✓"); };
+    q("#sva_f").onkeydown = e => { if (e.key === "Enter") q("#sva_t").focus(); };
+    q("#sva_ok").onclick = () => save("✓"); q("#sva_no").onclick = () => save("✗");
+    q("#sva_blk").onclick = async () => { await svWrite(Object.fromEntries([svRec(S, aid, F, T, "✓")])); draw(); say(`נשמר ${F}–${T} ✓ בוצע`); };
+    q("#sva_close").onclick = () => { close(); render(); };
+    draw(); setTimeout(() => q("#sva_f").focus(), 50);
+  });
+}
 async function svClick(act, b) {
   const S = ui.sv || {};
   if (act === "svC") { S.cid = b.dataset.id; S.segId = ""; S.idx = 0; S.sel = []; S.anchor = null; svReset(S); render(); }
@@ -1446,9 +1495,7 @@ async function svClick(act, b) {
   else if (act === "svSelClear") { S.sel = []; S.anchor = null; svReset(S); render(); }
   else if (act === "svSelAll") { const { bl } = svCtx(); S.sel = bl.map((_, k) => k); S.anchor = 0; svReset(S); render(); }
   else if (act === "svRReset") { svReset(S); render(); }
-  else if (act === "svTap") { const { F, T } = svCtx(), a = b.dataset.id, cur = svState(svIntervals(S.cid, S.segId), a, F, T);
-    const nx = cur === "✓" ? "✗" : cur === "✗" ? "" : "✓";   // ריק/חלקי → ✓ → ✗ → מחיקה
-    await svWrite(Object.fromEntries([svRec(S, a, F, T, nx)])); }
+  else if (act === "svTap") svActModal(b.dataset.id);
   else if (act === "svAll") { const { F, T, acts } = svCtx(); await svWrite(Object.fromEntries(acts.map(a => svRec(S, a.id, F, T, b.dataset.id)))); }
   else if (act === "svCopy") { const { bl, F, T, acts } = svCtx(), p = bl[S.idx - 1]; if (!p) return; const ivs = svIntervals(S.cid, S.segId);
     const recs = acts.map(a => [a.id, svState(ivs, a.id, p.from, p.to)]).filter(([, s]) => s === "✓" || s === "✗").map(([a, s]) => svRec(S, a, F, T, s));
