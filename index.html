@@ -553,7 +553,26 @@ let NEWER_FILE = null;            // data.json חדש יותר שנמצא באת
 let fb = null, user = null, me = null;
 
 const D = () => Object.fromEntries(COLS.map(c => [c, list(c)]));
-const list = col => Object.entries(RAW[col] || {}).map(([id, v]) => ({ id, ...v })).sort(byOrder);
+const list = col => { const L = Object.entries(RAW[col] || {}).map(([id, v]) => ({ id, ...v })).sort(byOrder); if (col === "orders") L.forEach(ordBySecs); return L; };
+/** הזמנה שהוגדרה לפי חתכים הנדסיים (מחתך–עד חתך): האורך = מספר החתכים × 20 מ׳ בקטעי התכנון של הקבלן, והק.ד. נגזר מהחתכים */
+function ordSecKeys(cid) { const out = { f: "secFrom", t: "secTo" };
+  for (const k of ["orders__" + cid, "orders"]) { const cu = RAW.tableConfig?.[k]?.custom || {};
+    for (const [key, v] of Object.entries(cu)) { const l = String(v?.label || ""); if (/^\s*עד\s*חתך/.test(l)) out.tx = "x_" + key; else if (/^\s*(מ\s*)?חתך|מחתך/.test(l)) out.fx = "x_" + key; } }
+  return out; }
+function ordSecs(o) { const k = ordSecKeys(o.contractorId), n = v => v === "" || v == null || isNaN(Number(v)) ? null : Number(v);
+  let a = n(o.secFrom), b = n(o.secTo); if (a === null && k.fx) a = n(o[k.fx]); if (b === null && k.tx) b = n(o[k.tx]);
+  return a === null || b === null || a === b ? null : [Math.min(a, b), Math.max(a, b)]; }
+function ordBySecs(o) {
+  const sr = ordSecs(o); if (!sr) return;
+  const c = RAW.contractors?.[o.contractorId], cr = c && (() => { const a = kdNum(c.kdFrom), b = kdNum(c.kdTo); return a === null || b === null ? null : { lo: Math.min(a, b), hi: Math.max(a, b) }; })();
+  const segs = Object.entries(RAW.designSegments || {}).map(([id, v]) => ({ id, ...v })).filter(x => x.secFrom !== "" && x.secTo !== "" && x.secFrom != null);
+  const near = x => { if (!cr) return true; const a = kdNum(x.kdFrom), b = kdNum(x.kdTo); return a !== null && b !== null && Math.min(cr.hi + 30, Math.max(a, b)) > Math.max(cr.lo - 30, Math.min(a, b)); };
+  const parts = segs.filter(near).map(x => { const lo = Math.min(+x.secFrom, +x.secTo), hi = Math.max(+x.secFrom, +x.secTo), f = Math.max(lo, sr[0]), t = Math.min(hi, sr[1]);
+    return t > f ? { s: x, f, t, n: t - f, office: RAW.designOffices?.[x.officeId], full: f === lo && t === hi } : null; }).filter(Boolean);
+  o._secLen = (parts.length ? parts.reduce((a, x) => a + x.n, 0) : sr[1] - sr[0]) * SECTION_M; o._secParts = parts; o._secs = sr;
+  const ks = parts.flatMap(x => [sec2kd(x.s, x.f), sec2kd(x.s, x.t)]).filter(k => k !== null && !isNaN(k));
+  if (ks.length && (kdNum(o.kdFrom) === null || kdNum(o.kdTo) === null)) o._kdr = { lo: Math.min(...ks), hi: Math.max(...ks) };
+}
 const stamp = () => ({ updatedAt: new Date().toISOString(), updatedBy: user?.email || "מקומי" });
 const dataOnly = () => Object.fromEntries(DATA_COLS.map(c => [c, RAW[c] || {}]));
 const isBackup = j => j && typeof j === "object" && j.data && typeof j.data === "object" && DATA_COLS.some(c => j.data[c]);
@@ -914,7 +933,7 @@ function pagePlan(id) {
 
 /* ---------- ציר ק.ד.: חפיפות בין שכבות ---------- */
 const kdNum = v => { const n = parseFloat(String(v ?? "").replace(",", ".")); return isNaN(n) ? null : n; };
-const kdRange = x => { const a = kdNum(x.kdFrom), b = kdNum(x.kdTo); return a === null || b === null || a === b ? null : { lo: Math.min(a, b), hi: Math.max(a, b) }; };
+const kdRange = x => { if (x && x._kdr) return x._kdr; const a = kdNum(x.kdFrom), b = kdNum(x.kdTo); return a === null || b === null || a === b ? null : { lo: Math.min(a, b), hi: Math.max(a, b) }; };
 const overlap = (r1, r2) => { if (!r1 || !r2) return null; const lo = Math.max(r1.lo, r2.lo), hi = Math.min(r1.hi, r2.hi); return hi - lo > 0 ? { lo, hi } : null; };
 const kdTxt = r => r ? `${num(r.hi, 1)}–${num(r.lo, 1)}` : "—";
 /** אורך: לפי חתכים אם יש, אחרת האורך שהוזן ידנית */
@@ -4086,10 +4105,15 @@ const TABLE_DEFS = {
   orders: () => { const c = RAW.contractors[ui.page.slice(2)] || {}, r = kdRange(c); return [
     { key: "idx", label: "מס״ד", cls: "c", cell: o => o._i ?? "" },
     { key: "name", label: "הזמנה", cls: "w-place", cell: o => cellInput("orders", o, "name") },
-    { key: "kdFrom", label: "ק.ד. מ", cls: "w-kd", cell: o => cellInput("orders", o, "kdFrom", "kdin") },
-    { key: "kdTo", label: "ק.ד. עד", cls: "w-kd", cell: o => cellInput("orders", o, "kdTo", "kdin") },
-    { key: "len", label: "אורך (מתכנון)", cls: "calc", cell: o => { const L = lenFromDesign(D(), kdRange(o)); return L ? `${L.approx ? "≈" : ""}${MTR(L.km)}` : `<span class="pill">אין נתוני תכנון</span>`; } },
-    { key: "segs", label: "קטעי תכנון", cls: "small", cell: o => { const L = lenFromDesign(D(), kdRange(o)); return L ? L.parts.map(x => `${esc(x.office?.name || "")} ${esc(x.s.num)}${x.full ? "" : ` (${Math.round(x.frac * 100)}%)`}`).join(", ") : "—"; } },
+    { key: "kdFrom", label: "ק.ד. מ", cls: "w-kd", cell: o => cellInput("orders", o, "kdFrom", "kdin", o._kdr ? `placeholder="≈${num(o._kdr.hi, 1)}" title="נגזר מהחתכים"` : "") },
+    { key: "kdTo", label: "ק.ד. עד", cls: "w-kd", cell: o => cellInput("orders", o, "kdTo", "kdin", o._kdr ? `placeholder="≈${num(o._kdr.lo, 1)}" title="נגזר מהחתכים"` : "") },
+    ...(ordSecKeys(ui.page.slice(2)).fx ? [] : [
+    { key: "secFrom", label: "מחתך", cls: "w-num", cell: o => cellInput("orders", o, "secFrom", "num", `style="width:7ch"`) },
+    { key: "secTo", label: "עד חתך", cls: "w-num", cell: o => cellInput("orders", o, "secTo", "num", `style="width:7ch"`) }]),
+    { key: "len", label: "אורך", cls: "calc", cell: o => { if (o._secLen) return `<b>${num(o._secLen, 0)} מ׳</b><div class="small muted">לפי חתכים ${o._secs[1]}–${o._secs[0]}</div>`;
+      const L = lenFromDesign(D(), kdRange(o)); return L ? `${L.approx ? "≈" : ""}${MTR(L.km)}<div class="small muted">לפי ק.ד.</div>` : `<span class="pill">אין חתכים / ק.ד.</span>`; } },
+    { key: "segs", label: "קטעי תכנון", cls: "small", cell: o => { if (o._secParts?.length) return o._secParts.map(x => `${esc(x.office?.name || "")} ${esc(x.s.num)} <span dir="ltr">${x.t}–${x.f}</span>${x.full ? "" : ` (${num(x.n * SECTION_M, 0)} מ׳)`}`).join("<br>");
+      const L = lenFromDesign(D(), kdRange(o)); return L ? L.parts.map(x => `${esc(x.office?.name || "")} ${esc(x.s.num)}${x.full ? "" : ` (${Math.round(x.frac * 100)}%)`}`).join(", ") : "—"; } },
     { key: "inside", label: "בתוך הגזרה", cls: "c", cell: o => { const or = kdRange(o), inside = !r || !or ? null : (or.lo >= r.lo && or.hi <= r.hi);
       return inside === null ? "—" : inside ? `<span class="pill ok">כן</span>` : `<span class="pill warn">חורג</span>`; } },
     { key: "note", label: "הערה", cls: "w-place", cell: o => cellInput("orders", o, "note") },
@@ -4698,4 +4722,3 @@ start();
 </script>
 </body>
 </html>
-
