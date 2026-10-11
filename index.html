@@ -576,28 +576,30 @@ function denyWrite(col, id, obj) {
   setTimeout(() => { render(); alertMsg(isViewer() ? "הרשאת צפייה בלבד — אי אפשר לשנות נתונים." : "ההרשאה שלך היא לחיבורי חשמל בלבד — את זה אי אפשר לשנות."); }, 0);
   return true;
 }
+/** כתיבה שנכשלה (בד״כ כללי Firebase) — מציגים למשתמש במקום להיכשל בשקט */
+const writeFail = col => e => { console.error("write failed", col, e); setTimeout(() => { render(); alertMsg(/PERMISSION_DENIED|permission/i.test(String(e?.code || e?.message)) ? (col === "users" ? "השינוי לא נשמר: Firebase דחה את הכתיבה. לשנות משתמשים יכול רק ״מנהל״ או ״סופר מנהל״ פעיל — ובתנאי שכללי Firebase העדכניים פורסמו (Realtime Database ← Rules)." : "השינוי לא נשמר: אין הרשאה לפי כללי Firebase.") : "השינוי לא נשמר: " + (e?.message || e)); }, 0); };
 const api = {
   async add(col, obj) {
     if (denyWrite(col, null, obj)) return null;
     const id = newId();
     if (col === "issues" && !obj.code) obj = { ...obj, code: nextIssueCode(obj.contractorId) };
     if (LOCAL) { RAW[col][id] = { ...obj, ...stamp() }; touched(); render(); return id; }
-    await refOf(col, id).set(fbSafe({ ...obj, ...stamp() })); return id;
+    await refOf(col, id).set(fbSafe({ ...obj, ...stamp() })).catch(writeFail(col)); return id;
   },
   async update(col, id, patch) {
     if (denyWrite(col, id, patch)) return;
     if (LOCAL) { RAW[col][id] = { ...RAW[col][id], ...patch, ...stamp() }; touched(); render(); return; }
-    await refOf(col, id).update(fbSafe({ ...patch, ...stamp() }));
+    await refOf(col, id).update(fbSafe({ ...patch, ...stamp() })).catch(writeFail(col));
   },
   async put(col, id, obj) {
     if (denyWrite(col, id, obj)) return;
     if (LOCAL) { if (obj === null) delete RAW[col][id]; else RAW[col][id] = obj; touched(); render(); return; }
-    await refOf(col, id).set(obj === null ? null : fbSafe(obj));
+    await refOf(col, id).set(obj === null ? null : fbSafe(obj)).catch(writeFail(col));
   },
   async remove(col, id) {
     if (denyWrite(col, id)) return;
     if (LOCAL) { delete RAW[col][id]; touched(); render(); return; }
-    await refOf(col, id).remove();
+    await refOf(col, id).remove().catch(writeFail(col));
   },
   /** החלפת כל הנתונים (מגיבוי) */
   async replaceAll(data, source, savedAt) {
