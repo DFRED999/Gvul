@@ -3100,17 +3100,22 @@ const bgM = v => `${num(Math.round(v || 0), 0)} ₪`, bgMM = v => `${(Math.round
 /** מפתח עמודת התקציב בהזמנות (עמודה מותאמת בשם "תקציב") */
 function bgBudgetKey(cid) { for (const k of ["orders__" + cid, "orders"]) { const cu = RAW.tableConfig?.[k]?.custom || {}; for (const [key, v] of Object.entries(cu)) if (/תקציב/.test(String(v?.label || ""))) return "x_" + key; } return null; }
 const bgOrdAmt = o => { const k = bgBudgetKey(o.contractorId); return k ? bgN(o[k]) : 0; };
+/** קישור שורת אומדן ↔ הזמנות: בשורה נשמר ords = { מזהה הזמנה: true }. הזמנה מקושרת נספרת בשורה (ולא בעבודות העפר) */
+const bgOrdsOf = x => Object.keys(x?.ords || {}).filter(id => RAW.orders?.[id]).map(id => ({ id, ...RAW.orders[id] }));
+const bgLinkedAmt = x => bgOrdsOf(x).reduce((t, o) => t + bgOrdAmt(o), 0);
+const bgLinkedSet = () => new Set(Object.values(RAW.budget || {}).flatMap(x => Object.keys(x.ords || {})));
+const bgLineOfOrder = oid => Object.entries(RAW.budget || {}).find(([, x]) => x.ords?.[oid])?.[0] || "";
 function bgData(d) {
-  const cfg = bgCfg(), V = 1 + cfg.vat / 100, B = Object.entries(RAW.budget || {}).map(([id, v]) => ({ id, ...v }));
+  const LK = bgLinkedSet(), cfg = bgCfg(), V = 1 + cfg.vat / 100, B = Object.entries(RAW.budget || {}).map(([id, v]) => ({ id, ...v }));
   const mains = d.contractors.filter(isMain);
   const earth = mains.map(c => { const price = bgN(cfg.prices[c.sector || ""]);
-    const ords = d.orders.filter(o => o.contractorId === c.id && (bgOrdAmt(o) || o._secs)).map(o => { const m = o._secs ? (o._secs[1] - o._secs[0]) * SECTION_M : 0, est = m && price ? m * price * V : null, amt = bgOrdAmt(o);
+    const ords = d.orders.filter(o => o.contractorId === c.id && !LK.has(o.id) && o._secs).map(o => { const m = o._secs ? (o._secs[1] - o._secs[0]) * SECTION_M : 0, est = m && price ? m * price * V : null, amt = bgOrdAmt(o);
       return { o, m, est, amt, diff: est === null ? null : amt - est }; });
     const est = ords.reduce((a, x) => a + (x.est ?? x.amt), 0), amt = ords.reduce((a, x) => a + x.amt, 0);
     return { c, price, ords, m: ords.reduce((a, x) => a + x.m, 0), est, amt, bad: ords.filter(x => x.diff !== null && Math.abs(x.diff) > 1000) }; });
   const extras = B.filter(x => x.kind === "extra").sort((a, b) => (a.phase === "בוצע" ? 0 : 1) - (b.phase === "בוצע" ? 0 : 1) || (+a.order || 0) - (+b.order || 0));
   const sites = B.filter(x => x.kind === "site").sort((a, b) => (+a.order || 0) - (+b.order || 0));
-  const exAmt = x => x.excluded ? 0 : bgN(x.amount), exCov = x => bgN(x.transferred) + bgN(x.ordered);
+  const exAmt = x => x.excluded ? 0 : bgN(x.amount), exCov = x => bgN(x.transferred) + bgN(x.ordered) + bgLinkedAmt(x);
   const exDone = extras.filter(x => x.phase === "בוצע"), exNext = extras.filter(x => x.phase !== "בוצע");
   const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
   const siteTot = sum(sites, x => bgN(x.mast) + bgN(x.build));
@@ -3152,15 +3157,15 @@ function pageBudgetEdit(d) {
         <td class="c">${x.m ? num(x.m, 0) + " מ׳" : "—"}</td><td></td><td class="c">${x.est === null ? "—" : bgM(x.est)}</td><td class="c">${bgM(x.amt)}</td>
         <td class="c">${x.diff === null ? "—" : Math.abs(x.diff) <= 1000 ? `<span class="pill ok">תואם</span>` : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td></tr>`).join("") : "")).join("");
   const exTable = (arr, title, sub) => `<h3 style="margin:14px 0 6px">${title} <span class="muted small">${sub}</span></h3><div class="tablewrap"><table class="sheet"><thead><tr><th>עבודה</th><th>סוג עבודה</th><th>גזרה</th><th>מבצע</th><th>אומדן (₪)</th><th>הועבר תקציב (₪)</th><th>הוזמן (₪)</th><th>נדרש להשלמה</th><th>הערה</th><th></th></tr></thead><tbody>
-    ${arr.map(x => { const left = x.excluded ? 0 : bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered);
+    ${arr.map(x => { const lk = bgLinkedAmt(x), left = x.excluded ? 0 : bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered) - lk;
       const ar = x.areaId ?? (d.contractors.find(c => c.id === x.contractorId && isMain(c)) ? x.contractorId : "");
       return `<tr style="${x.excluded ? "opacity:.6" : ""}"><td>${txt(x, "title", 24)}</td>
       <td><select class="inp" data-edit="budget|${x.id}|cat">${BG_CAT.map(k => `<option ${k === (x.cat || "עבודות נוספות") ? "selected" : ""}>${k}</option>`).join("")}</select></td>
       <td><select class="inp" data-edit="budget|${x.id}|areaId"><option value="">כללי / כל הקו</option>${d.contractors.filter(isMain).map(c => `<option value="${c.id}" ${c.id === ar ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></td>
       <td><select class="inp" data-edit="budget|${x.id}|contractorId"><option value="">—</option>${d.contractors.map(c => `<option value="${c.id}" ${c.id === x.contractorId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></td>
-      <td>${inp(x, "amount")}</td><td>${inp(x, "transferred")}</td><td>${inp(x, "ordered")}</td><td class="c"><b>${x.excluded ? "לא נכלל" : bgLeft(left)}</b></td><td>${txt(x, "note", 16)}</td>
+      <td>${inp(x, "amount")}</td><td>${inp(x, "transferred")}</td><td>${inp(x, "ordered")}${lk ? `<div class="small" style="color:var(--accent)">+ ${bgM(lk)} בהזמנות מקושרות</div>` : ""}</td><td class="c"><b>${x.excluded ? "לא נכלל" : bgLeft(left)}</b></td><td>${txt(x, "note", 16)}</td>
       <td><button class="lnk" data-act="bgDel" data-id="${x.id}">מחיקה</button></td></tr>`; }).join("") || `<tr><td colspan="10" class="muted">אין שורות</td></tr>`}
-    <tr class="sub"><td colspan="4"><b>סה״כ</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.amount)), 0))}</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.transferred)), 0))}</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.ordered)), 0))}</b></td><td class="c"><b>${bgLeft(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered)), 0))}</b></td><td colspan="2"></td></tr></tbody></table></div>`;
+    <tr class="sub"><td colspan="4"><b>סה״כ</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.amount)), 0))}</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.transferred)), 0))}</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.ordered) + bgLinkedAmt(x)), 0))}</b></td><td class="c"><b>${bgLeft(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered) - bgLinkedAmt(x)), 0))}</b></td><td colspan="2"></td></tr></tbody></table></div>`;
   const siteRows = R.sites.map(x => `<tr><td>${txt(x, "title", 20)}</td><td>${inp(x, "mast")}</td><td>${inp(x, "build")}</td><td class="c"><b>${bgM(bgN(x.mast) + bgN(x.build))}</b></td><td>${txt(x, "note", 20)}</td><td><button class="lnk" data-act="bgDel" data-id="${x.id}">מחיקה</button></td></tr>`).join("");
   return `<div class="bgp"><div class="ch-banner" style="--cc:#7a5c3e"><div><h1>עריכת אומדן</h1><span>כל השורות לעריכה — שינוי נשמר מיד. כל הסכומים כולל מע״מ ${cfg.vat}%.</span></div>
     <div class="row" style="gap:6px"><button class="btn ghost" data-act="bgCfg">⚙ מע״מ ומחיר למטר</button><button class="btn" data-act="bgEditTog">✓ סיום עריכה — לתמונה הכוללת</button></div></div>
@@ -3196,7 +3201,7 @@ function bgLines(d, R) {
   const mainIds = new Set(d.contractors.filter(isMain).map(c => c.id)), L = [];
   R.earth.forEach(e => L.push({ cat: "עבודות עפר", area: e.c.id, exec: e.c.id, title: `מקטעי עבודה — ${e.c.name}`, est: e.est, cov: e.amt, earth: e }));
   R.extras.filter(x => !x.excluded).forEach(x => L.push({ cat: x.cat && BG_ROWS.includes(x.cat) ? x.cat : "עבודות נוספות", area: x.areaId ?? (mainIds.has(x.contractorId) ? x.contractorId : ""),
-    exec: x.contractorId || "", title: x.title || "", est: bgN(x.amount), cov: bgN(x.transferred) + bgN(x.ordered), x, phase: x.phase === "בוצע" ? "בוצע" : "יבוצע", note: x.note || "" }));
+    exec: x.contractorId || "", title: x.title || "", est: bgN(x.amount), cov: bgN(x.transferred) + bgN(x.ordered) + bgLinkedAmt(x), x, phase: x.phase === "בוצע" ? "בוצע" : "יבוצע", note: x.note || "" }));
   R.sites.forEach(x => L.push({ cat: "אתרי איסוף", area: "", exec: "", title: x.title || "", est: bgN(x.mast) + bgN(x.build), cov: 0, site: x, note: x.note || "" }));
   if (R.cfg.sitesOrdered) L.push({ cat: "אתרי איסוף", area: "", exec: "", title: "הזמנות שיצאו לאתרי איסוף", est: 0, cov: R.cfg.sitesOrdered, sitesOrd: true });
   L.forEach(l => { if (l.area && !mainIds.has(l.area)) l.area = ""; });
@@ -3221,8 +3226,10 @@ function bgAttention(d, R, M) {
     out.push({ sev: "blue", t: `${k}: הועבר / הוזמן ${bgMM(c)} מול אומדן ${bgMM(e)} — עודף ${bgMM(c - e)}`, act: "bgRow", id: k }); });
   M.L.filter(l => !l.earth && !l.site && !l.sitesOrd && l.phase !== "בוצע" && l.est - l.cov >= 3e6).sort((a, b) => (b.est - b.cov) - (a.est - a.cov)).slice(0, 6)
     .forEach(l => out.push({ sev: "orange", t: `טרם הוזמן: ${l.title}${l.area ? ` · ${cn(l.area)}` : ""} — ${bgMM(l.est - l.cov)}`, act: "bgCell", id: `${l.cat}|${l.area}` }));
-  R.specs.filter(x => x.amt > 0).forEach(x => { const ls = M.L.filter(l => l.exec === x.c.id), o = ls.reduce((t, l) => t + bgN(l.x?.ordered), 0);
-    if (ls.length && o < x.amt - 1) out.push({ sev: "orange", t: `ל${x.c.name} יש הזמנות באתר בסך ${bgMM(x.amt)}, ובאומדן רשום "הוזמן" ${bgMM(o)} — לעדכן בעריכת אומדן`, act: "bgRow", id: ls[0].cat }); });
+  R.specs.filter(x => x.amt > 0).forEach(x => { const ls = M.L.filter(l => l.exec === x.c.id), o = ls.reduce((t, l) => t + bgN(l.x?.ordered) + (l.x ? bgLinkedAmt(l.x) : 0), 0);
+    if (ls.length && o < x.amt - 1) out.push({ sev: "orange", t: `ל${x.c.name} יש הזמנות באתר בסך ${bgMM(x.amt)}, ובאומדן מקושרות / רשומות ${bgMM(o)} — לקשר אותן לשורה (🔗 בפירוט)`, act: "bgRow", id: ls[0].cat }); });
+  const LKs = bgLinkedSet(), loose = d.orders.filter(o => isMain(d.contractors.find(c => c.id === o.contractorId) || {}) && !o._secs && !LKs.has(o.id) && bgOrdAmt(o) > 0);
+  if (loose.length) out.push({ sev: "orange", t: `${loose.length} הזמנות עם תקציב שלא משויכות לשורת אומדן (${loose.map(o => `${cn(o.contractorId)} · ${o.name || "הזמנה"}`).slice(0, 3).join("; ")}${loose.length > 3 ? "…" : ""}) — לשייך בעמודה ״שורת אומדן״ בטבלת ההזמנות`, act: "bgCol", id: loose[0].contractorId });
   const siteLeft = R.T.siteEst - R.T.siteOrd; if (siteLeft > 1) out.push({ sev: "orange", t: `אתרי איסוף: הוזמנו ${bgMM(R.T.siteOrd)} מתוך ${bgMM(R.T.siteEst)} — חסר ${bgMM(siteLeft)}`, act: "bgRow", id: "אתרי איסוף" });
   return out;
 }
@@ -3251,29 +3258,66 @@ function pageBudget(d) {
   <div class="card bg-att"><h2 style="margin-top:0">דורש תשומת לב <span class="muted small">(${A.length})</span></h2>${A.length ? `<ul>${A.map(a => `<li class="${a.sev}" data-act="${a.act}" data-id="${esc(a.id)}" role="button">${esc(a.t)}</li>`).join("")}</ul>` : `<p class="muted">אין חריגות 👍</p>`}</div></div></div>`;
 }
 /** חלון פירוט: רשימת השורות שבתא / שורה / עמודה */
+function bgOpen(act, id) {
+  const d = D(), R = bgData(d), M = bgMatrix(d, R), cn = x => x ? (d.contractors.find(c => c.id === x)?.name || "") : "כללי / כל הקו"; ui.bgLast = [act, id];
+  if (act === "bgCell") { const [k, a] = id.split("|"); return bgDrill(`${k} — ${cn(a)}`, M.L.filter(l => l.cat === k && l.area === a)); }
+  if (act === "bgRow") return bgDrill(id ? `${id} — כל הקו` : "כל שורות האומדן", M.L.filter(l => !id || l.cat === id));
+  if (act === "bgCol") return bgDrill(`${cn(id)} — כל השורות`, M.L.filter(l => l.area === id));
+  if (id === "doneNo") return bgDrill("עבודות שבוצעו ואין עליהן הזמנה", M.L.filter(l => l.phase === "בוצע" && l.cov < l.est - 1));
+}
 function bgDrill(title, lines) {
   const d = D(), cn = id => id ? (d.contractors.find(c => c.id === id)?.name || "") : "", est = lines.reduce((a, l) => a + l.est, 0), cov = lines.reduce((a, l) => a + l.cov, 0);
   const rows = lines.slice().sort((a, b) => BG_ROWS.indexOf(a.cat) - BG_ROWS.indexOf(b.cat) || (b.est - a.est)).map(l => { const tn = bgTone(l.est, l.cov);
     const main = `<tr class="${l.earth ? "bg-er" : ""}"><td><b>${esc(l.title)}</b>${l.phase ? ` <span class="pill ${l.phase === "בוצע" ? "warn" : ""}">${l.phase}</span>` : ""}${l.note ? `<div class="small muted">${esc(l.note)}</div>` : ""}</td><td class="small">${esc(l.cat)}</td><td class="small">${esc(cn(l.area) || "כללי")}${l.exec && l.exec !== l.area ? `<div class="muted">מבצע: ${esc(cn(l.exec))}</div>` : ""}</td>
-      <td class="c">${l.est ? bgM(l.est) : "—"}</td><td class="c">${l.cov ? bgM(l.cov) : "—"}</td><td class="c bg-c ${tn}">${l.est || l.cov ? bgLeft(l.est - l.cov) : ""}</td></tr>`;
+      <td class="c">${l.est ? bgM(l.est) : "—"}</td><td class="c">${l.cov ? bgM(l.cov) : "—"}</td><td class="c bg-c ${tn}">${l.est || l.cov ? bgLeft(l.est - l.cov) : ""}</td>
+      <td class="small">${l.x ? `${bgOrdsOf(l.x).map(o => `<span class="pill ok bg-ol">${esc(o.name || "הזמנה")} · ${bgM(bgOrdAmt(o))}${isViewer() ? "" : ` <button class="lnk" data-bgun="${l.x.id}|${o.id}" title="ביטול הקישור">✕</button>`}</span>`).join(" ")}${isViewer() ? "" : ` <button class="btn ghost sm" data-bglink="${l.x.id}">🔗 ${bgOrdsOf(l.x).length ? "עוד" : "קישור להזמנה"}</button>`}` : l.earth ? `<span class="muted">${l.earth.ords.length} הזמנות</span>` : ""}</td></tr>`;
     const subs = l.earth ? l.earth.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || "הזמנה")}</span>${x.o._secs ? ` <span class="small muted">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span> · ${num(x.m, 0)} מ׳</span>` : ""}</td><td></td><td></td>
-      <td class="c small">${x.est === null ? "—" : bgM(x.est)}</td><td class="c small">${bgM(x.amt)}</td><td class="c small">${x.diff === null ? "—" : Math.abs(x.diff) <= 1000 ? `<span class="pill ok">תואם</span>` : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td></tr>`).join("") : "";
+      <td class="c small">${x.est === null ? "—" : bgM(x.est)}</td><td class="c small">${bgM(x.amt)}</td><td class="c small">${x.diff === null ? "—" : Math.abs(x.diff) <= 1000 ? `<span class="pill ok">תואם</span>` : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td><td></td></tr>`).join("") : "";
     return main + subs; }).join("");
   modal(`<h2 style="margin:0">${esc(title)}</h2><div class="row small" style="gap:14px"><span>אומדן <b>${bgM(est)}</b></span><span>כוסה <b>${bgM(cov)}</b></span><span>חסר <b>${bgLeft(est - cov)}</b></span></div>
-    <div class="tablewrap" style="max-height:60vh;overflow:auto"><table class="sheet bgp"><thead><tr><th>עבודה</th><th>סוג</th><th>גזרה</th><th>אומדן</th><th>הוזמן / הועבר</th><th>חסר</th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="muted">אין שורות</td></tr>`}</tbody></table></div>
+    <div class="tablewrap" style="max-height:60vh;overflow:auto"><table class="sheet bgp"><thead><tr><th>עבודה</th><th>סוג</th><th>גזרה</th><th>אומדן</th><th>הוזמן / הועבר</th><th>חסר</th><th>הזמנה</th></tr></thead><tbody>${rows || `<tr><td colspan="7" class="muted">אין שורות</td></tr>`}</tbody></table></div>
     <div class="row"><button class="btn ghost" id="mEdit">✎ לעריכה</button><span class="spacer"></span><button class="btn" id="mNo">סגירה</button></div>`, (m, close) => {
     const cd = m.querySelector(".card"); cd.style.width = "min(1060px, 96vw)"; cd.style.maxWidth = "96vw";
-    m.querySelector("#mNo").onclick = close; m.querySelector("#mEdit").onclick = () => { close(); ui.bgEdit = true; render(); window.scrollTo(0, 0); }; });
+    m.querySelector("#mNo").onclick = close; m.querySelector("#mEdit").onclick = () => { close(); ui.bgEdit = true; render(); window.scrollTo(0, 0); };
+    const again = () => { close(); render(); if (ui.bgLast) bgOpen(...ui.bgLast); };
+    m.querySelectorAll("[data-bglink]").forEach(bt => bt.onclick = () => bgLinkModal(bt.dataset.bglink, again));
+    m.querySelectorAll("[data-bgun]").forEach(bt => bt.onclick = async () => { const [lid, oid] = bt.dataset.bgun.split("|"), o = { ...(RAW.budget[lid].ords || {}) }; delete o[oid]; await api.update("budget", lid, { ords: Object.keys(o).length ? o : null }); again(); }); });
+}
+/** קישור שורת אומדן להזמנה: הזמנה קיימת של הקבלן, או הזמנה חדשה שנפתחת עכשיו (נכנסת גם לטבלת ההזמנות של הקבלן) */
+function bgLinkModal(lid, done) {
+  const d = D(), x = RAW.budget[lid]; if (!x) return;
+  const area = x.areaId ?? (d.contractors.find(c => c.id === x.contractorId && isMain(c)) ? x.contractorId : ""), cids = [...new Set([x.contractorId, area].filter(Boolean))];
+  const LK = bgLinkedSet(), cn = id => d.contractors.find(c => c.id === id)?.name || "";
+  const opts = d.orders.filter(o => cids.includes(o.contractorId) && !x.ords?.[o.id]).map(o => { const other = LK.has(o.id) ? Object.values(RAW.budget).find(y => y.ords?.[o.id])?.title : "";
+    return `<option value="${o.id}" ${other ? "disabled" : ""}>${esc(cn(o.contractorId))} · ${esc(o.name || "הזמנה")}${bgOrdAmt(o) ? ` · ${bgM(bgOrdAmt(o))}` : ""}${o._secs ? " (עבודות עפר)" : ""}${other ? ` — כבר מקושרת ל"${esc(other)}"` : ""}</option>`; }).join("");
+  const left = Math.max(0, bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered) - bgLinkedAmt(x)), defC = d.contractors.some(c => c.id === x.contractorId) ? x.contractorId : area;
+  modal(`<h2 style="margin:0">קישור להזמנה — ${esc(x.title || "")}</h2><p class="small muted" style="margin:0">אומדן ${bgM(bgN(x.amount))} · חסר ${bgM(left)}. הזמנה מקושרת נספרת כ״הוזמן״ בשורה הזו — והשורה עוברת מ״טרם הוזמן״ למכוסה.</p>
+    <div class="row" style="gap:6px"><label class="chip on"><input type="radio" name="bgm" value="new" checked> הזמנה חדשה</label><label class="chip"><input type="radio" name="bgm" value="old" ${opts ? "" : "disabled"}> הזמנה קיימת${opts ? "" : " (אין)"}</label></div>
+    <div id="bg_new"><div class="row" style="gap:8px;flex-wrap:wrap"><label class="field" style="flex:2;min-width:180px">שם ההזמנה<input class="inp" id="bg_nm" value="${esc(x.title || "")}"></label>
+      <label class="field" style="flex:1;min-width:120px">סכום (כולל מע״מ)<input class="inp" id="bg_am" inputmode="decimal" value="${left ? moneyTxt(left) : ""}"></label>
+      <label class="field" style="flex:1;min-width:140px">קבלן<select class="inp" id="bg_c">${d.contractors.map(c => `<option value="${c.id}" ${c.id === defC ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
+      <label class="field" style="flex:1;min-width:120px">מס׳ הזמנה (רכש)<input class="inp" id="bg_no" dir="ltr"></label></div>
+      <p class="small muted" style="margin:0">ההזמנה תיפתח גם בלשונית ״הזמנות״ של הקבלן, עם הסכום בעמודת ״תקציב״.</p></div>
+    <div id="bg_old" hidden><label class="field">הזמנה<select class="inp" id="bg_o">${opts}</select></label></div>
+    <p class="small" id="bg_msg"></p><div class="row"><button class="btn" id="mYes">קישור</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    const mode = () => m.querySelector("[name=bgm]:checked").value;
+    m.querySelectorAll("[name=bgm]").forEach(r => r.onchange = () => { m.querySelector("#bg_new").hidden = mode() !== "new"; m.querySelector("#bg_old").hidden = mode() !== "old"; m.querySelectorAll("[name=bgm]").forEach(q => q.closest(".chip").classList.toggle("on", q.checked)); });
+    m.querySelector("#mNo").onclick = close;
+    m.querySelector("#mYes").onclick = async () => { let oid;
+      if (mode() === "old") oid = m.querySelector("#bg_o").value;
+      else { const cid = m.querySelector("#bg_c").value, k = bgBudgetKey(cid), am = moneyNum(m.querySelector("#bg_am").value), nm = m.querySelector("#bg_nm").value.trim();
+        if (!nm) { m.querySelector("#bg_nm").style.borderColor = "var(--warn)"; return; }
+        if (!k) { m.querySelector("#bg_msg").textContent = "לקבלן הזה אין עמודת ״תקציב״ בטבלת ההזמנות — מוסיפים אותה ב״עמודות״ ואז מקשרים."; return; }
+        const ok = Object.entries(RAW.tableConfig?.["orders__" + cid]?.custom || RAW.tableConfig?.orders?.custom || {}).find(([, v]) => /מס.?\s*הזמנה/.test(v?.label || ""));
+        oid = await api.add("orders", { contractorId: cid, name: nm, kdFrom: "", kdTo: "", secFrom: "", secTo: "", lengthKm: "", note: `מאומדן: ${x.title || ""}`, order: Date.now(), [k]: am ?? "", ...(ok && m.querySelector("#bg_no").value.trim() ? { ["x_" + ok[0]]: m.querySelector("#bg_no").value.trim() } : {}) }); }
+      if (!oid) return; await api.update("budget", lid, { ords: { ...(RAW.budget[lid].ords || {}), [oid]: true } }); close(); toast("קושר ✓"); done && done(); };
+  });
 }
 
 async function bgClick(act, b) {
   if (act === "bgMode") { ui.bgMode = b.dataset.id; render(); return; }
   if (act === "bgEditTog") { ui.bgEdit = !ui.bgEdit; render(); window.scrollTo(0, 0); return; }
-  if (["bgCell", "bgRow", "bgCol", "bgList"].includes(act)) { const d = D(), R = bgData(d), M = bgMatrix(d, R), id = b.dataset.id, cn = x => x ? (d.contractors.find(c => c.id === x)?.name || "") : "כללי / כל הקו";
-    if (act === "bgCell") { const [k, a] = id.split("|"); return bgDrill(`${k} — ${cn(a)}`, M.L.filter(l => l.cat === k && l.area === a)); }
-    if (act === "bgRow") return bgDrill(id ? `${id} — כל הקו` : "כל שורות האומדן", M.L.filter(l => !id || l.cat === id));
-    if (act === "bgCol") return bgDrill(`${cn(id)} — כל השורות`, M.L.filter(l => l.area === id));
-    if (id === "doneNo") return bgDrill("עבודות שבוצעו ואין עליהן הזמנה", M.L.filter(l => l.phase === "בוצע" && l.cov < l.est - 1)); }
+  if (["bgCell", "bgRow", "bgCol", "bgList"].includes(act)) return bgOpen(act, b.dataset.id);
   if (act === "bgTog") { const o = ui.bgOpen = ui.bgOpen || {}; o[b.dataset.id] = !o[b.dataset.id]; render(); }
   else if (act === "bgDel") { if (b.dataset.sure) { await api.remove("budget", b.dataset.id); } else { b.dataset.sure = 1; b.textContent = "ללחוץ שוב"; } }
   else if (act === "bgAdd") { const [kind, phase] = b.dataset.id.split("|"), n = Object.values(RAW.budget || {}).filter(x => x.kind === kind).length;
@@ -4787,6 +4831,8 @@ const TABLE_DEFS = {
     { key: "inside", label: "בתוך הגזרה", cls: "c", cell: o => { const or = kdRange(o), inside = !r || !or ? null : (or.lo >= r.lo && or.hi <= r.hi);
       return inside === null ? "—" : inside ? `<span class="pill ok">כן</span>` : `<span class="pill warn">חורג</span>`; } },
     { key: "note", label: "הערה", cls: "w-place", cell: o => cellInput("orders", o, "note") },
+    ...((cid => { const ls = Object.entries(RAW.budget || {}).filter(([, x]) => x.kind === "extra" && !x.excluded && (x.contractorId === cid || x.areaId === cid)); return ls.length ? [{ key: "bgLine", label: "שורת אומדן", cls: "small", cell: o => { const cur = bgLineOfOrder(o.id);
+      return `<select class="inp" id="f_orders_${o.id}_bgLine" data-edit="orders|${o.id}|_bgLine" title="לאיזו עבודה באומדן שייכת ההזמנה — הסכום שלה נספר שם כ״הוזמן״"><option value="">${o._secs ? "— עבודות עפר (מקטעים)" : "— לא משויכת"}</option>${ls.map(([id, x]) => `<option value="${id}" ${id === cur ? "selected" : ""}>${esc(x.title || "")}</option>`).join("")}</select>`; } }] : []; })(ui.page.slice(2))),
   ]; },
 };
 
@@ -5313,6 +5359,11 @@ $app.addEventListener("change", async e => {
     return api.update(col, id, { kdFrom: v, name: shName(v, RAW.items[id].oldNo) });
   if (key === "kd" && col === "iecOrders" && RAW.iecOrders?.[id]?.kind === "ארון שקד" && /^ארון שקד ק\.ד\./.test(RAW.iecOrders[id].name || "") && String(v).trim())
     return api.update(col, id, { kd: v, name: shName(v, (RAW.iecOrders[id].name.match(/\((\d+)\)\s*$/) || [])[1]) });
+  if (col === "orders" && key === "_bgLine") {   // שיוך הזמנה לשורת אומדן (מהצד של טבלת ההזמנות)
+    const old = bgLineOfOrder(id); if (old === v) return;
+    if (old) { const o = { ...(RAW.budget[old].ords || {}) }; delete o[id]; await api.update("budget", old, { ords: Object.keys(o).length ? o : null }); }
+    if (v) await api.update("budget", v, { ords: { ...(RAW.budget[v]?.ords || {}), [id]: true } });
+    return; }
   if (col === "deliveries" && ["kdFrom", "kdTo", "secFrom", "secTo", "contractorId"].includes(key)) {
     const x = RAW.deliveries?.[id]; if (!x) return;
     if (key === "contractorId") { const y = { ...x, contractorId: v }; return api.update(col, id, { contractorId: v, ...(x.kdFrom ? dlvSync(D(), y, "kdFrom", x.kdFrom) : {}), ...(x.kdTo ? dlvSync(D(), y, "kdTo", x.kdTo) : {}) }); }
