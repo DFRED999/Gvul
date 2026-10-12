@@ -900,6 +900,8 @@ function render() {
   if (!LOCAL && !me) return renderPending();
   fixIrish();
   const scroll = window.scrollY, focusId = document.activeElement?.id;
+  // שדה שהמשתמש באמצע הקלדה בו: עדכון שמגיע מ-Firebase (משתמש אחר / שמירה אחרת) מרנדר את המסך — לא לאבד את מה שהוקלד
+  const ae = document.activeElement, typing = ae && ae.id && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && ae.type !== "checkbox" && ae.type !== "date" ? { id: ae.id, v: ae.value, s: ae.selectionStart, e: ae.selectionEnd } : null;
   // לשמור מה היה פתוח/גלול כדי שעדכון לא "יסגור" את המסך: חלונות מתקפלים וגלילה פנימית של טבלאות
   const keyOf = el => (el.querySelector("summary")?.textContent || "").replace(/\d+/g, "#").trim();
   const openDet = new Set([...document.querySelectorAll("details[open]")].map(keyOf));
@@ -941,6 +943,7 @@ function render() {
   wrapScroll.forEach(([t, top, left], i) => { const w = (t && wraps.find(x => x.querySelector("table")?.dataset.table === t)) || wraps[i]; if (w) { w.scrollTop = top; w.scrollLeft = left; } });
   window.scrollTo(0, scroll);
   if (focusId) document.getElementById(focusId)?.focus();
+  if (typing) { const el = document.getElementById(typing.id); if (el && el.value !== typing.v) { el.value = typing.v; try { el.setSelectionRange(typing.s, typing.e); } catch (e) {} } }
 }
 
 /** דוח הנהלה: בחירת תאריך, מה ייכלל במצגת, בדיקות לפני הפקה, והפקה */
