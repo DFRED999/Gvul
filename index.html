@@ -119,6 +119,16 @@ h2 { font-size: 17px; margin: 0 0 12px; font-weight: 700; }
 .sheet textarea.cell { display: block; field-sizing: content; width: auto; min-width: 100%; max-width: 320px; white-space: pre-wrap; overflow-wrap: break-word; line-height: 1.35; resize: none; overflow: hidden; }
 @supports not (field-sizing: content) { .sheet textarea.cell { width: 100%; min-width: 150px; } }
 .sheet td.w-text { min-width: 220px; }
+.od-sum { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; } .od-sum > div { background: var(--bg); border-radius: 12px; padding: 8px 14px; display: flex; flex-direction: column; } .od-sum span { font-size: 12px; color: var(--muted); } .od-sum b { font-size: 18px; }
+.od-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.od-card { background: var(--surface); border: 1px solid var(--line); border-inline-start: 5px solid var(--cc, #7a5c3e); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 12px -10px rgba(0,0,0,.4); }
+.od-card.fut { border-style: dashed; border-inline-start-style: solid; border-inline-start-color: #c9a43a; background: #fffcf3; }
+.od-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; } .od-h b { font-size: 16px; margin-inline-end: auto; }
+.od-amt { font-size: 22px; font-weight: 800; display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; } .od-amt small { font-size: 13px; color: var(--muted); font-weight: 500; } .od-amt .pill { font-size: 11.5px; font-weight: 600; }
+.od-g { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; } .od-g > div { display: flex; flex-direction: column; min-width: 0; } .od-g > div.w { grid-column: 1 / -1; } .od-g span { font-size: 11.5px; color: var(--muted); } .od-g b { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+.od-ex { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 12px; } .od-ex span { color: var(--muted); } .od-ex em { height: 8px; border-radius: 4px; background: #e6e9e2; overflow: hidden; } .od-ex em i { display: block; height: 100%; background: var(--cc); } .od-ex b { font-size: 13px; }
+.od-note { font-size: 12.5px; color: #7a5a12; background: #fdf6e3; border-radius: 8px; padding: 4px 8px; }
+.od-edit { margin-top: 18px; } .od-edit > summary { cursor: pointer; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); } .od-edit[open] > summary { margin-bottom: 10px; }
 .fchips { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 0 0 8px; }
 .fchips:empty { display: none; }
 .fcg { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; } .fcl { font-size: 12.5px; color: var(--muted); font-weight: 600; margin-inline-end: 2px; }
@@ -4331,9 +4341,10 @@ function pageContractor(d, id) {
 
   let tab = "";
   if (ui.ctab === "orders") {
-    tab = renderSheet("orders", ords, "אין הזמנות") + `
+    tab = ordersTab(d, c, ords, cov) + `<details class="od-edit" ${ui.odEdit ? "open" : ""}><summary><b>✎ טבלת ההזמנות — עריכה</b> <span class="muted small">כל השדות, עמודות, סינון ואקסל</span></summary>
+      ${renderSheet("orders", ords, "אין הזמנות")}
       <div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="addOrder" data-id="${id}">+ הזמנה</button>
-      ${cov ? `<span class="spacer"></span><span class="small">כיסוי הגזרה בהזמנות: <b>${Math.round(cov.pct * 100)}%</b></span>${cov.gaps.map(g => `<span class="pill warn">לא בהזמנה: ק.ד. ${kdTxt(g)}</span>`).join("")}` : ""}</div>`;
+      ${cov ? `<span class="spacer"></span><span class="small">כיסוי הגזרה בהזמנות: <b>${Math.round(cov.pct * 100)}%</b></span>${cov.gaps.map(g => `<span class="pill warn">לא בהזמנה: ק.ד. ${kdTxt(g)}</span>`).join("")}` : ""}</div></details>`;
   } else if (ui.ctab === "design") {
     tab = ds.length ? renderSheet("contractorDesign", ds.map(x => ({ ...x.s, id: x.s.id, _x: x })), "", { store: "designSegments", del: false }) + `<p class="muted small" style="margin:8px 0 0">נשלף אוטומטית מטבלת קטעי התכנון לפי ק.ד. בקטע חלקי האורך משוער לפי חלק הק.ד., עד שיוגדרו חתכים לכל קבלן.</p>`
       : `<p class="muted">${r ? "אין קטעי תכנון בטווח הגזרה." : "צריך להגדיר קודם את גבולות הגזרה (ק.ד. מ–עד) בכרטיס הקבלן."}</p>`;
@@ -4836,6 +4847,52 @@ const TABLE_DEFS = {
   ]; },
 };
 
+/** לשונית הזמנות של קבלן ראשי: כרטיס לכל הזמנה (מספרים, חתכים, תקציב מול אומדן, ביצוע) + הזמנות עתידיות מהאומדן */
+function ordersTab(d, c, ords, cov) {
+  const R = (() => { try { return bgData(d); } catch (e) { return null; } })(), E = R?.earth.find(e => e.c.id === c.id), estOf = Object.fromEntries((E?.ords || []).map(x => [x.o.id, x]));
+  const EO = execByOrders(d, c.id), exOf = Object.fromEntries(EO.ords.map(O => [O.o.id, O.overall])), col = cColor(d, c), LKline = id => { const l = bgLineOfOrder(id); return l ? RAW.budget[l] : null; };
+  const f = v => v ? esc(String(v)) : "";
+  const sorted = [...ords].sort((a, b) => (b._secs?.[1] ?? kdRange(b)?.hi ?? 0) - (a._secs?.[1] ?? kdRange(a)?.hi ?? 0));
+  const card = o => { const amt = bgOrdAmt(o), x = estOf[o.id], ex = exOf[o.id], ln = LKline(o.id), st = String(o.x_signer || "");
+    const stCls = /מאושר|הסתיים/.test(st) ? "ok" : /אין|ממתין|חסר/.test(st) ? "warn" : "";
+    return `<div class="od-card" style="--cc:${col}"><div class="od-h"><b>${esc(o.name || "הזמנה")}</b>${st ? `<span class="pill ${stCls}">${esc(st)}</span>` : ""}${ln ? `<span class="pill">${esc(ln.title || "")}</span>` : ""}</div>
+      <div class="od-amt">${amt ? `${num(amt, 0)} <small>₪</small>` : `<span class="muted">אין תקציב</span>`}${x && x.diff !== null ? (Math.abs(x.diff) <= 1000 ? `<span class="pill ok">תואם אומדן</span>` : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${num(Math.round(x.diff), 0)} מול אומדן</span>`) : ""}</div>
+      <div class="od-g">
+        ${o._secs ? `<div><span>חתכים</span><b dir="ltr">${o._secs[1]}–${o._secs[0]}</b></div><div><span>אורך</span><b>${num(o._secLen || (o._secs[1] - o._secs[0]) * SECTION_M, 0)} מ׳</b></div>` : ""}
+        ${kdRange(o) ? `<div><span>ק.ד.</span><b>${kdTxt(kdRange(o))}</b></div>` : ""}
+        ${o._secParts?.length ? `<div class="w"><span>קטעי תכנון</span><b>${o._secParts.map(p => `${esc(p.office?.name || "")} ${esc(p.s.num)}`).join(" · ")}</b></div>` : ""}
+        ${o.x_ordNo ? `<div><span>מס׳ הזמנה</span><b dir="ltr">${f(o.x_ordNo)}</b></div>` : ""}${o.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o.x_reqNo)}</b></div>` : ""}
+        ${o.x_sentDate ? `<div><span>נשלחה</span><b>${fmtD(o.x_sentDate)}</b></div>` : ""}${o.x_lzEnd ? `<div><span>סיום לפי לו״ז</span><b>${fmtD(o.x_lzEnd)}</b></div>` : ""}
+      </div>
+      ${ex != null ? `<div class="od-ex"><span>ביצוע בתחום ההזמנה</span><em><i style="width:${Math.round(ex * 100)}%"></i></em><b>${Math.round(ex * 100)}%</b></div>` : ""}
+      ${o.note ? `<div class="od-note">${esc(o.note)}</div>` : ""}</div>`; };
+  const tot = ords.reduce((t, o) => t + bgOrdAmt(o), 0), len = ords.reduce((t, o) => t + (o._secLen || 0), 0);
+  // הזמנות עתידיות = שורות באומדן של הקבלן (גזרה או מבצע) שעוד לא כוסו
+  const fut = R ? bgLines(d, R).filter(l => l.x && (l.area === c.id || l.exec === c.id) && l.est - l.cov > 1) : [];
+  const fcard = l => `<div class="od-card fut"><div class="od-h"><b>${esc(l.title)}</b><span class="pill ${l.phase === "בוצע" ? "warn" : ""}">${l.phase === "בוצע" ? "בוצע — אין הזמנה" : "עתידית"}</span><span class="pill">${esc(l.cat)}</span></div>
+      <div class="od-amt">${num(Math.round(l.est - l.cov), 0)} <small>₪</small>${l.cov ? `<span class="muted small"> מתוך ${num(Math.round(l.est), 0)}</span>` : ""}</div>${l.note ? `<div class="od-note">${esc(l.note)}</div>` : ""}
+      ${isViewer() ? "" : `<div class="row" style="gap:6px;margin-top:auto"><button class="btn sm" data-act="odIssue" data-id="${l.x.id}">📝 הוצאת הזמנה</button></div>`}</div>`;
+  return `<div class="od-sum"><div><span>הזמנות</span><b>${ords.length}</b></div><div><span>תקציב בהזמנות</span><b>${num(tot, 0)} ₪</b></div>${len ? `<div><span>אורך לפי חתכים</span><b>${num(len, 0)} מ׳</b></div>` : ""}
+      ${cov ? `<div><span>כיסוי הגזרה</span><b>${Math.round(cov.pct * 100)}%</b></div>` : ""}${fut.length ? `<div><span>עתידיות (מהאומדן)</span><b>${fut.length} · ${num(Math.round(fut.reduce((t, l) => t + l.est - l.cov, 0)), 0)} ₪</b></div>` : ""}</div>
+    <div class="od-grid">${sorted.map(card).join("") || `<p class="muted">אין הזמנות</p>`}</div>
+    <div class="row" style="align-items:center;margin:18px 0 8px"><h3 style="margin:0">הזמנות עתידיות <span class="muted small">— מהאומדן; כשמוציאים הזמנה היא עוברת למעלה ומתעדכנת גם במסך התקציב</span></h3><span class="spacer"></span>${isViewer() ? "" : `<button class="btn ghost sm" data-act="odFuture" data-id="${c.id}">+ הזמנה עתידית</button>`}</div>
+    <div class="od-grid">${fut.map(fcard).join("") || `<p class="muted small">אין הזמנות עתידיות לקבלן הזה באומדן.</p>`}</div>`;
+}
+function odFutureModal(cid) {
+  const c = RAW.contractors[cid];
+  modal(`<h2>הזמנה עתידית — ${esc(c?.name || "")}</h2><p class="small muted" style="margin:0">נכנסת לאומדן (מסך התקציב) כעבודה שתבוצע בגזרה של הקבלן.</p>
+    <label class="field">עבודה<input class="inp" id="fu_t" placeholder="למשל: הסדרי תנועה זמניים"></label>
+    <div class="row" style="gap:8px"><label class="field" style="flex:1">אומדן (₪ כולל מע״מ)<input class="inp" id="fu_a" inputmode="decimal"></label>
+      <label class="field" style="flex:1">סוג עבודה<select class="inp" id="fu_c">${BG_CAT.map(k => `<option>${k}</option>`).join("")}</select></label></div>
+    <label class="field">הערה<input class="inp" id="fu_n"></label>
+    <div class="row"><button class="btn" id="mYes">הוספה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close; m.querySelector("#fu_t").focus();
+    m.querySelector("#mYes").onclick = async () => { const t = m.querySelector("#fu_t"); if (!t.value.trim()) { t.style.borderColor = "var(--warn)"; return; }
+      await api.add("budget", { kind: "extra", phase: "יבוצע", title: t.value.trim(), amount: moneyNum(m.querySelector("#fu_a").value) ?? "", transferred: "", ordered: "", cat: m.querySelector("#fu_c").value, contractorId: cid, areaId: cid, note: m.querySelector("#fu_n").value.trim(), order: Date.now() });
+      close(); toast("נוסף לאומדן ✓"); };
+  });
+}
+
 /** בפרטי הקבלן: מאיזה חתך עד איזה חתך הוא עובד בכל קטע תכנון → אורך גזרה מדויק */
 function secAssignBlock(d, c) {
   const ds = designOfC(d, c); if (!ds.length) return "";
@@ -5107,6 +5164,8 @@ $app.addEventListener("click", async e => {
   else if (act === "mergeFile") pickMergeFile();
   else if (act === "shRename") shModal();
   else if (act === "sepRun") sepModal();
+  else if (act === "odIssue") bgLinkModal(b.dataset.id, () => render());
+  else if (act === "odFuture") odFutureModal(b.dataset.id);
   else if (act === "saveDlv") {
     const f = ui.df, bad = m => { f.msg = m; f.err = true; render(); };
     if (!f.contractorId) return bad("צריך לבחור קבלן");
