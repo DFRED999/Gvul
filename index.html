@@ -621,6 +621,7 @@ a.btn { text-decoration: none; }
 </style>
 </head>
 <body>
+<datalist id="dl_ordst"><option value="מאושר"><option value="עתידי"><option value="ממתין לחתימה"><option value="בהכנה"><option value="הסתיים"></datalist>
 <div id="app"></div>
 
 <script>
@@ -4803,7 +4804,7 @@ function customColDef(col, c) {
 /** העמודות המוצגות בפועל: קבועות שלא הוסתרו + מותאמות */
 /** כל העמודות של טבלה (קבועות + שהוספת) לפי הסדר שנקבע. עמודה בלי מיקום שמור — בסוף, בסדר ברירת המחדל. */
 function orderedCols(table, store = table) {
-  const all = [...TABLE_DEFS[table](), ...customOf(table).map(c => customColDef(store, c))];
+  const all = [...TABLE_DEFS[table](), ...customOf(table).filter(c => !(table === "orders" && c.id === "signer")).map(c => customColDef(store, c))];   // "סטטוס" של הזמנה — עמודה קבועה (x_signer)
   const ord = tcfg(table).order || [];
   const pos = k => { const i = ord.indexOf(k); return i < 0 ? 1e6 + all.findIndex(c => c.key === k) : i; };
   return all.sort((a, b) => pos(a.key) - pos(b.key));
@@ -5208,6 +5209,7 @@ const TABLE_DEFS = {
   orders: () => { const c = RAW.contractors[ui.page.slice(2)] || {}, r = kdRange(c); return [
     { key: "idx", label: "מס״ד", cls: "c", cell: o => o._i ?? "" },
     { key: "name", label: "הזמנה", cls: "w-place", cell: o => cellInput("orders", o, "name") },
+    { key: "ordStatus", label: "סטטוס", cls: "w-place", cell: o => `<input class="cell" list="dl_ordst" id="f_orders_${o.id}_x_signer" value="${esc(o.x_signer || "")}" data-edit="orders|${o.id}|x_signer" placeholder="מאושר / עתידי / …" title="בוחרים מהרשימה או כותבים חופשי — מוצג גם בכרטיס ההזמנה">` },
     { key: "kdFrom", label: "ק.ד. מ", cls: "w-kd", cell: o => cellInput("orders", o, "kdFrom", "kdin", o._kdr ? `placeholder="≈${num(o._kdr.hi, 1)}" title="נגזר מהחתכים"` : "") },
     { key: "kdTo", label: "ק.ד. עד", cls: "w-kd", cell: o => cellInput("orders", o, "kdTo", "kdin", o._kdr ? `placeholder="≈${num(o._kdr.lo, 1)}" title="נגזר מהחתכים"` : "") },
     ...(ordSecKeys(ui.page.slice(2)).fx ? [] : [
