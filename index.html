@@ -190,6 +190,7 @@ body.ro .side .foot::after { content: " · צפייה בלבד"; color: #f2c66d;
 .bg-c { position: relative; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; } .bg-c[role=button] { cursor: pointer; } .bg-c[role=button]:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
 .bg-c.ok { background: #e3f2e7; } .bg-c.part { background: #fbf1cf; } .bg-c.no { background: #f8dfd7; } .bg-c.x { background: #e3ecf7; } .bg-c.tot { font-weight: 800; }
 .bg-mx tr.bg-tr th, .bg-mx tr.bg-tr td { border-top: 2px solid #9aa79c; } .bg-mx tr.bg-tr th { background: #f7f8f5; }
+.bg-mx th.bg-sp { background: #eef1f5; font-size: 12.5px; } .bg-mx .bg-sp1 { border-inline-start: 3px double #9aa7b4 !important; } .bg-mx tr.bg-gh th { font-size: 11.5px; color: var(--muted); font-weight: 600; background: #f7f8f5; padding: 3px; }
 .bg-c i { position: absolute; inset-inline-start: 0; bottom: 0; height: 3px; background: #2f7d4f; } .bg-sur { color: #2f6db5; }
 .bg-lg { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; color: var(--muted); } .bg-lg i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-inline-end: 5px; vertical-align: -2px; }
 .bg-lg i.ok { background: #cfe8d6; } .bg-lg i.part { background: #f5e3a6; } .bg-lg i.no { background: #f0c4b6; } .bg-lg i.x { background: #c9daf0; }
@@ -3218,16 +3219,20 @@ function bgLines(d, R) {
     exec: x.contractorId || "", title: x.title || "", est: bgN(x.amount), cov: bgN(x.transferred) + bgN(x.ordered) + bgLinkedAmt(x), x, phase: x.phase === "בוצע" ? "בוצע" : "יבוצע", note: x.note || "" }));
   R.sites.forEach(x => L.push({ cat: "אתרי איסוף", area: "", exec: "", title: x.title || "", est: bgN(x.mast) + bgN(x.build), cov: 0, site: x, note: x.note || "" }));
   if (R.cfg.sitesOrdered) L.push({ cat: "אתרי איסוף", area: "", exec: "", title: "הזמנות שיצאו לאתרי איסוף", est: 0, cov: R.cfg.sitesOrdered, sitesOrd: true });
-  L.forEach(l => { if (l.area && !mainIds.has(l.area)) l.area = ""; });
+  L.forEach(l => { if (l.area && !mainIds.has(l.area)) l.area = "";
+    // מבצע בפועל: שערים / סבכות / טרפו / חח״י — קבלן ייעודי גם אם בשורה רשום קבלן העפר של הגזרה
+    if (mainIds.has(l.exec) && !l.earth) { const sp = l.cat === "שערים" ? "sp-ilanit" : l.cat === "סבכות" ? GRATE_CID : /טרפו|חח["״]?י|חברת חשמל/.test(l.title) ? IEC_CID : null; if (sp && d.contractors.some(c => c.id === sp)) l.exec = sp; }
+    l.col = d.contractors.some(c => c.id === l.exec) ? l.exec : ""; });
   return L;
 }
 function bgMatrix(d, R) {
   const L = bgLines(d, R), mains = d.contractors.filter(isMain).sort(byNorth);
-  const cols = [...mains.map(c => ({ id: c.id, name: c.name, c })), ...(L.some(l => !l.area) ? [{ id: "", name: "כללי / כל הקו" }] : [])];
+  const sps = d.contractors.filter(c => !isMain(c) && L.some(l => l.col === c.id));
+  const cols = [...mains.map(c => ({ id: c.id, name: c.name, c })), ...sps.map(c => ({ id: c.id, name: c.id === IEC_CID ? "חח״י / שקד / טרפו" : c.name, c, sp: true })), ...(L.some(l => !l.col) ? [{ id: "", name: "כללי / לא משויך" }] : [])];
   const rows = BG_ROWS.filter(k => L.some(l => l.cat === k));
   const agg = arr => ({ est: arr.reduce((a, l) => a + l.est, 0), cov: arr.reduce((a, l) => a + l.cov, 0), lines: arr });
-  const cell = (k, a) => agg(L.filter(l => l.cat === k && l.area === a));
-  return { L, cols, rows, cell, rowT: k => agg(L.filter(l => l.cat === k)), colT: a => agg(L.filter(l => l.area === a)), all: agg(L) };
+  const cell = (k, a) => agg(L.filter(l => l.cat === k && l.col === a));
+  return { L, cols, rows, cell, rowT: k => agg(L.filter(l => l.cat === k)), colT: a => agg(L.filter(l => l.col === a)), all: agg(L) };
 }
 /** מה דורש תשומת לב */
 function bgAttention(d, R, M) {
@@ -3257,15 +3262,16 @@ function pageBudget(d) {
   const mbtn = (k, l) => `<button class="btn ghost sm ${mode === k ? "on" : ""}" data-act="bgMode" data-id="${k}">${l}</button>`;
   const td = (x, act, id, cls = "") => { const tn = bgTone(x.est, x.cov);
     return `<td class="bg-c ${tn} ${cls}" ${x.est || x.cov ? `data-act="${act}" data-id="${esc(id)}" role="button" title="אומדן ${bgM(x.est)} · כוסה ${bgM(x.cov)} · חסר ${bgM(Math.max(0, x.est - x.cov))} — לחיצה לפירוט"` : ""}>${show(x)}${x.est > 0 && x.cov > 0 && x.cov < x.est - 1 ? `<i style="width:${Math.round(x.cov / x.est * 100)}%"></i>` : ""}</td>`; };
-  const table = `<div class="tablewrap"><table class="sheet bg-mx"><thead><tr><th>סוג עבודה</th>${M.cols.map(c => `<th ${c.c ? `style="border-top:4px solid ${cColor(d, c.c)}"` : ""} data-act="bgCol" data-id="${esc(c.id)}" role="button" title="כל מה ששייך ל${esc(c.name)}">${esc(c.name)}</th>`).join("")}<th>סה״כ</th></tr></thead><tbody>
-    ${M.rows.map(k => `<tr><th class="bg-rh" data-act="bgRow" data-id="${esc(k)}" role="button">${esc(k)}</th>${M.cols.map(c => td(M.cell(k, c.id), "bgCell", `${k}|${c.id}`)).join("")}${td(M.rowT(k), "bgRow", k, "tot")}</tr>`).join("")}
-    <tr class="bg-tr"><th>סה״כ</th>${M.cols.map(c => td(M.colT(c.id), "bgCol", c.id, "tot")).join("")}${td(M.all, "bgRow", "", "tot")}</tr></tbody></table></div>`;
+  const sp1 = i => M.cols[i].sp && !M.cols[i - 1]?.sp ? "bg-sp1" : "", nM = M.cols.filter(c => c.c && !c.sp).length, nS = M.cols.filter(c => c.sp).length, nG = M.cols.length - nM - nS;
+  const table = `<div class="tablewrap"><table class="sheet bg-mx"><thead><tr class="bg-gh"><th></th><th colspan="${nM}">קבלני עבודות עפר (צפון ← דרום)</th>${nS ? `<th colspan="${nS}" class="bg-sp1">קבלנים ייעודיים</th>` : ""}${nG ? `<th colspan="${nG}"></th>` : ""}<th></th></tr><tr><th>סוג עבודה</th>${M.cols.map((c, i) => `<th class="${c.sp && !M.cols[i - 1]?.sp ? "bg-sp1" : ""} ${c.sp ? "bg-sp" : ""}" ${c.c ? `style="border-top:4px solid ${c.sp ? (KIND_ICON[specsOf(c.c)[0]] || {}).c || "#8a9a90" : cColor(d, c.c)}"` : ""} data-act="bgCol" data-id="${esc(c.id)}" role="button" title="כל מה ששייך ל${esc(c.name)}">${esc(c.name)}</th>`).join("")}<th>סה״כ</th></tr></thead><tbody>
+    ${M.rows.map(k => `<tr><th class="bg-rh" data-act="bgRow" data-id="${esc(k)}" role="button">${esc(k)}</th>${M.cols.map((c, i) => td(M.cell(k, c.id), "bgCell", `${k}|${c.id}`, sp1(i))).join("")}${td(M.rowT(k), "bgRow", k, "tot")}</tr>`).join("")}
+    <tr class="bg-tr"><th>סה״כ</th>${M.cols.map((c, i) => td(M.colT(c.id), "bgCol", c.id, "tot " + sp1(i))).join("")}${td(M.all, "bgRow", "", "tot")}</tr></tbody></table></div>`;
   return `<div class="bgp"><div class="ch-banner" style="--cc:#7a5c3e"><div><h1>תקציב ואומדן</h1><span>אומדן מול הזמנות — כל הסכומים כולל מע״מ ${R.cfg.vat}% · לא כולל תפעול</span></div>
     <div class="row" style="gap:6px"><button class="btn ghost" data-act="bgEditTog">✎ עריכת אומדן</button></div></div>
   ${R.has ? "" : `<div class="card"><p style="margin:0">עוד אין נתוני אומדן. טוענים את קובץ האומדן ב״הגדרות ← נתונים וגיבוי ← הוספת נתונים מקובץ״, או נכנסים ל״עריכת אומדן״.</p></div>`}
   <div class="card bg-head" style="margin-top:12px"><div class="bg-hn"><div><span>אומדן כולל</span><b>${bgMM(T.est)}</b></div><em>←</em><div><span>כוסה (הוזמן / הועבר)</span><b style="color:var(--accent)">${bgMM(T.cov)}</b><small>${pct}%</small></div><em>←</em><div><span>חסר להשלמה</span><b style="color:${T.left > 0 ? "#b8452f" : "var(--accent)"}">${bgMM(T.left)}</b></div></div>
     <div class="bg-pb"><i style="width:${pct}%"></i></div></div>
-  <div class="bg-grid"><div class="card"><div class="row" style="align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px"><h2 style="margin:0">תמונה כוללת <span class="muted small">— מ׳ ₪ · לחיצה על תא, שורה או קבלן לפירוט</span></h2><span class="spacer"></span>
+  <div class="bg-grid"><div class="card"><div class="row" style="align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px"><h2 style="margin:0">תמונה כוללת <span class="muted small">— מ׳ ₪ · לפי הקבלן המבצע · לחיצה על תא, שורה או קבלן לפירוט</span></h2><span class="spacer"></span>
       <div class="viewtabs" style="margin:0">${mbtn("est", "אומדן")}${mbtn("cov", "הוזמן")}${mbtn("left", "חסר")}</div></div>
     ${table}
     <div class="bg-lg small"><span><i class="ok"></i>כוסה במלואו</span><span><i class="part"></i>כוסה חלקית</span><span><i class="no"></i>טרם הוזמן</span><span><i class="x"></i>הוזמן ללא אומדן</span></div></div>
@@ -3273,10 +3279,10 @@ function pageBudget(d) {
 }
 /** חלון פירוט: רשימת השורות שבתא / שורה / עמודה */
 function bgOpen(act, id) {
-  const d = D(), R = bgData(d), M = bgMatrix(d, R), cn = x => x ? (d.contractors.find(c => c.id === x)?.name || "") : "כללי / כל הקו"; ui.bgLast = [act, id];
-  if (act === "bgCell") { const [k, a] = id.split("|"); return bgDrill(`${k} — ${cn(a)}`, M.L.filter(l => l.cat === k && l.area === a)); }
+  const d = D(), R = bgData(d), M = bgMatrix(d, R), cn = x => x ? (d.contractors.find(c => c.id === x)?.name || "") : "כללי / לא משויך"; ui.bgLast = [act, id];
+  if (act === "bgCell") { const [k, a] = id.split("|"); return bgDrill(`${k} — ${cn(a)}`, M.L.filter(l => l.cat === k && l.col === a)); }
   if (act === "bgRow") return bgDrill(id ? `${id} — כל הקו` : "כל שורות האומדן", M.L.filter(l => !id || l.cat === id));
-  if (act === "bgCol") return bgDrill(`${cn(id)} — כל השורות`, M.L.filter(l => l.area === id));
+  if (act === "bgCol") return bgDrill(`${cn(id)} — כל השורות`, M.L.filter(l => l.col === id));
   if (id === "doneNo") return bgDrill("עבודות שבוצעו ואין עליהן הזמנה", M.L.filter(l => l.phase === "בוצע" && l.cov < l.est - 1));
 }
 function bgDrill(title, lines) {
