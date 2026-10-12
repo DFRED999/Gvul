@@ -426,7 +426,7 @@ function linkList() { if (!LK) return []; const K = LK.kind, pad = LK.pad, st = 
     if (K === "מעבירי מים" ? !isGr(pa) : p.activityId !== LK.act.id) return;
     Object.keys(p.itemIds || {}).forEach(id => { if (st[id] !== "בוצע") st[id] = p.review === "לבדיקה" ? "ממתין" : "בוצע"; }); });
   return list("items").filter(i => i.kind === K && i.status !== "מבוטל" && (K === "מעבירי מים" || (pad ? i.mainId === LK.cid : i.contractorId === LK.cid)))
-    .map(i => ({ ...i, lab: labOf(i), gd: st[i.id] === "בוצע" || (pad ? false : K === "מעבירי מים" ? i.grate === "הותקנה" : i.status === "הושלם") ? "בוצע" : st[i.id] || "" }))
+    .map(i => ({ ...i, lab: labOf(i), gd: st[i.id] === "בוצע" || (pad ? i.padStatus === "הושלם" : K === "מעבירי מים" ? i.grate === "הותקנה" : i.status === "הושלם") ? "בוצע" : st[i.id] || "" }))
     .sort((a, b) => (parseFloat(b.kdFrom) || 0) - (parseFloat(a.kdFrom) || 0) || a.lab.localeCompare(b.lab, "he", { numeric: true })); }
 function linkFind(q) { const n = normQ(q), all = linkList();
   if (!n) return all.length <= 30 ? all.filter(i => !i.gd) : [];   // מעט פריטים (תט״זים, שערים…) — מציגים מיד את מה שעוד לא בוצע
@@ -687,7 +687,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-12e";
+const VER = "2026-10-12f";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
