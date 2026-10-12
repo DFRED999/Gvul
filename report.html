@@ -417,7 +417,7 @@ let LK = null;   // { kind, act, cid } — ההקשר הנוכחי של בורר
 function linkKind(a, cid) { if (!a || !isUA(a)) return null; const m = ACT_KINDS.find(([re]) => re.test(a.name)); if (!m) return null;
   if (m[1] === "מעבירי מים") return m[1];
   if (list("items").some(i => i.kind === m[1] && i.contractorId === cid && i.status !== "מבוטל")) return m[1];
-  return m[1] === "תט״ז" && list("items").some(i => i.kind === m[1] && i.mainId === cid && i.status !== "מבוטל") ? "pad" : null; }   // קבלן גזרה: משטחים לתט״זים שבגזרה שלו
+  return (m[1] === "תט״ז" || m[1] === "חדר טרפו") && list("items").some(i => i.kind === m[1] && i.mainId === cid && i.status !== "מבוטל") ? "pad:" + m[1] : null; }   // קבלן גזרה: משטחים לתט״זים שבגזרה שלו
 const isPad = () => LK?.pad;
 const labOf = i => i.kind === "מעבירי מים" ? bcOf(i) : String(i.name || i.kind || "").replace(/\s*\([^)]*\)\s*$/, "");
 /** הפריטים לבחירה + מצב: "בוצע" (סטטוס הושלם / דיווח מאושר), "ממתין" (דיווח ממתין לאישור) */
@@ -435,9 +435,9 @@ function linkFind(q) { const n = normQ(q), all = linkList();
 /** שורת "בוצעו / נשארו" לכל מלאכה ביחידות */
 function unitSum(act, cid) {
   if (LK) { const all = linkList(), dn = all.filter(i => i.gd === "בוצע").length, pd = all.filter(i => i.gd === "ממתין").length, rest = all.filter(i => !i.gd);
-    return `<div class="usum"><b>${dn}</b> בוצעו${pd ? ` · <b class="pd">${pd}</b> ממתינים לאישור` : ""} · מתוך <b>${all.length}</b> · נשארו <b>${rest.length}</b>${rest.length && rest.length <= 12 ? `<div class="hint">נשארו: ${rest.map(i => esc(i.lab)).join(", ")}</div>` : ""}</div>`; }
+    return `<div class="usum"><button class="covmore" data-un="${act.id}">פירוט ›</button><b>${dn}</b> בוצעו${pd ? ` · <b class="pd">${pd}</b> ממתינים לאישור` : ""} · מתוך <b>${all.length}</b> · נשארו <b>${rest.length}</b>${rest.length && rest.length <= 6 ? `<div class="hint">נשארו: ${rest.map(i => esc(i.lab)).join(", ")}</div>` : ""}</div>`; }
   const ps = list("progress").filter(p => p.activityId === act.id && p.contractorId === cid && p.review !== "נדחה"), ok = ps.filter(p => !p.review).reduce((t, p) => t + (+p.qty || 0), 0), pd = ps.filter(p => p.review === "לבדיקה").reduce((t, p) => t + (+p.qty || 0), 0), plan = +act.planQty || 0;
-  return `<div class="usum"><b>${ok}</b> בוצעו${pd ? ` · <b class="pd">${pd}</b> ממתינים לאישור` : ""}${plan ? ` · מתוך <b>${plan}</b> · נשארו <b>${Math.max(0, plan - ok - pd)}</b>` : ""}</div>`; }
+  return `<div class="usum">${ps.length ? `<button class="covmore" data-un="${act.id}">פירוט ›</button>` : ""}<b>${ok}</b> בוצעו${pd ? ` · <b class="pd">${pd}</b> ממתינים לאישור` : ""}${plan ? ` · מתוך <b>${plan}</b> · נשארו <b>${Math.max(0, plan - ok - pd)}</b>` : ""}</div>`; }
 /* חתך ↔ ק.ד.: לפי טבלת ק.ד.↔חתכים אם יש (מדויק), אחרת קו ישר בין קצוות הקטע (≈) */
 function kdPts(s) {
   const pts = Object.values(D.kdSections || {}).filter(r => r.officeId === s.officeId && Number(r.seg) === Number(s.num)).map(r => [parseFloat(r.kd), Number(r.secFrom), Number(r.secTo)]).filter(p => !p.some(isNaN)).sort((a, b) => a[0] - b[0]);
@@ -478,6 +478,28 @@ function covModal(c, seg, acts) {
       <div class="ovt" style="margin-top:12px">מה דווח <span class="hint">(${pr.length} דיווחים, לפי סדר החתכים)</span></div>
       ${pr.map(({ p, iv: [x, y] }) => `<div class="ovr"><div><b>${rng(x, y)}</b><small>${kd(x, y)} · ${M(y - x)} · ${fmtD(p.date)} · ${esc(p.reportedByName || (p.reportedBy || "משרד").split("@")[0])}</small></div>${st(p)}</div>`).join("") || `<p class="hint">עוד אין דיווחים למלאכה הזו בקטע</p>`}
     </div></div></div>`;
+}
+/** פירוט למלאכה ביחידות — מה בוצע, מה ממתין לאישור ומה נשאר (כמו "פירוט" של החתכים) */
+function unitModal(act, cid) {
+  if (!act || S.unOpen !== act.id) return "";
+  const who = p => esc(p.reportedByName || (p.reportedBy || "משרד").split("@")[0]), st = p => p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span>` : `<span class="pill p1">אושר</span>`;
+  const head = (t, sub) => `<div class="ovl" data-unx="1"><div class="ovc" role="dialog" aria-label="פירוט"><div class="ovh"><div><b>${esc(short(act.name))}</b>${LK?.pad ? " · משטחים" : ""}<div class="hint">${sub}</div></div><button class="btn ghost" data-unx="1" aria-label="סגירה">✕</button></div><div class="ovb">${t}</div></div></div>`;
+  if (LK) { const rp = {}; list("progress").forEach(p => { if (p.review === "נדחה") return; const pa = D.activities?.[p.activityId];
+      if (LK.kind === "מעבירי מים" ? !isGr(pa) : p.activityId !== act.id) return; Object.keys(p.itemIds || {}).forEach(id => (rp[id] = rp[id] || []).push(p)); });
+    const all = linkList(), kd = i => i.kdFrom ? `ק.ד. ${esc(i.kdFrom)}` : "", sec = i => i.x_sec ? ` · חתך <span dir="ltr">${esc(i.x_sec)}</span>` : "";
+    const rest = all.filter(i => !i.gd), pend = all.filter(i => i.gd === "ממתין"), done = all.filter(i => i.gd === "בוצע");
+    const repTxt = i => (rp[i.id] || []).map(p => `${fmtD(p.date)} · ${who(p)}`).join(" · ");
+    return head(`<div class="ovt">עוד לא בוצע <span class="hint">(${rest.length})</span></div>
+      ${rest.map(i => `<div class="ovr gap"><div><b dir="ltr">${esc(i.lab)}</b><small>${kd(i)}${sec(i)}</small></div><button class="btn ghost" data-gpick="${i.id}">${S.gsel.includes(i.id) ? "✓ נבחר" : "לדווח את זה"}</button></div>`).join("") || `<p class="hint">הכל בוצע ✓</p>`}
+      ${pend.length ? `<div class="ovt" style="margin-top:12px">ממתין לאישור <span class="hint">(${pend.length})</span></div>${pend.map(i => `<div class="ovr"><div><b dir="ltr">${esc(i.lab)}</b><small>${kd(i)}${sec(i)} · ${repTxt(i)}</small></div><span class="pill p0">ממתין</span></div>`).join("")}` : ""}
+      <div class="ovt" style="margin-top:12px">בוצע <span class="hint">(${done.length})</span></div>
+      ${done.map(i => `<div class="ovr"><div><b dir="ltr">${esc(i.lab)}</b><small>${kd(i)}${sec(i)}${rp[i.id] ? ` · ${repTxt(i)}` : " · לפי הסטטוס באתר"}</small></div><span class="pill p1">בוצע</span></div>`).join("") || `<p class="hint">עוד לא בוצע אף אחד</p>`}`,
+      `בוצעו ${done.length}${pend.length ? ` · ממתינים ${pend.length}` : ""} · מתוך ${all.length} · נשארו ${rest.length}`); }
+  const ps = list("progress").filter(p => p.activityId === act.id && p.contractorId === cid && p.review !== "נדחה").sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const ok = ps.filter(p => !p.review).reduce((t, p) => t + (+p.qty || 0), 0), pd = ps.filter(p => p.review === "לבדיקה").reduce((t, p) => t + (+p.qty || 0), 0), plan = +act.planQty || 0;
+  return head(`<div class="ovt">הדיווחים <span class="hint">(${ps.length}, מהחדש לישן)</span></div>
+    ${ps.map(p => `<div class="ovr"><div><b>${+p.qty || 0} יח׳</b><small>${fmtD(p.date)} · ${who(p)}${p.loc ? ` · ${esc(p.loc)}` : ""}${p.note ? ` · ${esc(p.note)}` : ""}</small></div>${st(p)}</div>`).join("") || `<p class="hint">עוד אין דיווחים</p>`}`,
+    `בוצעו ${ok}${pd ? ` · ממתינים ${pd}` : ""}${plan ? ` · מתוך ${plan} · נשארו ${Math.max(0, plan - ok - pd)}` : ""}`);
 }
 /** נייד: גובה הקוביות כך שכל הלוח ייכנס בין כרטיס החתכים לפס השליחה */
 function fitTiles() {
@@ -550,7 +572,7 @@ function view() {
   if (!segs.some(s => s.id === S.segId)) S.segId = segs[0]?.id || "";
   S.acts = S.acts.filter(id => acts.some(a => a.id === id));
   const sel = acts.filter(a => S.acts.includes(a.id)), act = sel[0] || null, unit = sel.length === 1 && isUA(act), lkK = unit ? linkKind(act, S.cid) : null, gr = !!lkK && Object.keys(D.items || {}).length > 0, isC = lkK === "מעבירי מים";
-  LK = gr ? { kind: lkK === "pad" ? "תט״ז" : lkK, pad: lkK === "pad", act, cid: S.cid } : null;
+  const isP = String(lkK || "").startsWith("pad:"); LK = gr ? { kind: isP ? lkK.slice(4) : lkK, pad: isP, act, cid: S.cid } : null;
   S.gsel = (S.gsel || []).filter(id => D.items?.[id]); if (gr) S.qty = S.gsel.length || "";
   const seg = segs.find(s => s.id === S.segId);
   const selName = sel.length <= 2 ? sel.map(a => short(a.name)).join(" + ") : `${short(sel[0].name)} + עוד ${sel.length - 1}`;
@@ -566,7 +588,7 @@ function view() {
       <label class="date"><span>תאריך</span><input type="date" id="dt" value="${esc(S.date)}"></label></div>
   </div>
   <div class="card where">
-    ${gr ? `<div class="lbl" style="margin-top:0">${esc(short(act.name))} — ${isC ? `באיזה מעביר? <span class="hint">(כל מעביר = סבכה אחת)</span>` : lkK === "pad" ? `משטח לאיזה תט״ז?` : `איזה ${esc(lkK)} בוצע?`}</div>${unitSum(act, S.cid)}
+    ${gr ? `<div class="lbl" style="margin-top:0">${esc(short(act.name))} — ${isC ? `באיזה מעביר? <span class="hint">(כל מעביר = סבכה אחת)</span>` : isP ? `משטח לאיזה ${esc(LK.kind)}?` : `איזה ${esc(lkK)} בוצע?`}</div>${unitSum(act, S.cid)}
       <div class="row"><input id="gq" placeholder="${isC ? "מספר מעביר (BC) / ק.ד. / חתך" : "ק.ד. / חתך — או בוחרים מהרשימה"}" autocomplete="off" style="flex:1" value="${esc(S.gq || "")}"></div><div id="gres" class="gres">${grRes()}</div>
       <div class="gsel">${S.gsel.map(id => { const i = D.items[id]; return `<span class="gchip"><b dir="ltr">${esc(labOf(i))}</b>${i.kdFrom ? ` · ק.ד. ${esc(i.kdFrom)}` : ""}<button data-gx="${id}" aria-label="הסרה">✕</button></span>`; }).join("") || `<span class="hint">עוד לא נבחר${isC ? " מעביר — מקלידים מספר ובוחרים מהרשימה" : " — בוחרים מהרשימה"}</span>`}</div>`
     : unit ? `<div class="lbl" style="margin-top:0">${esc(short(act.name))} — כמות (יח׳)</div>${unitSum(act, S.cid)}<div class="row"><input class="num" id="qty" inputmode="numeric" value="${esc(S.qty)}"><input id="loc" placeholder="מיקום (ק.ד. / חתך)" style="flex:1" value="${esc(S.loc || "")}"></div>`
@@ -594,7 +616,7 @@ function view() {
   <div class="card"><b>הדיווחים שלי</b> <span class="hint">— ממתין לאישור עד שמנהל הפרויקט מאשר</span>
     ${mine.map(p => `<div class="rep"><div class="t"><b>${esc(actName(p.activityId))}</b><small>${fmtD(p.date)} · ${esc(D.contractors?.[p.contractorId]?.name || "")} · ${p.qty ? `${p.qty} יח׳${p.loc ? ` · ${esc(p.loc)}` : ""}` : `${esc(segName(p.segmentId))} ${rng(esc(p.secFrom), esc(p.secTo))}${(s => s ? ` · ק.ד. ${kdOf(s, p.secFrom)}–${kdOf(s, p.secTo)}` : "")(segs.find(x => x.id === p.segmentId))} (${(Math.abs(p.secTo - p.secFrom) * SECTION_M).toLocaleString("he-IL")} מ׳)`}${p.note ? " · " + esc(p.note) : ""}</small></div>
       ${p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span><button class="btn ghost" data-del="${p.id}" style="padding:6px 10px">מחיקה</button>` : p.review === "נדחה" ? `<span class="pill p2">לא אושר</span>` : `<span class="pill p1">אושר ✓</span>`}</div>`).join("") || `<p class="hint">עוד אין דיווחים</p>`}
-  </div>${rqList()}${covModal(c, seg, acts)}${rqModal(c)}`;
+  </div>${rqList()}${covModal(c, seg, acts)}${unit ? unitModal(act, c.id) : ""}${rqModal(c)}`;
   fitTiles();
   $("out").onclick = () => fb.auth().signOut();
   if ($("wkopen")) $("wkopen").onclick = () => wkModal(D, cids, S.cid, me.name || user.email);
@@ -618,6 +640,9 @@ function view() {
   const rqFilter = () => { const q = (S.rqQ || "").trim().toLowerCase(); let n = 0; app.querySelectorAll("#rqcard .rqi").forEach(el => { const ok = !q || el.dataset.rqs.includes(q); el.hidden = !ok; if (ok) n++; }); if ($("rqcnt")) $("rqcnt").textContent = `${n} פניות`; };
   if ($("rqq")) { $("rqq").oninput = e => { S.rqQ = e.target.value; rqFilter(); }; rqFilter(); }
   app.querySelectorAll("[data-rqdel]").forEach(b => b.onclick = async () => { if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "בטוח?"; return; } await fb.database().ref(`${ROOT}/requests/${b.dataset.rqdel}`).remove(); });
+  app.querySelectorAll("[data-un]").forEach(b => b.onclick = () => { S.unOpen = b.dataset.un; view(); });
+  app.querySelectorAll("[data-unx]").forEach(b => b.onclick = e => { if (e.target === b || b.tagName === "BUTTON") { S.unOpen = null; view(); } });
+  app.querySelectorAll("[data-gpick]").forEach(b => b.onclick = () => { const id = b.dataset.gpick; S.gsel = S.gsel.includes(id) ? S.gsel.filter(x => x !== id) : [...S.gsel, id]; S.grOk = false; S.msg = ""; view(); });
   app.querySelectorAll("[data-cov]").forEach(b => b.onclick = () => { S.covOpen = b.dataset.cov; view(); });
   app.querySelectorAll("[data-covx]").forEach(b => b.onclick = e => { if (e.target === b || b.tagName === "BUTTON") { S.covOpen = null; view(); } });
   app.querySelectorAll("[data-fill]").forEach(b => b.onclick = () => { const [f, t] = b.dataset.fill.split("|").map(Number);
@@ -687,7 +712,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-12f";
+const VER = "2026-10-12h";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
