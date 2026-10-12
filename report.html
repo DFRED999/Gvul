@@ -418,7 +418,6 @@ function linkKind(a, cid) { if (!a || !isUA(a)) return null; const m = ACT_KINDS
   if (m[1] === "מעבירי מים") return m[1];
   if (list("items").some(i => i.kind === m[1] && i.contractorId === cid && i.status !== "מבוטל")) return m[1];
   return (m[1] === "תט״ז" || m[1] === "חדר טרפו") && list("items").some(i => i.kind === m[1] && i.mainId === cid && i.status !== "מבוטל") ? "pad:" + m[1] : null; }   // קבלן גזרה: משטחים לתט״זים שבגזרה שלו
-const isPad = () => LK?.pad;
 const labOf = i => i.kind === "מעבירי מים" ? bcOf(i) : String(i.name || i.kind || "").replace(/\s*\([^)]*\)\s*$/, "");
 /** הפריטים לבחירה + מצב: "בוצע" (סטטוס הושלם / דיווח מאושר), "ממתין" (דיווח ממתין לאישור) */
 function linkList() { if (!LK) return []; const K = LK.kind, pad = LK.pad, st = {};
@@ -712,11 +711,22 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-12h";
+const VER = "2026-10-12i";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
-const safeView = () => { try { view(); if (firstView) { firstView = false; window.scrollTo(0, 0); } } catch (e) { console.error(e); fail("שגיאה בהצגת הדף", (e && e.message || e) + ""); } };
+/* ניטור שגיאות — נרשם ב-border/errLog (נראה באתר הראשי: הגדרות ← יומן שגיאות) */
+let errN = 0, lastAct = ""; const errSeen = new Set();
+function logErr(kind, msg, stack) { try {
+  msg = String(msg || "שגיאה").slice(0, 300); if (errSeen.has(msg)) return; errSeen.add(msg);
+  const rec = { t: new Date().toISOString(), kind, msg, stack: String(stack || "").split("\n").slice(0, 4).join("\n").slice(0, 600), site: "report", ver: VER, act: lastAct,
+    page: [D.contractors?.[S.cid]?.name, (S.acts || []).map(a => D.activities?.[a]?.name).join("+")].filter(Boolean).join(" · "), who: me?.name || user?.email || "", ua: navigator.userAgent.slice(0, 120) };
+  if (fb && user && errN++ < 10) fb.database().ref(`${ROOT}/errLog`).push(rec).catch(() => {});
+} catch (e) {} }
+window.addEventListener("error", e => { if (e.message) logErr("js", e.message, e.error?.stack); });
+window.addEventListener("unhandledrejection", e => logErr("promise", e.reason?.message || e.reason, e.reason?.stack));
+document.addEventListener("click", e => { const b = e.target.closest("button"); if (b) lastAct = (b.id || b.className || "").slice(0, 30) + ":" + (b.textContent || "").trim().slice(0, 20); }, true);
+const safeView = () => { try { view(); if (firstView) { firstView = false; window.scrollTo(0, 0); } } catch (e) { console.error(e); logErr("render", e?.message || e, e?.stack); fail("שגיאה בהצגת הדף", (e && e.message || e) + ""); } };
 const withTimeout = (pr, ms) => Promise.race([pr, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
 const soft = () => { const el = document.activeElement; if (el && /INPUT|TEXTAREA/.test(el.tagName) && app.contains(el)) { later = true; return; } safeView(); };
 document.addEventListener("focusout", () => { if (later) { later = false; setTimeout(safeView); } });
