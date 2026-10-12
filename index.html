@@ -241,6 +241,11 @@ body.dark .mt { filter: invert(1) hue-rotate(180deg); }
 .ov-msi { display: flex; flex-direction: column; align-items: center; gap: 3px; } .ov-msi i { width: 100%; height: 34px; border-radius: 7px; background: color-mix(in srgb, var(--c) 14%, #fff); position: relative; overflow: hidden; display: block; }
 .ov-msi em { position: absolute; bottom: 0; left: 0; right: 0; border-radius: 0; } .ov-msi span { font-size: 9.5px; color: var(--muted); text-align: center; line-height: 1.1; }
 .ov-sph { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 8px; } .ov-sph h2 { margin: 0; }
+.sm-l.sm-pad .sm-lab b { font-weight: 600; } .sm-l.sm-pad .sm-lab i { opacity: .6; }
+.ov-grps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; align-items: start; } .ov-grp { display: flex; flex-direction: column; gap: 8px; }
+.ov-sp.pad { filter: saturate(.55) brightness(1.08); } .ov-sp.pad > i { opacity: .85; }
+@media (max-width: 1400px) { .ov-grps { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .ov-grps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ov-sps { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr)); gap: 10px; margin-bottom: 18px; }
 .ov-sp { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: auto 1fr; grid-template-rows: 1fr auto; gap: 6px 10px; align-items: center; padding: 12px; border-radius: 16px; color: #fff;
   background: linear-gradient(155deg, color-mix(in srgb, var(--kc) 75%, #fff), var(--kc) 70%); box-shadow: 0 4px 12px -8px color-mix(in srgb, var(--kc) 80%, transparent); transition: transform .12s; }
@@ -684,8 +689,8 @@ const list = col => { const L = Object.entries(RAW[col] || {}).map(([id, v]) => 
 /** פריט שהקבלן המבצע שלו דיווח עליו (דיווח מאושר עם בחירת הפריט, באתר הדיווחים) — נחשב "הושלם" */
 function itemRepMap() { const m = {}; Object.values(RAW.progress || {}).forEach(p => { if (p.review || !p.itemIds) return; Object.keys(p.itemIds).forEach(id => { const i = RAW.items?.[id]; if (i && i.contractorId === p.contractorId && i.kind !== "מעבירי מים" && (!m[id] || String(p.date) < String(m[id].date))) m[id] = p; }); }); return m; }
 /** תט״ז — שני שלבים: הכנת משטח (קבלן הגזרה, padStatus) והצבת התט״ז (חח״י, status). דיווח של קבלן הגזרה עם בחירת התט״ז → המשטח הושלם */
-const PAD_KIND = "תט״ז";
-function padRepMap() { const m = {}; Object.values(RAW.progress || {}).forEach(p => { if (p.review || !p.itemIds) return; Object.keys(p.itemIds).forEach(id => { const i = RAW.items?.[id]; if (i && i.kind === PAD_KIND && i.mainId && i.mainId === p.contractorId && (!m[id] || String(p.date) < String(m[id].date))) m[id] = p; }); }); return m; }
+const PAD_KIND = "תט״ז", PAD_KINDS = ["תט״ז", "חדר טרפו"];   // פריטים עם שלב "הכנת משטח" של קבלן הגזרה
+function padRepMap() { const m = {}; Object.values(RAW.progress || {}).forEach(p => { if (p.review || !p.itemIds) return; Object.keys(p.itemIds).forEach(id => { const i = RAW.items?.[id]; if (i && PAD_KINDS.includes(i.kind) && i.mainId && i.mainId === p.contractorId && (!m[id] || String(p.date) < String(m[id].date))) m[id] = p; }); }); return m; }
 /** מלאכה ביחידות שמקושרת לסוג פריט (תט״ז / חדר טרפו / שער) של אותו קבלן — הביצוע = הפריטים שהושלמו */
 const ACT_KINDS = [[/תט["״׳']{0,2}ז/, "תט״ז"], [/טרפו/, "חדר טרפו"], [/שער/, "שערים"]];
 function actKind(d, a) { const m = ACT_KINDS.find(([re]) => re.test(a?.name || "")); return m && d.items.some(i => i.kind === m[1] && i.contractorId === a.contractorId && i.status !== "מבוטל") ? m[1] : null; }
@@ -1026,7 +1031,11 @@ function sectorMap(d, c) {
     const dots = ii.map((i, n) => { const k0 = kdNum(i.kdFrom), num = Math.round(k0);   // ק.ד. — גם לארונות שקד
       return `<span class="sm-dot ${i.status === "הושלם" ? "dn" : ""}" style="${at(k0)};--dc:${stCol(i)}" title="${esc(i.name || k)} · ק.ד. ${esc(itemTxt(i))} · ${esc(i.status || "")}${i.doneDate ? " · " + fmtD(i.doneDate) : ""}">${lab ? `<b class="${n % 2 ? "dn2" : "up"}">${num}</b>` : ""}</span>`; }).join("");
     const dn = ii.filter(i => i.status === "הושלם").length;
-    return lane(KIND_PLURAL[k] || k, `${dn} מתוך ${ii.length} הושלמו`, dots, lab ? "sm-il" : "sm-il nolab", I ? matSvg(I.i) : "", I?.c || "#6b7280"); }).join("");
+    const main = lane(KIND_PLURAL[k] || k, `${dn} מתוך ${ii.length} ${k === "תט״ז" ? "הוצבו" : "הושלמו"}`, dots, lab ? "sm-il" : "sm-il nolab", I ? matSvg(I.i) : "", I?.c || "#6b7280");
+    if (!PAD_KINDS.includes(k)) return main;   // תט״ז / חדר טרפו — שורה נוספת להכנת המשטח (קבלן הגזרה)
+    const P = ii.map(i => ({ ...i, status: i.padStatus || "טרם", doneDate: i.padDone || "" })), pdn = P.filter(i => i.status === "הושלם").length;
+    const pdots = P.map((i, n) => { const k0 = kdNum(i.kdFrom); return `<span class="sm-dot ${i.status === "הושלם" ? "dn" : ""}" style="${at(k0)};--dc:${stCol(i)}" title="משטח · ${esc(i.name || k)} · ק.ד. ${esc(itemTxt(i))} · ${esc(i.status)}${i.doneDate ? " · " + fmtD(i.doneDate) : ""}">${lab ? `<b class="${n % 2 ? "dn2" : "up"}">${Math.round(k0)}</b>` : ""}</span>`; }).join("");
+    return main + lane(`משטח ל${k}`, `${pdn} מתוך ${P.length} מוכנים`, pdots, (lab ? "sm-il" : "sm-il nolab") + " sm-pad", I ? matSvg(I.i) : "", I?.c || "#6b7280"); }).join("");
   // נושאים פתוחים
   const iss = d.issues.filter(i => i.contractorId === c.id && i.status !== "סגור" && kdNum(i.kdFrom) !== null);
   const issLane = iss.length ? lane("נושאים פתוחים", `${iss.length} עם מיקום`, iss.map((i, n) => { const a = kdNum(i.kdFrom), b = kdNum(i.kdTo) ?? a, wide = Math.abs(b - a) > 1.5;
@@ -1291,7 +1300,7 @@ const comps = () => [...COMPS_BASE.map(([k, name, kind]) => ({ k, name, kind }))
 const compOf = kind => comps().find(x => x.kind === kind);
 function pageComp(d, key) {
   const C = comps().find(x => x.k === key); if (!C) return `<p class="muted">רכיב לא קיים</p>`;
-  if (key === "ttz") return pageTtz(d, C);
+  if (key === "ttz" || key === "trafo") return pageTtz(d, C);
   if (key === "grate") { const old = d.items.filter(i => i.kind === C.kind);
     return `<div class="ch-banner" style="--cc:#37414b"><div><h1>סבכות</h1><span>סבכה לכל מעביר מים — המעביר בביצוע קבלן הגזרה, הסבכה בביצוע ${esc(d.contractors.find(c => c.id === GRATE_CID)?.name || "קבלן הסבכות")}.</span></div></div>
       <div class="card">${gratesBlock(d)}</div>${old.length ? `<div class="card"><h2>סבכות שנרשמו כפריט נפרד <span class="small muted">(${old.length}) — מומלץ לסמן את הסבכה על המעביר עצמו ולמחוק את הפריט</span></h2>${renderSheet("items", old, "")}</div>` : ""}`; }
@@ -1309,16 +1318,17 @@ function pageComp(d, key) {
 }
 /** דף התט״זים — שתי שכבות: הכנת משטח (קבלני הגזרה) והצבה (חח״י) */
 function pageTtz(d, C) {
-  const its = d.items.filter(i => i.kind === PAD_KIND && i.status !== "מבוטל"), mains = d.contractors.filter(isMain).sort(byNorth), kd = i => kdNum(i.kdFrom) ?? -1;
+  const K = C.kind, isT = K === PAD_KIND, ex = d.contractors.find(c => c.id === (spFor(K) || (isT ? IEC_CID : ""))), exN = ex?.name || (isT ? "חח״י" : "קבלן ייעודי"), verb = isT ? "הוצבו" : "הותקנו";
+  const its = d.items.filter(i => i.kind === K && i.status !== "מבוטל"), mains = d.contractors.filter(isMain).sort(byNorth), kd = i => kdNum(i.kdFrom) ?? -1;
   const pd = a => a.filter(i => i.padStatus === "הושלם").length, pl = a => a.filter(i => i.status === "הושלם").length;
-  const tile = (name, a, col, act = "") => `<div class="ch-t" ${act} style="border-top:4px solid ${col}"><span>${esc(name)}</span><b>${pd(a)}/${a.length}</b><small>משטחים מוכנים</small><small><b>${pl(a)}/${a.length}</b> הוצבו (חח״י)</small></div>`;
+  const tile = (name, a, col, act = "") => `<div class="ch-t" ${act} style="border-top:4px solid ${col}"><span>${esc(name)}</span><b>${pd(a)}/${a.length}</b><small>משטחים מוכנים</small><small><b>${pl(a)}/${a.length}</b> ${verb} (${esc(exN)})</small></div>`;
   const byArea = mains.map(m => ({ m, a: its.filter(i => mainAt(d, i)?.id === m.id) })).filter(x => x.a.length);
-  const mig = !RAW.tableConfig?.settings?.ttzPadMig && its.some(i => !RAW.items[i.id]?.padStatus && RAW.items[i.id]?.status && RAW.items[i.id].status !== "טרם");
-  return `<div class="ch-banner" style="--cc:#c27c0e"><div><h1>תט״זים</h1><span>שני שלבים לכל תט״ז: הכנת משטח — קבלן הגזרה · הצבת התט״ז — חח״י.</span></div></div>
+  const mig = isT && !RAW.tableConfig?.settings?.ttzPadMig && its.some(i => !RAW.items[i.id]?.padStatus && RAW.items[i.id]?.status && RAW.items[i.id].status !== "טרם");
+  return `<div class="ch-banner" style="--cc:#c27c0e"><div><h1>${esc(C.name)}</h1><span>שני שלבים לכל ${esc(K)}: הכנת משטח — קבלן הגזרה · ${isT ? "הצבת התט״ז" : "הובלה והתקנה"} — ${esc(exN)}.</span></div></div>
     ${mig && !isViewer() ? `<div class="banner"><b>העברת הסטטוסים להכנת משטח</b><span>הסטטוסים שרשומים היום בתט״זים הם בפועל של הכנת המשטח — להעביר אותם לעמודת "הכנת משטח" ולאפס את ההצבה</span><button class="btn sm" data-act="ttzMig">העברה…</button></div>` : ""}
     <div class="ch-tiles" style="--cc:#c27c0e;grid-template-columns:repeat(${byArea.length + 1},minmax(0,1fr))">${tile("כל הקו", its, "#c27c0e")}${byArea.map(x => tile(x.m.name, x.a, cColor(d, x.m), `data-act="nav" data-id="c:${x.m.id}" role="button"`)).join("")}</div>
-    <div class="card"><h2>תט״זים <span class="small muted">(${its.length}) — הכנת משטח והצבה זה לצד זה</span></h2>${renderSheet("ttz", [...its].sort((a, b) => kd(b) - kd(a)), "אין תט״זים", { store: "items" })}
-    <div class="row" style="margin-top:10px;gap:8px">${!isViewer() ? `<button class="btn ghost sm" data-act="addItem" data-id="${spFor(C.kind) || IEC_CID}" data-kind="${esc(C.kind)}">+ תט״ז</button>` : ""}<span class="small muted">דיווח מפקח של קבלן הגזרה (מלאכת התט״ז שלו) עם בחירת התט״ז מסמן את המשטח; דיווח "הצבת תט״ז" של חח״י מסמן את ההצבה.</span></div></div>`;
+    <div class="card"><h2>${esc(C.name)} <span class="small muted">(${its.length}) — הכנת משטח וביצוע זה לצד זה</span></h2>${renderSheet("ttz", [...its].sort((a, b) => kd(b) - kd(a)), "אין פריטים", { store: "items" })}
+    <div class="row" style="margin-top:10px;gap:8px">${!isViewer() ? `<button class="btn ghost sm" data-act="addItem" data-id="${spFor(C.kind) || IEC_CID}" data-kind="${esc(C.kind)}">+ ${esc(K)}</button>` : ""}<span class="small muted">דיווח מפקח של קבלן הגזרה (מלאכת התט״ז שלו) עם בחירת התט״ז מסמן את המשטח; דיווח "הצבת תט״ז" של חח״י מסמן את ההצבה.</span></div></div>`;
 }
 function ttzMigModal() {
   const its = list("items").filter(i => i.kind === PAD_KIND && !RAW.items[i.id]?.padStatus && RAW.items[i.id]?.status && i.status && i.status !== "טרם" && i.status !== "מבוטל");
@@ -2223,6 +2233,21 @@ function overviewHero(d) {
           <div class="ov-iss">${o.length} נושאים פתוחים${o.filter(i => i.status === "HOLD").length ? ` · <span class="hold">${o.filter(i => i.status === "HOLD").length} HOLD</span>` : ""}</div></div></div>
       ${msBar(s)}</button>`; };
   const sp = [...d.contractors.filter(c => !isMain(c)), { id: "culverts", name: "פריטים בגזרות — קבלני העפר", _culv: true }];
+  /* קבוצות רכיבים (אחד מעל השני): טרפו + משטח · תט״ז + משטח · מעבירי מים + סבכות · ארונות שקד · שערים · מעברים איריים */
+  const KI = k => KIND_ICON[k] || { c: "#5f6670", i: '<circle cx="12" cy="12" r="7"/>' };
+  const gTile = (name, k, ii, f, page, sub = "", tone = "") => { const dn2 = ii.filter(i => f(i) === "הושלם").length, ip = ii.filter(i => f(i) === "בביצוע").length, I = KI(k);
+    return `<button class="ov-sp ${tone}" data-act="nav" data-id="${page}" style="--kc:${I.c}"><i>${matSvg(I.i)}</i><div><b>${esc(name)}</b>
+      <span class="ov-spn"><b>${dn2}</b>/${ii.length} ${sub || "הושלמו"}${ip ? ` · ${ip} בביצוע` : ""}</span></div><div class="ov-spbar"><em style="width:${ii.length ? Math.round(dn2 / ii.length * 100) : 0}%"></em></div></button>`; };
+  const ofK = k => d.items.filter(i => i.kind === k && i.status !== "מבוטל");
+  const grs = (R => { const cs = ofK("מעבירי מים").map(i => ({ i, g: grateOf(i, R) })).filter(x => grateNeed(x.g)); return cs.map(x => ({ status: x.g.st === "הותקנה" ? "הושלם" : x.g.st === "בביצוע" ? "בביצוע" : "" })); })(grateReps(d));
+  const ovGroups = [
+    ofK("חדר טרפו").length && [gTile("חדרי טרפו", "חדר טרפו", ofK("חדר טרפו"), i => i.status, "k:trafo", "הותקנו"), gTile("משטח לחדר טרפו", "חדר טרפו", ofK("חדר טרפו"), i => i.padStatus, "k:trafo", "משטחים מוכנים", "pad")],
+    ofK("תט״ז").length && [gTile("תט״זים", "תט״ז", ofK("תט״ז"), i => i.status, "k:ttz", "הוצבו"), gTile("משטח לתט״ז", "תט״ז", ofK("תט״ז"), i => i.padStatus, "k:ttz", "משטחים מוכנים", "pad")],
+    ofK("מעבירי מים").length && [gTile("מעבירי מים", "מעבירי מים", ofK("מעבירי מים"), i => i.status, "k:culv"), gTile("סבכות", "סבכות למעבירי מים", grs, i => i.status, "k:grate", "הותקנו")],
+    ofK("ארון שקד").length && [gTile("ארונות שקד", "ארון שקד", ofK("ארון שקד"), i => i.status, "k:cab")],
+    ofK("שערים").length && [gTile("שערים", "שערים", ofK("שערים"), i => i.status, "k:gate")],
+    ofK("מעביר אירי").length && [gTile("מעברים איריים", "מעביר אירי", ofK("מעביר אירי"), i => i.status, "k:air")],
+  ].filter(Boolean);
   const spTiles = sp.flatMap(c => { const its = d.items.filter(i => (c._culv ? d.contractors.some(m => m.id === i.contractorId && isMain(m)) : i.contractorId === c.id) && i.status !== "מבוטל");
     return [...new Set(its.map(i => i.kind || "אחר"))].map(k => { const ii = its.filter(i => (i.kind || "אחר") === k), dn2 = ii.filter(i => i.status === "הושלם").length, ip = ii.filter(i => i.status === "בביצוע").length, I = KIND_ICON[k] || { c: "#5f6670", i: '<circle cx="12" cy="12" r="7"/>' };
       const wk = ii.filter(i => i.status === "הושלם" && i.doneDate && i.doneDate > wkD).length;
@@ -2236,7 +2261,7 @@ function overviewHero(d) {
       ${kpi("k4", "להחלטת הנהלה", mgmt.length, mgmt.length ? "לחיצה — לוח התראות" : "אין נושאים מסומנים", `data-act="nav" data-id="alerts" role="button" tabindex="0"`)}
     </div>
     <div class="ov-cards">${mains.map(card).join("")}</div>
-    ${spTiles.length ? `<div class="ov-sph"><h2>קבלנים ייעודיים</h2><span class="muted small">ביחידות · לחיצה פותחת את הקבלן</span></div><div class="ov-sps">${spTiles.join("")}</div>` : ""}`;
+    ${ovGroups.length ? `<div class="ov-sph"><h2>רכיבי הפרויקט</h2><span class="muted small">ביחידות · לחיצה פותחת את דף הרכיב</span></div><div class="ov-grps">${ovGroups.map(g => `<div class="ov-grp">${g.join("")}</div>`).join("")}</div>` : ""}`;
 }
 /* ---------- "מה השתנה מאז הביקור הקודם" — לפי המכשיר ---------- */
 const SINCE = (() => { let prev = null; try { prev = sessionStorage.getItem("sincePrev"); if (prev === null) { prev = localStorage.getItem("lastVisit") || ""; sessionStorage.setItem("sincePrev", prev); } localStorage.setItem("lastVisit", new Date().toISOString()); } catch (e) {} return prev || ""; })();
@@ -2630,7 +2655,8 @@ function execState(d, cid, asOf = null) {
   const prog = d.progress.filter(p => p.contractorId === cid && !p.review && (!asOf || !p.date || p.date <= asOf));
   const rows = acts.map(a => {
     const AK = isUnitAct(a) && !isGrateAct(a) ? actKind(d, a) : null;
-    if (!AK && isUnitAct(a) && isMain(c || {}) && /תט["״׳']{0,2}ז/.test(a.name)) { const its = d.items.filter(i => i.kind === PAD_KIND && i.status !== "מבוטל" && mainAt(d, i)?.id === cid);
+    const PK = !AK && isUnitAct(a) && isMain(c || {}) ? (/תט["״׳']{0,2}ז/.test(a.name) ? "תט״ז" : /טרפו/.test(a.name) ? "חדר טרפו" : null) : null;
+    if (PK) { const its = d.items.filter(i => i.kind === PK && i.status !== "מבוטל" && mainAt(d, i)?.id === cid);
       if (its.length) { const done = its.filter(i => i.padStatus === "הושלם" && (!asOf || !i.padDone || i.padDone <= asOf)).length + prog.filter(p => p.activityId === a.id && !p.itemIds).reduce((s, p) => s + (Number(p.qty) || 0), 0), plan = Number(a.planQty) || its.length;
         return { a, unit: true, cells: ds.map(x => ({ x, done: null, plan: null, pct: null })), done, plan, pct: plan ? Math.min(1, done / plan) : null }; } }
     if (AK) { const its = d.items.filter(i => i.kind === AK && i.contractorId === cid && i.status !== "מבוטל"), done = its.filter(i => i.status === "הושלם" && (!asOf || !i.doneDate || i.doneDate <= asOf)).length + prog.filter(p => p.activityId === a.id && !p.itemIds).reduce((s, p) => s + (Number(p.qty) || 0), 0), plan = Number(a.planQty) || its.length;
@@ -5060,14 +5086,14 @@ const TABLE_DEFS = {
   ttz: () => { const d = D(); const st = (i, k, rep) => `<select class="inp" id="f_items_${i.id}_${k}" data-edit="items|${i.id}|${k}" style="background:${ITEM_COLORS[i[k] || "טרם"] || "#fff"}">${ITEM_STATUS.map(x => `<option ${x === (i[k] || "טרם") ? "selected" : ""}>${x}</option>`).join("")}</select>${rep ? `<div><span class="pill ok" title="לפי דיווח מפקח מאושר">לפי דיווח ${esc(fmtD(rep))}</span></div>` : ""}`;
     const dt = (i, k) => `<input type="date" class="cell" id="f_items_${i.id}_${k}" value="${esc(i[k] || "")}" data-edit="items|${i.id}|${k}">`;
     return [
-    { key: "name", label: "תט״ז", cls: "w-place", cell: i => cellInput("items", i, "name") },
+    { key: "name", label: ui.page === "k:trafo" ? "חדר טרפו" : "תט״ז", cls: "w-place", cell: i => cellInput("items", i, "name") },
     { key: "kdFrom", label: "ק.ד.", cls: "w-kd", cell: i => cellInput("items", i, "kdFrom", "kdin") },
     { key: "main", label: "קבלן הגזרה", cls: "small", cell: i => esc(mainAt(d, i)?.name || "—") },
     { key: "padStatus", label: "הכנת משטח (קבלן הגזרה)", cell: i => st(i, "padStatus", i._padRep) },
     { key: "padDone", label: "משטח — תאריך", cell: i => dt(i, "padDone") },
-    { key: "status", label: "הצבת תט״ז (חח״י)", cell: i => st(i, "status", i._rep) },
-    { key: "doneDate", label: "הצבה — תאריך", cell: i => dt(i, "doneDate") },
-    { key: "flag", label: "סנכרון", cls: "small", cell: i => i.padStatus === "הושלם" && !["הושלם", "בביצוע", "מבוטל"].includes(i.status) ? `<span class="pill" style="background:#d6ebf7;color:#14527a">משטח מוכן — ממתין להצבה</span>` : ["הושלם", "בביצוע"].includes(i.status) && i.padStatus !== "הושלם" ? `<span class="pill warn">הצבה בלי משטח מסומן</span>` : `<span class="muted">—</span>` },
+    { key: "status", label: ui.page === "k:trafo" ? "הובלה והתקנה (קבלן ייעודי)" : "הצבת תט״ז (חח״י)", cell: i => st(i, "status", i._rep) },
+    { key: "doneDate", label: ui.page === "k:trafo" ? "התקנה — תאריך" : "הצבה — תאריך", cell: i => dt(i, "doneDate") },
+    { key: "flag", label: "סנכרון", cls: "small", cell: i => i.padStatus === "הושלם" && !["הושלם", "בביצוע", "מבוטל"].includes(i.status) ? `<span class="pill" style="background:#d6ebf7;color:#14527a">משטח מוכן — ממתין ל${ui.page === "k:trafo" ? "התקנה" : "הצבה"}</span>` : ["הושלם", "בביצוע"].includes(i.status) && i.padStatus !== "הושלם" ? `<span class="pill warn">${ui.page === "k:trafo" ? "התקנה" : "הצבה"} בלי משטח מסומן</span>` : `<span class="muted">—</span>` },
     { key: "iec", label: "חיבור חח״י", cls: "small nowrap", cell: i => { const os = d.iecOrders.filter(o => o.itemId === i.id); return os.length ? os.map(o => `<button class="pill" style="border:0;cursor:pointer;background:${IEC_COLORS[o.stage] || "#eee"}" data-act="iecGo" data-id="${esc(o.orderNo)}">${esc(o.stage)} · <span dir="ltr">${esc(o.orderNo)}</span></button>`).join(" ") : `<span class="muted">—</span>`; } },
     { key: "note", label: "הערה", cls: "w-place", cell: i => cellInput("items", i, "note") },
   ]; },
