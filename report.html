@@ -337,8 +337,8 @@ const ACT_GROUPS = [
   { key: "prep", name: "הכנות ועבודות מקדימות", color: "#9a6a2f", tint: "#f6efe4", stages: ["חישוף והכנה", "פריסת תלתליות", "פירוק גדר קיימת"], re: /חישוף|הכנה|פריס|פריש|פירוק/ },
   { key: "fence", name: "גדר", color: "#2f7d4f", tint: "#e8f4ec", stages: ["כלונסאות", "קורה", "עמודים", "רשתות / מודולים", "ניו ג׳רסי", "רשת סכינים", "תלתליות על הגדר"], re: /גדר|כלונס|קלונס|קור|עמוד|רשת|מודול|ניו|ג.ר[סז]י|סכינ|תלתל|קלמר|ריתוך|בטון רזה/ },
   { key: "road", name: "כביש", color: "#5a55b0", tint: "#efeef7", stages: ["מבנה דרך", "מצעים", "אספלט", "דרך אחזקה", "מעקה בטון"], re: /מבנה דרך|מצע|אספלט|אחזקה|מעקה בטון/ },
-  { key: "comm", name: "תקשורת ותשתיות", color: "#2d6cb8", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "ארונות שקד"], re: /תשתי|תקשור|חשמל|שוח|צנר|גוב|שקד/ },
-  { key: "fin", name: "ניקוז וגמר", color: "#127c76", tint: "#e4f3f1", stages: ["מעבירי מים וסבכות", "מעקות", "סימון כביש ושילוט"], re: /מעביר|סבכ|מעקות|סימון|שילוט/ }];
+  { key: "comm", name: "תקשורת ותשתיות", color: "#2d6cb8", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)"], re: /תשתי|תקשור|חשמל|שוח|צנר|גוב/ },   // ארונות שקד — תחת "אחר" (פריטים שהקבלן בונה, לא תשתיות)
+  { key: "fin", name: "ניקוז וגמר", color: "#127c76", tint: "#e4f3f1", stages: ["מעבירי מים", "מעבירי מים וסבכות", "מעקות", "סימון כביש ושילוט"], re: /מעביר|סבכ|מעקות|סימון|שילוט/ }];
 const OTHER_G = { key: "other", name: "אחר", color: "#5f6670", tint: "#f1f2f3" };
 const actGroup = a => ACT_GROUPS.find(G => G.stages.includes(a.stage)) || (a.stage ? null : ACT_GROUPS.find(G => G.re.test(a.name))) || OTHER_G;
 const groupActs = acts => [...ACT_GROUPS, OTHER_G].map(G => ({ G, acts: acts.filter(a => actGroup(a).key === G.key) })).filter(x => x.acts.length);
@@ -634,7 +634,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-11c";
+const VER = "2026-10-12b";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
@@ -683,3 +683,4 @@ document.addEventListener("focusout", () => { if (later) { later = false; setTim
 </script>
 </body>
 </html>
+
