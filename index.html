@@ -310,7 +310,13 @@ body.present .shell { grid-template-columns: minmax(0, 1fr); } body.present .mai
 .sm-sep { margin: 10px 0 4px; padding: 3px 10px; font-size: 12px; color: var(--muted); background: #f5f6f3; border-radius: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .sm-sep u { display: inline-block; width: 16px; height: 4px; background: #f39c12; border-radius: 2px; }
 .sm-k { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: var(--dc); border: 1px solid #8a9088; margin-inline-start: 6px; }
 .sm-rl { min-height: 26px; } .sm-rib { position: absolute; inset: 5px 0; background: var(--gt); border-radius: 6px; overflow: hidden; }
-.sm-rib em { position: absolute; top: 0; bottom: 0; background: var(--g); } .sm-rib u { position: absolute; top: 0; height: 4px; background: #f39c12; }
+.sm-rib em { position: absolute; top: 0; bottom: 0; background: var(--g); }
+.sm-rn { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,.55), 0 0 1px rgba(0,0,0,.8); white-space: nowrap; overflow: visible; pointer-events: auto; z-index: 1; }
+.sm-rn.sm { font-size: 9.5px; }
+.ch-graphs { margin: 0 0 14px; } .ch-graphs > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); font-weight: 600; }
+.ch-graphs > summary::-webkit-details-marker { display: none; } .ch-graphs > summary::before { content: "▸"; color: var(--muted); } .ch-graphs[open] > summary::before { content: "▾"; }
+.ch-graphs > summary em { font-style: normal; font-weight: 400; font-size: 12px; color: var(--muted); margin-inline-start: auto; } .ch-graphs[open] > summary em { display: none; }
+.ch-graphs[open] > summary { margin-bottom: 10px; } .sm-rib u { position: absolute; top: 0; height: 4px; background: #f39c12; }
 .sm-il { min-height: 44px; border-bottom: 1px solid #eef0eb; } .sm-il.nolab { min-height: 30px; }
 .sm-il .sm-tr { background: color-mix(in srgb, var(--lc) 6%, transparent); } .sm-il:nth-child(even) .sm-tr { background: color-mix(in srgb, var(--lc) 11%, transparent); }
 .sm-il .sm-tr::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1.5px dashed color-mix(in srgb, var(--lc) 55%, #fff); pointer-events: none; }
@@ -904,20 +910,26 @@ function sectorMap(d, c) {
   const done = kdDone(d, c, today), doneW = kdDone(d, c, wkD), N = 120, bw = W / N;
   const acts = d.activities.filter(a => a.contractorId === c.id && !isUnitAct(a));
   const cover = (ivs, a, b) => (ivs || []).reduce((t, [x, y]) => t + Math.max(0, Math.min(b, y) - Math.max(a, x)), 0) / (b - a);
+  const SN = snapshot(d, c, today), Lm = (SN.km || 0) * 1000;   // המספרים ברצועות — לפי אותו חישוב של הדשבורד (מטר שווה-ערך), מחולקים לפי הרצפים
   const ribbons = STAGE_GROUPS.map(G => { const ga = acts.filter(a => G.stages.includes(a.stage)); if (!ga.length) return "";
-    let segs = "", tot = 0;
+    const gv = G.stages.map(g => SN.st[g]).filter(v => v !== null && v !== undefined), offM = gv.length ? gv.reduce((a, b) => a + b, 0) / gv.length * Lm : null;
+    let segs = "", tot = 0, run = null; const runs = [];
     for (let j = 0; j < N; j++) { const a = r.lo + j * bw, b = a + bw, f = ga.reduce((t, x) => t + cover(done[x.id], a, b), 0) / ga.length, fw = ga.reduce((t, x) => t + cover(doneW[x.id], a, b), 0) / ga.length; tot += f;
-      if (f > 0.005) segs += `<em style="${span(a, b)};opacity:${(0.18 + 0.82 * f).toFixed(2)}"></em>`;
+      if (f > 0.005) { segs += `<em style="${span(a, b)};opacity:${(0.18 + 0.82 * f).toFixed(2)}"></em>`; if (run) { run.b = b; run.m += f * bw * 1000; } else runs.push(run = { a, b, m: f * bw * 1000 }); } else run = null;
       if (f - fw > 0.005) segs += `<u style="${span(a, b)}"></u>`; }
-    const pct = Math.round(tot / N * 100);
-    return lane(G.name, `${pct}% לאורך הגזרה`, `<div class="sm-rib" style="--g:${G.color};--gt:${G.tint}" title="${esc(G.name)}: ${ga.map(a => svShort(a.name)).join(" · ")}">${segs}</div>`, "sm-rl", "", G.color); }).join("");
+    const rawM = runs.reduce((t, x) => t + x.m, 0), totM = offM ?? (tot / N * Lm), k = rawM > 0 ? totM / rawM : 0; runs.forEach(x => { x.m *= k; });
+    const pct = Lm ? Math.round(totM / Lm * 100) : Math.round(tot / N * 100);
+    // מספר בתוך כל רצף צבוע: מטר שווה-ערך (ממוצע המלאכות באבן הדרך) — רק ברצף שיש בו מקום לטקסט
+    segs += runs.filter(x => x.m >= 15).map(x => { const wPct = (x.b - x.a) / W * 100, t = num(Math.round(x.m / 10) * 10, 0);
+      return `<span class="sm-rn ${wPct < 3.2 ? "sm" : ""}" style="${span(x.a, x.b)}" title="ק.ד. ${kdTxt({ lo: x.a, hi: x.b })} · ≈${t} מ׳ שווה-ערך">${wPct >= 1.6 ? t : ""}</span>`; }).join("");
+    return lane(G.name, `≈${num(Math.round(totM / 10) * 10, 0)} מ׳ · ${pct}%`, `<div class="sm-rib" style="--g:${G.color};--gt:${G.tint}" title="${esc(G.name)}: ${ga.map(a => svShort(a.name)).join(" · ")}">${segs}</div>`, "sm-rl", "", G.color); }).join("");
   // פריטים לפי סוג — נקודה + מספר / ק.ד.
   const its = d.items.filter(i => i.status !== "מבוטל" && mainAt(d, i)?.id === c.id && kdNum(i.kdFrom) !== null);
   const kinds = [...new Set(its.map(i => i.kind || "אחר"))];
   const NOLAB = new Set(["מעבירי מים", "מעביר אירי"]);
   const stCol = i => i.status === "הושלם" ? (i.doneDate && i.doneDate > wkD ? "#f39c12" : "#2f7d4f") : i.status === "בביצוע" ? "#f2c94c" : i.status === "HOLD" ? "#c0392b" : "#fff";
   const itemLanes = kinds.map(k => { const ii = its.filter(i => (i.kind || "אחר") === k).sort((p, q) => kdNum(p.kdFrom) - kdNum(q.kdFrom)), I = KIND_ICON[k], lab = !NOLAB.has(k);
-    const dots = ii.map((i, n) => { const k0 = kdNum(i.kdFrom), num = k === "ארון שקד" ? ((String(i.name || "").match(/^ארון שקד\s+(\d+)\s*$/) || [])[1] || Math.round(k0)) : Math.round(k0);
+    const dots = ii.map((i, n) => { const k0 = kdNum(i.kdFrom), num = Math.round(k0);   // ק.ד. — גם לארונות שקד
       return `<span class="sm-dot ${i.status === "הושלם" ? "dn" : ""}" style="${at(k0)};--dc:${stCol(i)}" title="${esc(i.name || k)} · ק.ד. ${esc(itemTxt(i))} · ${esc(i.status || "")}${i.doneDate ? " · " + fmtD(i.doneDate) : ""}">${lab ? `<b class="${n % 2 ? "dn2" : "up"}">${num}</b>` : ""}</span>`; }).join("");
     const dn = ii.filter(i => i.status === "הושלם").length;
     return lane(KIND_PLURAL[k] || k, `${dn} מתוך ${ii.length} הושלמו`, dots, lab ? "sm-il" : "sm-il nolab", I ? matSvg(I.i) : "", I?.c || "#6b7280"); }).join("");
@@ -1773,9 +1785,9 @@ function contractorHero(d, c, { ords, cov }) {
   return `<div class="ch-banner" style="--cc:${col}">${cLogo(c, "ban")}<div><h1>${esc(c.name)}</h1><span>${esc(c.sector || "")} · ק.ד. ${kdTxt(kdRange(c))}${c.method ? ` · ${esc(c.method)}` : ""}${c.inspector ? ` · מפקח: ${esc(c.inspector)}` : ""}</span></div>
       <div class="ov-ring ch-ring">${ring(now.overall, "#fff", 84).replace('stroke="#e9ece6"', 'stroke="rgba(255,255,255,.28)"')}<b>${now.overall === null ? "—" : Math.round(now.overall * 100) + "%"}</b></div></div>
     <div class="ch-tiles" style="--cc:${col}">
-      ${tile("t1", "בוצע — מטר שווה-ערך", m(dn(now)), `מתוך ${m(now.km)} מ׳`)}
-      ${tile("t2", "השבוע", w > 0.0005 ? `+${m(w)}` : "—", w > 0.0005 ? "מ׳ ב-7 הימים האחרונים" : "ללא ביצוע השבוע")}
-      ${tile("t3", "החודש", mm > 0.0005 ? `+${m(mm)}` : "—", mm > 0.0005 ? "מ׳ ב-30 הימים האחרונים" : "ללא ביצוע החודש")}
+      ${tile("t1", "בוצע — מטר שווה-ערך", m(dn(now)), `מתוך ${m(now.km)} מ׳`, `data-act="ctab" data-id="progress" role="button"`)}
+      ${tile("t2", "השבוע", w > 0.0005 ? `+${m(w)}` : "—", w > 0.0005 ? "מ׳ ב-7 הימים האחרונים" : "ללא ביצוע השבוע", `data-act="ctab" data-id="progress" role="button"`)}
+      ${tile("t3", "החודש", mm > 0.0005 ? `+${m(mm)}` : "—", mm > 0.0005 ? "מ׳ ב-30 הימים האחרונים" : "ללא ביצוע החודש", `data-act="ctab" data-id="progress" role="button"`)}
       ${tile("t4", "נושאים פתוחים", open.length, `${hold ? `HOLD: ${hold}` : "אין HOLD"}${mg ? ` · ${mg} להנהלה` : ""}`, `data-act="ctab" data-id="issues" role="button"`)}
       ${tile("t5", "הזמנות", ords.length, cov ? `כיסוי הגזרה ${Math.round(cov.pct * 100)}%` : "—", `data-act="ctab" data-id="orders" role="button"`)}
       ${tile("t6", "תוכניות נמסרו", dv === null ? "—" : Math.round(dv * 100) + "%", "מהגזרה", `data-act="ctab" data-id="deliveries" role="button"`)}
@@ -1783,11 +1795,12 @@ function contractorHero(d, c, { ords, cov }) {
     ${pend ? `<button class="ch-pend" data-act="ctab" data-id="progress">${pend} דיווחים של מפקחים ממתינים לאישור ←</button>` : ""}
     ${(n => n ? `<button class="ch-pend rq" data-act="ctab" data-id="issues">✉ ${n} פניות מהשטח מחכות להתייחסות שלך ←</button>` : "")(d.requests.filter(r => r.contractorId === c.id && r.status === "פתוח").length)}
     ${forecastBar(d, c)}
+    <details class="ch-graphs"><summary><span>📊 גרפים — אחוזי ביצוע לפי אבני דרך והתקדמות לאורך זמן</span><em>לחיצה לפתיחה</em></summary>
     <div class="ch-ms">${(FC => STAGE_GROUPS.map(G => { const fg = FC.groups?.[G.name]; const vs = G.stages.map(g => now.st[g]).filter(v => v !== null && v !== undefined), v = vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null;
       const ws = G.stages.map(g => (now.st[g] ?? 0) - (wk.st[g] ?? 0)).reduce((a, b) => a + b, 0) / Math.max(1, vs.length);
       return `<div class="ch-m ${v === null ? "na" : ""}" style="--c:${G.color};--t:${G.tint}" title="${esc(G.stages.join(" · "))}"><i><em style="height:${v === null ? 0 : Math.max(3, Math.round(v * 100))}%"></em></i>
         <div><b>${v === null ? "—" : Math.round(v * 100) + "%"}</b><span>${esc(G.name)}</span>${ws > 0.001 && v !== null ? `<small>השבוע +${Math.round(ws * 100)}%</small>` : ""}${fg && fg.eta && fg.eta !== "הושלם" && v < 0.999 ? `<small class="fc-m ${c.targetDate && fg.eta > c.targetDate ? "late" : ""}">סיום ≈ ${fmtMY(fg.eta)}</small>` : ""}</div></div>`; }).join(""))(forecast(d, c))}</div>
-    ${progressChart(d, c)}`;
+    ${progressChart(d, c)}</details>`;
 }
 function overviewHero(d) {
   const today = todayStr(), wkD = addDays(today, -7), moD = addDays(today, -30);
@@ -3829,7 +3842,7 @@ async function mgmtDeck(asOf, theme = "color") {
         sorted.forEach((it, n) => { const k0 = kdNum(it.kdFrom); if (k0 < r.lo - 0.5 || k0 > r.hi + 0.5) return; const st = it.status, xx = xOf(Math.max(r.lo, Math.min(r.hi, k0)));
           const fill = st === "הושלם" ? (inWeek(it.doneDate) ? C_WK : inMonth(it.doneDate) ? C_MON : C_OLD) : st === "בביצוע" ? C_IP : st === "HOLD" ? C_HOLD : "FFFFFF";
           sl.addShape(P.ShapeType.ellipse, { x: xx - dot / 2, y: cy - dot / 2, w: dot, h: dot, fill: { color: fill }, line: { color: st === "הושלם" ? "1F5E3A" : "8A9088", width: 0.75 } });
-          if (lab) { const num = k === "ארון שקד" ? (String(it.name || "").match(/^ארון שקד\s+(\d+)\s*$/) || [])[1] || kd1(k0) : kd1(k0), up = n % 2 === 0;
+          if (lab) { const num = kd1(k0), up = n % 2 === 0;
             T(sl, String(num), { x: xx - 0.25, y: up ? cy - dot / 2 - 0.17 : cy + dot / 2 + 0.005, w: 0.5, h: 0.16, fontSize: 6.5, align: "center", valign: up ? "bottom" : "top", margin: 0, color: st === "הושלם" ? "1F5E3A" : "555B55", bold: st === "הושלם" }); } });
         const dn = its.filter(x => x.status === "הושלם").length, ip = its.filter(x => x.status === "בביצוע").length, dw = its.filter(x => x.status === "הושלם" && inWeek(x.doneDate)).length, dmn = its.filter(x => x.status === "הושלם" && inMonth(x.doneDate)).length;
         const tf2 = Math.max(7, fs - 1.5);
@@ -4746,7 +4759,8 @@ $app.addEventListener("click", async e => {
   else if (act === "goStages") { ui.page = "settings"; ui.setTab = "activities"; ui.setCid = b.dataset.id; location.hash = "settings"; render(); window.scrollTo(0, 0); }
   else if (act === "setCid") { ui.setCid = b.dataset.id; render(); }
   else if (act === "setTab") { ui.setTab = b.dataset.id; render(); }
-  else if (act === "ctab") { ui.ctab = b.dataset.id; render(); }
+  else if (act === "ctab") { const jump = !!b.closest(".ch-tiles, .ch-pend"); ui.ctab = b.dataset.id; render();
+    if (jump) $app.querySelector(".main .tabs")?.scrollIntoView({ behavior: "smooth", block: "start" }); }
   else if (act === "newContractor") newContractorModal();
   else if (act === "seedActs") { const c = RAW.contractors[b.dataset.id]; const P = methodPresets(), rows = P[c?.method] || P[METHODS()[0]] || (ACT_PRESETS[c?.method] || ACT_PRESETS["מוסרות"]).map((name, i) => ({ name, order: i + 1 }));
     for (const r of rows) await api.add("activities", { contractorId: b.dataset.id, name: r.name, order: r.order, stage: r.stage || guessStage(r.name), unit: r.unit || "", planQty: "" }); }
