@@ -167,6 +167,12 @@ body.ro .side .foot::after { content: " · צפייה בלבד"; color: #f2c66d;
 .ov-rl { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-style: normal; font-size: 10.5px; color: var(--muted); }
 @media (max-width: 900px) { .fh-top { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 560px) { .fh-steps { grid-template-columns: minmax(0, 1fr); } .fh-big > b { font-size: 28px; } }
+.mc { border-top: 5px solid; } .mc-top { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 18px; align-items: center; }
+.mc-cs { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; } .mc-cs > div { background: var(--bg); border-radius: 12px; padding: 8px 12px; border-inline-start: 4px solid var(--cc); display: flex; flex-direction: column; }
+.mc-cs span { font-size: 12px; color: var(--muted); } .mc-cs b { font-size: 19px; } .mc-cs small { font-size: 11px; color: var(--muted); }
+.mp-scrim { position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 40; } .mp { position: fixed; top: 0; bottom: 0; inset-inline-start: 0; width: min(320px, 90vw); background: var(--surface); z-index: 41; padding: 16px; box-shadow: 0 0 30px rgba(0,0,0,.25); overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.mp-i { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); border-inline-start: 5px solid var(--mc); cursor: pointer; font-size: 14px; } .mp-i.on { background: color-mix(in srgb, var(--mc) 12%, var(--surface)); font-weight: 600; }
+@media (max-width: 900px) { .mc-top { grid-template-columns: minmax(0, 1fr); } }
 .ov-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
 .ov-kpi { border-radius: 18px; padding: 14px 16px; color: #fff; display: flex; flex-direction: column; gap: 2px; min-height: 104px; box-shadow: 0 6px 16px -10px rgba(0,0,0,.45); }
 .ov-kpi span { font-size: 13px; opacity: .85; } .ov-kpi b { font-size: 34px; line-height: 1.1; font-weight: 800; } .ov-kpi b small { font-size: 14px; font-weight: 600; opacity: .85; } .ov-kpi small { font-size: 12.5px; opacity: .85; }
@@ -185,7 +191,7 @@ body.ro .side .foot::after { content: " · צפייה בלבד"; color: #f2c66d;
 .bgp td.c { white-space: nowrap; }
 .bg-head { padding: 14px 18px; } .bg-hn { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; } .bg-hn > div { display: flex; flex-direction: column; } .bg-hn span { font-size: 12.5px; color: var(--muted); } .bg-hn b { font-size: 26px; font-weight: 800; } .bg-hn small { color: var(--muted); } .bg-hn em { font-style: normal; color: var(--muted); font-size: 20px; } @media (max-width: 600px) { .bg-hn em { display: none; } .bg-hn b { font-size: 22px; } }
 .bg-pb { height: 10px; border-radius: 5px; background: #f3dcd4; overflow: hidden; margin-top: 10px; } .bg-pb i { display: block; height: 100%; background: var(--accent); }
-.bg-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; margin-top: 12px; align-items: start; } @media (max-width: 1100px) { .bg-grid { grid-template-columns: minmax(0, 1fr); } }
+.bg-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px; align-items: start; } .bg-att ul { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 .bg-mx th, .bg-mx td { text-align: center; } .bg-mx thead th[role=button], .bg-mx .bg-rh { cursor: pointer; } .bg-mx .bg-rh { text-align: start; white-space: nowrap; background: #f7f8f5; }
 .bg-c { position: relative; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; } .bg-c[role=button] { cursor: pointer; } .bg-c[role=button]:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
 .bg-c.ok { background: #e3f2e7; } .bg-c.part { background: #fbf1cf; } .bg-c.no { background: #f8dfd7; } .bg-c.x { background: #e3ecf7; } .bg-c.tot { font-weight: 800; }
@@ -196,7 +202,7 @@ body.ro .side .foot::after { content: " · צפייה בלבד"; color: #f2c66d;
 .bg-lg i.ok { background: #cfe8d6; } .bg-lg i.part { background: #f5e3a6; } .bg-lg i.no { background: #f0c4b6; } .bg-lg i.x { background: #c9daf0; }
 .bg-att ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; } .bg-att li { padding: 7px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; border-inline-start: 4px solid; }
 .bg-att li.red { background: #fbe7e1; border-color: #c0392b; } .bg-att li.orange { background: #fdf1dc; border-color: #e08a1e; } .bg-att li.blue { background: #e7eff9; border-color: #2f6db5; } .bg-att li:hover { filter: brightness(.97); }
-.bg-cs small { font-size: 11.5px; color: var(--muted); }
+.bg-cs small { font-size: 11.5px; color: var(--muted); } .bg-in { cursor: default; } .bg-in .bg-cs > div { cursor: pointer; } .bg-in .bg-cs > div:hover { outline: 2px solid var(--cc); }
 .bgp tr.bg-er td { background: #faf7f1; }
 .bg-xb { margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; background: #fbfcfa; } .bgp .sheet td { vertical-align: middle; }
 .bg-cats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
@@ -862,8 +868,9 @@ const NAV_ALL = () => [
     ...(cs => cs.map(c => ["c:" + c.id, c.name, "", "", 0, cColor({ contractors: cs }, c)]))(list("contractors").filter(isMain)),
     ["#h2", "קבלנים ייעודיים", "", "head"],
     ...list("contractors").filter(c => !isMain(c)).map(c => ["c:" + c.id, c.name, "", "", 0, (KIND_ICON[specsOf(c)[0]] || {}).c || "#8a9a90"]),
-    ["culverts", "פריטים בגזרות", "", "", 0, "#1c7fb5"], ["power", "חיבורי חח״י", "", "", 0, "#e0a21b"], ["sites", "אתרי איסוף", "soon", "", 0, "#8a9a90"],
     ["newContractor", "+ קבלן חדש", "", "add"]] },
+  { group: "רכיבי הפרויקט", box: true, items: [...comps().map(x => x.k === "@power" ? ["power", "חיבורי חח״י", "", "", 0, "#e0a21b"] : x.k === "@sites" ? ["sites", "אתרי איסוף", "soon", "", 0, "#8a9a90"]
+      : ["k:" + x.k, x.name, "", "", 0, (KIND_ICON[x.kind] || {}).c || "#8a9a90"]), ["compAdd", "+ רכיב חדש", "", "add"]] },
   { group: "תכנון", items: [["segments", "קטעי תכנון"], ["deliveries", "מסירות תוכניות"]] },
   { group: "ניהול שוטף", items: [["survey", "סקר שטח"], ["svcmp", "סקר מול דיווחים"], ["dq", "🩺 איכות נתונים", "", "", (() => { try { return dqChecks(D()).filter(c => c.sev === "red" && c.n).length; } catch { return 0; } })()]] },
   { group: "דוחות", items: [["mreport", "דוח הנהלה"], ["budget", "💰 תקציב ואומדן"]] },
@@ -913,7 +920,7 @@ function render() {
   document.body.classList.toggle("ro", isViewer());
   document.body.classList.toggle("dark", !!ui.dark); document.body.classList.toggle("present", !!ui.present);
   const p = ui.page;
-  const body = p === "overview" ? (weeklySnapshot(d), sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "budget" ? pageBudget(d) : p === "meeting" ? pageMeeting(d) : p === "mytasks" ? pageMyTasks(d) : p === "mtgarch" ? pageMtgArchive(d) : p === "power" ? pageIec(d) : p === "culverts" ? pageCulverts(d) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
+  const body = p === "overview" ? (weeklySnapshot(d), sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "budget" ? pageBudget(d) : p === "meeting" ? pageMeeting(d) : p === "mytasks" ? pageMyTasks(d) : p === "mtgarch" ? pageMtgArchive(d) : p === "power" ? pageIec(d) : p === "culverts" ? pageCulverts(d) : p.startsWith("k:") ? pageComp(d, p.slice(2)) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
     : p === "segments" ? pageSegments(d) : p === "deliveries" ? pageDeliveries(d) : p === "settings" ? pageSettings(d) : p === "mreport" ? pageMreport(d) : pagePlan(p);
   $app.innerHTML = `
   <div class="mtop"><button class="mbtn" data-act="menu" aria-label="תפריט" aria-expanded="${ui.menu ? "true" : "false"}"><span></span><span></span><span></span></button>
@@ -924,7 +931,7 @@ function render() {
     <aside class="side ${ui.menu ? "open" : ""}">
       <div class="brand">מכשול — בקרת ביצוע<small>עמקים · בקעה</small></div>
       ${nav.map(g => { const its = g.items.map(([id, l, s, kind, badge, dot]) => kind === "head" ? `<div class="nb-sub">${esc(l)}</div>` :
-        `<button class="nav ${id === p ? "on" : ""} ${kind === "add" ? "addnav" : ""} ${kind === "rq" ? "rqnav" + (badge ? " has" : "") : ""}" data-act="${kind === "add" ? "newContractor" : "nav"}" data-id="${esc(id)}">${dot ? `<span class="ndot" style="--d:${esc(dot)}"></span>` : ""}<span class="nl">${esc(l)}</span>${s ? `<span class="soon">בהמשך</span>` : ""}${badge ? `<span class="nbadge">${badge}</span>` : ""}</button>`).join("");
+        `<button class="nav ${id === p ? "on" : ""} ${kind === "add" ? "addnav" : ""} ${kind === "rq" ? "rqnav" + (badge ? " has" : "") : ""}" data-act="${kind === "add" ? id : "nav"}" data-id="${esc(id)}">${dot ? `<span class="ndot" style="--d:${esc(dot)}"></span>` : ""}<span class="nl">${esc(l)}</span>${s ? `<span class="soon">בהמשך</span>` : ""}${badge ? `<span class="nbadge">${badge}</span>` : ""}</button>`).join("");
         return g.box ? `<div class="navbox"><div class="nb-h"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg>${esc(g.group)}</div>${its}</div>`
           : `${g.group ? `<div class="grp">${g.group}</div>` : ""}${its}`; }).join("")}
       <div class="modes"><button class="mode-b" data-act="darkTog">${ui.dark ? "☀ מצב בהיר" : "🌙 מצב כהה"}</button><button class="mode-b" data-act="presTog">🖥 מצב הצגה</button></div>
@@ -1064,9 +1071,11 @@ function designInRange(d, range) {
 const secAsg = (c, segId) => { const a = c?.secs?.[segId]; if (!a || a.from === "" || a.to === "" || a.from == null || a.to == null) return null;
   const f = Number(a.from), t = Number(a.to); return isNaN(f) || isNaN(t) || f === t ? null : [Math.min(f, t), Math.max(f, t)]; };
 /** קטעי התכנון של קבלן: לפי ק.ד., וכשהוגדרו חתכים — האורך לפי החתכים (מדויק) */
+/** טווח הקו כולו (כל הקבלנים הראשיים) — לקבלן ייעודי שעובד לאורך כל הקו בלי גבולות גזרה משלו */
+const lineRange = d => { const rs = d.contractors.filter(isMain).map(kdRange).filter(Boolean); return rs.length ? { lo: Math.min(...rs.map(r => r.lo)), hi: Math.max(...rs.map(r => r.hi)) } : null; };
 function designOfC(d, c) {
   if (!c) return [];
-  const base = designInRange(d, kdRange(c)), ids = new Set(base.map(x => x.s.id));
+  const base = designInRange(d, kdRange(c) || (!isMain(c) ? lineRange(d) : null)), ids = new Set(base.map(x => x.s.id));
   const extra = Object.keys(c.secs || {}).filter(id => !ids.has(id) && secAsg(c, id)).map(id => d.designSegments.find(s => s.id === id)).filter(Boolean)
     .map(s => ({ s, r: kdRange(s), ov: kdRange(s), full: true, frac: 1, len: lenOf(s)?.v ?? null, office: d.designOffices.find(o => o.id === s.officeId) }));
   return [...base, ...extra].map(x => { const a = secAsg(c, x.s.id); return a ? { ...x, asg: a, exact: true, full: true, len: (a[1] - a[0]) * SECTION_M / 1000 } : x; })
@@ -1218,7 +1227,40 @@ function spMoveModal(tid) {
 }
 /* ---------- מעבירי מים: בביצוע קבלני העפר (לא קבלן הסבכות) ---------- */
 const CULV_KINDS = ["מעבירי מים", "מעביר אירי"], GRATE_CID = "sp-haoman";
-const MAIN_KINDS = ["מעבירי מים", "מעביר אירי", "ארון שקד"];   // פריטים שקבלני העפר בונים בעצמם
+const MAIN_KINDS = ["מעבירי מים", "מעביר אירי", "ארון שקד"];
+/** רכיבי הפרויקט — דף לכל סוג פריט, מכל הגזרות ומכל הקבלנים. רכיבים נוספים נשמרים בהגדרות (tableConfig/settings/components) */
+const COMPS_BASE = [["trafo", "חדרי טרפו", "חדר טרפו"], ["cab", "ארונות שקד", "ארון שקד"], ["culv", "מעבירי מים", "מעבירי מים"], ["air", "מעבירים איריים", "מעביר אירי"], ["grate", "סבכות", "סבכות למעבירי מים"],
+  ["@power", "חיבורי חח״י"], ["@sites", "אתרי איסוף"], ["gate", "שערים", "שערים"], ["ttz", "תט״זים", "תט״ז"], ["mine", "פינוי מוקשים", "פינוי מוקשים"]];
+const comps = () => [...COMPS_BASE.map(([k, name, kind]) => ({ k, name, kind })), ...Object.entries(RAW.tableConfig?.settings?.components || {}).map(([k, x]) => ({ k: "x" + k, name: x.name, kind: x.kind || x.name, custom: true }))];
+const compOf = kind => comps().find(x => x.kind === kind);
+function pageComp(d, key) {
+  const C = comps().find(x => x.k === key); if (!C) return `<p class="muted">רכיב לא קיים</p>`;
+  const its = d.items.filter(i => i.kind === C.kind), mains = d.contractors.filter(isMain).sort(byNorth), I = KIND_ICON[C.kind] || { c: "#5f6670", i: '<circle cx="12" cy="12" r="7"/>' };
+  const execs = [...new Set(its.map(i => i.contractorId))].map(id => d.contractors.find(c => c.id === id)).filter(Boolean), sp = spFor(C.kind);
+  const tile = (name, a, col, act) => { const dn = a.filter(i => i.status === "הושלם").length, ip = a.filter(i => i.status === "בביצוע").length;
+    return `<div class="ch-t" ${act} style="border-top:4px solid ${col}"><span>${esc(name)}</span><b>${dn}/${a.filter(i => i.status !== "מבוטל").length}</b><small>הושלמו${ip ? ` · ${ip} בביצוע` : ""}</small></div>`; };
+  const byArea = mains.map(m => ({ m, a: its.filter(i => mainAt(d, i)?.id === m.id) })).filter(x => x.a.length), none = its.filter(i => !mainAt(d, i));
+  const kd = i => kdNum(i.kdFrom) ?? -1;
+  return `<div class="ch-banner" style="--cc:${I.c}"><div><h1>${esc(C.name)}</h1><span>כל ה${esc(C.name)} בפרויקט — מכל הגזרות. ביצוע: ${execs.map(c => esc(c.name)).join(", ") || "—"}. עדכון כאן מתעדכן בכל האתר.</span></div></div>
+    <div class="ch-tiles" style="--cc:${I.c};grid-template-columns:repeat(${byArea.length + (none.length ? 1 : 0) + 1},minmax(0,1fr))">${tile("כל הקו", its, I.c, "")}${byArea.map(x => tile(x.m.name, x.a, cColor(d, x.m), `data-act="nav" data-id="c:${x.m.id}" role="button" ${isMain(d.contractors.find(c => c.id === its.find(i => mainAt(d, i)?.id === x.m.id)?.contractorId) || {}) ? 'data-ctab="culverts"' : ""}`)).join("")}${none.length ? tile("ללא גזרה", none, "#8a9a90", "") : ""}</div>
+    <div class="card"><div class="tablewrap"><table class="sheet">${statHead("גזרה")}<tbody>${byArea.map(x => statRow(esc(x.m.name), itemStats(x.a))).join("")}${none.length ? statRow("ללא גזרה", itemStats(none)) : ""}${statRow("סה״כ", itemStats(its))}</tbody></table></div>
+    <h2 style="margin-top:16px">${esc(C.name)} <span class="small muted">(${its.length}) — הכפתורים מעל הטבלה מסננים לפי גזרה, קבלן וסטטוס</span></h2>${renderSheet("items", [...its].sort((a, b) => kd(b) - kd(a)), "אין פריטים")}
+    <div class="row" style="margin-top:10px;gap:8px">${sp && !isViewer() ? `<button class="btn ghost sm" data-act="addItem" data-id="${sp}" data-kind="${esc(C.kind)}">+ ${esc(C.kind)}</button>` : `<span class="small muted">מוסיפים פריט בדף הקבלן המבצע (חוצץ ״פריטים״).</span>`}</div></div>`;
+}
+function compAddModal() {
+  const cs = list("contractors");
+  modal(`<h2>רכיב חדש</h2><p class="small muted" style="margin:0">סוג פריט חדש שיקבל דף משלו בתפריט ״רכיבי הפרויקט״ — למשל ״עמודי תאורה״.</p>
+    <label class="field">שם הרכיב<input class="inp" id="cp_n" placeholder="למשל: עמודי תאורה"></label>
+    <label class="field">הקבלן המבצע<select class="inp" id="cp_c"><option value="">— יוחלט בהמשך —</option>${cs.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label>
+    <div class="row"><button class="btn" id="mYes">הוספה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close; m.querySelector("#cp_n").focus();
+    m.querySelector("#mYes").onclick = async () => { const n = m.querySelector("#cp_n").value.trim(); if (!n) return; const cid = m.querySelector("#cp_c").value, id = newId();
+      const S = { ...(RAW.tableConfig?.settings || {}) }; delete S.updatedAt; delete S.updatedBy; S.components = { ...(S.components || {}), [id]: { name: n, kind: n, order: Date.now() } };
+      await api.put("tableConfig", "settings", S);
+      if (cid) { const c = RAW.contractors[cid]; await api.update("contractors", cid, { specialties: [...new Set([...specsOf(c), n])].join(" · ") }); }
+      close(); ui.page = "k:x" + id; render(); toast("נוסף רכיב ✓"); };
+  });
+}   // פריטים שקבלני העפר בונים בעצמם
 function culvertsBlock(d, its, cid) {
   const kinds = [...new Set([...MAIN_KINDS.filter(k => its.some(i => i.kind === k)), ...its.map(i => i.kind || "אחר")])];
   const st = its.length ? `<div class="tablewrap"><table class="sheet">${statHead("סוג")}<tbody>${kinds.map(k => (a => a.length ? statRow(esc(KIND_PLURAL[k] || k), itemStats(a)) : "")(its.filter(i => i.kind === k))).join("")}${statRow("סה״כ", itemStats(its))}</tbody></table></div>` : "";
@@ -1847,10 +1889,10 @@ async function fbCreateUser(email, pass) {
 }
 const AUTH_ERR = { "auth/weak-password": "סיסמה חלשה — לפחות 6 תווים", "auth/invalid-email": "מייל לא תקין", "auth/operation-not-allowed": "צריך להפעיל ב-Firebase: Authentication ← Sign-in method ← Email/Password", "auth/admin-restricted-operation": "ב-Firebase: Authentication ← Settings ← User actions ← לסמן Enable create (sign-up)", "auth/network-request-failed": "אין חיבור לאינטרנט" };
 function inspectorsTab(d) {
-  const mains = d.contractors.filter(isMain), L = inspList();
+  const mains = d.contractors, L = inspList();   // כל הקבלנים — ראשיים וייעודיים (מפקח יכול לדווח גם על שערים, חח״י, סבכות…)
   const url = location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "") + "report.html";
   const rows = Object.entries(L).sort((a, b) => String(a[1].name).localeCompare(String(b[1].name), "he"));
-  const per = mains.map(c => ({ c, n: rows.filter(([, x]) => x.active !== false && x.contractors?.[c.id]).map(([, x]) => x.name || x.email) }));
+  const per = mains.filter(isMain).map(c => ({ c, n: rows.filter(([, x]) => x.active !== false && x.contractors?.[c.id]).map(([, x]) => x.name || x.email) }));
   return `<p class="small" style="max-width:90ch;margin-top:0">כל מפקח נכנס מהנייד לדף הדיווח עם מייל וסיסמה משלו, ורואה רק את הקבלנים שסומנו לו. אפשר כמה מפקחים לאותו קבלן, ומפקח אחד לכמה קבלנים. הדיווחים מגיעים כ<b>״לבדיקה״</b>.</p>
     <div class="row" style="gap:6px;margin-bottom:10px">${per.map(p => `<span class="pill ${p.n.length ? "ok" : "warn"}">${esc(p.c.name)}: ${p.n.length ? esc(p.n.join(", ")) : "אין מפקח"}</span>`).join("")}</div>
     <div class="tablewrap" style="max-height:none"><table class="sheet"><thead><tr><th>שם</th><th>מייל לכניסה</th><th>טלפון</th>${mains.map(c => `<th class="c">${esc(c.name)}</th>`).join("")}<th class="c">פעיל</th><th>סיסמה</th><th></th></tr></thead><tbody>
@@ -2012,6 +2054,49 @@ function fenceHero(d) {
     <div class="fh-leg small"><span><i class="f"></i>יסוד בלבד</span><span><i class="s"></i>גדר עומדת</span><span><i class="d"></i>גמורה</span><span class="muted">· לחיצה על קבלן פותחת אותו</span></div>
     <div class="fh-more small"><span class="muted">עוד:</span>${more}</div></div>`;
 }
+/* ---------- קוביות מדד בדף הראשי (גדר + מלאכות לבחירה) ---------- */
+/** מדדים אפשריים: גדר (משולב) + כל שלב; מצעים מפוצל לשכבות לפי שם המלאכה */
+function metricDefs() {
+  const L = [{ k: "fence", name: "גדר", color: "#2e7d4f" }];
+  STAGE_GROUPS.forEach(G => G.stages.forEach(g => { if (ITEM_STAGES[g]) return;
+    if (g === "מצעים") { L.push({ k: "base1", name: "מצע שכבה 1", color: G.color, st: g, re: /1|ראשונה|א׳/ }, { k: "base2", name: "מצע שכבה 2", color: G.color, st: g, re: /2|שנייה|ב׳/ }); return; }
+    L.push({ k: "st:" + g, name: g === "מבנה דרך" ? "כביש חפור (מבנה דרך)" : g, color: G.color, st: g }); }));
+  return L;
+}
+const OV_DEF = ["fence", "st:כלונסאות", "st:מבנה דרך", "base1"];
+const ovMetrics = () => { const v = RAW.tableConfig?.settings?.ovMetrics; return Array.isArray(v) && v.length ? v : OV_DEF; };
+/** התקדמות של מדד אצל קבלן: איחוד הטווחים שדווחו בכל המלאכות המתאימות (במטרים לפי חתכים) + טווחי ק.ד. לרצועה */
+function metricState(d, c, M, asOf = null) {
+  const acts = d.activities.filter(a => a.contractorId === c.id && !isUnitAct(a) && a.stage === M.st && (!M.re || M.re.test(a.name || "")));
+  const out = { has: acts.length > 0, done: 0, kd: [], len: 0 }; if (!out.has) return out;
+  const ids = new Set(acts.map(a => a.id)), prog = d.progress.filter(p => p.contractorId === c.id && ids.has(p.activityId) && !p.review && (!asOf || !p.date || p.date <= asOf) && p.secFrom !== "" && p.secTo !== "" && p.secFrom != null);
+  designOfC(d, c).forEach(x => { const U = mergeIvs(prog.filter(p => p.segmentId === x.s.id).map(ivOfP)); out.done += U.reduce((t, [a, b]) => t + b - a, 0) * SECTION_M;
+    U.forEach(([a, b]) => { const k1 = sec2kd(x.s, a), k2 = sec2kd(x.s, b); if (k1 !== null && k2 !== null) out.kd.push([Math.min(k1, k2), Math.max(k1, k2)]); }); });
+  out.len = execState(d, c.id, asOf).rows.find(r => r.plan)?.plan || (lenOfC(d, c)?.km || 0) * 1000; return out;
+}
+function metricCard(d, M) {
+  const T = todayStr(), mains = d.contractors.filter(isMain).sort(byNorth);
+  const F = mains.map(c => ({ c, col: cColor(d, c), now: metricState(d, c, M), wk: metricState(d, c, M, addDays(T, -7)), mo: metricState(d, c, M, addDays(T, -30)) })).filter(x => x.now.has);
+  if (!F.length) return `<div class="card fh mc" style="border-top-color:${M.color}"><div class="fh-big"><span>${esc(M.name)}</span><b class="muted" style="font-size:18px">אין מלאכה כזו אצל הקבלנים</b></div></div>`;
+  const L = F.reduce((t, x) => t + x.now.len, 0), dn = F.reduce((t, x) => t + x.now.done, 0), wk = dn - F.reduce((t, x) => t + x.wk.done, 0), mo = dn - F.reduce((t, x) => t + x.mo.done, 0);
+  const km = v => (v / 1000).toLocaleString("he-IL", { minimumFractionDigits: 1, maximumFractionDigits: 1 }), pc = L ? Math.round(dn / L * 100) : 0;
+  const strip = F.map(x => { const r = kdRange(x.c); if (!r) return ""; const W = r.hi - r.lo || 1;
+    return `<div class="fh-blk" style="flex:${x.now.len || 1};--cc:${x.col}" data-act="nav" data-id="c:${x.c.id}" role="button" title="${esc(x.c.name)}: ${km(x.now.done)} ק״מ מתוך ${km(x.now.len)}">
+      <div class="fh-tr">${mergeIvs(x.now.kd).map(([a, b]) => `<i class="s" style="background:${M.color};right:${((r.hi - Math.min(r.hi, b)) / W * 100).toFixed(2)}%;width:${Math.max(0.4, (Math.min(r.hi, b) - Math.max(r.lo, a)) / W * 100).toFixed(2)}%"></i>`).join("")}</div>
+      <span>${esc(x.c.name)} <b style="color:${M.color}">${x.now.len ? Math.round(x.now.done / x.now.len * 100) : 0}%</b></span></div>`; }).join("");
+  return `<div class="card fh mc" style="border-top-color:${M.color}"><div class="mc-top"><div class="fh-big"><span>${esc(M.name)} — כל הקו</span><b style="color:${M.color}">${km(dn)} <small>ק״מ מתוך ${km(L)}</small></b>
+      <div class="fh-pc" style="color:${M.color}">${pc}%</div><div class="fh-wk">${wk > 0.5 ? `<b>+${num(Math.round(wk), 0)} מ׳</b> השבוע` : "ללא התקדמות השבוע"} · החודש ${mo > 0.5 ? `+${num(Math.round(mo), 0)} מ׳` : "—"}</div></div>
+      <div class="mc-cs">${F.map(x => `<div style="--cc:${x.col}"><span>${esc(x.c.name)}</span><b>${km(x.now.done)}</b><small>מתוך ${km(x.now.len)} ק״מ</small></div>`).join("")}</div></div>
+    <div class="fh-strip"><span class="fh-ns">צפון</span>${strip}<span class="fh-ns">דרום</span></div></div>`;
+}
+function ovMetricsBlock(d) {
+  const defs = metricDefs(), sel = ovMetrics().map(k => defs.find(x => x.k === k)).filter(Boolean);
+  const cards = sel.map(M => M.k === "fence" ? fenceHero(d) : metricCard(d, M)).join("");
+  const pick = ui.ovPick ? `<div class="mp-scrim" data-act="ovPick"></div><aside class="mp"><div class="row" style="align-items:center"><h3 style="margin:0">מה להציג בדף הראשי</h3><span class="spacer"></span><button class="btn ghost sm" data-act="ovPick">סגירה</button></div>
+      <p class="small muted" style="margin:4px 0 10px">לחיצה מוסיפה / מסירה קובייה. הבחירה נשמרת לכל המשתמשים.</p>
+      ${defs.map(x => `<label class="mp-i ${ovMetrics().includes(x.k) ? "on" : ""}" style="--mc:${x.color}"><input type="checkbox" data-ovm="${esc(x.k)}" ${ovMetrics().includes(x.k) ? "checked" : ""} ${isViewer() ? "disabled" : ""}> ${esc(x.name)}</label>`).join("")}</aside>` : "";
+  return `<div class="row" style="margin:14px 0 -4px;align-items:center"><span class="small muted">מדדי ביצוע — כל הקו</span><span class="spacer"></span><button class="btn ghost sm" data-act="ovPick">☰ מה להציג</button></div>${cards}${pick}`;
+}
 function overviewHero(d) {
   const today = todayStr(), wkD = addDays(today, -7), moD = addDays(today, -30);
   const mains = d.contractors.filter(isMain).map((c, i) => ({ c, col: cColor(d, c), now: snapshot(d, c, today), wk: snapshot(d, c, wkD), mo: snapshot(d, c, moD) }));
@@ -2039,13 +2124,12 @@ function overviewHero(d) {
       return `<button class="ov-sp" data-act="${c._culv ? "navKind" : "nav"}" data-id="${c._culv ? "culverts" : "c:" + c.id}" data-kind="${esc(k)}" style="--kc:${I.c}" title="${esc(c.name)}"><i>${matSvg(I.i)}</i><div><b>${esc(KIND_PLURAL[k] || k)}</b>
         <span class="ov-spn"><b>${dn2}</b>/${ii.length} הושלמו${ip ? ` · ${ip} בביצוע` : ""}</span>${wk ? `<span class="ov-wk">השבוע +${wk}</span>` : ""}</div>
         <div class="ov-spbar"><em style="width:${ii.length ? Math.round(dn2 / ii.length * 100) : 0}%"></em></div></button>`; }); });
-  return `${fenceHero(d)}<div class="ov-kpis">
+  return `${ovMetricsBlock(d)}<div class="ov-kpis">
       ${kpi("k1", "כל המלאכות — ממוצע (מטר שווה-ערך)", `${km ? Math.round(done / km * 100) : 0}%`, `${m(done)} מתוך ${m(km)} מ׳`)}
       ${kpi("k2", "התקדמות", `<span class="ov-wkb">+${m(Math.max(0, dW))}</span> <small>מ׳ השבוע</small>`, `החודש +${m(Math.max(0, dM))} מ׳`)}
       ${kpi("k3", "נושאים פתוחים", open.length, `HOLD: ${open.filter(i => i.status === "HOLD").length}${pend ? ` · ${pend} דיווחים ממתינים לאישור` : ""}`)}
       ${kpi("k4", "להחלטת הנהלה", mgmt.length, mgmt.length ? "לחיצה — לוח התראות" : "אין נושאים מסומנים", `data-act="nav" data-id="alerts" role="button" tabindex="0"`)}
     </div>
-    ${budgetCard(d)}
     <div class="ov-cards">${mains.map(card).join("")}</div>
     ${spTiles.length ? `<div class="ov-sph"><h2>קבלנים ייעודיים</h2><span class="muted small">ביחידות · לחיצה פותחת את הקבלן</span></div><div class="ov-sps">${spTiles.join("")}</div>` : ""}`;
 }
@@ -2321,7 +2405,7 @@ function specialistDash(d, S) {
       ...kinds.map(k => statRow(`<span style="padding-inline-start:14px">${esc(KIND_PLURAL[k] || k)}</span>`, itemStats(its.filter(i => (i.kind || "אחר") === k))))]; });
   return rows.length ? `<h3 style="margin:16px 0 6px">קבלנים ייעודיים${S === "הכל" ? "" : " — " + esc(S)}</h3><div class="tablewrap"><table class="sheet">${statHead("סוג פריט")}<tbody>${rows.join("")}</tbody></table></div>` : "";
 }
-const SP_TABS = [["items", "פריטי עבודה"], ["orders", "הזמנות"], ["deliveries", "מסירות תוכניות"], ["issues", "נושאים פתוחים"]];
+const SP_TABS = [["items", "פריטי עבודה"], ["progress", "דיווחי ביצוע"], ["orders", "הזמנות"], ["deliveries", "מסירות תוכניות"], ["issues", "נושאים פתוחים"]];
 function pageSpecialist(d, c) {
   const id = c.id, its = d.items.filter(i => i.contractorId === id), specs = specsOf(c);
   if (!SP_TABS.some(t => t[0] === ui.ctab) || isIecOnly()) ui.ctab = "items";
@@ -2353,6 +2437,8 @@ function pageSpecialist(d, c) {
   } else if (ui.ctab === "deliveries") {
     const dls = d.deliveries.filter(x => x.contractorId === id).sort((a, b) => String(b.date).localeCompare(String(a.date)));
     tab = `<h2>רישום מסירה ל${esc(c.name)}</h2>${deliveryForm(d, id)}<h2 style="margin-top:22px">מסירות שבוצעו</h2>${renderSheet("deliveries", dls, "עוד לא נרשמו מסירות")}`;
+  } else if (ui.ctab === "progress") {
+    tab = zonesBlock(d, c) + execTab(d, c);
   } else tab = issuesTab(d, c);
   const st = itemStats(its);
   const spCol = (KIND_ICON[specs[0]] || KIND_ICON[its[0]?.kind] || { c: "#5f6670" }).c, wkD = addDays(todayStr(), -7);
@@ -2361,7 +2447,7 @@ function pageSpecialist(d, c) {
   return `<div class="ch-banner" style="--cc:${spCol}">${cLogo(c, "ban")}<div><h1>${esc(c.name)}</h1><span>קבלן ייעודי${c.sector ? ` · ${esc(c.sector)}` : ""}${specs.length ? ` · ${specs.map(esc).join(" · ")}` : ""}</span></div></div>
   ${kTiles ? `<div class="ov-sps" style="margin-top:12px">${kTiles}</div>` : ""}
   <div class="row" style="display:none"><h1>${esc(c.name)}</h1><span class="pill">קבלן ייעודי</span><span class="pill">${esc(c.sector || "")}</span>${specs.map(x => `<span class="pill ok">${esc(x)}</span>`).join("")}</div>
-  <div class="row" style="margin-bottom:18px"><p class="sub" style="margin:0">קבלן שעובד לרוחב הקו לפי התמחות. העבודה מנוהלת כפריטים לפי ק.ד.</p><span class="spacer"></span>${logoField(c)}<button class="btn del" data-act="delContractor" data-id="${id}">מחיקת קבלן</button></div>
+  <div class="row" style="margin-bottom:18px"><p class="sub" style="margin:0">קבלן שעובד לרוחב הקו לפי התמחות. העבודה מנוהלת כפריטים לפי ק.ד.</p><span class="spacer"></span>${isViewer() ? "" : `<span class="small muted">סדר בתפריט</span><button class="btn ghost sm" data-act="spOrd" data-id="${id}|-1" title="למעלה">▲</button><button class="btn ghost sm" data-act="spOrd" data-id="${id}|1" title="למטה">▼</button>`}${logoField(c)}<button class="btn del" data-act="delContractor" data-id="${id}">מחיקת קבלן</button></div>
   <div class="card">
     <details class="ch-det"><summary><b>פרטי קבלן</b> <span class="muted small">— שם, גזרה, התמחויות, תכולות העבודה</span></summary>
     <div class="form6" style="margin-top:10px">${fld("name", "שם הקבלן")}${sel("sector", "גזרה", ["עמקים", "בקעה", "שתי הגזרות"])}${fld("inspector", "מפקח / איש קשר")}${fld("code", "קוד לנושאים")}${fld("kdFrom", "אזור עבודה — ק.ד. מ (רשות)")}${fld("kdTo", "אזור עבודה — ק.ד. עד (רשות)")}
@@ -2480,6 +2566,21 @@ function execByOrders(d, cid) {
 const heatC = (p, col) => p === null || p === undefined || p <= 0 ? "" : `background:color-mix(in oklab, ${col} ${Math.round(16 + Math.min(1, p) * 74)}%, #fff);${p > .5 ? "color:#fff;" : ""}`;
 const heatBg = p => p === null ? "" : p <= 0 ? "" : `background:color-mix(in oklab, var(--accent) ${Math.round(12 + p * 70)}%, #fff);${p > .55 ? "color:#fff;" : ""}`;
 
+/** אזורי עבודה (נפות) של קבלן ייעודי — מחתך עד חתך (מספרי החתכים ייחודיים לכל קטע תכנון). ההתקדמות במטרים לפי החתכים שדווחו בתוך האזור. */
+function zonesBlock(d, c) {
+  const Z = Object.entries(c.zones || {}).map(([id, z]) => ({ id, ...z })).sort((a, b) => (+a.order || 0) - (+b.order || 0));
+  const segs = d.designSegments.filter(s => s.secFrom !== "" && s.secTo !== "" && s.secFrom != null).map(s => [Math.min(+s.secFrom, +s.secTo), Math.max(+s.secFrom, +s.secTo)]);
+  const zl = z => { const a = Math.min(+z.secFrom, +z.secTo), b = Math.max(+z.secFrom, +z.secTo); if (isNaN(a) || isNaN(b)) return null; return segs.reduce((t, [x, y]) => t + Math.max(0, Math.min(b, y) - Math.max(a, x)), 0) * SECTION_M; };
+  const acts = d.activities.filter(a => a.contractorId === c.id && !isUnitAct(a)), prog = d.progress.filter(p => p.contractorId === c.id && !p.review && p.secFrom !== "" && p.secTo !== "" && p.secFrom != null);
+  const done = (z, a) => { const lo = Math.min(+z.secFrom, +z.secTo), hi = Math.max(+z.secFrom, +z.secTo); return mergeLen(prog.filter(p => p.activityId === a.id).map(ivOfP).map(([x, y]) => [Math.max(lo, x), Math.min(hi, y)]).filter(([x, y]) => y > x)); };
+  const inp = (z, f, w, ph = "") => `<input class="inp" style="width:${w}" value="${esc(z[f] ?? "")}" data-zone="${c.id}|${z.id}|${f}" ${ph ? `placeholder="${ph}"` : ""} ${f !== "name" ? 'inputmode="numeric" dir="ltr"' : ""}>`;
+  return `<div class="card" style="margin-bottom:12px"><div class="row" style="align-items:center"><h2 style="margin:0">אזורי עבודה (נפות) <span class="muted small">— מחתך עד חתך; המטרים נספרים לפי החתכים שדווחו (חתך = ${SECTION_M} מ׳)</span></h2><span class="spacer"></span>${isViewer() ? "" : `<button class="btn ghost sm" data-act="zoneAdd" data-id="${c.id}">+ אזור</button>`}</div>
+    ${Z.length ? `<div class="tablewrap"><table class="sheet"><thead><tr><th>אזור</th><th>מחתך</th><th>עד חתך</th><th>אורך</th>${acts.map(a => `<th>${esc(svShort(a.name))}</th>`).join("")}<th></th></tr></thead><tbody>
+      ${Z.map(z => { const L = zl(z); return `<tr><td>${inp(z, "name", "16ch", "שם הנפה")}</td><td>${inp(z, "secFrom", "8ch")}</td><td>${inp(z, "secTo", "8ch")}</td><td class="c">${L === null ? "—" : num(L, 0) + " מ׳"}</td>
+        ${acts.map(a => { const m = L === null ? null : done(z, a); return `<td class="c">${m === null ? "—" : `<b>${num(m, 0)}</b> מ׳${L ? ` <span class="muted small">${Math.round(m / L * 100)}%</span>` : ""}`}</td>`; }).join("")}
+        <td>${isViewer() ? "" : `<button class="lnk" data-act="zoneDel" data-id="${c.id}|${z.id}">מחיקה</button>`}</td></tr>`; }).join("")}</tbody></table></div>`
+      : `<p class="muted small" style="margin:6px 0 0">עוד לא הוגדרו אזורים. לחברת חשמל — שלוש הנפות, כל אחת מחתך עד חתך. מלאכה במטרים (למשל ״השחלת כבלים״) תוצג לפי נפה.</p>`}</div>`;
+}
 function execTab(d, c) {
   const st = execState(d, c.id), f = ui.pf;
   if (!st.ds.length) return `<p class="muted">צריך קודם גבולות גזרה (ק.ד. מ–עד) וקטעי תכנון בטווח שלה.</p>`;
@@ -3207,6 +3308,16 @@ function bgData(d) {
   return { cfg, earth, byC, cats, extras, exDone, exNext, sites, T, specs, iec, has: B.length > 0 || T.earthOrd > 0 };
 }
 /** כרטיס במסך הראשי */
+/** סרגל העלויות (מהדף הראשי) — בתוך מסך התקציב: חלוקה לקטגוריות + קובייה לכל קבלן ולכל רכיב (שערים, סבכות, חח״י, אתרי איסוף…) */
+function budgetBar(d, R, M) {
+  const T = R.T, parts = [["עבודות עפר", T.earthEst, "#7a5c3e"], ["עבודות נוספות", T.doneEst + T.nextEst, "#4a6d93"], ["אתרי איסוף", T.siteEst, "#2f6b4f"]].filter(p => p[1] > 0);
+  const col = c => c.c ? (c.sp ? (KIND_ICON[specsOf(c.c)[0]] || {}).c || "#8a9a90" : cColor(d, c.c)) : "#2f6b4f";
+  const cube = c => { const x = M.colT(c.id), nm = c.id ? c.name : (M.L.some(l => !l.col && l.cat === "אתרי איסוף") && M.L.filter(l => !l.col).every(l => l.cat === "אתרי איסוף") ? "אתרי איסוף" : c.name);
+    return `<div style="--cc:${col(c)}" data-act="bgCol" data-id="${esc(c.id)}" role="button" title="אומדן ${bgM(x.est)} · כוסה ${bgM(x.cov)}"><b>${esc(nm)}</b><span>${bgMM(x.est)}</span><small>${x.est - x.cov > 1 ? `חסר ${bgMM(x.est - x.cov)}` : "כוסה במלואו"}</small>${c.c && R.earth.find(e => e.c.id === c.id)?.bad.length ? `<em title="יש הזמנה שהתקציב שלה לא תואם לאורך × מחיר">⚠</em>` : ""}</div>`; };
+  return `<div class="card bg-card bg-in" style="margin-top:12px"><div class="bg-bar">${parts.map(([n, v, c]) => `<i style="flex:${v};background:${c}" title="${esc(n)}: ${bgM(v)}"></i>`).join("")}</div>
+    <div class="bg-leg">${parts.map(([n, v, c]) => `<span><i style="background:${c}"></i>${esc(n)} <b>${bgMM(v)}</b></span>`).join("")}</div>
+    <div class="bg-cs" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${M.cols.map(cube).join("")}</div></div>`;
+}
 function budgetCard(d) {
   let R; try { R = bgData(d); } catch (e) { return ""; } if (!R.has) return "";
   const T = R.T, parts = [["עבודות עפר", T.earthEst, "#7a5c3e"], ["עבודות נוספות", T.doneEst + T.nextEst, "#4a6d93"], ["אתרי איסוף", T.siteEst, "#2f6b4f"]].filter(p => p[1] > 0);
@@ -3326,6 +3437,7 @@ function pageBudget(d) {
   return `<div class="bgp"><div class="ch-banner" style="--cc:#7a5c3e"><div><h1>תקציב ואומדן</h1><span>אומדן מול הזמנות — כל הסכומים כולל מע״מ ${R.cfg.vat}% · לא כולל תפעול</span></div>
     <div class="row" style="gap:6px"><button class="btn ghost" data-act="bgEditTog">✎ עריכת אומדן</button></div></div>
   ${R.has ? "" : `<div class="card"><p style="margin:0">עוד אין נתוני אומדן. טוענים את קובץ האומדן ב״הגדרות ← נתונים וגיבוי ← הוספת נתונים מקובץ״, או נכנסים ל״עריכת אומדן״.</p></div>`}
+  ${budgetBar(d, R, M)}
   <div class="card bg-head" style="margin-top:12px"><div class="bg-hn"><div><span>אומדן כולל</span><b>${bgMM(T.est)}</b></div><em>←</em><div><span>כוסה (הוזמן / הועבר)</span><b style="color:var(--accent)">${bgMM(T.cov)}</b><small>${pct}%</small></div><em>←</em><div><span>חסר להשלמה</span><b style="color:${T.left > 0 ? "#b8452f" : "var(--accent)"}">${bgMM(T.left)}</b></div></div>
     <div class="bg-pb"><i style="width:${pct}%"></i></div></div>
   <div class="bg-grid"><div class="card"><div class="row" style="align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px"><h2 style="margin:0">תמונה כוללת <span class="muted small">— מ׳ ₪ · לפי הקבלן המבצע · לחיצה על תא, שורה או קבלן לפירוט</span></h2><span class="spacer"></span>
@@ -4822,7 +4934,7 @@ const TABLE_DEFS = {
     { key: "kdFrom", label: "ק.ד. מ", cls: "w-kd", cell: i => cellInput("items", i, "kdFrom", "kdin") + (kdNum(i.kdFrom) === null ? (k => k === null ? "" : `<div class="small muted nowrap" title="משוער לפי הנ.צ. ביחס לנקודות עם ק.ד. ידוע — לא נשמר. כדאי לאמת ולהקליד.">≈${k} לפי נ.צ.</div>`)(kdEst(d, i)) : "") },
     { key: "kdTo", label: "ק.ד. עד", cls: "w-kd", cell: i => cellInput("items", i, "kdTo", "kdin") },
     { key: "coord", label: "נ.צ. (ITM)", cls: "c", cell: i => `<input class="cell" id="f_items_${i.id}_coord" value="${esc(i.coord || "")}" data-edit="items|${i.id}|coord" dir="ltr" style="width:19ch;font-size:12px;text-align:center" placeholder="E / N">` + (parseCoord(i.coord) ? `<div>${mapLinks(i.coord)}</div>` : "") },
-    ...(ui.page === "c:sp-haoman" || ui.page === "culverts" || (ui.page.startsWith("c:") && ui.ctab === "culverts") ? [
+    ...(ui.page === "c:sp-haoman" || ui.page === "culverts" || ui.page === "k:culv" || ui.page === "k:air" || (ui.page.startsWith("c:") && ui.ctab === "culverts") ? [
       { key: "shape", label: "צורה", cls: "c", cell: i => `<select class="inp" id="f_items_${i.id}_shape" data-edit="items|${i.id}|shape"><option value=""></option>${["צינור", "BOX"].concat(i.shape && !["צינור", "BOX"].includes(i.shape) ? [i.shape] : []).map(k => `<option ${k === i.shape ? "selected" : ""}>${esc(k)}</option>`).join("")}</select>` },
       { key: "sizeEx", label: "מידה קיימת", cls: "c", cell: i => cellInput("items", i, "sizeEx", "kdin", 'dir="ltr" style="field-sizing:content;min-width:5ch"') },
       { key: "sizePlan", label: "מידה מתוכננת", cls: "c", cell: i => cellInput("items", i, "sizePlan", "kdin", 'dir="ltr" style="field-sizing:content;min-width:5ch"') },
@@ -4830,14 +4942,14 @@ const TABLE_DEFS = {
       { key: "newLen", label: "אורך חדש / הארכה (מ׳)", cls: "c", cell: i => cellInput("items", i, "newLen", "num", 'style="width:6ch"') },
       { key: "sheet", label: "גיליון", cls: "c", cell: i => cellInput("items", i, "sheet", "kdin", 'style="width:6ch"') },
     ] : []),
-    ...(ui.page === "culverts" || ui.page === "c:" + GRATE_CID ? [{ key: "exec", label: "קבלן מבצע", cls: "small", cell: i => `<select class="inp" id="f_items_${i.id}_contractorId" data-edit="items|${i.id}|contractorId">${[...d.contractors.filter(isMain), ...d.contractors.filter(c => c.id === GRATE_CID)].map(c => `<option value="${c.id}" ${c.id === i.contractorId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>` }] : []),
+    ...(ui.page === "culverts" || ui.page.startsWith("k:") || ui.page === "c:" + GRATE_CID ? [{ key: "exec", label: "קבלן מבצע", cls: "small", cell: i => `<select class="inp" id="f_items_${i.id}_contractorId" data-edit="items|${i.id}|contractorId">${[...d.contractors.filter(isMain), ...d.contractors.filter(c => !isMain(c) && (c.id === GRATE_CID || c.id === i.contractorId || specsOf(c).includes(i.kind)))].map(c => `<option value="${c.id}" ${c.id === i.contractorId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>` }] : []),
     { key: "main", label: "קבלן ראשי באזור", cls: "small", cell: i => { const a = mainAuto(d, i) || mainByEst(d, i), est = !mainAuto(d, i) && a;
       return `<select class="inp" id="f_items_${i.id}_mainId" data-edit="items|${i.id}|mainId" title="ברירת מחדל — לפי הק.ד.; אפשר לבחור ידנית"><option value="">${a ? (est ? "לפי נ.צ.: " : "אוטו׳: ") + esc(a.name) : "— (לפי ק.ד.)"}</option>${d.contractors.filter(isMain).map(c => `<option value="${esc(c.id)}" ${c.id === i.mainId ? "selected" : ""}>${esc(c.name)} · ${esc(c.sector || "")}</option>`).join("")}</select>`; } },
     { key: "status", label: "סטטוס", cell: i => `<select class="inp" id="f_items_${i.id}_status" data-edit="items|${i.id}|status" style="background:${ITEM_COLORS[i.status] || "#fff"}${i.status === "מבוטל" ? ";text-decoration:line-through;color:#888" : ""}">${ITEM_STATUS.map(k => `<option ${k === i.status ? "selected" : ""}>${k}</option>`).join("")}</select>` },
     { key: "plannedDate", label: "תאריך מתוכנן", cell: i => `<input type="date" class="cell" id="f_items_${i.id}_plannedDate" value="${esc(i.plannedDate)}" data-edit="items|${i.id}|plannedDate">` },
     { key: "doneDate", label: "תאריך ביצוע", cell: i => `<input type="date" class="cell" id="f_items_${i.id}_doneDate" value="${esc(i.doneDate)}" data-edit="items|${i.id}|doneDate">` },
     { key: "note", label: "הערה", cls: "w-place", cell: i => cellInput("items", i, "note") },
-    ...(ui.page === "c:sp-iec" || ui.page === "culverts" || (ui.page.startsWith("c:") && ui.ctab === "culverts") ? [{ key: "iec", label: "חיבור חח״י", cls: "small nowrap", cell: i => { const os = d.iecOrders.filter(o => o.itemId === i.id);
+    ...(ui.page === "c:sp-iec" || ui.page === "culverts" || ["k:cab", "k:ttz", "k:trafo"].includes(ui.page) || (ui.page.startsWith("c:") && ui.ctab === "culverts") ? [{ key: "iec", label: "חיבור חח״י", cls: "small nowrap", cell: i => { const os = d.iecOrders.filter(o => o.itemId === i.id);
       return os.length ? os.map(o => `<button class="pill" style="border:0;cursor:pointer;background:${IEC_COLORS[o.stage] || "#eee"}" data-act="iecGo" data-id="${esc(o.orderNo)}" title="פתיחה בחיבורי חח״י">${esc(o.stage)} · <span dir="ltr">${esc(o.orderNo)}</span></button>`).join(" ") : `<span class="muted">—</span>`; } }] : []),
   ]; },
   activities: () => [
@@ -5256,7 +5368,13 @@ $app.addEventListener("click", async e => {
   else if (act === "mergeFile") pickMergeFile();
   else if (act === "shRename") shModal();
   else if (act === "sepRun") sepModal();
-  else if (act === "navKind") { ui.filt.items = { v: {}, c: { kind: [b.dataset.kind] } }; ui.page = "culverts"; location.hash = ui.page; render(); window.scrollTo(0, 0); }
+  else if (act === "zoneAdd") { const c = RAW.contractors[b.dataset.id], Z = { ...(c.zones || {}) }, n = Object.keys(Z).length; Z[newId()] = { name: `אזור ${n + 1}`, secFrom: "", secTo: "", order: n + 1 }; await api.update("contractors", b.dataset.id, { zones: Z }); }
+  else if (act === "zoneDel") { const [cid, zid] = b.dataset.id.split("|"), Z = { ...(RAW.contractors[cid].zones || {}) }; delete Z[zid]; await api.update("contractors", cid, { zones: Object.keys(Z).length ? Z : null }); }
+  else if (act === "compAdd") compAddModal();
+  else if (act === "ovPick") { ui.ovPick = !ui.ovPick; render(); }
+  else if (act === "spOrd") { const [cid, dir] = b.dataset.id.split("|"), L = list("contractors").filter(c => !isMain(c)), i = L.findIndex(c => c.id === cid), j = i + Number(dir);
+    if (i < 0 || j < 0 || j >= L.length) return; [L[i], L[j]] = [L[j], L[i]]; for (let k = 0; k < L.length; k++) if (Number(L[k].order) !== k + 1) await api.update("contractors", L[k].id, { order: k + 1 }); }
+  else if (act === "navKind") { const C = compOf(b.dataset.kind); if (C) { ui.page = "k:" + C.k; } else { ui.filt.items = { v: {}, c: { kind: [b.dataset.kind] } }; ui.page = "culverts"; } location.hash = ui.page; render(); window.scrollTo(0, 0); }
   else if (act === "toMains") toMainsModal(b.dataset.id);
   else if (act === "odIssue") bgLinkModal(b.dataset.id, () => render());
   else if (act === "odFuture") odFutureModal(b.dataset.id);
@@ -5446,6 +5564,11 @@ $app.addEventListener("input", e => {
 });
 function alApplyQ() { const q = String(ui.alQ || "").trim().toLowerCase(), cs = [...$app.querySelectorAll("[data-altxt]")]; if (!cs.length) return;
   let n = 0; cs.forEach(c => { const ok = !q || q.split(/\s+/).every(w => c.dataset.altxt.includes(w)); c.hidden = !ok; n += ok; }); const z = $app.querySelector(".al-none"); if (z) z.hidden = !(q && !n); }
+$app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?.ovm) return; const k = t.dataset.ovm, cur = ovMetrics(), defs = metricDefs().map(x => x.k);
+  const next = t.checked ? [...cur, k] : cur.filter(x => x !== k); const S = { ...(RAW.tableConfig?.settings || {}) }; delete S.updatedAt; delete S.updatedBy;
+  await api.put("tableConfig", "settings", { ...S, ovMetrics: defs.filter(x => next.includes(x)).length ? next.filter(x => defs.includes(x)) : ["fence"] }); });
+$app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?.zone) return; const [cid, zid, f] = t.dataset.zone.split("|"), c = RAW.contractors[cid]; if (!c) return;
+  const Z = JSON.parse(JSON.stringify(c.zones || {})); Z[zid] = { ...(Z[zid] || {}), [f]: f === "name" ? t.value.trim() : (t.value.trim() === "" ? "" : Number(t.value)) }; await api.update("contractors", cid, { zones: Z }); });
 $app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.alq) return; ui.alQ = t.value; alApplyQ(); });
 $app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.gsearch) return; (ui.gsearch = ui.gsearch || {})[t.dataset.gsearch] = t.value; applyFilters(); applyGSearch(); });
 $app.addEventListener("change", async e => {
