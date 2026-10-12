@@ -197,7 +197,8 @@ body.ro .side .foot::after { content: " · צפייה בלבד"; color: #f2c66d;
 .bg-att ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; } .bg-att li { padding: 7px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; border-inline-start: 4px solid; }
 .bg-att li.red { background: #fbe7e1; border-color: #c0392b; } .bg-att li.orange { background: #fdf1dc; border-color: #e08a1e; } .bg-att li.blue { background: #e7eff9; border-color: #2f6db5; } .bg-att li:hover { filter: brightness(.97); }
 .bg-cs small { font-size: 11.5px; color: var(--muted); }
-.bgp tr.bg-er td { background: #faf7f1; } .bgp .sheet td { vertical-align: middle; }
+.bgp tr.bg-er td { background: #faf7f1; }
+.bg-xb { margin-top: 10px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; background: #fbfcfa; } .bgp .sheet td { vertical-align: middle; }
 .bg-cats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .bg-cats > div { border: 1px solid var(--line, #e5e2da); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .bg-cats span { color: var(--muted, #6b7280); font-size: 13px; } .bg-cats b { font-size: 19px; } .bg-cats small { color: var(--muted, #6b7280); }
@@ -3297,13 +3298,29 @@ function bgDrill(title, lines) {
     const subs = l.earth ? l.earth.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || "הזמנה")}</span>${x.o._secs ? ` <span class="small muted">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span> · ${num(x.m, 0)} מ׳</span>` : ""}</td><td></td><td></td>
       <td class="c small">${x.est === null ? "—" : bgM(x.est)}</td><td class="c small">${bgM(x.amt)}</td><td class="c small">${x.diff === null ? "—" : Math.abs(x.diff) <= 1000 ? `<span class="pill ok">תואם</span>` : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td><td></td></tr>`).join("") : "";
     return main + subs; }).join("");
+  // מה שקיים באתר מאחורי השורות: דרישות תקציב + חיבורי חח״י, והזמנות של הקבלנים בעמודה שלא שויכו לאומדן
+  const V = 1 + iecVat(), xLines = lines.filter(l => l.x), LK = bgLinkedSet();
+  const iecL = lines.find(l => l.x && l.exec === IEC_CID && /חברת חשמל|חח["״']?י/.test(l.title));
+  const reqs = (RAW.tableConfig?.iec?.budgetReqs || []).map(r => ({ no: r.no, a: (n => /מ[׳']?\s*ש|מש["״]?ח|מיליון/.test(String(r.amount)) ? n * 1e6 : n)(parseFloat(String(r.amount).replace(/[^\d.]/g, "")) || 0), t: r.amount }));
+  const io = d.iecOrders.filter(o => o.stage !== "בוטל"), ioAmt = io.reduce((t, o) => t + bgN(o.amount) + bgN(o.excAmount), 0), ioPaid = io.reduce((t, o) => t + (typeof iecPaid === "function" ? iecPaid(o) : 0), 0);
+  const iecBlock = iecL ? `<div class="bg-xb"><b>⚡ מאחורי "${esc(iecL.title)}"</b>
+      ${reqs.length ? `<div>דרישות תקציב לחח״י: ${reqs.map(r => `<span class="pill">${esc(r.no || "")} · ${esc(r.t || "")}</span>`).join(" ")} = <b>${bgM(reqs.reduce((t, r) => t + r.a, 0))}</b> <span class="muted">(זה ה״הועבר״ בשורה)</span></div>` : ""}
+      <div>חיבורי חח״י באתר: <b>${io.length}</b> הזמנות · סכום ההזמנות <b>${bgM(ioAmt * V)}</b> כולל מע״מ (${bgM(ioAmt)} לפני מע״מ)${ioPaid ? ` · שולם עד היום <b>${bgM(ioPaid * V)}</b>` : ""} · <a href="#power" data-go="power">לחיבורי חח״י ←</a></div>
+      <div class="muted small">ניצול התקציב שהועבר: ${reqs.length ? Math.round(ioAmt * V / Math.max(1, reqs.reduce((t, r) => t + r.a, 0)) * 100) + "%" : "—"}</div></div>` : "";
+  const cols = [...new Set(lines.map(l => l.col).filter(Boolean))];
+  const loose = d.orders.filter(o => cols.includes(o.contractorId) && !o._secs && !LK.has(o.id));
+  const looseBlock = loose.length && xLines.length ? `<div class="bg-xb"><b>📋 הזמנות של ${esc([...new Set(loose.map(o => cn(o.contractorId)))].join(", "))} שלא משויכות לאומדן (${loose.length})</b>
+      ${loose.map(o => `<div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><span>${esc(o.name || "הזמנה")}</span><span class="muted">${bgOrdAmt(o) ? bgM(bgOrdAmt(o)) : "ללא סכום תקציב"}${o.x_ordNo ? ` · ${esc(o.x_ordNo)}` : ""}</span><span class="spacer"></span>
+        ${isViewer() ? "" : `<select class="inp" data-bgattach="${o.id}" style="max-width:260px"><option value="">— לשייך לשורה…</option>${xLines.map(l => `<option value="${l.x.id}">${esc(l.title)}${l.area ? " · " + esc(cn(l.area)) : ""}</option>`).join("")}</select>`}</div>`).join("")}</div>` : "";
   modal(`<h2 style="margin:0">${esc(title)}</h2><div class="row small" style="gap:14px"><span>אומדן <b>${bgM(est)}</b></span><span>כוסה <b>${bgM(cov)}</b></span><span>חסר <b>${bgLeft(est - cov)}</b></span></div>
-    <div class="tablewrap" style="max-height:60vh;overflow:auto"><table class="sheet bgp"><thead><tr><th>עבודה</th><th>סוג</th><th>גזרה</th><th>אומדן</th><th>הוזמן / הועבר</th><th>חסר</th><th>הזמנה</th></tr></thead><tbody>${rows || `<tr><td colspan="7" class="muted">אין שורות</td></tr>`}</tbody></table></div>
+    <div class="tablewrap" style="max-height:60vh;overflow:auto"><table class="sheet bgp"><thead><tr><th>עבודה</th><th>סוג</th><th>גזרה</th><th>אומדן</th><th>הוזמן / הועבר</th><th>חסר</th><th>הזמנה</th></tr></thead><tbody>${rows || `<tr><td colspan="7" class="muted">אין שורות</td></tr>`}</tbody></table>${iecBlock}${looseBlock}</div>
     <div class="row"><button class="btn ghost" id="mEdit">✎ לעריכה</button><span class="spacer"></span><button class="btn" id="mNo">סגירה</button></div>`, (m, close) => {
     const cd = m.querySelector(".card"); cd.style.width = "min(1060px, 96vw)"; cd.style.maxWidth = "96vw";
     m.querySelector("#mNo").onclick = close; m.querySelector("#mEdit").onclick = () => { close(); ui.bgEdit = true; render(); window.scrollTo(0, 0); };
     const again = () => { close(); render(); if (ui.bgLast) bgOpen(...ui.bgLast); };
     m.querySelectorAll("[data-bglink]").forEach(bt => bt.onclick = () => bgLinkModal(bt.dataset.bglink, again));
+    m.querySelectorAll("[data-bgattach]").forEach(sel => sel.onchange = async () => { if (!sel.value) return; await api.update("budget", sel.value, { ords: { ...(RAW.budget[sel.value]?.ords || {}), [sel.dataset.bgattach]: true } }); toast("שויך ✓"); again(); });
+    m.querySelectorAll("[data-go]").forEach(a => a.onclick = e => { e.preventDefault(); close(); ui.page = a.dataset.go; location.hash = ui.page; render(); window.scrollTo(0, 0); });
     m.querySelectorAll("[data-bgun]").forEach(bt => bt.onclick = async () => { const [lid, oid] = bt.dataset.bgun.split("|"), o = { ...(RAW.budget[lid].ords || {}) }; delete o[oid]; await api.update("budget", lid, { ords: Object.keys(o).length ? o : null }); again(); }); });
 }
 /** קישור שורת אומדן להזמנה: הזמנה קיימת של הקבלן, או הזמנה חדשה שנפתחת עכשיו (נכנסת גם לטבלת ההזמנות של הקבלן) */
