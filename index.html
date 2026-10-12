@@ -135,6 +135,27 @@ body.ro .side .foot::after { content: " · צפייה בלבד"; color: #f2c66d;
 .ov-kpi { border-radius: 18px; padding: 14px 16px; color: #fff; display: flex; flex-direction: column; gap: 2px; min-height: 104px; box-shadow: 0 6px 16px -10px rgba(0,0,0,.45); }
 .ov-kpi span { font-size: 13px; opacity: .85; } .ov-kpi b { font-size: 34px; line-height: 1.1; font-weight: 800; } .ov-kpi b small { font-size: 14px; font-weight: 600; opacity: .85; } .ov-kpi small { font-size: 12.5px; opacity: .85; }
 .ov-kpi.k1 { background: linear-gradient(150deg, #3d8f5f, #22553a); } .ov-kpi.k2 { background: linear-gradient(150deg, #f0a43a, #c96a12); } .ov-kpi.k3 { background: linear-gradient(150deg, #4a6d93, #2c4560); } .ov-kpi.k4 { background: linear-gradient(150deg, #c0563a, #8e2f1d); cursor: pointer; }
+.bg-card { cursor: pointer; margin-bottom: 14px; border-inline-start: 5px solid #7a5c3e; }
+.bg-card:hover { box-shadow: 0 6px 18px -10px rgba(0,0,0,.35); }
+.bg-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
+.bg-kpis > div { background: var(--bg); border-radius: 12px; padding: 8px 12px; display: flex; flex-direction: column; }
+.bg-kpis span { font-size: 12px; color: var(--muted, #6b7280); } .bg-kpis b { font-size: 22px; }
+.bg-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 2px; } .bg-bar i { display: block; min-width: 4px; }
+.bg-leg { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; margin: 6px 0 10px; } .bg-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 5px; vertical-align: -1px; }
+.bg-leg .bg-cat { background: #f1ede4; border-radius: 10px; padding: 0 8px; }
+.bg-cs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.bg-cs > div { border-inline-start: 4px solid var(--cc); background: color-mix(in srgb, var(--cc) 9%, transparent); border-radius: 8px; padding: 6px 10px; display: flex; flex-direction: column; position: relative; }
+.bg-cs span { font-size: 15px; font-weight: 600; } .bg-cs em { position: absolute; inset-inline-end: 8px; top: 6px; font-style: normal; color: #b8452f; }
+.bgp td.c { white-space: nowrap; } .bgp .sheet td { vertical-align: middle; }
+.bg-cats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.bg-cats > div { border: 1px solid var(--line, #e5e2da); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bg-cats span { color: var(--muted, #6b7280); font-size: 13px; } .bg-cats b { font-size: 19px; } .bg-cats small { color: var(--muted, #6b7280); }
+.bg-cats ul { margin: 6px 0 0; padding-inline-start: 18px; font-size: 12.5px; }
+@media (max-width: 760px) { .bg-kpis, .bg-cats { grid-template-columns: minmax(0, 1fr); } .bg-cs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .bg-kpis b { font-size: 18px; } }
+.al-sj { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; }
+.al-chip { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 11px; cursor: pointer; border-inline-start: 4px solid var(--cc, var(--line)); }
+.al-chip b { font-weight: 600; color: var(--muted); margin-inline-start: 3px; } .al-chip.on { background: color-mix(in srgb, var(--cc, #2f6b4f) 16%, var(--surface)); border-color: var(--cc, #2f6b4f); font-weight: 600; }
+.al-q { flex: 1 1 220px; max-width: 340px; margin-inline-start: auto; }
 .ov-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
 .ov-card { all: unset; box-sizing: border-box; cursor: pointer; background: #fff; border-radius: 18px; overflow: hidden; border: 1px solid #e3e6df; box-shadow: 0 6px 18px -12px rgba(0,0,0,.35); display: flex; flex-direction: column; transition: transform .12s, box-shadow .12s; }
 .ov-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -14px rgba(0,0,0,.45); } .ov-card:focus-visible { outline: 3px solid var(--cc); }
@@ -528,7 +549,7 @@ const SECTION_M = 20;          // מרחק בין חתכים (מ׳) — קבוע
 /* =====================================================================
    עזרים
    ===================================================================== */
-const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "requests", "snapshots", "tasks", "mtgs", "tableConfig", "users"];
+const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "requests", "snapshots", "tasks", "mtgs", "budget", "tableConfig", "users"];
 /* קבלנים ייעודיים — עובדים לרוחב הקו לפי התמחות (שערים, מבני חשמל, פינוי מוקשים, סבכות…) ומנוהלים לפי "פריטי עבודה" */
 const SPECIALTIES = ["ארון שקד", "חדר טרפו", "תט״ז", "שערים", "פינוי מוקשים", "סבכות למעבירי מים", "תקשורת", "מעבירי מים", "מעביר אירי", "אחר"];
 const ITEM_STATUS = ["טרם", "מתוכנן", "בביצוע", "הושלם", "HOLD", "מבוטל"];
@@ -785,7 +806,7 @@ const NAV_ALL = () => [
     ["newContractor", "+ קבלן חדש", "", "add"]] },
   { group: "תכנון", items: [["segments", "קטעי תכנון"], ["deliveries", "מסירות תוכניות"]] },
   { group: "ניהול שוטף", items: [["survey", "סקר שטח"], ["svcmp", "סקר מול דיווחים"], ["dq", "🩺 איכות נתונים", "", "", (() => { try { return dqChecks(D()).filter(c => c.sev === "red" && c.n).length; } catch { return 0; } })()]] },
-  { group: "דוחות", items: [["mreport", "דוח הנהלה"]] },
+  { group: "דוחות", items: [["mreport", "דוח הנהלה"], ["budget", "💰 תקציב ואומדן"]] },
   { group: "", items: [["settings", "הגדרות"]] },
 ];
 const PLANS = {
@@ -830,7 +851,7 @@ function render() {
   document.body.classList.toggle("ro", isViewer());
   document.body.classList.toggle("dark", !!ui.dark); document.body.classList.toggle("present", !!ui.present);
   const p = ui.page;
-  const body = p === "overview" ? (weeklySnapshot(d), sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "meeting" ? pageMeeting(d) : p === "mytasks" ? pageMyTasks(d) : p === "mtgarch" ? pageMtgArchive(d) : p === "power" ? pageIec(d) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
+  const body = p === "overview" ? (weeklySnapshot(d), sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "budget" ? pageBudget(d) : p === "meeting" ? pageMeeting(d) : p === "mytasks" ? pageMyTasks(d) : p === "mtgarch" ? pageMtgArchive(d) : p === "power" ? pageIec(d) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
     : p === "segments" ? pageSegments(d) : p === "deliveries" ? pageDeliveries(d) : p === "settings" ? pageSettings(d) : p === "mreport" ? pageMreport(d) : pagePlan(p);
   $app.innerHTML = `
   <div class="mtop"><button class="mbtn" data-act="menu" aria-label="תפריט" aria-expanded="${ui.menu ? "true" : "false"}"><span></span><span></span><span></span></button>
@@ -854,7 +875,7 @@ function render() {
       ${body}
     </main>
   </div>`;
-  applyFilters(); applyGSearch(); applySorts();
+  applyFilters(); applyGSearch(); applySorts(); if (ui.page === "alerts") alApplyQ();
   if (p === "map") initMap(d);
   document.querySelectorAll("details").forEach(el => { if (openDet.has(keyOf(el))) el.open = true; });
   const wraps = [...document.querySelectorAll(".tablewrap")];
@@ -915,7 +936,7 @@ function sectorMap(d, c) {
       ${lane("קטעי תכנון", `${ds.length} קטעים`, bands(ds.map(x => ({ ...x, q: x.ov })), x => `${x.office?.name || ""} ${x.s.num}`, x => x.office?.color || "#eef0eb", x => `${x.office?.name || ""} קטע ${x.s.num} · ק.ד. ${kdTxt(x.r)}`), "sm-bl")}
       <div class="sm-sep">התקדמות לפי אבני דרך — כהה = בוצע יותר · <u></u> כתום = עבודה השבוע</div>
       ${ribbons}
-      ${itemLanes ? `<div class="sm-sep">פריטים — <span class="sm-k" style="--dc:#2f7d4f"></span>הושלם <span class="sm-k" style="--dc:#f39c12"></span>הושלם השבוע <span class="sm-k" style="--dc:#f2c94c"></span>בביצוע <span class="sm-k" style="--dc:#c0392b"></span>HOLD <span class="sm-k" style="--dc:#fff"></span>טרם · המספר = מס׳ ארון / ק.ד.</div>${itemLanes}` : ""}
+      ${itemLanes ? `<div class="sm-sep">פריטים — <span class="sm-k" style="--dc:#2f7d4f"></span>הושלם <span class="sm-k" style="--dc:#f39c12"></span>הושלם השבוע <span class="sm-k" style="--dc:#f2c94c"></span>בביצוע <span class="sm-k" style="--dc:#c0392b"></span>HOLD <span class="sm-k" style="--dc:#fff"></span>טרם · המספר = ק.ד.</div>${itemLanes}` : ""}
       ${issLane || dlLane ? `<div class="sm-sep">נושאים ותוכניות — מעבר עם העכבר מציג פרטים</div>` : ""}${issLane}${dlLane}
     </div>${axis}</div>`;
 }
@@ -1075,6 +1096,32 @@ function itmToWgs(E, N) {
 const mapLinks = coord => { const c = parseCoord(coord); if (!c) return ""; const [la, lo] = itmToWgs(...c).map(x => x.toFixed(6));
   return `<span class="small nowrap"><a href="https://www.google.com/maps?q=${la},${lo}" target="_blank" rel="noopener">מפה</a> · <a href="https://waze.com/ul?ll=${la},${lo}&navigate=yes" target="_blank" rel="noopener">Waze</a></span>`; };
 
+/** ארונות שקד — שם לפי ק.ד., והמספר הישן בסוגריים עד שכולם יתרגלו */
+const SH_OLD = /^ארון שקד\s+(\d+)\s*$/;
+const shName = (kd, old) => `ארון שקד ק.ד. ${String(kd).trim()}${old ? ` (${old})` : ""}`;
+function shPlan(d) {
+  const ops = [], oldOf = {};
+  d.items.filter(i => i.kind === "ארון שקד").forEach(i => { const m = String(i.name || "").match(SH_OLD), old = m ? m[1] : i.oldNo || ""; if (old) oldOf[i.id] = old;
+    const nk = (String(i.note || "").match(/ק\.ד\.\s*(\d+(?:\.\d+)?[A-Za-z]?(?:\/\d+[A-Za-z]?)?)/) || [])[1], kd = nk && parseFloat(nk) === kdNum(i.kdFrom) ? nk : String(i.kdFrom ?? "").trim();   // "771/772" כמו אצל חח״י
+    if (m && kd) ops.push({ col: "items", id: i.id, from: i.name, to: shName(kd, m[1]), extra: { oldNo: m[1] } }); });
+  d.iecOrders.filter(o => o.kind === "ארון שקד" && o.itemId && oldOf[o.itemId] && String(o.kd ?? "").trim() && !/\(\d+\)\s*$/.test(o.name || ""))
+    .forEach(o => ops.push({ col: "iecOrders", id: o.id, from: o.name || "", to: shName(o.kd, oldOf[o.itemId]) }));
+  return ops;
+}
+function shModal() {
+  const ops = shPlan(D()); if (!ops.length) return alertModal("כל ארונות השקד כבר נקראים לפי ק.ד.");
+  const ni = ops.filter(o => o.col === "items").length, no = ops.length - ni;
+  modal(`<h2>ארונות שקד — שם לפי ק.ד.</h2><p class="small" style="margin:0">כל ארון ייקרא לפי הק.ד. שלו, והמספר הישן יופיע בסוגריים — למשל <b>ארון שקד ק.ד. 783 (12)</b>. השינוי יופיע בכל מקום: טבלאות, מפה, דוחות, אתר הדיווח וחח״י.</p>
+    <div class="row" style="gap:6px"><span class="pill">${ni} פריטים</span><span class="pill">${no} הזמנות חח״י</span></div>
+    <ul class="small" style="margin:0;padding-inline-start:18px;max-height:200px;overflow:auto">${ops.slice(0, 60).map(o => `<li>${esc(o.from || "—")} ← <b>${esc(o.to)}</b></li>`).join("")}${ops.length > 60 ? `<li class="muted">ועוד ${ops.length - 60}…</li>` : ""}</ul>
+    <p class="small muted" style="margin:0">לפני השינוי יורד קובץ גיבוי. ארון שמשנים לו ק.ד. — השם מתעדכן לבד.</p><p class="small" id="sh_msg"></p>
+    <div class="row"><button class="btn" id="mYes">החלפת השמות</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close;
+    m.querySelector("#mYes").onclick = async () => { m.querySelector("#mYes").disabled = true; try { downloadJson(backupName()); } catch (e) {}
+      let n = 0; for (const o of ops) { await api.update(o.col, o.id, { name: o.to, ...(o.extra || {}) }); if (++n % 10 === 0) m.querySelector("#sh_msg").textContent = `${n}/${ops.length}`; }
+      close(); render(); toast(`עודכנו ${ops.length} שמות ✓`); };
+  });
+}
 function pageIec(d) {
   const F = ui.iec = ui.iec || { dist: "", kind: "", stage: "", q: "", showOff: false };
   const all = d.iecOrders, live = all.filter(o => o.stage !== "בוטל");
@@ -1097,7 +1144,8 @@ function pageIec(d) {
       <td class="c">${ils(sum(a, o => mn(o.amount)))}</td><td class="c">${ils(sum(a, iecPaid))}</td><td class="c">${ils(sum(a, iecBalance))}</td><td class="c">${ils(sum(a, iecToPay)) === "0" ? "" : ils(sum(a, iecToPay))}</td></tr>`; }).join("");
   const bud = RAW.tableConfig?.iec?.budgetReqs || [];
   const kindOpts = ["", ...IEC_KINDS].map(k => `<option value="${esc(k)}" ${k === F.kind ? "selected" : ""}>${k || "כל הסוגים"}${k ? ` (${all.filter(o => o.kind === k && inDist(o)).length})` : ""}</option>`).join("");
-  return `<h1>חיבורי חח״י</h1><p class="sub">כל ההזמנות מול חברת החשמל במקום אחד — לפי נפה, שלב ותשלום. סכומים ללא מע״מ.</p>
+  const shN = shPlan(d).length;
+  return `<h1>חיבורי חח״י</h1><p class="sub">כל ההזמנות מול חברת החשמל במקום אחד — לפי נפה, שלב ותשלום. סכומים ללא מע״מ.</p>${shN && !isViewer() ? `<div class="banner"><b>ארונות שקד לפי ק.ד.</b><span>${shN} שמות עדיין לפי המספר הישן</span><button class="btn sm" data-act="shRename">החלפה לשם לפי ק.ד.</button></div>` : ""}
   <div class="card">
     <div class="row" style="margin-bottom:10px"><div class="viewtabs" style="margin:0">${["", ...IEC_DISTRICTS].map(ds => `<button class="btn ghost sm ${F.dist === ds ? "on" : ""}" data-act="iecDist" data-id="${ds}">${ds ? "נפת " + ds : "כל הנפות"}</button>`).join("")}</div>
       <span class="spacer"></span><label class="small row" style="gap:6px">מע״מ %<input class="inp" style="width:56px" id="iecVat" data-act="iecVat" value="${esc(Math.round(vat * 1000) / 10)}" inputmode="decimal"></label></div>
@@ -1242,7 +1290,7 @@ function allAlerts(d) {
   const A = alAcks();
   const man = d.alerts.map(a => { const n = a.due ? daysTo(a.due) : null;
     return { key: "m:" + a.id, manual: true, id: a.id, cat: a.cat || "החלטה", sev: n !== null && n < 0 ? "red" : (n !== null && n <= 14) || (a.cat || "החלטה") === "החלטה" ? "orange" : "blue",
-      title: a.title, note: a.note, date: a.due, go: a.page ? { page: a.page, q: a.q } : null, done: a.status === "סגור", decision: a.decision, closed: a.closed, lines: [] }; });
+      title: a.title, note: a.note, subj: a.subj || "", date: a.due, go: a.page ? { page: a.page, q: a.q } : null, done: a.status === "סגור", decision: a.decision, closed: a.closed, lines: [] }; });
   return [...man, ...autoAlerts(d).map(a => ({ ...a, done: !!A[a.key], ackAt: A[a.key]?.at }))];
 }
 function alertsStrip(d) {
@@ -1250,11 +1298,28 @@ function alertsStrip(d) {
   const n = c => A.filter(a => a.cat === c).length, red = A.filter(a => a.sev === "red").length;
   return `<div class="banner ${red ? "warnbar" : ""}"><b>${A.length} התראות פתוחות</b><span>${AL_CATS.map(c => n(c) ? `${n(c)} ${c === "החלטה" ? "דורשות החלטה" : c === "תאריך" ? "תאריכים" : "למעקב"}` : "").filter(Boolean).join(" · ")}${red ? ` · <b>${red} דחופות</b>` : ""}</span><span class="spacer"></span><button class="btn ghost sm" data-act="nav" data-id="alerts">ללוח ההתראות</button></div>`;
 }
+/** לאיזה קבלן / נושא שייכת התראה: שדה "קבלן" בהתראה ידנית, המסך שהיא מפנה אליו, או שם / מילת מפתח בטקסט */
+const AL_KW = { "sp-iec": /חח["״׳']?י|שקד|טרפו|תט["״׳']?ז|חברת חשמל|חיבורי חשמל/, "sp-ilanit": /שער/, "sp-haoman": /סבכ|מעביר/, "sp-mines": /מוקש|רלפ/ };
+const AL_SKIPW = new Set(["מים", "פינוי", "קבלן", "עבודות", "הזמנה", "ארון", "חדר"]);
+function alSubj(d, a) {
+  const s = new Set(); if (a.subj) s.add(a.subj);
+  const pg = a.go?.page || ""; if (pg.startsWith("c:")) s.add(pg.slice(2)); else if (pg === "power") s.add(IEC_CID);
+  const txt = [a.title, a.sub, a.note, a.decision, ...(a.lines || [])].join(" ");
+  d.contractors.forEach(c => { const kw = AL_KW[c.id]; if (kw && kw.test(txt)) s.add(c.id);
+    String(c.name || "").split(/[\s,()״"'.׳]+/).filter(w => w.length >= 3 && !AL_SKIPW.has(w)).forEach(w => { if (txt.includes(w)) s.add(c.id); }); });
+  return s;
+}
 function pageAlerts(d) {
-  const all = allAlerts(d), cat = ui.alCat || "", showDone = !!ui.alDone;
+  const all0 = allAlerts(d), cat = ui.alCat || "", showDone = !!ui.alDone, sj = ui.alSubj || "";
+  all0.forEach(a => { a._s = alSubj(d, a); });
+  const all = all0.filter(a => !sj || (sj === "-" ? !a._s.size : a._s.has(sj)));
   const rows = all.filter(a => (!cat || a.cat === cat) && (showDone || !a.done)).sort((a, b) => (a.done - b.done) || (!!b.rq - !!a.rq) || AL_SEV[a.sev] - AL_SEV[b.sev] || String(a.date || "9").localeCompare(String(b.date || "9")));
   const cnt = c => all.filter(a => !a.done && (!c || a.cat === c)).length;
-  const card = a => `<div class="alrt sev-${a.sev} ${a.done ? "done" : ""} ${a.rq ? "rq-al" : ""}">
+  const sjCnt = k => all0.filter(a => !a.done && (k === "-" ? !a._s.size : a._s.has(k))).length;
+  const sjList = [...d.contractors.filter(isMain), ...d.contractors.filter(c => !isMain(c))].map(c => [c.id, c.id === IEC_CID ? "חח״י / שקד / טרפו" : c.name, cColor(d, c)]).concat([["-", "כללי (לא משויך)", "#8a9a90"]]).filter(([k]) => sjCnt(k) || k === sj);
+  const sjBar = `<div class="al-sj"><span class="small muted">התמקדות:</span><button class="al-chip ${!sj ? "on" : ""}" data-act="alSubj" data-id="">הכל</button>${sjList.map(([k, l, c]) => `<button class="al-chip ${sj === k ? "on" : ""}" style="--cc:${c}" data-act="alSubj" data-id="${esc(k)}">${esc(l)} <b>${sjCnt(k)}</b></button>`).join("")}
+    <input type="search" class="inp al-q" data-alq="1" placeholder="חיפוש חופשי — מספר הזמנה, ק.ד., מילה…" value="${esc(ui.alQ || "")}"></div>`;
+  const card = a => `<div class="alrt sev-${a.sev} ${a.done ? "done" : ""} ${a.rq ? "rq-al" : ""}" data-altxt="${esc([a.title, a.sub, a.note, a.decision, a.cat, ...(a.lines || [])].join(" ").toLowerCase())}">
     <div class="row" style="gap:8px"><span class="pill">${esc(a.cat)}</span>${a.auto ? `<span class="pill" title="נוצרה מהנתונים — תיעלם לבד כשהבעיה תתוקן">אוטומטית</span>` : ""}<b style="flex:1;min-width:200px">${esc(a.title)}</b>${a.date ? `<span class="small nowrap">${a.cat === "החלטה" ? "עד " : ""}${fmtD(a.date)}</span>` : ""}</div>
     ${a.sub ? `<div class="small">${esc(a.sub)}</div>` : ""}${a.note ? `<p class="small" style="margin:4px 0 0">${esc(a.note)}</p>` : ""}${a.hint && !a.done ? `<p class="small muted" style="margin:4px 0 0">${esc(a.hint)}</p>` : ""}
     ${a.lines.length ? `<details><summary class="small">${a.lines.length} פריטים</summary><ul class="small" style="margin:4px 0;padding-inline-start:18px">${a.lines.slice(0, 80).map(l => `<li>${esc(l)}</li>`).join("")}</ul></details>` : ""}
@@ -1269,7 +1334,9 @@ function pageAlerts(d) {
   return `<h1>לוח התראות</h1>${rqBtn}<p class="sub">מה דורש החלטה, מה באיחור ומה עומד לפוג. התראות אוטומטיות נעלמות לבד כשמתקנים את הנתונים; אפשר גם לסמן אותן כטופלו.</p>
   <div class="row" style="margin-bottom:12px"><div class="viewtabs" style="margin:0">${[["", "הכל"], ["החלטה", "דורש החלטה"], ["תאריך", "תאריכים ותוקף"], ["מעקב", "מעקב"]].map(([k, l]) => `<button class="btn ghost sm ${cat === k ? "on" : ""}" data-act="alCat" data-id="${k}">${l} (${cnt(k)})</button>`).join("")}</div>
     <span class="spacer"></span><label class="row small" title="אחרי כמה ימים בלי דיווח על קבלן — תופיע התראה">ימים בלי דיווח עד התראה <input type="number" min="1" max="60" data-act="quietDays" value="${Number(RAW.tableConfig?.settings?.quietDays) || 7}" style="width:56px;font:inherit"></label><label class="row small"><input type="checkbox" data-act="alDone" ${showDone ? "checked" : ""}> הצג גם שטופלו</label><button class="btn sm" data-act="alNew">+ החלטה / תזכורת</button></div>
-  ${rows.map(card).join("") || `<div class="card"><p class="muted" style="margin:0">אין התראות פתוחות.</p></div>`}
+  ${sjBar}
+  ${rows.map(card).join("") || `<div class="card"><p class="muted" style="margin:0">${sj ? "אין התראות פתוחות בנושא הזה." : "אין התראות פתוחות."}</p></div>`}
+  <div class="card al-none" hidden><p class="muted" style="margin:0">אין התראות שמתאימות לחיפוש.</p></div>
   <p class="small muted">אדום = עבר / דחוף · כתום = דורש החלטה או מתקרב (עד 14 יום; סיום הזמנה — 30 יום) · כחול = למעקב. עמודת תאריך שהשם שלה מתחיל ב״תוקף״ או ״סיום״ (בכל טבלה) נכנסת ללוח אוטומטית.</p>`;
 }
 function alertModal2(id) {
@@ -1279,13 +1346,14 @@ function alertModal2(id) {
     <label class="field">מה צריך<input id="aT" value="${esc(a.title)}" placeholder="למשל: לאשר מעבר לתוואי חלופי / ביטוח הקבלן פג"></label>
     <div class="row"><label class="field" style="flex:1">סוג<select id="aC">${AL_CATS.map(c => `<option ${c === a.cat ? "selected" : ""}>${c}</option>`).join("")}</select></label>
       <label class="field" style="flex:1">תאריך (יעד / תוקף)<input type="date" id="aD" value="${esc(a.due || "")}"></label></div>
+    <label class="field">קבלן / נושא<select id="aS"><option value="">— לפי הטקסט —</option>${list("contractors").map(c => `<option value="${c.id}" ${c.id === a.subj ? "selected" : ""}>${esc(c.id === IEC_CID ? "חח״י / שקד / טרפו" : c.name)}</option>`).join("")}</select></label>
     <label class="field">פרטים<textarea id="aN" rows="3">${esc(a.note || "")}</textarea></label>
     <label class="field">קשור למסך<select id="aP"><option value="">—</option>${pages.map(([pid, l]) => `<option value="${esc(pid)}" ${pid === a.page ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
     <div class="row"><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
     m.querySelector("#mNo").onclick = close; m.querySelector("#aT").focus();
     m.querySelector("#mYes").onclick = async () => { const t = m.querySelector("#aT"); if (!t.value.trim()) { t.style.borderColor = "var(--warn)"; return; }
       const dv = m.querySelector("#aD").value; if (dv && +dv.slice(0, 4) < 1990) return;
-      const rec = { title: t.value.trim(), cat: m.querySelector("#aC").value, due: dv, note: m.querySelector("#aN").value.trim(), page: m.querySelector("#aP").value };
+      const rec = { title: t.value.trim(), cat: m.querySelector("#aC").value, due: dv, note: m.querySelector("#aN").value.trim(), page: m.querySelector("#aP").value, subj: m.querySelector("#aS").value };
       close(); id ? await api.update("alerts", id, rec) : await api.add("alerts", { ...rec, q: "", status: "פתוח", decision: "", created: todayStr() }); };
   });
 }
@@ -1754,6 +1822,7 @@ function overviewHero(d) {
       ${kpi("k3", "נושאים פתוחים", open.length, `HOLD: ${open.filter(i => i.status === "HOLD").length}${pend ? ` · ${pend} דיווחים ממתינים לאישור` : ""}`)}
       ${kpi("k4", "להחלטת הנהלה", mgmt.length, mgmt.length ? "לחיצה — לוח התראות" : "אין נושאים מסומנים", `data-act="nav" data-id="alerts" role="button" tabindex="0"`)}
     </div>
+    ${budgetCard(d)}
     <div class="ov-cards">${mains.map(card).join("")}</div>
     ${spTiles.length ? `<div class="ov-sph"><h2>קבלנים ייעודיים</h2><span class="muted small">ביחידות · לחיצה פותחת את הקבלן</span></div><div class="ov-sps">${spTiles.join("")}</div>` : ""}`;
 }
@@ -2863,6 +2932,131 @@ async function tkClick(act, b) {
 }
 document.addEventListener("change", async e => { const s = e.target.closest?.("[data-tkst]"); if (!s) return; const id = s.dataset.tkst, t = RAW.tasks?.[id]; if (!t || s.value === t.status) return; await tkSave(id, { status: s.value }, `מצב: ${s.value}`); toast("עודכן ✓"); });
 
+/* =====================================================================
+   תקציב ואומדן — ריכוז העלויות ובקרת אומדן מול הזמנות
+   מקור הנתונים: אוסף budget (שורות אומדן: עבודות נוספות, אתרי איסוף, הגדרות) + עמודת "תקציב" בהזמנות.
+   הסכומים בשקלים כולל מע״מ. מחיר למטר נשמר לפני מע״מ לכל גזרה, והמע״מ אחד לכולם (משתנה בהגדרה).
+   הנתונים עצמם לא בקוד — נטענים מקובץ (הגדרות ← הוספת נתונים מקובץ) או מוקלדים כאן.
+   ===================================================================== */
+const BG_CAT = ["עבודות נוספות", "סבכות", "שערים", "חשמל", "גשרים ומעברים", "אחר"];
+const bgCfg = () => { const c = Object.values(RAW.budget || {}).find(x => x.kind === "cfg") || {}; return { vat: c.vat === "" || c.vat == null ? 18 : Number(c.vat), prices: c.prices || {}, sitesOrdered: Number(c.sitesOrdered) || 0, id: Object.keys(RAW.budget || {}).find(k => RAW.budget[k].kind === "cfg") }; };
+const bgN = v => { const n = Number(String(v ?? "").replace(/[^\d.-]/g, "")); return isNaN(n) ? 0 : n; };
+const bgLeft = v => v < -0.5 ? `<span style="color:var(--accent)">עודף ${num(Math.round(-v), 0)} ₪</span>` : `${num(Math.round(v || 0), 0)} ₪`;
+const bgM = v => `${num(Math.round(v || 0), 0)} ₪`, bgMM = v => `${(Math.round((v || 0) / 1e5) / 10).toLocaleString("he-IL")} מ׳ ₪`;
+/** מפתח עמודת התקציב בהזמנות (עמודה מותאמת בשם "תקציב") */
+function bgBudgetKey(cid) { for (const k of ["orders__" + cid, "orders"]) { const cu = RAW.tableConfig?.[k]?.custom || {}; for (const [key, v] of Object.entries(cu)) if (/תקציב/.test(String(v?.label || ""))) return "x_" + key; } return null; }
+const bgOrdAmt = o => { const k = bgBudgetKey(o.contractorId); return k ? bgN(o[k]) : 0; };
+function bgData(d) {
+  const cfg = bgCfg(), V = 1 + cfg.vat / 100, B = Object.entries(RAW.budget || {}).map(([id, v]) => ({ id, ...v }));
+  const mains = d.contractors.filter(isMain);
+  const earth = mains.map(c => { const price = bgN(cfg.prices[c.sector || ""]);
+    const ords = d.orders.filter(o => o.contractorId === c.id && (bgOrdAmt(o) || o._secs)).map(o => { const m = o._secs ? (o._secs[1] - o._secs[0]) * SECTION_M : 0, est = m && price ? m * price * V : null, amt = bgOrdAmt(o);
+      return { o, m, est, amt, diff: est === null ? null : amt - est }; });
+    const est = ords.reduce((a, x) => a + (x.est ?? x.amt), 0), amt = ords.reduce((a, x) => a + x.amt, 0);
+    return { c, price, ords, m: ords.reduce((a, x) => a + x.m, 0), est, amt, bad: ords.filter(x => x.diff !== null && Math.abs(x.diff) > 1000) }; });
+  const extras = B.filter(x => x.kind === "extra").sort((a, b) => (a.phase === "בוצע" ? 0 : 1) - (b.phase === "בוצע" ? 0 : 1) || (+a.order || 0) - (+b.order || 0));
+  const sites = B.filter(x => x.kind === "site").sort((a, b) => (+a.order || 0) - (+b.order || 0));
+  const exAmt = x => x.excluded ? 0 : bgN(x.amount), exCov = x => bgN(x.transferred) + bgN(x.ordered);
+  const exDone = extras.filter(x => x.phase === "בוצע"), exNext = extras.filter(x => x.phase !== "בוצע");
+  const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
+  const siteTot = sum(sites, x => bgN(x.mast) + bgN(x.build));
+  const T = {
+    earthEst: sum(earth, e => e.est), earthOrd: sum(earth, e => e.amt),
+    doneEst: sum(exDone, exAmt), doneCov: sum(exDone, x => x.excluded ? 0 : exCov(x)),
+    nextEst: sum(exNext, exAmt), nextCov: sum(exNext, x => x.excluded ? 0 : exCov(x)),
+    siteEst: siteTot, siteOrd: cfg.sitesOrdered };
+  T.est = T.earthEst + T.doneEst + T.nextEst + T.siteEst; T.cov = T.earthOrd + T.doneCov + T.nextCov + T.siteOrd; T.left = T.est - T.cov;
+  const specs = d.contractors.filter(c => !isMain(c)).map(c => ({ c, amt: sum(d.orders.filter(o => o.contractorId === c.id), bgOrdAmt), n: d.orders.filter(o => o.contractorId === c.id).length })).filter(x => x.n);
+  const iec = { n: d.iecOrders.length, amt: sum(d.iecOrders, x => bgN(x.amount)), exc: sum(d.iecOrders, x => bgN(x.excAmount)) };
+  const byC = earth.map(e => { const mine = arr => arr.filter(x => x.contractorId === e.c.id && !x.excluded);
+    const done = sum(mine(exDone), x => bgN(x.amount)), next = sum(mine(exNext), x => bgN(x.amount)), nextCov = sum(mine(exNext), exCov);
+    return { c: e.c, earthEst: e.est, earthOrd: e.amt, done, next, nextCov, tot: e.est + done + next }; });
+  const cats = ["סבכות", "שערים", "חשמל"].map(k => { const a = extras.filter(x => !x.excluded && x.cat === k);
+    return { k, n: a.length, est: sum(a, x => bgN(x.amount)), cov: sum(a, exCov), rows: a }; });
+  return { cfg, earth, byC, cats, extras, exDone, exNext, sites, T, specs, iec, has: B.length > 0 || T.earthOrd > 0 };
+}
+/** כרטיס במסך הראשי */
+function budgetCard(d) {
+  let R; try { R = bgData(d); } catch (e) { return ""; } if (!R.has) return "";
+  const T = R.T, parts = [["עבודות עפר", T.earthEst, "#7a5c3e"], ["עבודות נוספות", T.doneEst + T.nextEst, "#4a6d93"], ["אתרי איסוף", T.siteEst, "#2f6b4f"]].filter(p => p[1] > 0);
+  return `<div class="card bg-card" data-act="nav" data-id="budget" role="button" tabindex="0" title="לחיצה — מסך תקציב ואומדן">
+    <div class="row" style="align-items:baseline;gap:10px;flex-wrap:wrap"><h2 style="margin:0">💰 עלות הפרויקט — אומדן מול הזמנות</h2><span class="muted small">כולל מע״מ ${R.cfg.vat}% · לחיצה לפירוט</span></div>
+    <div class="bg-kpis"><div><span>אומדן כולל</span><b>${bgMM(T.est)}</b></div><div><span>הוזמן / כוסה</span><b style="color:var(--accent)">${bgMM(T.cov)}</b></div><div><span>נדרש להשלמה</span><b style="color:${T.left > 0 ? "#b8452f" : "var(--accent)"}">${bgMM(T.left)}</b></div></div>
+    <div class="bg-bar">${parts.map(([n, v, c]) => `<i style="flex:${v};background:${c}" title="${esc(n)}: ${bgM(v)}"></i>`).join("")}</div>
+    <div class="bg-leg">${R.cats.filter(x => x.est).map(x => `<span class="bg-cat">${x.k} <b>${bgMM(x.est)}</b></span>`).join("")}${parts.map(([n, v, c]) => `<span><i style="background:${c}"></i>${esc(n)} <b>${bgMM(v)}</b></span>`).join("")}</div>
+    <div class="bg-cs">${R.earth.map((e, i) => `<div style="--cc:${cColor(d, e.c)}" title="עבודות עפר ${bgM(e.amt)} + עבודות נוספות ${bgM(R.byC[i].done + R.byC[i].next)}"><b>${esc(e.c.name)}</b><span>${bgMM(R.byC[i].tot)}</span>${e.bad.length ? `<em title="יש הזמנה שהתקציב שלה לא תואם לאורך × מחיר">⚠</em>` : ""}</div>`).join("")}</div></div>`;
+}
+function pageBudget(d) {
+  const R = bgData(d), T = R.T, cfg = R.cfg, open = ui.bgOpen = ui.bgOpen || {};
+  const inp = (x, f, w = 12) => `<input class="inp num" data-edit="budget|${x.id}|${f}|m" value="${esc(moneyTxt(x[f]))}" style="width:${w}ch" inputmode="decimal">`;
+  const txt = (x, f, w = 24) => `<input class="inp" data-edit="budget|${x.id}|${f}" value="${esc(x[f] ?? "")}" style="width:${w}ch">`;
+  const cName = id => d.contractors.find(c => c.id === id)?.name || "";
+  const earthRows = R.earth.map(e => `<tr class="mrow" data-act="bgTog" data-id="${e.c.id}" style="cursor:pointer"><td style="border-inline-start:5px solid ${cColor(d, e.c)}"><b>${open[e.c.id] ? "▾" : "▸"} ${esc(e.c.name)}</b><div class="small muted">${esc(e.c.sector || "")} · ${e.ords.length} הזמנות</div></td>
+      <td class="c">${num(e.m, 0)} מ׳</td><td class="c">${e.price ? `${num(e.price, 0)} ₪` : `<span class="pill warn">אין מחיר לגזרה</span>`}</td><td class="c"><b>${bgM(e.est)}</b></td><td class="c"><b>${bgM(e.amt)}</b></td>
+      <td class="c">${e.bad.length ? `<span class="pill warn">${e.bad.length} לא תואמות</span>` : `<span class="pill ok">תואם</span>`}</td></tr>`
+    + (open[e.c.id] ? e.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || x.o.x_reqNo || "הזמנה")}</span>${x.o._secs ? `<div class="small muted" style="padding-inline-start:18px">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span></div>` : ""}</td>
+        <td class="c">${x.m ? num(x.m, 0) + " מ׳" : "—"}</td><td></td><td class="c">${x.est === null ? "—" : bgM(x.est)}</td><td class="c">${bgM(x.amt)}</td>
+        <td class="c">${x.diff === null ? "—" : Math.abs(x.diff) <= 1000 ? `<span class="pill ok">תואם</span>` : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td></tr>`).join("") : "")).join("");
+  const exTable = (arr, title, sub) => `<h3 style="margin:14px 0 6px">${title} <span class="muted small">${sub}</span></h3><div class="tablewrap"><table class="sheet"><thead><tr><th>עבודה</th><th>קבלן</th><th>קטגוריה</th><th>אומדן (₪)</th><th>הועבר תקציב (₪)</th><th>הוזמן (₪)</th><th>נדרש להשלמה</th><th>הערה</th><th></th></tr></thead><tbody>
+    ${arr.map(x => { const left = x.excluded ? 0 : bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered);
+      return `<tr style="${x.excluded ? "opacity:.6" : ""}"><td>${txt(x, "title", 24)}</td><td><select class="inp" data-edit="budget|${x.id}|contractorId"><option value="">—</option>${d.contractors.map(c => `<option value="${c.id}" ${c.id === x.contractorId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></td>
+      <td><select class="inp" data-edit="budget|${x.id}|cat">${BG_CAT.map(k => `<option ${k === (x.cat || "עבודות נוספות") ? "selected" : ""}>${k}</option>`).join("")}</select></td>
+      <td>${inp(x, "amount")}</td><td>${inp(x, "transferred")}</td><td>${inp(x, "ordered")}</td><td class="c"><b>${x.excluded ? "לא נכלל" : bgLeft(left)}</b></td><td>${txt(x, "note", 16)}</td>
+      <td><button class="lnk" data-act="bgDel" data-id="${x.id}">מחיקה</button></td></tr>`; }).join("") || `<tr><td colspan="9" class="muted">אין שורות</td></tr>`}
+    <tr class="sub"><td colspan="3"><b>סה״כ</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.amount)), 0))}</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.transferred)), 0))}</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.ordered)), 0))}</b></td><td class="c"><b>${bgLeft(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered)), 0))}</b></td><td colspan="2"></td></tr></tbody></table></div>`;
+  const siteRows = R.sites.map(x => `<tr><td>${txt(x, "title", 20)}</td><td>${inp(x, "mast")}</td><td>${inp(x, "build")}</td><td class="c"><b>${bgM(bgN(x.mast) + bgN(x.build))}</b></td><td>${txt(x, "note", 20)}</td><td><button class="lnk" data-act="bgDel" data-id="${x.id}">מחיקה</button></td></tr>`).join("");
+  return `<div class="bgp"><div class="ch-banner" style="--cc:#7a5c3e"><div><h1>תקציב ואומדן</h1><span>אומדן מול הזמנות — ריכוז כל העלויות. כל הסכומים כולל מע״מ ${cfg.vat}%.</span></div>
+    <div class="row" style="gap:6px"><button class="btn ghost" data-act="bgCfg">⚙ מע״מ ומחיר למטר</button></div></div>
+  ${R.has ? "" : `<div class="card"><p style="margin:0">עוד אין נתוני אומדן. טוענים את קובץ האומדן ב״הגדרות ← נתונים וגיבוי ← הוספת נתונים מקובץ״, או מוסיפים שורות כאן.</p></div>`}
+  <div class="ch-tiles sg-tiles" style="--cc:#7a5c3e">
+    <div class="ch-t t1"><span>אומדן כולל</span><b>${bgMM(T.est)}</b><small>${bgM(T.est)}</small></div>
+    <div class="ch-t t3"><span>הוזמן / הועבר תקציב</span><b>${bgMM(T.cov)}</b><small>${bgM(T.cov)}</small></div>
+    <div class="ch-t ${T.left > 0 ? "t2" : ""}"><span>נדרש להשלמה</span><b>${bgMM(T.left)}</b><small>${bgM(T.left)}</small></div>
+    <div class="ch-t"><span>עבודות עפר — הזמנות</span><b>${bgMM(T.earthOrd)}</b><small>${R.earth.reduce((a, e) => a + e.ords.length, 0)} הזמנות</small></div></div>
+  <div class="card"><h2 style="margin-top:0">1. עבודות עפר — מקטעים והזמנות <span class="muted small">— אומדן = (עד חתך − מחתך) × 20 מ׳ × מחיר למטר × מע״מ. לחיצה על קבלן פותחת את ההזמנות</span></h2>
+    <div class="tablewrap"><table class="sheet"><thead><tr><th>קבלן</th><th>אורך</th><th>מחיר למ׳ (לפני מע״מ)</th><th>אומדן</th><th>הזמנות (תקציב)</th><th>בקרה</th></tr></thead><tbody>${earthRows}
+      <tr class="sub"><td><b>סה״כ עבודות עפר</b></td><td class="c"><b>${num(R.earth.reduce((a, e) => a + e.m, 0), 0)} מ׳</b></td><td></td><td class="c"><b>${bgM(T.earthEst)}</b></td><td class="c"><b>${bgM(T.earthOrd)}</b></td><td class="c">${bgM(T.earthOrd - T.earthEst)}</td></tr></tbody></table></div></div>
+  <div class="card" style="margin-top:12px"><h2 style="margin-top:0">לפי קבלן <span class="muted small">— עבודות עפר + עבודות נוספות שמשויכות לקבלן (צפון ← דרום)</span></h2>
+    <div class="tablewrap"><table class="sheet"><thead><tr><th>קבלן</th><th>עבודות עפר (אומדן)</th><th>הוזמן — עבודות עפר</th><th>נוספות שבוצעו</th><th>נוספות שיבוצעו</th><th>סה״כ אומדן לקבלן</th></tr></thead><tbody>
+    ${R.byC.map(x => `<tr><td style="border-inline-start:5px solid ${cColor(d, x.c)}"><b>${esc(x.c.name)}</b></td><td class="c">${bgM(x.earthEst)}</td><td class="c">${bgM(x.earthOrd)}</td><td class="c">${bgM(x.done)}</td><td class="c">${bgM(x.next)}</td><td class="c"><b>${bgM(x.tot)}</b></td></tr>`).join("")}
+    <tr class="sub"><td><b>סה״כ</b></td>${["earthEst", "earthOrd", "done", "next", "tot"].map(k => `<td class="c"><b>${bgM(R.byC.reduce((a, x) => a + x[k], 0))}</b></td>`).join("")}</tr></tbody></table></div>
+    <p class="small muted" style="margin:6px 0 0">עבודות שלא שויכו לקבלן ראשי (סבכות, חברת חשמל וכד׳) מופיעות בריכוז שלמטה ובסה״כ הכללי.</p></div>
+  <div class="card" style="margin-top:12px"><h2 style="margin-top:0">ריכוז — סבכות, שערים, חשמל</h2>
+    <div class="bg-cats">${R.cats.map(x => `<div><span>${x.k}</span><b>${bgM(x.est)}</b><small>הועבר / הוזמן ${bgM(x.cov)} · ${x.est - x.cov >= 0 ? "נדרש " + bgM(x.est - x.cov) : "עודף " + bgM(x.cov - x.est)}</small>
+      <ul>${x.rows.map(r => `<li>${esc(r.title || "")}${r.contractorId ? ` · <span class="muted">${esc(cName(r.contractorId))}</span>` : ""} — ${bgM(bgN(r.amount))}</li>`).join("") || `<li class="muted">אין שורות בקטגוריה</li>`}</ul></div>`).join("")}</div>
+    <p class="small muted" style="margin:6px 0 0">הקטגוריה נקבעת בעמודה ״קטגוריה״ בטבלת העבודות הנוספות.</p></div>
+  <div class="card" style="margin-top:12px"><div class="row" style="align-items:center"><h2 style="margin:0">2. עבודות נוספות</h2><span class="spacer"></span><button class="btn sm" data-act="bgAdd" data-id="extra|בוצע">+ שבוצעה</button><button class="btn sm" data-act="bgAdd" data-id="extra|יבוצע">+ שתבוצע</button></div>
+    ${exTable(R.exDone, "שבוצעו", "— חייבות להיות משולמות")}${exTable(R.exNext, "שיבוצעו", "— נדרש להשלמה = אומדן פחות מה שהועבר / הוזמן")}</div>
+  <div class="card" style="margin-top:12px"><div class="row" style="align-items:center"><h2 style="margin:0">3. אתרי איסוף <span class="muted small">(${R.sites.length})</span></h2><span class="spacer"></span><button class="btn sm" data-act="bgAdd" data-id="site">+ אתר</button></div>
+    <div class="tablewrap"><table class="sheet"><thead><tr><th>אתר</th><th>עלות תורן (₪)</th><th>הקמת אתר — בינוי (₪)</th><th>סה״כ</th><th>הערה</th><th></th></tr></thead><tbody>${siteRows || `<tr><td colspan="6" class="muted">אין אתרים</td></tr>`}
+      <tr class="sub"><td><b>סה״כ עלות אתרי איסוף</b></td><td colspan="2"></td><td class="c"><b>${bgM(T.siteEst)}</b></td><td colspan="2"></td></tr>
+      <tr><td><b>הזמנות שיצאו לאתרי איסוף</b></td><td colspan="2">${cfg.id ? `<input class="inp num" data-edit="budget|${cfg.id}|sitesOrdered|m" value="${esc(moneyTxt(cfg.sitesOrdered))}" style="width:14ch">` : "—"}</td><td class="c"><b>${bgM(T.siteOrd)}</b></td><td colspan="2"></td></tr>
+      <tr class="sub"><td><b>נדרש להשלמה</b></td><td colspan="2"></td><td class="c"><b>${bgM(T.siteEst - T.siteOrd)}</b></td><td colspan="2"></td></tr></tbody></table></div></div>
+  <div class="card" style="margin-top:12px"><h2 style="margin-top:0">4. קבלנים ייעודיים וחשמל <span class="muted small">— לעיון: הזמנות שקיימות באתר</span></h2>
+    <div class="tablewrap"><table class="sheet"><thead><tr><th>קבלן</th><th>הזמנות</th><th>תקציב בהזמנות</th></tr></thead><tbody>${R.specs.map(s => `<tr><td><b>${esc(s.c.name)}</b></td><td class="c">${s.n}</td><td class="c">${s.amt ? bgM(s.amt) : `<span class="muted">לא הוזן</span>`}</td></tr>`).join("")}
+      <tr><td><b>חיבורי חח״י</b> <span class="muted small">(${R.iec.n} חיבורים, לפי סכומי חח״י)</span></td><td class="c">—</td><td class="c">${bgM(R.iec.amt)}${R.iec.exc ? `<div class="small muted">+ חריגים ${bgM(R.iec.exc)}</div>` : ""}</td></tr></tbody></table></div></div>
+  <div class="card" style="margin-top:12px"><h2 style="margin-top:0">5. טבלה מרכזת</h2><div class="tablewrap"><table class="sheet"><thead><tr><th></th><th>אומדן</th><th>הוזמן / הועבר</th><th>נדרש להשלמה</th></tr></thead><tbody>
+    ${[["מקטעי עבודה (עבודות עפר)", T.earthEst, T.earthOrd], ["עבודות נוספות שבוצעו", T.doneEst, T.doneCov], ["עבודות נוספות שיבוצעו", T.nextEst, T.nextCov], ["אתרי איסוף", T.siteEst, T.siteOrd]].map(([n, a, b]) => `<tr><td><b>${n}</b></td><td class="c">${bgM(a)}</td><td class="c">${bgM(b)}</td><td class="c"><b>${bgLeft(a - b)}</b></td></tr>`).join("")}
+    <tr class="sub"><td><b>סה״כ</b></td><td class="c"><b>${bgM(T.est)}</b></td><td class="c"><b>${bgM(T.cov)}</b></td><td class="c"><b>${bgM(T.left)}</b></td></tr></tbody></table></div>
+    <p class="small muted" style="margin:6px 0 0">לא כולל תפעול (מדידות, מפקחים, מתאמים, מתכננים, רטג, עתיקות, מעבדה וכד׳).</p></div></div>`;
+}
+async function bgClick(act, b) {
+  if (act === "bgTog") { const o = ui.bgOpen = ui.bgOpen || {}; o[b.dataset.id] = !o[b.dataset.id]; render(); }
+  else if (act === "bgDel") { if (b.dataset.sure) { await api.remove("budget", b.dataset.id); } else { b.dataset.sure = 1; b.textContent = "ללחוץ שוב"; } }
+  else if (act === "bgAdd") { const [kind, phase] = b.dataset.id.split("|"), n = Object.values(RAW.budget || {}).filter(x => x.kind === kind).length;
+    await api.add("budget", kind === "site" ? { kind, title: "אתר חדש", mast: "", build: "", order: n + 1 } : { kind, phase, title: "עבודה חדשה", cat: "עבודות נוספות", amount: "", transferred: "", ordered: "", order: n + 1 }); }
+  else if (act === "bgCfg") { const c = bgCfg(), secs = [...new Set(D().contractors.filter(isMain).map(x => x.sector).filter(Boolean))];
+    modal(`<h2>מע״מ ומחיר למטר</h2><label class="field">מע״מ (%) — אחד לכל הפרויקט<input class="inp" id="bg_vat" inputmode="decimal" value="${esc(String(c.vat))}"></label>
+      ${secs.map(s => `<label class="field">מחיר למטר לפני מע״מ — גזרת ${esc(s)} (₪)<input class="inp" data-sec="${esc(s)}" inputmode="decimal" value="${esc(String(c.prices[s] ?? ""))}"></label>`).join("")}
+      <p class="small muted">כשהמע״מ משתנה, האומדן של עבודות העפר מתעדכן לבד. סכומי ההזמנות נשארים כפי שהוזנו.</p>
+      <div class="row"><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+      m.querySelector("#mNo").onclick = close;
+      m.querySelector("#mYes").onclick = async () => { const prices = {}; m.querySelectorAll("[data-sec]").forEach(i => { if (i.value.trim() !== "") prices[i.dataset.sec] = bgN(i.value); });
+        const rec = { kind: "cfg", vat: bgN(m.querySelector("#bg_vat").value), prices };
+        if (c.id) await api.update("budget", c.id, rec); else await api.add("budget", rec); close(); toast("נשמר ✓"); };
+    }); }
+}
+
 function pageSvCmp(d) {
   const R = svCompare(d), M = n => `${num(n * SECTION_M, 0)} מ׳`, len = rs => rs.reduce((t, [a, b]) => t + b - a, 0);
   const tot = { ch: R.reduce((t, r) => t + r.checked, 0), ag: R.reduce((t, r) => t + r.agree, 0), nr: R.reduce((t, r) => t + len(r.notRep), 0), rn: R.reduce((t, r) => t + len(r.repNo), 0) };
@@ -3100,7 +3294,7 @@ function pickMergeFile() {
         if (c === "tableConfig") continue;
         if (RAW[c]?.[id] && c !== "survey") skip[c] = (skip[c] || 0) + 1; else (add[c] = add[c] || {})[id] = v;   // סקר שטח — הגרסה מהקובץ גוברת
       }
-      const names = { contractors: "קבלנים", orders: "הזמנות", designOffices: "משרדי תכנון", designSegments: "קטעי תכנון", activities: "מלאכות", progress: "דיווחי ביצוע", deliveries: "מסירות תוכניות", issues: "נושאים", survey: "רשומות סקר שטח", iecOrders: "הזמנות חח״י", alerts: "התראות", items: "פריטים" };
+      const names = { budget: "שורות תקציב ואומדן", contractors: "קבלנים", orders: "הזמנות", designOffices: "משרדי תכנון", designSegments: "קטעי תכנון", activities: "מלאכות", progress: "דיווחי ביצוע", deliveries: "מסירות תוכניות", issues: "נושאים", survey: "רשומות סקר שטח", iecOrders: "הזמנות חח״י", alerts: "התראות", items: "פריטים" };
       const lines = Object.entries(add).map(([c, o]) => `${Object.keys(o).length} ${names[c] || c}`).join(" · ") || "אין רשומות חדשות";
       modal(`<h2>הוספת נתונים מקובץ</h2><p class="small">${esc(f.name)}${j.meta?.note ? `<br><span class="muted">${esc(j.meta.note)}</span>` : ""}</p>
         <p><b>יתווספו:</b> ${esc(lines)}</p>${Object.keys(skip).length ? `<p class="small muted">${Object.values(skip).reduce((a, b) => a + b, 0)} רשומות כבר קיימות ולא ישתנו.</p>` : ""}
@@ -4443,6 +4637,7 @@ function pageSettings(d) {
     <div class="backupgrid">
       <div class="bk"><b>הורדת גיבוי</b><span>קובץ עם תאריך ושעה בשם, לשמירה במחשב.</span><button class="btn" data-act="dlBackup">הורדת גיבוי</button></div>
       <div class="bk"><b>הורדת data.json לפרסום</b><span>אותו תוכן בשם data.json, מוכן להעלאה ל-GitHub.</span><button class="btn" data-act="dlPublish">הורדת data.json</button></div>
+      <div class="bk"><b>ארונות שקד — שם לפי ק.ד.</b><span>״ארון שקד 12״ ← ״ארון שקד ק.ד. 783 (12)״ בכל האתר ובאתר הדיווח.</span><button class="btn ghost" data-act="shRename">החלפת שמות…</button></div>
       <div class="bk"><b>הוספת נתונים מקובץ</b><span>מוסיף רשומות חדשות מקובץ (למשל ייבוא מסיכומי פגישות) בלי למחוק או לשנות שום דבר קיים.</span><button class="btn" data-act="mergeFile">בחירת קובץ…</button></div>
       <div class="bk"><b>טעינת גיבוי</b><span>מחליף את כל הנתונים באתר בנתוני קובץ שתבחר. דורש אישור.</span><button class="btn ghost" data-act="upBackup">בחירת קובץ…</button></div>
       <div class="bk"><b>טעינה מחדש מ-data.json</b><span>מבטל שינויים מקומיים וחוזר לקובץ שנמצא כרגע ב-GitHub.</span><button class="btn ghost" data-act="reloadFile">טעינה מחדש</button></div>
@@ -4534,6 +4729,7 @@ $app.addEventListener("click", async e => {
   const act = b.dataset.act;
   if (/^sv[A-Z]/.test(act) && !["svFill", "svAddRep", "svCutRep", "svSync"].includes(act)) return svClick(act, b);
   if (/^tk[A-Z]/.test(act)) return tkClick(act, b);
+  if (/^bg[A-Z]/.test(act)) return bgClick(act, b);
   if (/^ins[A-Z]/.test(act)) return inspClick(act, b);
   if (act === "menu") { ui.menu = !ui.menu; render(); return; }
   if (ui.menu && (act === "nav" || act === "newContractor")) ui.menu = false;
@@ -4581,6 +4777,7 @@ $app.addEventListener("click", async e => {
       validUntil: "", size: "", excNo: "", excAmount: "", excAdvance: "", excAdvanceDate: "", excApproved: false, parentNo: "", budgetNo: "", itemId: "", coord: "", last: "", note: "", history: {}, order: Date.now() });
     Object.assign(ui.iec, { stage: "", q: "" }); render(); }
   else if (act === "alCat") { ui.alCat = b.dataset.id; render(); }
+  else if (act === "alSubj") { ui.alSubj = b.dataset.id; render(); }
   else if (act === "alNew") alertModal2(null);
   else if (act === "alEdit") alertModal2(b.dataset.id);
   else if (act === "alClose") alertCloseModal(b.dataset.id);
@@ -4592,6 +4789,7 @@ $app.addEventListener("click", async e => {
     if (g.ctab) ui.ctab = g.ctab;
     ui.page = g.page; location.hash = g.page; render(); window.scrollTo(0, 0); }
   else if (act === "mergeFile") pickMergeFile();
+  else if (act === "shRename") shModal();
   else if (act === "saveDlv") {
     const f = ui.df, bad = m => { f.msg = m; f.err = true; render(); };
     if (!f.contractorId) return bad("צריך לבחור קבלן");
@@ -4765,6 +4963,9 @@ $app.addEventListener("input", e => {
   const f = ui.pf, m = f.secFrom !== "" && f.secTo !== "" && !isNaN(f.secFrom) && !isNaN(f.secTo) ? Math.abs(f.secTo - f.secFrom) * SECTION_M : null;
   const el = document.getElementById("pf_m"); if (el) el.textContent = m === null ? "" : num(m, 0) + " מ׳";
 });
+function alApplyQ() { const q = String(ui.alQ || "").trim().toLowerCase(), cs = [...$app.querySelectorAll("[data-altxt]")]; if (!cs.length) return;
+  let n = 0; cs.forEach(c => { const ok = !q || q.split(/\s+/).every(w => c.dataset.altxt.includes(w)); c.hidden = !ok; n += ok; }); const z = $app.querySelector(".al-none"); if (z) z.hidden = !(q && !n); }
+$app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.alq) return; ui.alQ = t.value; alApplyQ(); });
 $app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.gsearch) return; (ui.gsearch = ui.gsearch || {})[t.dataset.gsearch] = t.value; applyFilters(); applyGSearch(); });
 $app.addEventListener("change", async e => {
   const t = e.target;
@@ -4834,6 +5035,10 @@ $app.addEventListener("change", async e => {
     const bump = v && key === "advanceDate" ? "מקדמה שולמה" : v && key === "completionDate" ? "משלים שולם" : null;
     if (bump && IEC_STAGES.indexOf(o.stage) < IEC_STAGES.indexOf(bump)) return api.update(col, id, { [key]: v, stage: bump, stageDate: v, history: hist(v, `שלב: ${bump}`), last: `שלב: ${bump}` });
   }
+  if (key === "kdFrom" && col === "items" && RAW.items?.[id]?.kind === "ארון שקד" && /^ארון שקד ק\.ד\./.test(RAW.items[id].name || "") && String(v).trim())
+    return api.update(col, id, { kdFrom: v, name: shName(v, RAW.items[id].oldNo) });
+  if (key === "kd" && col === "iecOrders" && RAW.iecOrders?.[id]?.kind === "ארון שקד" && /^ארון שקד ק\.ד\./.test(RAW.iecOrders[id].name || "") && String(v).trim())
+    return api.update(col, id, { kd: v, name: shName(v, (RAW.iecOrders[id].name.match(/\((\d+)\)\s*$/) || [])[1]) });
   if (col === "deliveries" && ["kdFrom", "kdTo", "secFrom", "secTo", "contractorId"].includes(key)) {
     const x = RAW.deliveries?.[id]; if (!x) return;
     if (key === "contractorId") { const y = { ...x, contractorId: v }; return api.update(col, id, { contractorId: v, ...(x.kdFrom ? dlvSync(D(), y, "kdFrom", x.kdFrom) : {}), ...(x.kdTo ? dlvSync(D(), y, "kdTo", x.kdTo) : {}) }); }
@@ -4932,3 +5137,4 @@ start();
 </script>
 </body>
 </html>
+
