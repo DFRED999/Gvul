@@ -37,6 +37,9 @@ input, select, textarea { font: inherit; border: 1px solid #c9cdc5; border-radiu
 .top { padding: 10px 14px; } .date { display: flex; align-items: center; gap: 6px; margin-inline-start: auto; font-size: 14px; color: var(--muted); } .date input { padding: 8px; }
 .where { position: sticky; top: 0; z-index: 5; border: 2px solid var(--accent); box-shadow: 0 8px 14px -10px rgba(0,0,0,.35); }
 .chip.sm { padding: 7px 11px; font-size: 14px; } .sec, .kd { margin-top: 8px; } .kd { background: #eef4fb; border-radius: 10px; padding: 6px 8px; } .kd .num { font-size: 17px; width: 96px; }
+.gres { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; } .gres:empty { display: none; }
+.gi { display: flex; align-items: center; gap: 8px; text-align: right; font: inherit; font-size: 14.5px; border: 1px solid #d5d9d1; background: #fff; border-radius: 10px; padding: 8px 10px; cursor: pointer; } .gi b { font-size: 16px; min-width: 64px; } .gi span { flex: 1; color: var(--muted); font-size: 13px; } .gi em { font-style: normal; font-size: 12px; background: #dff0e3; color: #23633b; border-radius: 8px; padding: 2px 7px; } .gi em.pd { background: #fff0c2; color: #7a5a00; } .gi.on { border-color: var(--accent); background: #eef5ff; }
+.gsel { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; } .gchip { display: inline-flex; align-items: center; gap: 6px; background: #37414b; color: #fff; border-radius: 16px; padding: 4px 6px 4px 10px; font-size: 14px; } .gchip button { border: 0; background: rgba(255,255,255,.2); color: #fff; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 12px; }
 .len { font-size: 18px; color: var(--accent); } .where .hint { margin-top: 6px; }
 .agrp { margin-bottom: 14px; } .agh { display: flex; align-items: center; gap: 8px; color: var(--g); font-size: 16px; padding-bottom: 6px; margin-bottom: 8px; border-bottom: 2px solid var(--g); }
 .agi { display: inline-flex; width: 34px; height: 34px; border-radius: 10px; background: var(--gt); align-items: center; justify-content: center; } .agi svg { width: 22px; height: 22px; }
@@ -402,6 +405,16 @@ function noAccess() {
   $("out").onclick = () => fb.auth().signOut();
 }
 const list = col => Object.entries(D[col] || {}).map(([id, v]) => ({ id, ...v }));
+/* מלאכה ביחידות (כמות) — וגם "התקנת סבכה", שתמיד נספרת ביחידות: סבכה למעביר מים */
+const isGr = a => /סבכ/.test(a?.name || ""), isUA = a => a?.unit === "יח׳" || isGr(a);
+const bcOf = i => String(i.name || "").replace(/^מעביר\s*/, "").trim();
+const normQ = v => String(v || "").toLowerCase().replace(/bc|מעביר|[\s\-_.]/g, "");
+/** מעבירי מים לבחירה בדיווח סבכה — חיפוש לפי מספר BC, ק.ד. או חתך */
+function culvList() { const done = {}; list("progress").forEach(p => { if (p.review === "נדחה" || !isGr(D.activities?.[p.activityId])) return; Object.keys(p.itemIds || {}).forEach(id => done[id] = p.review === "לבדיקה" ? "ממתין" : "הותקנה"); });
+  return list("items").filter(i => i.kind === "מעבירי מים" && i.status !== "מבוטל").map(i => ({ ...i, bc: bcOf(i), gd: done[i.id] || (i.grate === "הותקנה" ? "הותקנה" : "") })); }
+function culvFind(q) { const n = normQ(q); if (!n) return [];
+  const rk = i => { const b = normQ(i.bc); return b === n ? 0 : b.startsWith(n) ? 1 : String(i.kdFrom || "").replace(/\s/g, "").startsWith(n) ? 2 : normQ(i.x_sec).includes(n) ? 3 : normQ(i.name).includes(n) ? 4 : 9; };
+  return culvList().map(i => ({ i, r: rk(i) })).filter(x => x.r < 9).sort((a, b) => a.r - b.r || a.i.bc.localeCompare(b.i.bc, "he", { numeric: true })).slice(0, 8).map(x => x.i); }
 /* חתך ↔ ק.ד.: לפי טבלת ק.ד.↔חתכים אם יש (מדויק), אחרת קו ישר בין קצוות הקטע (≈) */
 function kdPts(s) {
   const pts = Object.values(D.kdSections || {}).filter(r => r.officeId === s.officeId && Number(r.seg) === Number(s.num)).map(r => [parseFloat(r.kd), Number(r.secFrom), Number(r.secTo)]).filter(p => !p.some(isNaN)).sort((a, b) => a[0] - b[0]);
@@ -501,6 +514,9 @@ function rqList() {
     ${tools}${shown.map(item).join("") || `<p class="hint">אין פניות שמתאימות לסינון</p>`}
     ${!open && all.length > 3 ? `<button class="rqtog wide" data-rqtog="1">▾ להצגת כל ${all.length} הפניות, חיפוש ומיון</button>` : ""}</div>`;
 }
+function grRes() { const q = S.gq || ""; if (!normQ(q)) return "";
+  const r = culvFind(q); if (!r.length) return `<div class="hint">לא נמצא מעביר — לבדוק את המספר</div>`;
+  return r.map(i => `<button class="gi ${S.gsel.includes(i.id) ? "on" : ""}" data-gi="${i.id}"><b dir="ltr">${esc(i.bc)}</b><span>${i.kdFrom ? `ק.ד. ${esc(i.kdFrom)}` : ""}${i.x_sec ? ` · חתך <span dir="ltr">${esc(i.x_sec)}</span>` : ""} · ${esc(D.contractors?.[i.contractorId]?.name || "")}</span>${i.gd ? `<em class="${i.gd === "ממתין" ? "pd" : ""}">${i.gd === "ממתין" ? "סבכה — ממתין לאישור" : "יש סבכה ✓"}</em>` : ""}</button>`).join(""); }
 function view() {
   const north = k => { const c = D.contractors[k] || {}, a = kdNum(c.kdFrom), b = kdNum(c.kdTo); return c.kind === "ייעודי" ? -1e9 - (+c.order || 0) : a === null && b === null ? -1e9 : Math.max(a ?? -1e9, b ?? -1e9); };   // מצפון לדרום
   const cids = (me.admin ? Object.keys(D.contractors || {}).filter(k => D.contractors[k].kind !== "ייעודי" || Object.values(D.activities || {}).some(a => a.contractorId === k))
@@ -511,13 +527,14 @@ function view() {
   const acts = list("activities").filter(a => a.contractorId === c.id).sort(byOrder);
   if (!segs.some(s => s.id === S.segId)) S.segId = segs[0]?.id || "";
   S.acts = S.acts.filter(id => acts.some(a => a.id === id));
-  const sel = acts.filter(a => S.acts.includes(a.id)), act = sel[0] || null, unit = sel.length === 1 && act.unit === "יח׳";
+  const sel = acts.filter(a => S.acts.includes(a.id)), act = sel[0] || null, unit = sel.length === 1 && isUA(act), gr = unit && isGr(act) && Object.keys(D.items || {}).length > 0;
+  S.gsel = (S.gsel || []).filter(id => D.items?.[id]); if (gr) S.qty = S.gsel.length || "";
   const seg = segs.find(s => s.id === S.segId);
   const selName = sel.length <= 2 ? sel.map(a => short(a.name)).join(" + ") : `${short(sel[0].name)} + עוד ${sel.length - 1}`;
   const m = !unit && S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? Math.abs(S.to - S.from) * SECTION_M : null;
   const mine = list("progress").filter(p => p.reportedBy === me.email).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, 25);
   const actName = id => D.activities?.[id]?.name || "—", segName = id => segs.find(s => s.id === id)?.label || "";
-  const actTile = a => { const G = actGroup(a), M = matOf(a); return `<button class="act ${S.acts.includes(a.id) ? "on" : ""} ${M?.ink ? "lt" : ""}" data-a="${a.id}" style="--g:${M?.c || G.color};--gt:${G.tint}${M?.ink ? `;--fg:${M.ink}` : ""}"><i class="ico">${M ? SV(M.i) : agIcon(G.key)}</i><span>${tileName(short(a.name))}${a.unit === "יח׳" ? ` <small>(יח׳)</small>` : ""}</span><i class="tick">${S.acts.includes(a.id) ? "✓" : ""}</i></button>`; };
+  const actTile = a => { const G = actGroup(a), M = matOf(a); return `<button class="act ${S.acts.includes(a.id) ? "on" : ""} ${M?.ink ? "lt" : ""}" data-a="${a.id}" style="--g:${M?.c || G.color};--gt:${G.tint}${M?.ink ? `;--fg:${M.ink}` : ""}"><i class="ico">${M ? SV(M.i) : agIcon(G.key)}</i><span>${tileName(short(a.name))}${isUA(a) ? ` <small>(יח׳)</small>` : ""}</span><i class="tick">${S.acts.includes(a.id) ? "✓" : ""}</i></button>`; };
   const nNew = rqNew().length;
   app.innerHTML = `<header><h1>דיווח ביצוע</h1><button class="btn ghost" id="wkopen" title="דוח ביצוע שבועי — Excel או PDF" style="padding:6px 10px">📄 דוח</button><button class="rqbtn" id="rqopen" title="נושא בטקסט חופשי למנהל הפרויקט">✉ פנייה${nNew ? `<i>${nNew}</i>` : ""}</button><div class="who">${esc(me.name || user.email)}<br><button class="btn ghost" id="out" style="padding:4px 10px">יציאה</button></div></header>
   <div class="board">
@@ -526,7 +543,10 @@ function view() {
       <label class="date"><span>תאריך</span><input type="date" id="dt" value="${esc(S.date)}"></label></div>
   </div>
   <div class="card where">
-    ${unit ? `<div class="lbl" style="margin-top:0">${esc(short(act.name))} — כמות (יח׳)</div><div class="row"><input class="num" id="qty" inputmode="numeric" value="${esc(S.qty)}"><input id="loc" placeholder="מיקום (ק.ד. / חתך)" style="flex:1" value="${esc(S.loc || "")}"></div>`
+    ${gr ? `<div class="lbl" style="margin-top:0">${esc(short(act.name))} — באיזה מעביר? <span class="hint">(כל מעביר = סבכה אחת)</span></div>
+      <div class="row"><input id="gq" placeholder="מספר מעביר (BC) / ק.ד. / חתך" autocomplete="off" style="flex:1" value="${esc(S.gq || "")}"></div><div id="gres" class="gres">${grRes()}</div>
+      <div class="gsel">${S.gsel.map(id => { const i = D.items[id]; return `<span class="gchip"><b dir="ltr">${esc(bcOf(i))}</b>${i.kdFrom ? ` · ק.ד. ${esc(i.kdFrom)}` : ""}<button data-gx="${id}" aria-label="הסרה">✕</button></span>`; }).join("") || `<span class="hint">עוד לא נבחר מעביר — מקלידים מספר ובוחרים מהרשימה</span>`}</div>`
+    : unit ? `<div class="lbl" style="margin-top:0">${esc(short(act.name))} — כמות (יח׳)</div><div class="row"><input class="num" id="qty" inputmode="numeric" value="${esc(S.qty)}"><input id="loc" placeholder="מיקום (ק.ד. / חתך)" style="flex:1" value="${esc(S.loc || "")}"></div>`
       : `<div class="chips">${segs.map(s => `<button class="chip sm ${s.id === S.segId ? "on" : ""}" data-s="${s.id}">${esc(s.label)}</button>`).join("")}</div>
     <div class="row sec"><span>מחתך</span><input class="num" id="f" inputmode="numeric" value="${esc(S.from)}" placeholder="${seg?.lo ?? ""}"><span>עד</span><input class="num" id="t" inputmode="numeric" value="${esc(S.to)}" placeholder="${seg?.hi ?? ""}"><b id="m" class="len">${m === null ? "" : m.toLocaleString("he-IL") + " מ׳"}</b><button class="btn ghost kdbtn ${S.kdOpen ? "on" : ""}" id="kdt">לפי ק.ד.</button></div>
     <div class="row kd ${S.kdOpen || S.kf || S.kt ? "open" : ""}"><span>או ק.ד.</span><input class="num" id="kf" inputmode="decimal" value="${esc(S.kf ?? "")}" placeholder="${seg && S.from !== "" ? esc(kdOf(seg, S.from).replace("≈", "")) : "ק.ד."}"><span>עד</span><input class="num" id="kt" inputmode="decimal" value="${esc(S.kt ?? "")}" placeholder="${seg && S.to !== "" ? esc(kdOf(seg, S.to).replace("≈", "")) : "ק.ד."}"><button class="btn ghost" id="kgo">המרה</button></div>
@@ -546,10 +566,10 @@ function view() {
       ${S.dup.clean.length ? `<div style="margin-top:4px">בלי כפילות (יישלחו במלואן): <b>${S.dup.clean.map(r => esc(short(D.activities?.[r.activityId]?.name || ""))).join(", ")}</b></div>` : ""}</div>
     <div class="row" style="margin-top:8px;gap:6px">${S.dup.full ? "" : `<button class="btn" id="dupNew">${S.dup.hits.length === 1 && !S.dup.clean.length ? `שליחת החדש בלבד: ${S.dup.hits[0].gaps.map(([x, y]) => rng(x, y)).join(", ")}` : "שליחת מה שחדש בלבד"}</button>`}
       <button class="btn ghost" id="dupFix" title="כשהדיווח הקודם שגוי — נשלח עם הערה לבדיקת מנהל הפרויקט">בקשת תיקון</button><button class="btn ghost" id="dupNo">ביטול</button></div></div>` : ""}
-  <div class="sendbar"><div class="sum">${S.msg ? `<div class="msg ${S.err ? "err" : "ok"}" style="margin:0 0 2px">${esc(S.msg)}</div>` : ""}${act ? `<b>${esc(selName)}</b> · ${unit ? (S.qty ? S.qty + " יח׳" : "כמות?") : m !== null ? `${rng(S.from, S.to)} · ${m.toLocaleString("he-IL")} מ׳` : "חתכים?"}${sel.length > 1 && m !== null ? ` · ${sel.length} מלאכות` : ""}` : "בחר מלאכה — אפשר כמה"}</div><button class="btn" id="send">שליחת דיווח</button></div>
+  <div class="sendbar"><div class="sum">${S.msg ? `<div class="msg ${S.err ? "err" : "ok"}" style="margin:0 0 2px">${esc(S.msg)}</div>` : ""}${act ? `<b>${esc(selName)}</b> · ${gr ? (S.gsel.length ? `${S.gsel.length} סבכות · ${S.gsel.map(id => esc(bcOf(D.items[id]))).join(", ")}` : "איזה מעביר?") : unit ? (S.qty ? S.qty + " יח׳" : "כמות?") : m !== null ? `${rng(S.from, S.to)} · ${m.toLocaleString("he-IL")} מ׳` : "חתכים?"}${sel.length > 1 && m !== null ? ` · ${sel.length} מלאכות` : ""}` : "בחר מלאכה — אפשר כמה"}</div><button class="btn" id="send">שליחת דיווח</button></div>
   </div>
   <div class="card"><b>הדיווחים שלי</b> <span class="hint">— ממתין לאישור עד שמנהל הפרויקט מאשר</span>
-    ${mine.map(p => `<div class="rep"><div class="t"><b>${esc(actName(p.activityId))}</b><small>${fmtD(p.date)} · ${esc(D.contractors?.[p.contractorId]?.name || "")} · ${p.qty ? `${p.qty} יח׳` : `${esc(segName(p.segmentId))} ${rng(esc(p.secFrom), esc(p.secTo))}${(s => s ? ` · ק.ד. ${kdOf(s, p.secFrom)}–${kdOf(s, p.secTo)}` : "")(segs.find(x => x.id === p.segmentId))} (${(Math.abs(p.secTo - p.secFrom) * SECTION_M).toLocaleString("he-IL")} מ׳)`}${p.note ? " · " + esc(p.note) : ""}</small></div>
+    ${mine.map(p => `<div class="rep"><div class="t"><b>${esc(actName(p.activityId))}</b><small>${fmtD(p.date)} · ${esc(D.contractors?.[p.contractorId]?.name || "")} · ${p.qty ? `${p.qty} יח׳${p.loc ? ` · ${esc(p.loc)}` : ""}` : `${esc(segName(p.segmentId))} ${rng(esc(p.secFrom), esc(p.secTo))}${(s => s ? ` · ק.ד. ${kdOf(s, p.secFrom)}–${kdOf(s, p.secTo)}` : "")(segs.find(x => x.id === p.segmentId))} (${(Math.abs(p.secTo - p.secFrom) * SECTION_M).toLocaleString("he-IL")} מ׳)`}${p.note ? " · " + esc(p.note) : ""}</small></div>
       ${p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span><button class="btn ghost" data-del="${p.id}" style="padding:6px 10px">מחיקה</button>` : p.review === "נדחה" ? `<span class="pill p2">לא אושר</span>` : `<span class="pill p1">אושר ✓</span>`}</div>`).join("") || `<p class="hint">עוד אין דיווחים</p>`}
   </div>${rqList()}${covModal(c, seg, acts)}${rqModal(c)}`;
   fitTiles();
@@ -578,9 +598,9 @@ function view() {
   app.querySelectorAll("[data-cov]").forEach(b => b.onclick = () => { S.covOpen = b.dataset.cov; view(); });
   app.querySelectorAll("[data-covx]").forEach(b => b.onclick = e => { if (e.target === b || b.tagName === "BUTTON") { S.covOpen = null; view(); } });
   app.querySelectorAll("[data-fill]").forEach(b => b.onclick = () => { const [f, t] = b.dataset.fill.split("|").map(Number);
-    Object.assign(S, { from: f, to: t, byKd: false, kf: "", kt: "", covOpen: null, msg: "", dup: null }); if (!S.acts.includes(b.dataset.fa)) S.acts = D.activities?.[b.dataset.fa]?.unit === "יח׳" ? [b.dataset.fa] : [...S.acts.filter(x => D.activities?.[x]?.unit !== "יח׳"), b.dataset.fa]; view(); });
+    Object.assign(S, { from: f, to: t, byKd: false, kf: "", kt: "", covOpen: null, msg: "", dup: null }); if (!S.acts.includes(b.dataset.fa)) S.acts = isUA(D.activities?.[b.dataset.fa]) ? [b.dataset.fa] : [...S.acts.filter(x => !isUA(D.activities?.[x])), b.dataset.fa]; view(); });
   app.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { S.cid = b.dataset.c; S.acts = []; S.segId = ""; S.msg = ""; S.dup = null; view(); });
-  app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { const id = b.dataset.a, isU = x => D.activities?.[x]?.unit === "יח׳";
+  app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => { const id = b.dataset.a, isU = x => isUA(D.activities?.[x]);
     S.acts = isU(id) || S.acts.some(isU) ? (S.acts.includes(id) ? [] : [id]) : S.acts.includes(id) ? S.acts.filter(x => x !== id) : [...S.acts, id];
     S.msg = ""; S.dup = null; view(); });
   app.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { S.segId = b.dataset.s; S.dup = null; view(); });
@@ -598,11 +618,17 @@ function view() {
     if (!s) { S.msg = "הק.ד. לא נמצא באף קטע של הקבלן"; S.err = true; return view(); }
     const p = secOf(s, a), q = secOf(s, z); Object.assign(S, { segId: s.id, from: Math.min(p, q), to: Math.max(p, q), byKd: true, msg: "", err: false }); view(); };
   if ($("loc")) $("loc").oninput = e => S.loc = e.target.value;
+  if ($("gq")) { $("gq").oninput = e => { S.gq = e.target.value; $("gres").innerHTML = grRes(); };   // בלי רינדור מלא — כדי לא לאבד את הפוקוס
+    $("gres").onclick = e => { const b = e.target.closest("[data-gi]"); if (!b) return; if (!S.gsel.includes(b.dataset.gi)) S.gsel.push(b.dataset.gi); S.gq = ""; S.msg = ""; S.grOk = false; view(); setTimeout(() => $("gq")?.focus(), 20); }; }
+  app.querySelectorAll("[data-gx]").forEach(b => b.onclick = () => { S.gsel = S.gsel.filter(x => x !== b.dataset.gx); S.grOk = false; view(); });
   $("send").onclick = async () => {
     const bad = t => { S.msg = t; S.err = true; view(); };
     if (!sel.length) return bad("צריך לבחור מלאכה");
     if (!S.date) return bad("חסר תאריך");
     const base = { contractorId: c.id, date: S.date, note: S.note.trim(), review: me.admin ? "" : "לבדיקה", baseline: false, reportedBy: me.email, reportedByName: me.name || "", updatedAt: new Date().toISOString(), updatedBy: me.email };
+    if (gr) { if (!S.gsel.length) return bad("צריך לבחור מעביר — לפי מספר BC או ק.ד.");
+      const dupG = S.gsel.filter(id => culvList().find(i => i.id === id)?.gd); if (dupG.length && !S.grOk) { S.grOk = true; return bad(`כבר דווחה סבכה ב־${dupG.map(id => bcOf(D.items[id])).join(", ")} — ללחוץ שוב על שליחה כדי לשלוח בכל זאת`); }
+      return sendRecs([{ ...base, activityId: act.id, segmentId: "", secFrom: "", secTo: "", qty: S.gsel.length, itemIds: Object.fromEntries(S.gsel.map(id => [id, true])), loc: S.gsel.map(id => bcOf(D.items[id]) + (D.items[id].kdFrom ? ` (ק.ד. ${D.items[id].kdFrom})` : "")).join(", ") }]); }
     if (unit) { if (!(S.qty > 0)) return bad("צריך כמות"); return sendRecs([{ ...base, activityId: act.id, segmentId: "", secFrom: "", secTo: "", qty: Number(S.qty), loc: S.loc || "" }]); }
     if (!seg) return bad("צריך לבחור קטע תכנון");
     if (S.from === "" || S.to === "" || isNaN(S.from) || isNaN(S.to) || S.from === S.to) return bad("צריך חתך התחלה וחתך סוף (שונים)");
@@ -624,8 +650,8 @@ function view() {
     try { for (const r of recs) await fb.database().ref(`${ROOT}/progress`).push(r);
       const nA = new Set(recs.map(r => r.activityId)).size;
       const mOf = rs => (rs.reduce((s, r) => s + Math.abs(r.secTo - r.secFrom), 0) * SECTION_M).toLocaleString("he-IL") + " מ׳";
-      const len = unit ? `${S.qty} יח׳` : nA > 1 ? [...new Set(recs.map(r => r.activityId))].map(id => `${short(D.activities?.[id]?.name || "")} ${mOf(recs.filter(r => r.activityId === id))}`).join(" · ") : mOf(recs); S.dup = null;
-      Object.assign(S, { from: unit ? S.from : S.to, to: "", qty: "", note: "", byKd: false, kf: S.byKd ? S.kt : "", kt: "", msg: `נשלח ✓ ${len}${extra}${recs.every(r => r.review === "") ? " — נקלט כמאושר" : " — ממתין לאישור"}`, err: false });
+      const len = gr ? `${S.gsel.length} סבכות (${S.gsel.map(id => bcOf(D.items[id])).join(", ")})` : unit ? `${S.qty} יח׳` : nA > 1 ? [...new Set(recs.map(r => r.activityId))].map(id => `${short(D.activities?.[id]?.name || "")} ${mOf(recs.filter(r => r.activityId === id))}`).join(" · ") : mOf(recs); S.dup = null;
+      Object.assign(S, { gsel: [], gq: "", grOk: false, from: unit ? S.from : S.to, to: "", qty: "", note: "", byKd: false, kf: S.byKd ? S.kt : "", kt: "", msg: `נשלח ✓ ${len}${extra}${recs.every(r => r.review === "") ? " — נקלט כמאושר" : " — ממתין לאישור"}`, err: false });
     } catch (e) { S.msg = "השליחה נכשלה — אין הרשאה לקבלן הזה או אין חיבור"; S.err = true; }
     view();
   };
@@ -638,7 +664,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-12c";
+const VER = "2026-10-12d";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
@@ -669,10 +695,10 @@ document.addEventListener("focusout", () => { if (later) { later = false; setTim
     if (me) me.fullRead = isAdm;
     if (!me) return noAccess();
     me.email = String(u.email).toLowerCase();
-    const COLS6 = ["contractors", "activities", "designSegments", "designOffices", "kdSections", "progress"], got = new Set(), bad = [];
+    const COLS6 = ["contractors", "activities", "designSegments", "designOffices", "kdSections", "progress", "items"], got = new Set(), bad = [];
     for (const col of COLS6) {
       const ref = db.ref(`${ROOT}/${col}`), cb = ref.on("value", s => { D[col] = s.val() || {}; got.add(col); if (got.size === COLS6.length) soft(); },
-        err => { if (col === "kdSections") { D[col] = {}; got.add(col); if (got.size === COLS6.length) soft(); return; }   // טבלת עזר — בלעדיה ההמרה ק.ד.↔חתך משוערת
+        err => { if (col === "kdSections" || col === "items") { /* items — לבחירת מעביר בדיווח סבכה; בלי הרשאה → דיווח כמות רגיל */ D[col] = {}; got.add(col); if (got.size === COLS6.length) soft(); return; }   // טבלת עזר — בלעדיה ההמרה ק.ד.↔חתך משוערת
           bad.push(col); fail("אין הרשאה לקרוא נתונים", `${col}: ${err && err.message || err}`); });
       offs.push(() => ref.off("value", cb));
     }
