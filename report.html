@@ -413,7 +413,11 @@ const lerp = (pts, x, i, j) => { const p = [...pts].sort((a, b) => a[i] - b[i]);
 const kdOf = (s, sec) => { const k = kdPts(s); return k && sec !== "" && !isNaN(sec) ? `${k.exact ? "" : "≈"}${(Math.round(lerp(k.p, +sec, 1, 0) * 10) / 10).toLocaleString("he-IL")}` : ""; };
 const secOf = (s, kd) => { const k = kdPts(s); return k ? Math.max(s.lo, Math.min(s.hi, Math.round(lerp(k.p, kd, 0, 1)))) : null; };
 function segsOf(c) {
-  const a = kdNum(c.kdFrom), b = kdNum(c.kdTo); if (a === null || b === null) return [];
+  let a = kdNum(c.kdFrom), b = kdNum(c.kdTo);
+  if ((a === null || b === null) && c.kind === "ייעודי") {   // קבלן ייעודי בלי גבולות גזרה — עובד לאורך כל הקו
+    const ks = Object.values(D.contractors || {}).filter(x => x.kind !== "ייעודי").flatMap(x => [kdNum(x.kdFrom), kdNum(x.kdTo)]).filter(v => v !== null);
+    if (ks.length) { a = Math.min(...ks); b = Math.max(...ks); } }
+  if (a === null || b === null) return [];
   const lo = Math.min(a, b), hi = Math.max(a, b), offices = D.designOffices || {};
   return list("designSegments").filter(s => { const x = kdNum(s.kdFrom), y = kdNum(s.kdTo); return x !== null && y !== null && Math.min(hi, Math.max(x, y)) - Math.max(lo, Math.min(x, y)) > 0.01 && s.secFrom !== "" && s.secTo !== ""; })
     .map(s => ({ ...s, label: `${offices[s.officeId]?.name || ""} ${s.num}`, lo: Math.min(+s.secFrom, +s.secTo), hi: Math.max(+s.secFrom, +s.secTo) }))
@@ -498,8 +502,8 @@ function rqList() {
     ${!open && all.length > 3 ? `<button class="rqtog wide" data-rqtog="1">▾ להצגת כל ${all.length} הפניות, חיפוש ומיון</button>` : ""}</div>`;
 }
 function view() {
-  const north = k => { const c = D.contractors[k] || {}, a = kdNum(c.kdFrom), b = kdNum(c.kdTo); return a === null && b === null ? -1e9 : Math.max(a ?? -1e9, b ?? -1e9); };   // מצפון לדרום
-  const cids = (me.admin ? Object.keys(D.contractors || {}).filter(k => D.contractors[k].kind !== "ייעודי")
+  const north = k => { const c = D.contractors[k] || {}, a = kdNum(c.kdFrom), b = kdNum(c.kdTo); return c.kind === "ייעודי" ? -1e9 - (+c.order || 0) : a === null && b === null ? -1e9 : Math.max(a ?? -1e9, b ?? -1e9); };   // מצפון לדרום
+  const cids = (me.admin ? Object.keys(D.contractors || {}).filter(k => D.contractors[k].kind !== "ייעודי" || Object.values(D.activities || {}).some(a => a.contractorId === k))
     : Object.keys(me.contractors || {}).filter(k => D.contractors?.[k])).sort((a, b) => north(b) - north(a));
   if (!cids.length) return noAccess();
   if (!cids.includes(S.cid)) S.cid = cids[0];
@@ -634,7 +638,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-12b";
+const VER = "2026-10-12c";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
