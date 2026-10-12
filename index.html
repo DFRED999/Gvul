@@ -862,7 +862,7 @@ const NAV_ALL = () => [
     ...(cs => cs.map(c => ["c:" + c.id, c.name, "", "", 0, cColor({ contractors: cs }, c)]))(list("contractors").filter(isMain)),
     ["#h2", "קבלנים ייעודיים", "", "head"],
     ...list("contractors").filter(c => !isMain(c)).map(c => ["c:" + c.id, c.name, "", "", 0, (KIND_ICON[specsOf(c)[0]] || {}).c || "#8a9a90"]),
-    ["culverts", "מעבירי מים", "", "", 0, "#1c7fb5"], ["power", "חיבורי חח״י", "", "", 0, "#e0a21b"], ["sites", "אתרי איסוף", "soon", "", 0, "#8a9a90"],
+    ["culverts", "פריטים בגזרות", "", "", 0, "#1c7fb5"], ["power", "חיבורי חח״י", "", "", 0, "#e0a21b"], ["sites", "אתרי איסוף", "soon", "", 0, "#8a9a90"],
     ["newContractor", "+ קבלן חדש", "", "add"]] },
   { group: "תכנון", items: [["segments", "קטעי תכנון"], ["deliveries", "מסירות תוכניות"]] },
   { group: "ניהול שוטף", items: [["survey", "סקר שטח"], ["svcmp", "סקר מול דיווחים"], ["dq", "🩺 איכות נתונים", "", "", (() => { try { return dqChecks(D()).filter(c => c.sev === "red" && c.n).length; } catch { return 0; } })()]] },
@@ -875,7 +875,7 @@ const PLANS = {
   power: ["חשמל", "מעבר מהאתר הישן.", ["נכסי חשמל וסטטוס"]],
   mreport: ["דוח הנהלה", "הפקת הדוח השבועי.", ["תמונת מצב לכל ארבעת הקבלנים", "השוואה לשבוע הקודם", "חסמים קריטיים", "ייצוא PDF / Word"]],
 };
-const C_TABS = [["progress", "סטטוס"], ["issues", "נושאים פתוחים"], ["design", "קטעי גזרה"], ["orders", "הזמנות"], ["culverts", "מעבירי מים"], ["deliveries", "מסירות תוכניות"]];
+const C_TABS = [["progress", "סטטוס"], ["issues", "נושאים פתוחים"], ["design", "קטעי גזרה"], ["orders", "הזמנות"], ["culverts", "פריטים"], ["deliveries", "מסירות תוכניות"]];
 const SETTINGS_TABS = [["data", "נתונים וגיבוי"], ["offices", "משרדי תכנון"], ["activities", "מלאכות ושלבים"], ["inspectors", "מפקחים"], ["users", "משתמשים"]];
 
 const ui = { filt: {}, execView: "seg", page: location.hash.slice(1) || "overview", setTab: "data", ctab: "orders", df: dlvEmpty(), pf: { date: todayStr(), actId: "", segId: "", secFrom: "", secTo: "", note: "", baseline: false, msg: "" } };
@@ -1168,6 +1168,24 @@ const mapLinks = coord => { const c = parseCoord(coord); if (!c) return ""; cons
 /** הקבלן הייעודי שמבצע סוג עבודה (לפי ההתמחויות שלו). קבלן ייעודי ספציפי קודם לחח״י הכללי */
 const spFor = (kind, fallback = null) => { const cs = list("contractors").filter(c => !isMain(c) && specsOf(c).includes(kind)); return (cs.find(c => c.id !== IEC_CID) || cs[0])?.id || fallback; };
 const KIND_RE = { "חדר טרפו": /טרפו/, "ארון שקד": /שקד/, "תט״ז": /תט["״']?ז/, "שערים": /שער/, "סבכות למעבירי מים": /סבכ/, "פינוי מוקשים": /מוקש|רלפ/ };
+/** פריטים שקבלני העפר בונים (למשל ארונות שקד) — עוברים מהקבלן הייעודי לקבלן הגזרה לפי הק.ד. (או הנ.צ.) */
+function toMainsModal(sid) {
+  const d = D(), S = d.contractors.find(c => c.id === sid), its = d.items.filter(i => i.contractorId === sid), kinds = [...new Set(its.map(i => i.kind || "אחר"))];
+  const plan = ks => { const out = [], lost = []; its.filter(i => ks.includes(i.kind || "אחר")).forEach(i => { const m = mainAt(d, i) || mainByNorth(d, i); m ? out.push({ i, m }) : lost.push(i); }); return { out, lost }; };
+  modal(`<h2 style="margin:0">העברה לקבלני הגזרה — מ${esc(S.name)}</h2><p class="small muted" style="margin:0">לסוגי פריטים שקבלן העפר בונה בעצמו. כל פריט עובר לקבלן שבגזרה שלו לפי הק.ד.; הסטטוס, התאריכים והקישור לחיבורי חח״י נשמרים. לפני ההעברה יורד גיבוי.</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap">${kinds.map(k => `<label class="chip"><input type="checkbox" data-tk="${esc(k)}" ${MAIN_KINDS.includes(k) ? "checked" : ""}> ${esc(KIND_PLURAL[k] || k)} <b>${its.filter(i => (i.kind || "אחר") === k).length}</b></label>`).join("")}</div>
+    <div id="tm_sum" class="small"></div><p class="small" id="tm_msg"></p>
+    <div class="row"><button class="btn" id="mYes">העברה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    const ks = () => [...m.querySelectorAll("[data-tk]:checked")].map(x => x.dataset.tk);
+    const sum = () => { const P = plan(ks()), by = {}; P.out.forEach(x => by[x.m.name] = (by[x.m.name] || 0) + 1);
+      m.querySelector("#tm_sum").innerHTML = P.out.length || P.lost.length ? `${Object.entries(by).map(([n, c]) => `<span class="pill">${esc(n)} ${c}</span>`).join(" ")}${P.lost.length ? ` <span class="pill warn">${P.lost.length} בלי מיקום — נשארים</span>` : ""}` : `<span class="muted">לא נבחר סוג</span>`; };
+    m.querySelectorAll("[data-tk]").forEach(x => x.onchange = sum); sum(); m.querySelector("#mNo").onclick = close;
+    m.querySelector("#mYes").onclick = async () => { const K = ks(), P = plan(K); if (!P.out.length) return; m.querySelector("#mYes").disabled = true; try { downloadJson(backupName()); } catch (e) {}
+      let n = 0; for (const { i, m: mm } of P.out) { await api.update("items", i.id, { contractorId: mm.id }); if (++n % 10 === 0) m.querySelector("#tm_msg").textContent = `${n}/${P.out.length}`; }
+      const left = K.filter(k => P.lost.some(i => (i.kind || "אחר") === k)); await api.update("contractors", sid, { specialties: specsOf(S).filter(k => !K.includes(k) || left.includes(k)).join(" · ") });
+      close(); render(); toast(`הועברו ${P.out.length} פריטים לקבלני הגזרה ✓`); };
+  });
+}
 /** העברה לקבלן ייעודי חדש של מה שכבר נרשם אצל קבלן אחר: פריטים (לפי סוג), הזמנות ושורות אומדן. ההתמחות עוברת יחד איתם. */
 function spMoveModal(tid) {
   const d = D(), T = d.contractors.find(c => c.id === tid), srcs = d.contractors.filter(c => c.id !== tid && !isMain(c) && (d.items.some(i => i.contractorId === c.id) || d.orders.some(o => o.contractorId === c.id)));
@@ -1200,17 +1218,19 @@ function spMoveModal(tid) {
 }
 /* ---------- מעבירי מים: בביצוע קבלני העפר (לא קבלן הסבכות) ---------- */
 const CULV_KINDS = ["מעבירי מים", "מעביר אירי"], GRATE_CID = "sp-haoman";
+const MAIN_KINDS = ["מעבירי מים", "מעביר אירי", "ארון שקד"];   // פריטים שקבלני העפר בונים בעצמם
 function culvertsBlock(d, its, cid) {
-  const st = its.length ? `<div class="tablewrap"><table class="sheet">${statHead("סוג")}<tbody>${CULV_KINDS.map(k => (a => a.length ? statRow(esc(KIND_PLURAL[k] || k), itemStats(a)) : "")(its.filter(i => i.kind === k))).join("")}${statRow("סה״כ", itemStats(its))}</tbody></table></div>` : "";
+  const kinds = [...new Set([...MAIN_KINDS.filter(k => its.some(i => i.kind === k)), ...its.map(i => i.kind || "אחר")])];
+  const st = its.length ? `<div class="tablewrap"><table class="sheet">${statHead("סוג")}<tbody>${kinds.map(k => (a => a.length ? statRow(esc(KIND_PLURAL[k] || k), itemStats(a)) : "")(its.filter(i => i.kind === k))).join("")}${statRow("סה״כ", itemStats(its))}</tbody></table></div>` : "";
   const kd = i => kdNum(i.kdFrom) ?? -1;
-  return `${st}<h2 style="margin-top:16px">מעבירי מים <span class="small muted">(${its.length})</span></h2>${renderSheet("items", [...its].sort((a, b) => kd(b) - kd(a)), "אין מעבירי מים")}
-    ${cid ? `<div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="addItem" data-id="${cid}" data-kind="מעבירי מים">+ מעביר מים</button><button class="btn ghost sm" data-act="addItem" data-id="${cid}" data-kind="מעביר אירי">+ מעביר אירי</button>
-      <span class="small muted">הסבכות על המעבירים — אצל הקבלן הייעודי "${esc(d.contractors.find(c => c.id === GRATE_CID)?.name || "סבכות")}".</span></div>` : ""}`;
+  return `${st}<h2 style="margin-top:16px">פריטים <span class="small muted">(${its.length}) — הכפתורים מעל הטבלה מסננים לפי סוג</span></h2>${renderSheet("items", [...its].sort((a, b) => kd(b) - kd(a)), "אין פריטים")}
+    ${cid ? `<div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="addItem" data-id="${cid}" data-kind="מעבירי מים">+ מעביר מים</button><button class="btn ghost sm" data-act="addItem" data-id="${cid}" data-kind="מעביר אירי">+ מעביר אירי</button><button class="btn ghost sm" data-act="addItem" data-id="${cid}" data-kind="ארון שקד">+ ארון שקד</button>
+      <span class="small muted">הסבכות — אצל "${esc(d.contractors.find(c => c.id === GRATE_CID)?.name || "סבכות")}"; החיבור לחשמל של ארון שקד — בחיבורי חח״י.</span></div>` : ""}`;
 }
 function pageCulverts(d) {
-  const mains = d.contractors.filter(isMain), its = d.items.filter(i => CULV_KINDS.includes(i.kind) && mains.some(m => m.id === i.contractorId));
+  const mains = d.contractors.filter(isMain), its = d.items.filter(i => mains.some(m => m.id === i.contractorId));
   const P = sepPlan(d), n = P.ops.length;
-  return `<h1>מעבירי מים</h1><p class="sub">כל מעבירי המים והמעבירים האיריים בקו — בביצוע קבלני העפר. הכפתורים מעל הטבלה מסננים לפי קבלן, סוג וסטטוס.</p>
+  return `<h1>פריטים בגזרות</h1><p class="sub">מה שקבלני העפר בונים בעצמם לאורך הקו — מעבירי מים, מעבירים איריים, ארונות שקד. הכפתורים מעל הטבלה מסננים לפי סוג, קבלן וסטטוס.</p>
     ${n && !isViewer() ? `<div class="banner"><b>הפרדת מעבירי מים מסבכות</b><span>${n} שינויים ממתינים — מעבירי מים עדיין רשומים אצל קבלן הסבכות</span><button class="btn sm" data-act="sepRun">ביצוע ההפרדה</button></div>` : ""}
     ${!n && P.lost ? `<div class="banner"><b>${P.lost} מעבירים ממתינים לשיוך</b><span>אין להם ק.ד. והנ.צ. נופל בין הגזרות — בדף הסבכות בוחרים לכל אחד "קבלן מבצע" בטבלה.</span><button class="btn sm ghost" data-act="nav" data-id="c:${GRATE_CID}">לדף הסבכות</button></div>` : ""}
     <div class="ch-tiles" style="--cc:#1c7fb5;grid-template-columns:repeat(${mains.length},minmax(0,1fr))">${mains.map(m => { const a = its.filter(i => i.contractorId === m.id), dn = a.filter(i => i.status === "הושלם").length;
@@ -1474,7 +1494,7 @@ function pageAlerts(d) {
   const rows = all.filter(a => (!cat || a.cat === cat) && (showDone || !a.done)).sort((a, b) => (a.done - b.done) || (!!b.rq - !!a.rq) || AL_SEV[a.sev] - AL_SEV[b.sev] || String(a.date || "9").localeCompare(String(b.date || "9")));
   const cnt = c => all.filter(a => !a.done && (!c || a.cat === c)).length;
   const sjCnt = k => all0.filter(a => !a.done && (k === "-" ? !a._s.size : a._s.has(k))).length;
-  const sjList = [...d.contractors.filter(isMain), ...d.contractors.filter(c => !isMain(c))].map(c => [c.id, c.id === IEC_CID ? "חח״י / שקד / טרפו" : c.name, cColor(d, c)]).concat([["-", "כללי (לא משויך)", "#8a9a90"]]).filter(([k]) => sjCnt(k) || k === sj);
+  const sjList = [...d.contractors.filter(isMain), ...d.contractors.filter(c => !isMain(c))].map(c => [c.id, c.id === IEC_CID ? "חברת חשמל / חח״י" : c.name, cColor(d, c)]).concat([["-", "כללי (לא משויך)", "#8a9a90"]]).filter(([k]) => sjCnt(k) || k === sj);
   const sjBar = `<div class="al-sj"><span class="small muted">התמקדות:</span><button class="al-chip ${!sj ? "on" : ""}" data-act="alSubj" data-id="">הכל</button>${sjList.map(([k, l, c]) => `<button class="al-chip ${sj === k ? "on" : ""}" style="--cc:${c}" data-act="alSubj" data-id="${esc(k)}">${esc(l)} <b>${sjCnt(k)}</b></button>`).join("")}
     <input type="search" class="inp al-q" data-alq="1" placeholder="חיפוש חופשי — מספר הזמנה, ק.ד., מילה…" value="${esc(ui.alQ || "")}"></div>`;
   const card = a => `<div class="alrt sev-${a.sev} ${a.done ? "done" : ""} ${a.rq ? "rq-al" : ""}" data-altxt="${esc([a.title, a.sub, a.note, a.decision, a.cat, ...(a.lines || [])].join(" ").toLowerCase())}">
@@ -1504,7 +1524,7 @@ function alertModal2(id) {
     <label class="field">מה צריך<input id="aT" value="${esc(a.title)}" placeholder="למשל: לאשר מעבר לתוואי חלופי / ביטוח הקבלן פג"></label>
     <div class="row"><label class="field" style="flex:1">סוג<select id="aC">${AL_CATS.map(c => `<option ${c === a.cat ? "selected" : ""}>${c}</option>`).join("")}</select></label>
       <label class="field" style="flex:1">תאריך (יעד / תוקף)<input type="date" id="aD" value="${esc(a.due || "")}"></label></div>
-    <label class="field">קבלן / נושא<select id="aS"><option value="">— לפי הטקסט —</option>${list("contractors").map(c => `<option value="${c.id}" ${c.id === a.subj ? "selected" : ""}>${esc(c.id === IEC_CID ? "חח״י / שקד / טרפו" : c.name)}</option>`).join("")}</select></label>
+    <label class="field">קבלן / נושא<select id="aS"><option value="">— לפי הטקסט —</option>${list("contractors").map(c => `<option value="${c.id}" ${c.id === a.subj ? "selected" : ""}>${esc(c.id === IEC_CID ? "חברת חשמל / חח״י" : c.name)}</option>`).join("")}</select></label>
     <label class="field">פרטים<textarea id="aN" rows="3">${esc(a.note || "")}</textarea></label>
     <label class="field">קשור למסך<select id="aP"><option value="">—</option>${pages.map(([pid, l]) => `<option value="${esc(pid)}" ${pid === a.page ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>
     <div class="row"><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
@@ -2012,11 +2032,11 @@ function overviewHero(d) {
           ${(f => f.eta ? `<div class="ov-fc ${f.lateDays > 14 ? "bad" : f.lateDays > 0 ? "warn" : ""}">סיום צפוי ${fmtMY(f.eta)}${f.target ? ` · יעד ${fmtMY(f.target)}` : ""}</div>` : "")(forecast(d, s.c))}
           <div class="ov-iss">${o.length} נושאים פתוחים${o.filter(i => i.status === "HOLD").length ? ` · <span class="hold">${o.filter(i => i.status === "HOLD").length} HOLD</span>` : ""}</div></div></div>
       ${msBar(s)}</button>`; };
-  const sp = [...d.contractors.filter(c => !isMain(c)), { id: "culverts", name: "מעבירי מים — קבלני העפר", _culv: true }];
-  const spTiles = sp.flatMap(c => { const its = d.items.filter(i => (c._culv ? CULV_KINDS.includes(i.kind) && d.contractors.some(m => m.id === i.contractorId && isMain(m)) : i.contractorId === c.id) && i.status !== "מבוטל");
+  const sp = [...d.contractors.filter(c => !isMain(c)), { id: "culverts", name: "פריטים בגזרות — קבלני העפר", _culv: true }];
+  const spTiles = sp.flatMap(c => { const its = d.items.filter(i => (c._culv ? d.contractors.some(m => m.id === i.contractorId && isMain(m)) : i.contractorId === c.id) && i.status !== "מבוטל");
     return [...new Set(its.map(i => i.kind || "אחר"))].map(k => { const ii = its.filter(i => (i.kind || "אחר") === k), dn2 = ii.filter(i => i.status === "הושלם").length, ip = ii.filter(i => i.status === "בביצוע").length, I = KIND_ICON[k] || { c: "#5f6670", i: '<circle cx="12" cy="12" r="7"/>' };
       const wk = ii.filter(i => i.status === "הושלם" && i.doneDate && i.doneDate > wkD).length;
-      return `<button class="ov-sp" data-act="nav" data-id="${c._culv ? "culverts" : "c:" + c.id}" style="--kc:${I.c}" title="${esc(c.name)}"><i>${matSvg(I.i)}</i><div><b>${esc(KIND_PLURAL[k] || k)}</b>
+      return `<button class="ov-sp" data-act="${c._culv ? "navKind" : "nav"}" data-id="${c._culv ? "culverts" : "c:" + c.id}" data-kind="${esc(k)}" style="--kc:${I.c}" title="${esc(c.name)}"><i>${matSvg(I.i)}</i><div><b>${esc(KIND_PLURAL[k] || k)}</b>
         <span class="ov-spn"><b>${dn2}</b>/${ii.length} הושלמו${ip ? ` · ${ip} בביצוע` : ""}</span>${wk ? `<span class="ov-wk">השבוע +${wk}</span>` : ""}</div>
         <div class="ov-spbar"><em style="width:${ii.length ? Math.round(dn2 / ii.length * 100) : 0}%"></em></div></button>`; }); });
   return `${fenceHero(d)}<div class="ov-kpis">
@@ -2324,7 +2344,7 @@ function pageSpecialist(d, c) {
     const kbar = have.length > 1 ? `<div class="kbar"><span class="small muted">הצגה:</span>${have.map(k => `<label class="chip ${KF.includes(k) ? "on" : ""}"><input type="checkbox" data-act="kindF" data-id="${id}" value="${esc(k)}" ${KF.includes(k) ? "checked" : ""}> ${esc(KIND_PLURAL[k] || k)} <b>${its.filter(i => (i.kind || "אחר") === k).length}</b></label>`).join("")}${KF.length ? `<button class="btn ghost sm" data-act="kindFAll" data-id="${id}">הכל</button>` : `<span class="small muted">— סמן כדי להציג רק סוג מסוים</span>`}</div>` : "";
     tab = `${id === GRATE_CID && !isViewer() ? (P => P.ops.length ? `<div class="banner"><b>הפרדת מעבירי מים מסבכות</b><span>מעבירי המים בביצוע קבלני העפר — להעביר אותם אליהם ולהשאיר כאן רק סבכות</span><button class="btn sm" data-act="sepRun">ביצוע ההפרדה</button></div>`
       : P.lost ? `<div class="banner"><b>${P.lost} מעבירים ממתינים לשיוך</b><span>בוחרים לכל אחד "קבלן מבצע" בטבלה — והוא עובר לקבלן העפר</span></div>` : "")(sepPlan(d)) : ""}${sum}<h2 style="margin-top:16px">פריטי עבודה${KF.length ? ` <span class="small muted">(${shown.length} מתוך ${its.length})</span>` : ""}</h2>${kbar}${renderSheet("items", (k => [...shown].sort((a, b) => (k(b) ?? -1) - (k(a) ?? -1) || String(a.name).localeCompare(String(b.name), "he", { numeric: true })))(i => itemKd(d, i)), "עוד אין פריטים — מוסיפים פריט אחד או רשימה לפי ק.ד.")}
-      <div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="addItem" data-id="${id}">+ פריט</button><button class="btn ghost sm" data-act="bulkItems" data-id="${id}">+ כמה פריטים לפי ק.ד.</button><button class="btn ghost sm" data-act="spMove" data-id="${id}" title="העברת פריטים, הזמנות ושורות אומדן שנרשמו אצל קבלן אחר">⇄ העברה מקבלן אחר</button>
+      <div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="addItem" data-id="${id}">+ פריט</button><button class="btn ghost sm" data-act="bulkItems" data-id="${id}">+ כמה פריטים לפי ק.ד.</button><button class="btn ghost sm" data-act="spMove" data-id="${id}" title="העברת פריטים, הזמנות ושורות אומדן שנרשמו אצל קבלן אחר">⇄ העברה מקבלן אחר</button><button class="btn ghost sm" data-act="toMains" data-id="${id}" title="פריטים שקבלני העפר בונים — עוברים לכל קבלן לפי הגזרה">⇄ העברה לקבלני הגזרה</button>
       <span class="small muted">פריט = נקודה (ק.ד. אחד, למשל שער) או טווח (ק.ד. מ–עד, למשל קטע לפינוי מוקשים). הקבלן הראשי והגזרה נגזרים מהק.ד.</span></div>`;
   } else if (ui.ctab === "orders") {
     const so = d.orders.filter(o => o.contractorId === id);
@@ -3265,7 +3285,7 @@ function bgLines(d, R) {
 function bgMatrix(d, R) {
   const L = bgLines(d, R), mains = d.contractors.filter(isMain).sort(byNorth);
   const sps = d.contractors.filter(c => !isMain(c) && L.some(l => l.col === c.id));
-  const cols = [...mains.map(c => ({ id: c.id, name: c.name, c })), ...sps.map(c => ({ id: c.id, name: c.id === IEC_CID ? "חח״י / שקד / טרפו" : c.name, c, sp: true })), ...(L.some(l => !l.col) ? [{ id: "", name: "כללי / לא משויך" }] : [])];
+  const cols = [...mains.map(c => ({ id: c.id, name: c.name, c })), ...sps.map(c => ({ id: c.id, name: c.id === IEC_CID ? "חברת חשמל / חח״י" : c.name, c, sp: true })), ...(L.some(l => !l.col) ? [{ id: "", name: "כללי / לא משויך" }] : [])];
   const rows = BG_ROWS.filter(k => L.some(l => l.cat === k));
   const agg = arr => ({ est: arr.reduce((a, l) => a + l.est, 0), cov: arr.reduce((a, l) => a + l.cov, 0), lines: arr });
   const cell = (k, a) => agg(L.filter(l => l.cat === k && l.col === a));
@@ -4418,7 +4438,7 @@ function pageContractor(d, id) {
     const dls = d.deliveries.filter(x => x.contractorId === id).sort((a, b) => String(b.date).localeCompare(String(a.date)));
     tab = `<h2>רישום מסירה ל${esc(c.name)}</h2>${deliveryForm(d, id)}<h2 style="margin-top:22px">מסירות שבוצעו</h2>${renderSheet("deliveries", dls, "עוד לא נרשמו מסירות")}`;
   } else if (ui.ctab === "culverts") {
-    tab = culvertsBlock(d, d.items.filter(i => CULV_KINDS.includes(i.kind) && i.contractorId === id), id);
+    tab = culvertsBlock(d, d.items.filter(i => i.contractorId === id), id);
   } else if (ui.ctab === "progress") {
     tab = execTab(d, c);
 
@@ -4817,7 +4837,7 @@ const TABLE_DEFS = {
     { key: "plannedDate", label: "תאריך מתוכנן", cell: i => `<input type="date" class="cell" id="f_items_${i.id}_plannedDate" value="${esc(i.plannedDate)}" data-edit="items|${i.id}|plannedDate">` },
     { key: "doneDate", label: "תאריך ביצוע", cell: i => `<input type="date" class="cell" id="f_items_${i.id}_doneDate" value="${esc(i.doneDate)}" data-edit="items|${i.id}|doneDate">` },
     { key: "note", label: "הערה", cls: "w-place", cell: i => cellInput("items", i, "note") },
-    ...(ui.page === "c:sp-iec" ? [{ key: "iec", label: "חיבור חח״י", cls: "small nowrap", cell: i => { const os = d.iecOrders.filter(o => o.itemId === i.id);
+    ...(ui.page === "c:sp-iec" || ui.page === "culverts" || (ui.page.startsWith("c:") && ui.ctab === "culverts") ? [{ key: "iec", label: "חיבור חח״י", cls: "small nowrap", cell: i => { const os = d.iecOrders.filter(o => o.itemId === i.id);
       return os.length ? os.map(o => `<button class="pill" style="border:0;cursor:pointer;background:${IEC_COLORS[o.stage] || "#eee"}" data-act="iecGo" data-id="${esc(o.orderNo)}" title="פתיחה בחיבורי חח״י">${esc(o.stage)} · <span dir="ltr">${esc(o.orderNo)}</span></button>`).join(" ") : `<span class="muted">—</span>`; } }] : []),
   ]; },
   activities: () => [
@@ -5236,6 +5256,8 @@ $app.addEventListener("click", async e => {
   else if (act === "mergeFile") pickMergeFile();
   else if (act === "shRename") shModal();
   else if (act === "sepRun") sepModal();
+  else if (act === "navKind") { ui.filt.items = { v: {}, c: { kind: [b.dataset.kind] } }; ui.page = "culverts"; location.hash = ui.page; render(); window.scrollTo(0, 0); }
+  else if (act === "toMains") toMainsModal(b.dataset.id);
   else if (act === "odIssue") bgLinkModal(b.dataset.id, () => render());
   else if (act === "odFuture") odFutureModal(b.dataset.id);
   else if (act === "odDel") { if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "בטוח? למחוק מהאומדן"; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "מחיקה"; } }, 4000); return; } await api.remove("budget", b.dataset.id); toast("נמחק מהאומדן"); }
