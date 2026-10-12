@@ -678,10 +678,14 @@ const byNorth = (a, b) => ((a.kind === "ייעודי") - (b.kind === "ייעוד
 const OLD_CULV = "מעבירי מים וסבכות";   // שם ישן — מעבירי המים בביצוע קבלני העפר, הסבכות אצל קבלן ייעודי
 const list = col => { const L = Object.entries(RAW[col] || {}).map(([id, v]) => ({ id, ...v })).sort(col === "contractors" ? byNorth : byOrder); if (col === "orders") L.forEach(ordBySecs);
   if (col === "activities") L.forEach(a => { if (a.stage === OLD_CULV) a.stage = "מעבירי מים"; if (a.name === OLD_CULV) a.name = "מעבירי מים"; });
-  if (col === "items") { const R = itemRepMap(); L.forEach(i => { const p = R[i.id]; if (p && i.status !== "הושלם" && i.status !== "מבוטל") { i.status = "הושלם"; i.doneDate = i.doneDate || p.date || ""; i._rep = p.date || "—"; } }); }
+  if (col === "items") { const R = itemRepMap(), PR = padRepMap(); L.forEach(i => { const q = PR[i.id]; if (q && i.padStatus !== "הושלם") { i.padStatus = "הושלם"; i.padDone = i.padDone || q.date || ""; i._padRep = q.date || "—"; } });
+    L.forEach(i => { const p = R[i.id]; if (p && i.status !== "הושלם" && i.status !== "מבוטל") { i.status = "הושלם"; i.doneDate = i.doneDate || p.date || ""; i._rep = p.date || "—"; } }); }
   return L; };
 /** פריט שהקבלן המבצע שלו דיווח עליו (דיווח מאושר עם בחירת הפריט, באתר הדיווחים) — נחשב "הושלם" */
 function itemRepMap() { const m = {}; Object.values(RAW.progress || {}).forEach(p => { if (p.review || !p.itemIds) return; Object.keys(p.itemIds).forEach(id => { const i = RAW.items?.[id]; if (i && i.contractorId === p.contractorId && i.kind !== "מעבירי מים" && (!m[id] || String(p.date) < String(m[id].date))) m[id] = p; }); }); return m; }
+/** תט״ז — שני שלבים: הכנת משטח (קבלן הגזרה, padStatus) והצבת התט״ז (חח״י, status). דיווח של קבלן הגזרה עם בחירת התט״ז → המשטח הושלם */
+const PAD_KIND = "תט״ז";
+function padRepMap() { const m = {}; Object.values(RAW.progress || {}).forEach(p => { if (p.review || !p.itemIds) return; Object.keys(p.itemIds).forEach(id => { const i = RAW.items?.[id]; if (i && i.kind === PAD_KIND && i.mainId && i.mainId === p.contractorId && (!m[id] || String(p.date) < String(m[id].date))) m[id] = p; }); }); return m; }
 /** מלאכה ביחידות שמקושרת לסוג פריט (תט״ז / חדר טרפו / שער) של אותו קבלן — הביצוע = הפריטים שהושלמו */
 const ACT_KINDS = [[/תט["״׳']{0,2}ז/, "תט״ז"], [/טרפו/, "חדר טרפו"], [/שער/, "שערים"]];
 function actKind(d, a) { const m = ACT_KINDS.find(([re]) => re.test(a?.name || "")); return m && d.items.some(i => i.kind === m[1] && i.contractorId === a.contractorId && i.status !== "מבוטל") ? m[1] : null; }
@@ -1287,6 +1291,7 @@ const comps = () => [...COMPS_BASE.map(([k, name, kind]) => ({ k, name, kind }))
 const compOf = kind => comps().find(x => x.kind === kind);
 function pageComp(d, key) {
   const C = comps().find(x => x.k === key); if (!C) return `<p class="muted">רכיב לא קיים</p>`;
+  if (key === "ttz") return pageTtz(d, C);
   if (key === "grate") { const old = d.items.filter(i => i.kind === C.kind);
     return `<div class="ch-banner" style="--cc:#37414b"><div><h1>סבכות</h1><span>סבכה לכל מעביר מים — המעביר בביצוע קבלן הגזרה, הסבכה בביצוע ${esc(d.contractors.find(c => c.id === GRATE_CID)?.name || "קבלן הסבכות")}.</span></div></div>
       <div class="card">${gratesBlock(d)}</div>${old.length ? `<div class="card"><h2>סבכות שנרשמו כפריט נפרד <span class="small muted">(${old.length}) — מומלץ לסמן את הסבכה על המעביר עצמו ולמחוק את הפריט</span></h2>${renderSheet("items", old, "")}</div>` : ""}`; }
@@ -1301,6 +1306,31 @@ function pageComp(d, key) {
     <div class="card"><div class="tablewrap"><table class="sheet">${statHead("גזרה")}<tbody>${byArea.map(x => statRow(esc(x.m.name), itemStats(x.a))).join("")}${none.length ? statRow("ללא גזרה", itemStats(none)) : ""}${statRow("סה״כ", itemStats(its))}</tbody></table></div>
     <h2 style="margin-top:16px">${esc(C.name)} <span class="small muted">(${its.length}) — הכפתורים מעל הטבלה מסננים לפי גזרה, קבלן וסטטוס</span></h2>${renderSheet("items", [...its].sort((a, b) => kd(b) - kd(a)), "אין פריטים")}
     <div class="row" style="margin-top:10px;gap:8px">${sp && !isViewer() ? `<button class="btn ghost sm" data-act="addItem" data-id="${sp}" data-kind="${esc(C.kind)}">+ ${esc(C.kind)}</button>` : `<span class="small muted">מוסיפים פריט בדף הקבלן המבצע (חוצץ ״פריטים״).</span>`}</div></div>`;
+}
+/** דף התט״זים — שתי שכבות: הכנת משטח (קבלני הגזרה) והצבה (חח״י) */
+function pageTtz(d, C) {
+  const its = d.items.filter(i => i.kind === PAD_KIND && i.status !== "מבוטל"), mains = d.contractors.filter(isMain).sort(byNorth), kd = i => kdNum(i.kdFrom) ?? -1;
+  const pd = a => a.filter(i => i.padStatus === "הושלם").length, pl = a => a.filter(i => i.status === "הושלם").length;
+  const tile = (name, a, col, act = "") => `<div class="ch-t" ${act} style="border-top:4px solid ${col}"><span>${esc(name)}</span><b>${pd(a)}/${a.length}</b><small>משטחים מוכנים</small><small><b>${pl(a)}/${a.length}</b> הוצבו (חח״י)</small></div>`;
+  const byArea = mains.map(m => ({ m, a: its.filter(i => mainAt(d, i)?.id === m.id) })).filter(x => x.a.length);
+  const mig = !RAW.tableConfig?.settings?.ttzPadMig && its.some(i => !RAW.items[i.id]?.padStatus && RAW.items[i.id]?.status && RAW.items[i.id].status !== "טרם");
+  return `<div class="ch-banner" style="--cc:#c27c0e"><div><h1>תט״זים</h1><span>שני שלבים לכל תט״ז: הכנת משטח — קבלן הגזרה · הצבת התט״ז — חח״י.</span></div></div>
+    ${mig && !isViewer() ? `<div class="banner"><b>העברת הסטטוסים להכנת משטח</b><span>הסטטוסים שרשומים היום בתט״זים הם בפועל של הכנת המשטח — להעביר אותם לעמודת "הכנת משטח" ולאפס את ההצבה</span><button class="btn sm" data-act="ttzMig">העברה…</button></div>` : ""}
+    <div class="ch-tiles" style="--cc:#c27c0e;grid-template-columns:repeat(${byArea.length + 1},minmax(0,1fr))">${tile("כל הקו", its, "#c27c0e")}${byArea.map(x => tile(x.m.name, x.a, cColor(d, x.m), `data-act="nav" data-id="c:${x.m.id}" role="button"`)).join("")}</div>
+    <div class="card"><h2>תט״זים <span class="small muted">(${its.length}) — הכנת משטח והצבה זה לצד זה</span></h2>${renderSheet("ttz", [...its].sort((a, b) => kd(b) - kd(a)), "אין תט״זים", { store: "items" })}
+    <div class="row" style="margin-top:10px;gap:8px">${!isViewer() ? `<button class="btn ghost sm" data-act="addItem" data-id="${spFor(C.kind) || IEC_CID}" data-kind="${esc(C.kind)}">+ תט״ז</button>` : ""}<span class="small muted">דיווח מפקח של קבלן הגזרה (מלאכת התט״ז שלו) עם בחירת התט״ז מסמן את המשטח; דיווח "הצבת תט״ז" של חח״י מסמן את ההצבה.</span></div></div>`;
+}
+function ttzMigModal() {
+  const its = list("items").filter(i => i.kind === PAD_KIND && !RAW.items[i.id]?.padStatus && RAW.items[i.id]?.status && i.status && i.status !== "טרם" && i.status !== "מבוטל");
+  modal(`<h2>העברת הסטטוסים להכנת משטח</h2><p class="small" style="margin:0">לכל תט״ז: הסטטוס והתאריכים עוברים לעמודת "הכנת משטח", והצבת התט״ז (חח״י) חוזרת ל"טרם". תט״ז שחח״י כבר דיווחה עליו באתר הדיווחים יישאר מסומן כהוצב.</p>
+    <div class="tablewrap" style="max-height:320px;margin:10px 0"><table class="sheet"><thead><tr><th>תט״ז</th><th>ק.ד.</th><th>סטטוס נוכחי</th><th>←</th></tr></thead><tbody>${its.map(i => `<tr><td>${esc(i.name)}</td><td>${esc(i.kdFrom || "")}</td><td>${esc(RAW.items[i.id].status)}</td><td>משטח: ${esc(RAW.items[i.id].status)} · הצבה: טרם</td></tr>`).join("")}</tbody></table></div>
+    <div class="row"><button class="btn" id="mYes">העברת ${its.length} תט״זים</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close;
+    m.querySelector("#mYes").onclick = async () => { m.querySelector("#mYes").disabled = true;
+      for (const i of its) { const r = RAW.items[i.id] || {}; await api.update("items", i.id, { padStatus: r.status, padPlanned: r.plannedDate || "", padDone: r.doneDate || "", status: "טרם", plannedDate: "", doneDate: "" }); }
+      const S = { ...(RAW.tableConfig?.settings || {}) }; delete S.updatedAt; delete S.updatedBy; S.ttzPadMig = true; await api.put("tableConfig", "settings", S);
+      close(); render(); toast(`הועבר ✓ ${its.length} תט״זים`); };
+  });
 }
 function compAddModal() {
   const cs = list("contractors");
@@ -2600,6 +2630,9 @@ function execState(d, cid, asOf = null) {
   const prog = d.progress.filter(p => p.contractorId === cid && !p.review && (!asOf || !p.date || p.date <= asOf));
   const rows = acts.map(a => {
     const AK = isUnitAct(a) && !isGrateAct(a) ? actKind(d, a) : null;
+    if (!AK && isUnitAct(a) && isMain(c || {}) && /תט["״׳']{0,2}ז/.test(a.name)) { const its = d.items.filter(i => i.kind === PAD_KIND && i.status !== "מבוטל" && mainAt(d, i)?.id === cid);
+      if (its.length) { const done = its.filter(i => i.padStatus === "הושלם" && (!asOf || !i.padDone || i.padDone <= asOf)).length + prog.filter(p => p.activityId === a.id && !p.itemIds).reduce((s, p) => s + (Number(p.qty) || 0), 0), plan = Number(a.planQty) || its.length;
+        return { a, unit: true, cells: ds.map(x => ({ x, done: null, plan: null, pct: null })), done, plan, pct: plan ? Math.min(1, done / plan) : null }; } }
     if (AK) { const its = d.items.filter(i => i.kind === AK && i.contractorId === cid && i.status !== "מבוטל"), done = its.filter(i => i.status === "הושלם" && (!asOf || !i.doneDate || i.doneDate <= asOf)).length + prog.filter(p => p.activityId === a.id && !p.itemIds).reduce((s, p) => s + (Number(p.qty) || 0), 0), plan = Number(a.planQty) || its.length;
       return { a, unit: true, cells: ds.map(x => ({ x, done: null, plan: null, pct: null })), done, plan, pct: plan ? Math.min(1, done / plan) : null }; }
     if (isUnitAct(a)) { const done = prog.filter(p => p.activityId === a.id).reduce((s, p) => s + (Number(p.qty) || 0), 0), plan = Number(a.planQty) || (isGrateAct(a) ? (R => d.items.filter(i => i.kind === "מעבירי מים" && i.status !== "מבוטל" && grateNeed(grateOf(i, R))).length)(grateReps(d)) : 0);
@@ -5024,6 +5057,20 @@ const TABLE_DEFS = {
     { key: "status", label: "סטטוס", cell: x => supersededBy(x, d.deliveries) ? `<span class="pill">הוחלפה</span>` : `<select class="inp" id="f_deliveries_${x.id}_status" data-edit="deliveries|${x.id}|status">${DLV_STATUS.map(s => `<option ${s === x.status ? "selected" : ""}>${s}</option>`).join("")}</select>` },
     { key: "note", label: "הערה", cls: "w-place", cell: x => cellInput("deliveries", x, "note") },
   ]; },
+  ttz: () => { const d = D(); const st = (i, k, rep) => `<select class="inp" id="f_items_${i.id}_${k}" data-edit="items|${i.id}|${k}" style="background:${ITEM_COLORS[i[k] || "טרם"] || "#fff"}">${ITEM_STATUS.map(x => `<option ${x === (i[k] || "טרם") ? "selected" : ""}>${x}</option>`).join("")}</select>${rep ? `<div><span class="pill ok" title="לפי דיווח מפקח מאושר">לפי דיווח ${esc(fmtD(rep))}</span></div>` : ""}`;
+    const dt = (i, k) => `<input type="date" class="cell" id="f_items_${i.id}_${k}" value="${esc(i[k] || "")}" data-edit="items|${i.id}|${k}">`;
+    return [
+    { key: "name", label: "תט״ז", cls: "w-place", cell: i => cellInput("items", i, "name") },
+    { key: "kdFrom", label: "ק.ד.", cls: "w-kd", cell: i => cellInput("items", i, "kdFrom", "kdin") },
+    { key: "main", label: "קבלן הגזרה", cls: "small", cell: i => esc(mainAt(d, i)?.name || "—") },
+    { key: "padStatus", label: "הכנת משטח (קבלן הגזרה)", cell: i => st(i, "padStatus", i._padRep) },
+    { key: "padDone", label: "משטח — תאריך", cell: i => dt(i, "padDone") },
+    { key: "status", label: "הצבת תט״ז (חח״י)", cell: i => st(i, "status", i._rep) },
+    { key: "doneDate", label: "הצבה — תאריך", cell: i => dt(i, "doneDate") },
+    { key: "flag", label: "סנכרון", cls: "small", cell: i => i.padStatus === "הושלם" && !["הושלם", "בביצוע", "מבוטל"].includes(i.status) ? `<span class="pill" style="background:#d6ebf7;color:#14527a">משטח מוכן — ממתין להצבה</span>` : ["הושלם", "בביצוע"].includes(i.status) && i.padStatus !== "הושלם" ? `<span class="pill warn">הצבה בלי משטח מסומן</span>` : `<span class="muted">—</span>` },
+    { key: "iec", label: "חיבור חח״י", cls: "small nowrap", cell: i => { const os = d.iecOrders.filter(o => o.itemId === i.id); return os.length ? os.map(o => `<button class="pill" style="border:0;cursor:pointer;background:${IEC_COLORS[o.stage] || "#eee"}" data-act="iecGo" data-id="${esc(o.orderNo)}">${esc(o.stage)} · <span dir="ltr">${esc(o.orderNo)}</span></button>`).join(" ") : `<span class="muted">—</span>`; } },
+    { key: "note", label: "הערה", cls: "w-place", cell: i => cellInput("items", i, "note") },
+  ]; },
   grates: () => { const d = D(), R = grateReps(d); return [
     { key: "name", label: "מעביר", cls: "nowrap", cell: i => `<b dir="ltr">${esc(String(i.name || "").replace(/^מעביר\s*/, ""))}</b>` },
     { key: "kdFrom", label: "ק.ד.", cls: "c nowrap", cell: i => i.kdFrom ? esc(i.kdFrom) : (k => k === null ? "—" : `<span class="muted" title="משוער לפי נ.צ.">≈${k}</span>`)(kdEst(d, i)) },
@@ -5479,6 +5526,7 @@ $app.addEventListener("click", async e => {
   else if (act === "mergeFile") pickMergeFile();
   else if (act === "shRename") shModal();
   else if (act === "sepRun") sepModal();
+  else if (act === "ttzMig") ttzMigModal();
   else if (act === "zoneAdd") { const c = RAW.contractors[b.dataset.id], Z = { ...(c.zones || {}) }, n = Object.keys(Z).length; Z[newId()] = { name: `אזור ${n + 1}`, secFrom: "", secTo: "", order: n + 1 }; await api.update("contractors", b.dataset.id, { zones: Z }); }
   else if (act === "zoneDel") { const [cid, zid] = b.dataset.id.split("|"), Z = { ...(RAW.contractors[cid].zones || {}) }; delete Z[zid]; await api.update("contractors", cid, { zones: Object.keys(Z).length ? Z : null }); }
   else if (act === "compAdd") compAddModal();
