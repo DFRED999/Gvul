@@ -242,6 +242,10 @@ body.dark .mt { filter: invert(1) hue-rotate(180deg); }
 .ov-msi em { position: absolute; bottom: 0; left: 0; right: 0; border-radius: 0; } .ov-msi span { font-size: 9.5px; color: var(--muted); text-align: center; line-height: 1.1; }
 .ov-sph { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 8px; } .ov-sph h2 { margin: 0; }
 .sm-l.sm-pad .sm-lab b { font-weight: 600; } .sm-l.sm-pad .sm-lab i { opacity: .6; }
+.bkchip { all: unset; box-sizing: border-box; cursor: pointer; display: block; margin: 8px 12px 0; padding: 6px 10px; border-radius: 10px; font-size: 12.5px; background: rgba(255,255,255,.08); color: inherit; text-align: center; }
+.bkchip:hover { background: rgba(255,255,255,.16); } .bkchip.late { background: #b33a2b; color: #fff; font-weight: 700; }
+#errbar { position: fixed; bottom: 14px; inset-inline: 14px; z-index: 300; display: flex; gap: 10px; align-items: center; background: #8f1d1d; color: #fff; border-radius: 12px; padding: 10px 14px; box-shadow: 0 6px 20px rgba(0,0,0,.3); font-size: 14px; }
+#errbar span { flex: 1; } #errbar button { all: unset; cursor: pointer; padding: 2px 8px; font-size: 16px; }
 .ov-grps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; align-items: start; } .ov-grp { display: flex; flex-direction: column; gap: 8px; }
 .ov-sp.pad { filter: saturate(.55) brightness(1.08); } .ov-sp.pad > i { opacity: .85; }
 @media (max-width: 1400px) { .ov-grps { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -626,7 +630,38 @@ a.btn { text-decoration: none; }
 
 <script>
 /* =====================================================================
-   הגדרות Firebase — מדביקים כאן את הערכים מ-Firebase Console.
+   תוכן עניינים — כל פרק מסומן ב-§ (לחיפוש: Ctrl+F על "§12" למשל).
+   האתר בקובץ אחד בכוונה: מעלים קובץ אחד, ואין סכנה שחלקים מגרסאות שונות יתערבבו.
+   §1  הגדרות Firebase — מדביקים כאן את הערכים מ-Firebase Console.
+   §2  עזרים
+   §3  שכבת נתונים
+   §4  מבנה האתר — האתר מוכוון ביצוע: חוצץ לכל קבלן, באותה תבנית בדיוק
+   §5  חיבורי חח״י — ניהול ההזמנות מול חברת החשמל (ארונות שקד, חדרי טרפו, תט״זים, אתרי איסוף)
+   §6  לוח התראות — מה דורש החלטה, מה באיחור ומה עומד לפוג
+   §7  סקר שטח (אייפד / טלפון) — מה בוצע בפועל, בלוק של 100 מ׳ (5 חתכים) בכל פעם.
+   §8  מפקחים — רשימת מפקחים (כמה לכל קבלן, מפקח אחד יכול לכמה קבלנים), יצירת משתמש וסיסמה, איפוס
+   §9  סקירה כללית — "ראש" צבעוני: אריחי מספרים, כרטיס לכל קבלן ראשי עם טבעת ביצוע ואבני דרך, ארי
+   §10  דשבורד: סטטוס לפי גזרה (עמקים / בקעה / הכל).
+   §11  התקדמות לפי תקופה: כל תקופה = מצב מצטבר בסופה פחות המצב ביום שלפני תחילתה.
+   §12  קבלנים ייעודיים — פריטי עבודה (נקודה בק.ד. או טווח), סטטוס ותאריכים.
+   §13  ביצוע — דיווח לפי מלאכה + קטע תכנון + טווח חתכים.
+   §14  מסירות תוכניות — כל מסירה היא טווח ק.ד. שנמסר לקבלן, בתאריך ובמהדורה.
+   §15  נושאים פתוחים — חסמים, משימות והחלטות שעולים בפגישות הפיקוח.
+   §16  מסך אישורים מרכזי — כל הדיווחים שממתינים, מכל הקבלנים, עם סימון בעיות ואישור בבת אחת
+   §17  איכות נתונים — כל מה ש"לא מסתדר", עם מעבר לתיקון
+   §18  סקר שטח מול דיווחים — איפה הסקר אומר אחרת ממה שדווח (בחתכים, האחרון בסקר גובר)
+   §19  משימות הנהלה + ישיבה שבועית
+   §20  תקציב ואומדן — ריכוז העלויות ובקרת אומדן מול הזמנות
+   §21  מפת הקו — Leaflet. הקו נבנה מנקודות ידועות (נ.צ. + ק.ד.) של פריטים ותיקי חח״י, ובין הנקודו
+   §22  מספור נושאים, וורד לתגובה וקליטת התגובות
+   §23  מצגת הנהלה שבועית (PowerPoint) — נוצרת בדפדפן מהנתונים
+   §24  עמודות טבלה — הסתרה / הצגה של עמודות קבועות + הוספת עמודות משלך.
+   §25  אירועים
+   §26  כניסה (Firebase Authentication — מייל + סיסמה)
+   §27  הפעלה
+   ===================================================================== */
+/* =====================================================================
+   §1 הגדרות Firebase — מדביקים כאן את הערכים מ-Firebase Console.
    כל עוד apiKey ריק — האתר עובד במצב הדגמה (נתונים בדפדפן בלבד).
    ===================================================================== */
 const FIREBASE_CONFIG = { apiKey: "AIzaSyDDRcdT0My1ZIhtE04GGL5silY3QYyWPDw", authDomain: "gvul-950ce.firebaseapp.com", databaseURL: "https://gvul-950ce-default-rtdb.europe-west1.firebasedatabase.app", projectId: "gvul-950ce", storageBucket: "gvul-950ce.firebasestorage.app", messagingSenderId: "467547105884", appId: "1:467547105884:web:1664970f7b2db52bc55499" };
@@ -636,9 +671,9 @@ const SECTION_M = 20;          // מרחק בין חתכים (מ׳) — קבוע
 /* נתוני הפרויקט לא נמצאים בקוד — הם נקראים מהקובץ data.json (ראה שכבת נתונים). */
 
 /* =====================================================================
-   עזרים
+   §2 עזרים
    ===================================================================== */
-const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "requests", "snapshots", "tasks", "mtgs", "budget", "tableConfig", "users"];
+const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "requests", "snapshots", "tasks", "mtgs", "budget", "tableConfig", "errLog", "users"];
 /* קבלנים ייעודיים — עובדים לרוחב הקו לפי התמחות (שערים, מבני חשמל, פינוי מוקשים, סבכות…) ומנוהלים לפי "פריטי עבודה" */
 const SPECIALTIES = ["ארון שקד", "חדר טרפו", "תט״ז", "שערים", "פינוי מוקשים", "סבכות למעבירי מים", "תקשורת", "מעבירי מים", "מעביר אירי", "אחר"];
 const ITEM_STATUS = ["טרם", "מתוכנן", "בביצוע", "הושלם", "HOLD", "מבוטל"];
@@ -654,7 +689,8 @@ const specsOf = c => String(c.specialties || "").split("·").map(x => x.trim()).
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const num = (x, dg = 2) => x === null || x === undefined || x === "" || isNaN(x) ? "" : Number(x).toLocaleString("he-IL", { maximumFractionDigits: dg });
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name ?? "").localeCompare(String(b.name ?? ""), "he");
+const HE_COLL = new Intl.Collator("he");   // מהיר בהרבה מ-localeCompare בכל השוואה
+const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || HE_COLL.compare(String(a.name ?? ""), String(b.name ?? ""));
 /** אורך לפי חתכים: (חתך סוף − חתך התחלה) × 20 מ׳ */
 const secLenKm = s => (s.secFrom === "" || s.secTo === "" || s.secFrom == null || s.secTo == null || isNaN(s.secFrom) || isNaN(s.secTo))
   ? null : Math.abs(Number(s.secTo) - Number(s.secFrom)) * SECTION_M / 1000;
@@ -663,7 +699,7 @@ const fmtD = s => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : ""
 const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : "";
 
 /* =====================================================================
-   שכבת נתונים
+   §3 שכבת נתונים
    הנתונים לא נמצאים בקוד. האתר קורא אותם מהקובץ data.json שיושב ליד index.html.
    - בלי Firebase: עותק עבודה נשמר בדפדפן. כדי לשתף/לשמור — מורידים גיבוי ומעלים אותו ל-GitHub בשם data.json.
    - עם Firebase: הנתונים חיים ב-Firebase; data.json משמש לטעינה ראשונה ולגיבוי.
@@ -682,7 +718,10 @@ const D = () => Object.fromEntries(COLS.map(c => [c, list(c)]));
 const cNorth = c => { const a = kdNum(c.kdFrom), b = kdNum(c.kdTo); return a === null && b === null ? -1e9 : Math.max(a ?? -1e9, b ?? -1e9); };
 const byNorth = (a, b) => ((a.kind === "ייעודי") - (b.kind === "ייעודי")) || (a.kind !== "ייעודי" ? cNorth(b) - cNorth(a) : 0) || byOrder(a, b);
 const OLD_CULV = "מעבירי מים וסבכות";   // שם ישן — מעבירי המים בביצוע קבלני העפר, הסבכות אצל קבלן ייעודי
-const list = col => { const L = Object.entries(RAW[col] || {}).map(([id, v]) => ({ id, ...v })).sort(col === "contractors" ? byNorth : byOrder); if (col === "orders") L.forEach(ordBySecs);
+/* מהירות: בזמן רינדור אחד הנתונים לא משתנים — כל רשימה ממוינת מחושבת פעם אחת, וכל קורא מקבל עותק משלו (בטוח לשינוי) */
+let LISTC = null;
+const list = col => { if (!LISTC) return list0(col); let c = LISTC.get(col); if (!c) LISTC.set(col, c = list0(col)); return c.map(o => ({ ...o })); };
+const list0 = col => { const L = Object.entries(RAW[col] || {}).map(([id, v]) => ({ id, ...v })).sort(col === "contractors" ? byNorth : byOrder); if (col === "orders") L.forEach(ordBySecs);
   if (col === "activities") L.forEach(a => { if (a.stage === OLD_CULV) a.stage = "מעבירי מים"; if (a.name === OLD_CULV) a.name = "מעבירי מים"; });
   if (col === "items") { const R = itemRepMap(), PR = padRepMap(); L.forEach(i => { const q = PR[i.id]; if (q && i.padStatus !== "הושלם") { i.padStatus = "הושלם"; i.padDone = i.padDone || q.date || ""; i._padRep = q.date || "—"; } });
     L.forEach(i => { const p = R[i.id]; if (p && i.status !== "הושלם" && i.status !== "מבוטל") { i.status = "הושלם"; i.doneDate = i.doneDate || p.date || ""; i._rep = p.date || "—"; } }); }
@@ -813,9 +852,24 @@ function downloadJson(name) {
   a.href = URL.createObjectURL(new Blob([JSON.stringify(j, null, 1)], { type: "application/json" }));
   a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  META.backupAt = META.savedAt; if (LOCAL) storeLocal(); render();
+  META.backupAt = META.savedAt; if (LOCAL) storeLocal(); markBackup(now); render();
 }
-const backupName = () => `border-backup-${new Date().toISOString().slice(0, 16).replace("T", "_").replace(":", "")}.json`;
+const backupName = () => { const d = new Date(), l = new Date(d - d.getTimezoneOffset() * 6e4).toISOString(); return `border-backup-${l.slice(0, 16).replace("T", "_").replace(":", "")}.json`; };   // שעון מקומי
+/* ---------- גיבוי שבועי: נרשם מתי הורד גיבוי אחרון (בשרת — לכל המשתמשים, ובדפדפן). מנהל שנכנס אחרי 7 ימים בלי גיבוי — יורד גיבוי אוטומטית ---------- */
+const BK_LS = "border-lastbk", BK_TRY = "border-autobk-try", BK_DAYS = 7;
+function markBackup(at) { try { localStorage.setItem(BK_LS, at); } catch (e) {}
+  if (!LOCAL && fb && !isViewer() && !isIecOnly()) fb.database().ref(`${DB_ROOT}/tableConfig/backupInfo`).set({ at, by: me?.name || user?.email || "" }).catch(() => {}); }
+function lastBackup() { let l = ""; try { l = localStorage.getItem(BK_LS) || ""; } catch (e) {} const s = RAW.tableConfig?.backupInfo?.at || ""; return s > l ? { at: s, by: RAW.tableConfig.backupInfo.by || "" } : { at: l, by: l ? "דפדפן זה" : "" }; }
+const bkDays = () => { const a = lastBackup().at; return a ? Math.floor((Date.now() - Date.parse(a)) / 864e5) : null; };
+function bkChip() { if (isViewer() || isIecOnly()) return ""; const n = bkDays(), lb = lastBackup();
+  return `<button class="bkchip ${n === null || n >= BK_DAYS ? "late" : ""}" data-act="dlBackup" title="${lb.at ? `גיבוי אחרון ${fmtD(lb.at.slice(0, 10))}${lb.by ? " · " + esc(lb.by) : ""} — לחיצה מורידה גיבוי עכשיו` : "עוד לא הורד גיבוי — לחיצה מורידה"}">💾 ${n === null ? "אין גיבוי" : n === 0 ? "גובה היום" : `גיבוי לפני ${n} ימים`}</button>`; }
+let autoBkArmed = false;
+function autoBackup() {
+  if (!(isMgr()) || !Object.keys(RAW.contractors || {}).length) return;
+  const n = bkDays(), today = todayStr(); if (n !== null && n < BK_DAYS) return;
+  try { if (localStorage.getItem(BK_TRY) === today) return; localStorage.setItem(BK_TRY, today); } catch (e) { return; }
+  downloadJson(backupName()); toast(`גיבוי שבועי אוטומטי ✓ — הקובץ ירד לתיקיית ההורדות${n === null ? "" : ` (הקודם היה לפני ${n} ימים)`}`);
+}
 
 function pickBackupFile() {
   const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,application/json";
@@ -890,7 +944,7 @@ function dataBar() {
 }
 
 /* =====================================================================
-   מבנה האתר — האתר מוכוון ביצוע: חוצץ לכל קבלן, באותה תבנית בדיוק
+   §4 מבנה האתר — האתר מוכוון ביצוע: חוצץ לכל קבלן, באותה תבנית בדיוק
    ===================================================================== */
 const NAV = () => isIecOnly() ? [{ group: "חיבורי חשמל", items: [["power", "חיבורי חח״י"], ...list("contractors").filter(c => c.id === IEC_CID).map(c => ["c:" + c.id, c.name])] }] : NAV_ALL().filter(g => !isViewer() || g.items.length).map(g => isViewer() ? { ...g, items: g.items.filter(i => i[3] !== "add" && i[0] !== "settings") } : g).filter(g => g.items.length);
 const NAV_ALL = () => [
@@ -919,8 +973,32 @@ const PLANS = {
   mreport: ["דוח הנהלה", "הפקת הדוח השבועי.", ["תמונת מצב לכל ארבעת הקבלנים", "השוואה לשבוע הקודם", "חסמים קריטיים", "ייצוא PDF / Word"]],
 };
 const C_TABS = [["progress", "סטטוס"], ["issues", "נושאים פתוחים"], ["design", "קטעי גזרה"], ["orders", "הזמנות"], ["culverts", "פריטים"], ["deliveries", "מסירות תוכניות"]];
-const SETTINGS_TABS = [["data", "נתונים וגיבוי"], ["offices", "משרדי תכנון"], ["activities", "מלאכות ושלבים"], ["inspectors", "מפקחים"], ["users", "משתמשים"]];
+const SETTINGS_TABS = [["data", "נתונים וגיבוי"], ["offices", "משרדי תכנון"], ["activities", "מלאכות ושלבים"], ["inspectors", "מפקחים"], ["users", "משתמשים"], ["errors", "יומן שגיאות"]];
 
+/* ---------- ניטור שגיאות: כל שגיאה נרשמת (מסך, חוצץ, פעולה אחרונה, גרסה, משתמש) — בדפדפן ובפיירבייס (border/errLog) ---------- */
+const APP_VER = "2026-10-12i", ERR_LS = "border-err-v1";
+let lastAct = "", errN = 0; const errSeen = new Set();
+function logErr(...a) { try { logErr0(...a); } catch (e) {} }   // לא להפיל את האתר בגלל הניטור עצמו
+function logErr0(kind, msg, stack) {
+  msg = String(msg || "שגיאה לא ידועה").slice(0, 300); const key = msg + "|" + (typeof ui !== "undefined" ? ui.page : ""); if (errSeen.has(key)) return; errSeen.add(key);
+  const U = typeof ui !== "undefined" ? ui : {};
+  const rec = { t: new Date().toISOString(), kind, msg, stack: String(stack || "").split("\n").slice(0, 4).join("\n").slice(0, 600), page: U.page || "", ctab: U.ctab || "", act: lastAct, ver: APP_VER, site: "main",
+    who: LOCAL ? "מקומי" : (me?.name || user?.email || ""), ua: navigator.userAgent.slice(0, 120) };
+  try { const a = JSON.parse(localStorage.getItem(ERR_LS) || "[]"); a.unshift(rec); localStorage.setItem(ERR_LS, JSON.stringify(a.slice(0, 50))); } catch (e) {}
+  if (!LOCAL && fb && user && errN++ < 20) { try { fb.database().ref(`${DB_ROOT}/errLog`).push(rec).catch(() => {}); } catch (e) {} }
+  try { let bar = document.getElementById("errbar"); if (!bar) { bar = document.createElement("div"); bar.id = "errbar"; document.body.appendChild(bar); }
+    bar.innerHTML = `<b>אירעה שגיאה</b><span>${esc(msg.slice(0, 120))} — נרשמה ביומן השגיאות. אם משהו לא נשמר, כדאי לרענן את הדף.</span><button onclick="this.parentNode.remove()" aria-label="סגירה">✕</button>`; } catch (e) {}
+}
+window.addEventListener("error", e => { if (e.message) logErr("js", e.message, e.error?.stack || `${e.filename}:${e.lineno}`); });
+window.addEventListener("unhandledrejection", e => { const r = e.reason; logErr("promise", r?.message || r, r?.stack); });
+const errLocal = () => { try { return JSON.parse(localStorage.getItem(ERR_LS) || "[]"); } catch (e) { return []; } };
+function errLogPage(d) {
+  const fbL = d.errLog.map(x => ({ ...x, src: "שרת" })), seen = new Set(fbL.map(x => x.t + x.msg)), all = [...fbL, ...errLocal().filter(x => !seen.has(x.t + x.msg)).map(x => ({ ...x, src: "דפדפן זה" }))].sort((a, b) => String(b.t).localeCompare(String(a.t)));
+  const pn = id => NAV().flatMap(g => g.items).find(i => i[0] === id)?.[1] || id;
+  return `<h2>יומן שגיאות <span class="small muted">(${all.length})</span></h2><p class="small muted" style="margin-top:0">כל שגיאה באתר הראשי ובאתר הדיווחים נרשמת כאן עם המסך, הפעולה האחרונה, הגרסה והמשתמש. כדי שאבדוק — ״העתקה״ ולהדביק לי בשיחה (אין בזה נתוני פרויקט).</p>
+    <div class="row" style="margin-bottom:10px"><button class="btn ghost sm" data-act="errCopy">העתקה</button>${!isViewer() && all.length ? `<button class="btn ghost sm" data-act="errClear">ניקוי היומן</button>` : ""}</div>
+    ${all.length ? `<div class="tablewrap"><table class="sheet"><thead><tr><th>מתי</th><th>אתר</th><th>מי</th><th>מסך</th><th>פעולה אחרונה</th><th>שגיאה</th><th>גרסה</th></tr></thead><tbody>${all.slice(0, 200).map(x => `<tr><td class="nowrap small">${esc(fmtD(String(x.t).slice(0, 10)))} ${esc(String(x.t).slice(11, 16))}</td><td class="small">${x.site === "report" ? "דיווחים" : "ראשי"}</td><td class="small">${esc(x.who || "")}</td><td class="small">${esc(x.site === "report" ? (x.page || "") : pn(x.page) + (x.ctab && /^c:/.test(x.page) ? " · " + x.ctab : ""))}</td><td class="small" dir="ltr">${esc(x.act || "")}</td><td class="small" dir="ltr" style="text-align:left" title="${esc(x.stack || "")}">${esc(x.msg)}</td><td class="small nowrap">${esc(x.ver || "")}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">אין שגיאות רשומות ✓</p>`}`;
+}
 const ui = { filt: {}, execView: "seg", page: location.hash.slice(1) || "overview", setTab: "data", ctab: "orders", df: dlvEmpty(), pf: { date: todayStr(), actId: "", segId: "", secFrom: "", secTo: "", note: "", baseline: false, msg: "" } };
 const $app = document.getElementById("app");
 try { ui.dark = localStorage.getItem("dark") === "1"; } catch (e) {}
@@ -939,8 +1017,19 @@ function fixIrish() {
   const bad = its.filter(i => i.kind === "מעבירי מים" && /^מעביר אירי/.test(i.name || ""));
   if (bad.length) setTimeout(async () => { for (const i of bad) await api.update("items", i.id, { kind: "מעביר אירי" }); }, 0);
 }
+/** רינדור עם רשת ביטחון: שגיאה במסך אחד לא משאירה דף ריק — נרשמת ביומן ומוצג כרטיס עם דרך חזרה */
 function render() {
+  LISTC = new Map();
+  try { renderInner(); }
+  catch (e) { logErr("render", e?.message || e, e?.stack);
+    $app.innerHTML = `<div class="card errcard" style="margin:20px"><h2 style="margin-top:0">שגיאה בהצגת המסך</h2><p class="small muted" dir="ltr" style="text-align:left">${esc(String(e?.message || e))}</p><p>השגיאה נרשמה ביומן השגיאות (הגדרות ← יומן שגיאות). שום נתון לא נמחק.</p>
+      <div class="row"><button class="btn" data-act="nav" data-id="overview">חזרה לסקירה הכללית</button><button class="btn ghost" onclick="location.reload()">רענון הדף</button></div></div>`; }
+  finally { LISTC = null; }
+}
+function renderInner() {
+  LZ.clear(); KDSP = null;
   if (!LOCAL && !user) return renderLogin();
+  if (!autoBkArmed && Object.keys(RAW.contractors || {}).length && (LOCAL || me)) { autoBkArmed = true; setTimeout(() => { try { autoBackup(); } catch (e) { logErr("backup", e.message, e.stack); } }, 5000); }
   if (!LOCAL && !me) return renderPending();
   fixIrish();
   const scroll = window.scrollY, focusId = document.activeElement?.id;
@@ -971,7 +1060,7 @@ function render() {
         return g.box ? `<div class="navbox"><div class="nb-h"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg>${esc(g.group)}</div>${its}</div>`
           : `${g.group ? `<div class="grp">${g.group}</div>` : ""}${its}`; }).join("")}
       <div class="modes"><button class="mode-b" data-act="darkTog">${ui.dark ? "☀ מצב בהיר" : "🌙 מצב כהה"}</button><button class="mode-b" data-act="presTog">🖥 מצב הצגה</button></div>
-      <div class="foot">${esc(LOCAL ? "עבודה מקומית" : (me?.name || user.email))}${LOCAL ? "" : ` · <button data-act="logout">יציאה</button>`}</div>
+      ${bkChip()}<div class="foot">${esc(LOCAL ? "עבודה מקומית" : (me?.name || user.email))}${LOCAL ? "" : ` · <button data-act="logout">יציאה</button>`}</div>
     </aside>
     ${ui.present ? `<div class="pres-bar"><button data-act="presPrev" title="הקודם (←)">‹</button><span>${esc(nav.flatMap(g => g.items).find(i => i[0] === p)?.[1] || "")}</span><button data-act="presNext" title="הבא (→)">›</button>
       <button data-act="presAuto" class="${ui.presAuto ? "on" : ""}">${ui.presAuto ? "⏸ עצירה" : "▶ הצגה אוטומטית"}</button><button data-act="presTog">✕ יציאה</button></div>` : ""}
@@ -990,7 +1079,6 @@ function render() {
   if (typing) { const el = document.getElementById(typing.id); if (el && el.value !== typing.v) { el.value = typing.v; try { el.setSelectionRange(typing.s, typing.e); } catch (e) {} } }
 }
 
-/** דוח הנהלה: בחירת תאריך, מה ייכלל במצגת, בדיקות לפני הפקה, והפקה */
 /** מפת גזרה לאורך הק.ד.: הזמנות, קטעי תכנון, רצועת התקדמות לכל אבן דרך, פריטים (עם מספר / ק.ד.), נושאים פתוחים ותוכניות */
 function sectorMap(d, c) {
   const r = kdRange(c); if (!r) return "";
@@ -1173,7 +1261,7 @@ const ORDER_COLORS = ["#9cc7ad", "#c6dfcf"];
 const officeStroke = "#7d8a80";
 
 /* =====================================================================
-   חיבורי חח״י — ניהול ההזמנות מול חברת החשמל (ארונות שקד, חדרי טרפו, תט״זים, אתרי איסוף)
+   §5 חיבורי חח״י — ניהול ההזמנות מול חברת החשמל (ארונות שקד, חדרי טרפו, תט״זים, אתרי איסוף)
    כל הזמנה עוברת מסלול קבוע; צבע לכל שלב. סכומים ללא מע״מ — המע״מ מחושב.
    ===================================================================== */
 const IEC_STAGES = ["טרם הוזמן", "הוזמן", "שובר מקדמה", "מקדמה שולמה", "שובר משלים", "משלים שולם", "מתואם חיבור", "חובר", "מוקפא", "בוטל"];
@@ -1532,7 +1620,7 @@ function iecHistModal(id) {
 }
 
 /* =====================================================================
-   לוח התראות — מה דורש החלטה, מה באיחור ומה עומד לפוג
+   §6 לוח התראות — מה דורש החלטה, מה באיחור ומה עומד לפוג
    אוטומטיות: נגזרות מהנתונים ונעלמות לבד כשהבעיה מתוקנת (או "סומן כטופל").
    ידניות: החלטות / תאריכים שרושמים בעצמך (אוסף alerts).
    ===================================================================== */
@@ -1684,13 +1772,11 @@ function alertCloseModal(id) {
 }
 
 /* =====================================================================
-   סקר שטח (אייפד / טלפון) — מה בוצע בפועל, בלוק של 100 מ׳ (5 חתכים) בכל פעם.
+   §7 סקר שטח (אייפד / טלפון) — מה בוצע בפועל, בלוק של 100 מ׳ (5 חתכים) בכל פעם.
    לחיצה על מלאכה מחליפה מצב בטווח שנבחר: ✓ בוצע → ✗ לא בוצע → מחיקה. נשמר כטווחי חתכים מדויקים.
    נשמר אוטומטית במכשיר (אוסף survey), בנפרד מהדיווחים — כדי להשוות אחר כך. בסיום: "ייצוא הסקר".
    ===================================================================== */
 const SV_BLOCK = 5;
-const SV_STATES = ["", "✓", "½", "✗"];
-const SV_COLORS = { "✓": "#a8d8b0", "½": "#f7e08f", "✗": "#e4e4e1", "": "#ffffff" };
 /* ---- צבע ואייקון לכל מלאכה לפי החומר בשטח (אותה הגדרה כמו באתר הדיווח) ---- */
 const matSvg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const matELL = (y, rx, ry) => [7, 12, 17].map(x => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/>`).join("");
@@ -1960,7 +2046,7 @@ function svRangeInput(t) {
 }
 
 /* =====================================================================
-   מפקחים — רשימת מפקחים (כמה לכל קבלן, מפקח אחד יכול לכמה קבלנים), יצירת משתמש וסיסמה, איפוס סיסמה.
+   §8 מפקחים — רשימת מפקחים (כמה לכל קבלן, מפקח אחד יכול לכמה קבלנים), יצירת משתמש וסיסמה, איפוס סיסמה.
    נשמר ב-tableConfig/inspectorList; ממנו נגזרת מפת ההרשאות tableConfig/inspectorAccess (לפי מייל) שכללי Firebase בודקים.
    ===================================================================== */
 const inspList = () => { const L = { ...(RAW.tableConfig?.inspectorList || {}) }; delete L.updatedAt; delete L.updatedBy;
@@ -2048,7 +2134,7 @@ async function inspChange(t) {
 
 /* ---------- סקירה כללית ---------- */
 /* =====================================================================
-   סקירה כללית — "ראש" צבעוני: אריחי מספרים, כרטיס לכל קבלן ראשי עם טבעת ביצוע ואבני דרך, אריחים לקבלנים הייעודיים
+   §9 סקירה כללית — "ראש" צבעוני: אריחי מספרים, כרטיס לכל קבלן ראשי עם טבעת ביצוע ואבני דרך, אריחים לקבלנים הייעודיים
    ===================================================================== */
 const C_COLORS = ["#2f7d4f", "#b0602b", "#4f5bb5", "#1f7a8c", "#8a4a7a", "#6b7c2f"];
 const KIND_ICON = {
@@ -2130,28 +2216,6 @@ function fenceState(d, c, asOf = null) {
   const ex = execState(d, c.id, asOf); out.len = ex.rows.find(r => r.plan)?.plan || (lenOfC(d, c)?.km || 0) * 1000;
   out.has = stand.length > 0; return out;
 }
-/** מטר שווה-ערך של שלב (ממוצע המלאכות בשלב) — לשורת "עוד" */
-const stageM = (snap, g) => snap.st[g] == null ? 0 : snap.st[g] * snap.km * 1000;
-function fenceHero(d) {
-  const T = todayStr(), mains = d.contractors.filter(isMain).sort(byNorth);
-  const F = mains.map(c => ({ c, col: cColor(d, c), now: fenceState(d, c), wk: fenceState(d, c, addDays(T, -7)), mo: fenceState(d, c, addDays(T, -30)), snap: snapshot(d, c, T) }));
-  const sum = (f, k) => F.reduce((t, x) => t + x[f][k], 0), L = F.reduce((t, x) => t + x.now.len, 0);
-  const st = sum("now", "stand"), fd = sum("now", "found"), dn = sum("now", "done"), wk = st - sum("wk", "stand"), mo = st - sum("mo", "stand");
-  const km = v => (v / 1000).toLocaleString("he-IL", { minimumFractionDigits: 1, maximumFractionDigits: 1 }), pc = v => L ? Math.round(v / L * 100) : 0;
-  // רצועה לאורך הקו: צפון מימין, לכל קבלן בלוק ביחס לאורכו, בתוכו המקומות שבהם יש יסוד / גדר עומדת / גמורה
-  const strip = F.map(x => { const r = kdRange(x.c); if (!r) return ""; const W = r.hi - r.lo || 1;
-    const seg = (L, cls) => mergeIvs(L).map(([a, b]) => `<i class="${cls}" style="right:${((r.hi - Math.min(r.hi, b)) / W * 100).toFixed(2)}%;width:${Math.max(0.4, (Math.min(r.hi, b) - Math.max(r.lo, a)) / W * 100).toFixed(2)}%"></i>`).join("");
-    return `<div class="fh-blk" style="flex:${x.now.len || 1};--cc:${x.col}" data-act="nav" data-id="c:${x.c.id}" role="button" title="${esc(x.c.name)}: גדר עומדת ${km(x.now.stand)} ק״מ מתוך ${km(x.now.len)} · יסוד ${km(x.now.found)} ק״מ">
-      <div class="fh-tr">${seg(x.now.kd.found, "f")}${seg(x.now.kd.stand, "s")}${seg(x.now.kd.done, "d")}</div><span>${esc(x.c.name)} <b>${pc(x.now.stand) && x.now.len ? Math.round(x.now.stand / x.now.len * 100) : 0}%</b></span></div>`; }).join("");
-  const step = (cls, l, v, sub) => `<div class="fh-st ${cls}"><span>${l}</span><b>${km(v)} <small>ק״מ</small></b><em><i style="width:${pc(v)}%"></i></em><small>${pc(v)}% מהקו${sub ? " · " + sub : ""}</small></div>`;
-  const more = [["תלתליות על הגדר", "תלתליות על הגדר"], ["מבנה דרך", "מבנה דרך"], ["מצעים", "מצעים"], ["אספלט", "אספלט"]].map(([l, g]) => `<span>${l} <b>${km(F.reduce((t, x) => t + stageM(x.snap, g), 0))}</b> ק״מ</span>`).join("");
-  return `<div class="card fh"><div class="fh-top"><div class="fh-big"><span>🧱 גדר עומדת — כל הקו</span><b>${km(st)} <small>ק״מ מתוך ${km(L)}</small></b><div class="fh-pc">${pc(st)}%</div>
-      <div class="fh-wk">${wk > 0.5 ? `<b>+${num(Math.round(wk), 0)} מ׳</b> השבוע` : "ללא גדר חדשה השבוע"} · החודש ${mo > 0.5 ? `+${num(Math.round(mo), 0)} מ׳` : "—"}</div></div>
-    <div class="fh-steps">${step("f", "יסוד (כלונסאות)", fd)}${step("s", "גדר עומדת", st, "מודולים / רשת תחתונה + עליונה")}${step("d", "גדר גמורה", dn, "כולל תלתליות")}</div></div>
-    <div class="fh-strip"><span class="fh-ns">צפון</span>${strip}<span class="fh-ns">דרום</span></div>
-    <div class="fh-leg small"><span><i class="f"></i>יסוד בלבד</span><span><i class="s"></i>גדר עומדת</span><span><i class="d"></i>גמורה</span><span class="muted">· לחיצה על קבלן פותחת אותו</span></div>
-    <div class="fh-more small"><span class="muted">עוד:</span>${more}</div></div>`;
-}
 /* ---------- קוביות מדד בדף הראשי (גדר + מלאכות לבחירה) ---------- */
 /** מדדים אפשריים: גדר (משולב) + כל שלב; מצעים מפוצל לשכבות לפי שם המלאכה */
 function metricDefs() {
@@ -2171,21 +2235,6 @@ function metricState(d, c, M, asOf = null) {
   designOfC(d, c).forEach(x => { const U = mergeIvs(prog.filter(p => p.segmentId === x.s.id).map(ivOfP)); out.done += U.reduce((t, [a, b]) => t + b - a, 0) * SECTION_M;
     U.forEach(([a, b]) => { const k1 = sec2kd(x.s, a), k2 = sec2kd(x.s, b); if (k1 !== null && k2 !== null) out.kd.push([Math.min(k1, k2), Math.max(k1, k2)]); }); });
   out.len = execState(d, c.id, asOf).rows.find(r => r.plan)?.plan || (lenOfC(d, c)?.km || 0) * 1000; return out;
-}
-function metricCard(d, M) {
-  const T = todayStr(), mains = d.contractors.filter(isMain).sort(byNorth);
-  const F = mains.map(c => ({ c, col: cColor(d, c), now: metricState(d, c, M), wk: metricState(d, c, M, addDays(T, -7)), mo: metricState(d, c, M, addDays(T, -30)) })).filter(x => x.now.has);
-  if (!F.length) return `<div class="card fh mc" style="border-top-color:${M.color}"><div class="fh-big"><span>${esc(M.name)}</span><b class="muted" style="font-size:18px">אין מלאכה כזו אצל הקבלנים</b></div></div>`;
-  const L = F.reduce((t, x) => t + x.now.len, 0), dn = F.reduce((t, x) => t + x.now.done, 0), wk = dn - F.reduce((t, x) => t + x.wk.done, 0), mo = dn - F.reduce((t, x) => t + x.mo.done, 0);
-  const km = v => (v / 1000).toLocaleString("he-IL", { minimumFractionDigits: 1, maximumFractionDigits: 1 }), pc = L ? Math.round(dn / L * 100) : 0;
-  const strip = F.map(x => { const r = kdRange(x.c); if (!r) return ""; const W = r.hi - r.lo || 1;
-    return `<div class="fh-blk" style="flex:${x.now.len || 1};--cc:${x.col}" data-act="nav" data-id="c:${x.c.id}" role="button" title="${esc(x.c.name)}: ${km(x.now.done)} ק״מ מתוך ${km(x.now.len)}">
-      <div class="fh-tr">${mergeIvs(x.now.kd).map(([a, b]) => `<i class="s" style="background:${M.color};right:${((r.hi - Math.min(r.hi, b)) / W * 100).toFixed(2)}%;width:${Math.max(0.4, (Math.min(r.hi, b) - Math.max(r.lo, a)) / W * 100).toFixed(2)}%"></i>`).join("")}</div>
-      <span>${esc(x.c.name)} <b style="color:${M.color}">${x.now.len ? Math.round(x.now.done / x.now.len * 100) : 0}%</b></span></div>`; }).join("");
-  return `<div class="card fh mc" style="border-top-color:${M.color}"><div class="mc-top"><div class="fh-big"><span>${esc(M.name)} — כל הקו</span><b style="color:${M.color}">${km(dn)} <small>ק״מ מתוך ${km(L)}</small></b>
-      <div class="fh-pc" style="color:${M.color}">${pc}%</div><div class="fh-wk">${wk > 0.5 ? `<b>+${num(Math.round(wk), 0)} מ׳</b> השבוע` : "ללא התקדמות השבוע"} · החודש ${mo > 0.5 ? `+${num(Math.round(mo), 0)} מ׳` : "—"}</div></div>
-      <div class="mc-cs">${F.map(x => `<div style="--cc:${x.col}"><span>${esc(x.c.name)}</span><b>${km(x.now.done)}</b><small>מתוך ${km(x.now.len)} ק״מ</small></div>`).join("")}</div></div>
-    <div class="fh-strip"><span class="fh-ns">צפון</span>${strip}<span class="fh-ns">דרום</span></div></div>`;
 }
 /** קובייה קומפקטית למדד: סה״כ, אחוז, השבוע, ורצועה קטנה לאורך הקו עם אחוז לכל קבלן */
 function metricTile(d, M) {
@@ -2318,7 +2367,7 @@ function pageOverview(d) {
 }
 
 /* =====================================================================
-   דשבורד: סטטוס לפי גזרה (עמקים / בקעה / הכל).
+   §10 דשבורד: סטטוס לפי גזרה (עמקים / בקעה / הכל).
    לכל קבלן מלאכות משלו, ולכן כל מלאכה משויכת ל"שלב משותף".
    אחוז שלב לקבלן = ממוצע המלאכות שלו באותו שלב; ק״מ שבוצע = אחוז × אורך הגזרה.
    סיכום גזרה = סכום ק״מ שבוצעו ÷ סכום אורכי הגזרות (משוקלל לפי אורך).
@@ -2361,7 +2410,7 @@ function guessStage(name) {
   return (R.find(([re]) => re.test(n)) || [])[1] || "";
 }
 /* =====================================================================
-   התקדמות לפי תקופה: כל תקופה = מצב מצטבר בסופה פחות המצב ביום שלפני תחילתה.
+   §11 התקדמות לפי תקופה: כל תקופה = מצב מצטבר בסופה פחות המצב ביום שלפני תחילתה.
    שבוע = ראשון עד מוצאי שבת. תאריך תחילת המעקב נשמר בנתונים (tableConfig/settings.trackStart).
    ===================================================================== */
 const trackStart = () => RAW.tableConfig?.settings?.trackStart || "";
@@ -2474,7 +2523,7 @@ function dashboard(d, cs) {
 }
 
 /* =====================================================================
-   קבלנים ייעודיים — פריטי עבודה (נקודה בק.ד. או טווח), סטטוס ותאריכים.
+   §12 קבלנים ייעודיים — פריטי עבודה (נקודה בק.ד. או טווח), סטטוס ותאריכים.
    הקבלן הראשי באזור והגזרה נגזרים מהק.ד. של הפריט.
    ===================================================================== */
 const itemRange = i => { const a = kdNum(i.kdFrom), b = kdNum(i.kdTo); if (a === null) return null; return b === null || a === b ? { lo: a - .3, hi: a + .3, point: true } : { lo: Math.min(a, b), hi: Math.max(a, b) }; };
@@ -2628,7 +2677,7 @@ function bulkItemsModal(cid) {
 }
 
 /* =====================================================================
-   ביצוע — דיווח לפי מלאכה + קטע תכנון + טווח חתכים.
+   §13 ביצוע — דיווח לפי מלאכה + קטע תכנון + טווח חתכים.
    מטרים = (חתך עד − חתך מ) × 20. דיווחים חופפים לא נספרים פעמיים.
    מתוכנן = אורך חלק קטע התכנון שבגזרת הקבלן (מנתוני התכנון).
    ===================================================================== */
@@ -2678,8 +2727,14 @@ function execState(d, cid, asOf = null) {
 /** ביצוע לפי הזמנות: לכל הזמנה — אילו חתכים היא כוללת בכל קטע תכנון (יחסית לק.ד., לכן ≈),
     וכמה מכל מלאכה בוצע בתוכם. ההנחה: מספרי החתכים עולים עם הק.ד. */
 /** טבלת ק.ד. ↔ חתכים (אוסף kdSections, לפי משרד תכנון ומס' קטע) — כשקיימת, ההמרה מדויקת במקום יחסית */
+let KDSP = null;   // אינדקס טבלת ק.ד.↔חתכים לפי משרד+קטע — נבנה פעם אחת לכל רינדור (מהירות)
 function kdSecPts(s) {
-  const pts = Object.values(RAW.kdSections || {}).filter(r => r.officeId === s.officeId && Number(r.seg) === Number(s.num))
+  if (!KDSP || KDSP.src !== RAW.kdSections) { const m = new Map(); Object.values(RAW.kdSections || {}).forEach(r => { const k = r.officeId + "|" + Number(r.seg); (m.get(k) || m.set(k, []).get(k)).push(r); }); KDSP = { src: RAW.kdSections, m, out: new Map() }; }
+  const key = s.officeId + "|" + Number(s.num); if (KDSP.out.has(key)) return KDSP.out.get(key);
+  const v = kdSecPts0(KDSP.m.get(key) || []); KDSP.out.set(key, v); return v;
+}
+function kdSecPts0(rows) {
+  const pts = rows
     .map(r => [parseFloat(r.kd), Number(r.secFrom), Number(r.secTo)]).filter(p => !p.some(isNaN)).sort((a, b) => a[0] - b[0]);
   if (pts.length < 2) return null;
   const last = pts[pts.length - 1];
@@ -2816,7 +2871,7 @@ function execTab(d, c) {
 }
 
 /* =====================================================================
-   מסירות תוכניות — כל מסירה היא טווח ק.ד. שנמסר לקבלן, בתאריך ובמהדורה.
+   §14 מסירות תוכניות — כל מסירה היא טווח ק.ד. שנמסר לקבלן, בתאריך ובמהדורה.
    קטעי התכנון, המשרד והאורך נגזרים אוטומטית מטבלת קטעי התכנון.
    מסירה שמסירה מאוחרת יותר מכסה את כל הטווח שלה — מסומנת "הוחלפה".
    ===================================================================== */
@@ -2889,7 +2944,7 @@ function pageDeliveries(d) {
 }
 
 /* =====================================================================
-   נושאים פתוחים — חסמים, משימות והחלטות שעולים בפגישות הפיקוח.
+   §15 נושאים פתוחים — חסמים, משימות והחלטות שעולים בפגישות הפיקוח.
    לכל נושא: מיקום (ק.ד.), אחראי, סטטוס, ותיעוד עדכונים לפי תאריך.
    ===================================================================== */
 const ISSUE_STATUS = ["פתוח", "בטיפול", "HOLD", "סגור"];
@@ -2900,7 +2955,7 @@ const daysSince = s => s ? Math.floor((Date.now() - new Date(s + "T12:00:00")) /
 
 /** פניות מהשטח: טקסט חופשי ממפקח באתר הדיווח → כאן עונים / הופכים לנושא / סוגרים. התשובה מופיעה למפקח באתר הדיווח */
 /* =====================================================================
-   מסך אישורים מרכזי — כל הדיווחים שממתינים, מכל הקבלנים, עם סימון בעיות ואישור בבת אחת
+   §16 מסך אישורים מרכזי — כל הדיווחים שממתינים, מכל הקבלנים, עם סימון בעיות ואישור בבת אחת
    ===================================================================== */
 /** עדכון של הרבה רשומות בפעולה אחת (ב-Firebase: עדכון רב-נתיבי אחד) */
 async function bulkPatch(col, ids, patch) {
@@ -2928,7 +2983,7 @@ function progFlags(d, p) {
   return f;
 }
 /* =====================================================================
-   איכות נתונים — כל מה ש"לא מסתדר", עם מעבר לתיקון
+   §17 איכות נתונים — כל מה ש"לא מסתדר", עם מעבר לתיקון
    ===================================================================== */
 function dqChecks(d) {
   const C = [], add = (key, sev, title, lines, go, hint = "") => C.push({ key, sev, title, n: lines.length, lines, go, hint });
@@ -2984,7 +3039,7 @@ function pageDQ(d) {
   ${ok.length ? `<div class="card"><b>✓ תקין:</b> <span class="muted small">${ok.map(c => esc(c.title)).join(" · ")}</span></div>` : ""}`;
 }
 /* =====================================================================
-   סקר שטח מול דיווחים — איפה הסקר אומר אחרת ממה שדווח (בחתכים, האחרון בסקר גובר)
+   §18 סקר שטח מול דיווחים — איפה הסקר אומר אחרת ממה שדווח (בחתכים, האחרון בסקר גובר)
    ===================================================================== */
 function svCompare(d) {
   const out = [], runs = ks => { const a = [...ks].sort((x, y) => x - y), r = []; for (const k of a) { const L = r[r.length - 1]; if (L && k === L[1]) L[1] = k + 1; else r.push([k, k + 1]); } return r; };
@@ -3228,7 +3283,7 @@ const WK_CSS = `.wk-ovl{position:fixed;inset:0;background:rgba(20,26,22,.45);dis
 (() => { const st = document.createElement("style"); st.textContent = WK_CSS; document.head.appendChild(st); })();
 
 /* =====================================================================
-   משימות הנהלה + ישיבה שבועית
+   §19 משימות הנהלה + ישיבה שבועית
    מנהל־על (סופר מנהל / מנהל) נותן משימות למתאמי שטח. המתאם מעדכן בעצמו — כל שינוי שלו מסומן "לאישור",
    ומנהל־העל עובר ומאשר (בישיבה או בכל זמן). "בוצע" של מתאם → "בוצע — לאישור" → מנהל מאשר → "סגור".
    ישיבה שבועית: תמונת קבלנים, משימות לפי אחראי, נושאים שהוסלמו להנהלה, סיכום ישיבה נשמר בארכיון.
@@ -3416,7 +3471,7 @@ async function tkClick(act, b) {
 document.addEventListener("change", async e => { const s = e.target.closest?.("[data-tkst]"); if (!s) return; const id = s.dataset.tkst, t = RAW.tasks?.[id]; if (!t || s.value === t.status) return; await tkSave(id, { status: s.value }, `מצב: ${s.value}`); toast("עודכן ✓"); });
 
 /* =====================================================================
-   תקציב ואומדן — ריכוז העלויות ובקרת אומדן מול הזמנות
+   §20 תקציב ואומדן — ריכוז העלויות ובקרת אומדן מול הזמנות
    מקור הנתונים: אוסף budget (שורות אומדן: עבודות נוספות, אתרי איסוף, הגדרות) + עמודת "תקציב" בהזמנות.
    הסכומים בשקלים כולל מע״מ. מחיר למטר נשמר לפני מע״מ לכל גזרה, והמע״מ אחד לכולם (משתנה בהגדרה).
    הנתונים עצמם לא בקוד — נטענים מקובץ (הגדרות ← הוספת נתונים מקובץ) או מוקלדים כאן.
@@ -3463,7 +3518,6 @@ function bgData(d) {
     return { k, n: a.length, est: sum(a, x => bgN(x.amount)), cov: sum(a, exCov), rows: a }; });
   return { cfg, earth, byC, cats, extras, exDone, exNext, sites, T, specs, iec, has: B.length > 0 || T.earthOrd > 0 };
 }
-/** כרטיס במסך הראשי */
 /** סרגל העלויות (מהדף הראשי) — בתוך מסך התקציב: חלוקה לקטגוריות + קובייה לכל קבלן ולכל רכיב (שערים, סבכות, חח״י, אתרי איסוף…) */
 function budgetBar(d, R, M) {
   const T = R.T, parts = [["עבודות עפר", T.earthEst, "#7a5c3e"], ["עבודות נוספות", T.doneEst + T.nextEst, "#4a6d93"], ["אתרי איסוף", T.siteEst, "#2f6b4f"]].filter(p => p[1] > 0);
@@ -3473,16 +3527,6 @@ function budgetBar(d, R, M) {
   return `<div class="card bg-card bg-in" style="margin-top:12px"><div class="bg-bar">${parts.map(([n, v, c]) => `<i style="flex:${v};background:${c}" title="${esc(n)}: ${bgM(v)}"></i>`).join("")}</div>
     <div class="bg-leg">${parts.map(([n, v, c]) => `<span><i style="background:${c}"></i>${esc(n)} <b>${bgMM(v)}</b></span>`).join("")}</div>
     <div class="bg-cs" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${M.cols.map(cube).join("")}</div></div>`;
-}
-function budgetCard(d) {
-  let R; try { R = bgData(d); } catch (e) { return ""; } if (!R.has) return "";
-  const T = R.T, parts = [["עבודות עפר", T.earthEst, "#7a5c3e"], ["עבודות נוספות", T.doneEst + T.nextEst, "#4a6d93"], ["אתרי איסוף", T.siteEst, "#2f6b4f"]].filter(p => p[1] > 0);
-  return `<div class="card bg-card" data-act="nav" data-id="budget" role="button" tabindex="0" title="לחיצה — מסך תקציב ואומדן">
-    <div class="row" style="align-items:baseline;gap:10px;flex-wrap:wrap"><h2 style="margin:0">💰 עלות הפרויקט — אומדן מול הזמנות</h2><span class="muted small">כולל מע״מ ${R.cfg.vat}% · לחיצה לפירוט</span></div>
-    <div class="bg-kpis"><div><span>אומדן כולל</span><b>${bgMM(T.est)}</b></div><div><span>הוזמן / כוסה</span><b style="color:var(--accent)">${bgMM(T.cov)}</b></div><div><span>נדרש להשלמה</span><b style="color:${T.left > 0 ? "#b8452f" : "var(--accent)"}">${bgMM(T.left)}</b></div></div>
-    <div class="bg-bar">${parts.map(([n, v, c]) => `<i style="flex:${v};background:${c}" title="${esc(n)}: ${bgM(v)}"></i>`).join("")}</div>
-    <div class="bg-leg">${R.cats.filter(x => x.est).map(x => `<span class="bg-cat">${x.k} <b>${bgMM(x.est)}</b></span>`).join("")}${parts.map(([n, v, c]) => `<span><i style="background:${c}"></i>${esc(n)} <b>${bgMM(v)}</b></span>`).join("")}</div>
-    <div class="bg-cs">${(M => R.earth.map(e => { const x = M.colT(e.c.id); return `<div style="--cc:${cColor(d, e.c)}" title="בגזרה: אומדן ${bgM(x.est)} · כוסה ${bgM(x.cov)}"><b>${esc(e.c.name)}</b><span>${bgMM(x.est)}</span><small>חסר ${bgMM(Math.max(0, x.est - x.cov))}</small>${e.bad.length ? `<em title="יש הזמנה שהתקציב שלה לא תואם לאורך × מחיר">⚠</em>` : ""}</div>`; }).join(""))(bgMatrix(d, R))}</div></div>`;
 }
 function pageBudgetEdit(d) {
   const R = bgData(d), T = R.T, cfg = R.cfg, open = ui.bgOpen = ui.bgOpen || {};
@@ -3769,7 +3813,7 @@ function docsModal(col, id) {
   });
 }
 /* =====================================================================
-   מפת הקו — Leaflet. הקו נבנה מנקודות ידועות (נ.צ. + ק.ד.) של פריטים ותיקי חח״י, ובין הנקודות — קו ישר.
+   §21 מפת הקו — Leaflet. הקו נבנה מנקודות ידועות (נ.צ. + ק.ד.) של פריטים ותיקי חח״י, ובין הנקודות — קו ישר.
    ===================================================================== */
 const LEAF = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/";
 function kdLine(d) {   // [{k, lat, lng}] ממוין לפי ק.ד., בלי כפילויות
@@ -4004,7 +4048,6 @@ function meetingDate(text, fname) {
 }
 const CLOSE_RE = /(הושלם|הושלמה|הושלמו|נסתיים|נסתיימו|הסתיים|בוצע ה|בוצעה ה|אושר|ניתן אישור|נתקבל אישור|נתקבל מכתב שחרור|בוטל|הוסר|סופקו|הוחלט)/;
 const HOLD_RE = /\bHOLD\b|ב-HOLD|לא לקדם/;
-function issueText(x) { return [x.title, x.last, ...Object.values(x.history || {}).map(h => h.text)].join(" "); }
 function scoreMatch(issue, item) {
   const body = item.text + " " + (item.head || "");
   const t = keywords(body), tt = keywords(issue.title);
@@ -4034,7 +4077,7 @@ function analyzeSummary(issues, items) {
 }
 
 /* =====================================================================
-   מספור נושאים, וורד לתגובה וקליטת התגובות
+   §22 מספור נושאים, וורד לתגובה וקליטת התגובות
    ===================================================================== */
 const contractorCode = c => (c?.code || "").trim() || (c?.name || "X").replace(/[^A-Za-zא-ת]/g, "").slice(0, 2);
 function nextIssueCode(cid) {
@@ -4130,7 +4173,7 @@ async function issuesDocIn(cid, file) {
 }
 
 /* =====================================================================
-   מצגת הנהלה שבועית (PowerPoint) — נוצרת בדפדפן מהנתונים
+   §23 מצגת הנהלה שבועית (PowerPoint) — נוצרת בדפדפן מהנתונים
    שקף סיכום · שקף לכל קבלן ראשי · שקף קבלנים ייעודיים · שקפי נושאים דחופים להנהלה
    ===================================================================== */
 /* ---------- ייצוא לאקסל: הטבלה כפי שהיא מוצגת (שורות מסוננות לא נכללות) ---------- */
@@ -4757,7 +4800,7 @@ function pageContractor(d, id) {
 }
 
 /* =====================================================================
-   עמודות טבלה — הסתרה / הצגה של עמודות קבועות + הוספת עמודות משלך.
+   §24 עמודות טבלה — הסתרה / הצגה של עמודות קבועות + הוספת עמודות משלך.
    ההגדרות נשמרות בנתונים (tableConfig) ולכן עוברות עם הגיבוי.
    הסתרת עמודה לא מוחקת את הנתונים שבה.
    ===================================================================== */
@@ -4813,6 +4856,17 @@ async function saveOrder(table, keys) { await setCfg(table, { order: keys }); }
 
 /** כל טבלה באתר נבנית דרך כאן — כך לכל טבלה יש כפתור "עמודות".
  *  table = שם ההגדרה (TABLE_DEFS), store = האוסף שבו נשמרים ערכי העמודות שתוסיף, del = כפתור מחיקה בשורה */
+/* מהירות: בטבלאות גדולות כל רשימה נפתחת נבנית עם האפשרות הנבחרת בלבד; שאר האפשרויות נטענות ברגע שנוגעים בה (פחות אלפי אלמנטים בדף) */
+const LZ = new Map(); let lzN = 0;
+function lazySelects(html, rowsN) {
+  if (rowsN < 40) return html;
+  return html.replace(/<select\b([^>]*)>([\s\S]*?)<\/select>/g, (m, attrs, inner) => {
+    if (/<optgroup/.test(inner)) return m; const opts = inner.match(/<option\b[^>]*>[\s\S]*?<\/option>/g) || []; if (opts.length <= 2) return m;
+    const keep = opts.find(o => /\sselected\b/.test(o.replace(/>[\s\S]*$/, ""))) || opts[0], k = ++lzN; LZ.set(k, inner);
+    return `<select${attrs} data-lz="${k}">${keep}</select>`; });
+}
+function lzFill(sel) { const k = +sel.dataset.lz; if (!k || !LZ.has(k)) return; const v = sel.value; sel.innerHTML = LZ.get(k); sel.value = v; LZ.delete(k); delete sel.dataset.lz; }
+["mousedown", "focusin", "touchstart", "keydown"].forEach(ev => document.addEventListener(ev, e => { const s = e.target?.closest?.("select[data-lz]"); if (s) lzFill(s); }, { capture: true, passive: true }));
 function renderSheet(table, rows, emptyText, { store = table, del = true } = {}) {
   const h = hiddenOf(table);
   const cols = orderedCols(table, store).filter(c => !h[c.key]);
@@ -4825,8 +4879,8 @@ function renderSheet(table, rows, emptyText, { store = table, del = true } = {})
     <th><span class="fcount"></span>${nOn ? ` <button class="btn ghost sm" data-act="filtClear" data-table="${table}">ניקוי</button>` : ""}</th></tr>` : "";
   return `<div class="fchips" data-for="${table}"></div><div class="tablewrap"><table class="sheet" data-table="${table}">
     <thead><tr>${cols.map(c => `<th data-k="${c.key}" data-act="sortCol" data-table="${table}" title="לחיצה ממיינת לפי העמודה (עולה / יורד / ברירת מחדל)">${esc(c.label)}<span class="sarr"></span></th>`).join("")}<th class="colbtn"><span class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn ghost sm ${nOn ? "on" : ""}" data-act="filt" data-table="${table}" title="סינון לפי עמודה">סינון${nOn ? ` (${nOn})` : ""}</button><button class="btn ghost sm" data-act="cols" data-table="${table}" title="ניהול עמודות">עמודות</button><button class="btn ghost sm" data-act="xlsx" title="הפקת אקסל של הטבלה כפי שהיא מוצגת (כולל סינון)">אקסל</button></span></th></tr>${filtRow}</thead>
-    <tbody>${rows.map(r => `<tr${(bg => bg ? ` style="background:${bg}"` : "")(rowTint(table, r))}>${cols.map(c => `<td data-k="${c.key}" class="${c.cls || ""}" ${c.style ? `style="${c.style(r)}"` : ""}>${c.cell(r)}</td>`).join("")}<td>${del ? `<button class="btn del" data-act="del" data-col="${store}" data-id="${r.id}">מחיקה</button>` : ""}</td></tr>`).join("")
-      || `<tr><td colspan="${cols.length + 1}" class="c muted">${emptyText}</td></tr>`}</tbody>${foot}
+    <tbody>${lazySelects(rows.map(r => `<tr${(bg => bg ? ` style="background:${bg}"` : "")(rowTint(table, r))}>${cols.map(c => `<td data-k="${c.key}" class="${c.cls || ""}" ${c.style ? `style="${c.style(r)}"` : ""}>${c.cell(r)}</td>`).join("")}<td>${del ? `<button class="btn del" data-act="del" data-col="${store}" data-id="${r.id}">מחיקה</button>` : ""}</td></tr>`).join("")
+      || `<tr><td colspan="${cols.length + 1}" class="c muted">${emptyText}</td></tr>`, rows.length)}</tbody>${foot}
   </table></div>`;
 }
 
@@ -5387,6 +5441,7 @@ function pageSettings(d) {
     contractors: "קבלן, גזרה (ק.ד. מ–עד), חתך התחלה וסוף, שיטת ביצוע",
     orders: "הזמנות לכל קבלן — מחתך עד חתך, אורך מחושב",
     activities: "המלאכות של כל קבלן ואיך הן מתורגמות לתוצרים שההנהלה רואה" }[tab[0]]}</b></div></div>`;
+  else if (tab[0] === "errors") body = errLogPage(d);
   else if (tab[0] === "data") { const [c, o, of, sg] = counts(dataOnly());
     body = `<h2>איפה הנתונים</h2>
     <p class="small" style="max-width:75ch">הנתונים לא נמצאים בקוד האתר. הם יושבים בקובץ <b>data.json</b> באותה תיקייה של index.html ב-GitHub, והאתר קורא אותו בכל פתיחה.
@@ -5482,12 +5537,15 @@ function editLink(col, id, key) {
 }
 
 /* =====================================================================
-   אירועים
+   §25 אירועים
    ===================================================================== */
 $app.addEventListener("click", async e => {
   if (ui.fpop && !e.target.closest(".fdd")) { ui.fpop = ""; applyFilters(); }
   const b = e.target.closest("[data-act]"); if (!b) return;
-  const act = b.dataset.act;
+  const act = b.dataset.act; lastAct = act + (b.dataset.id ? ":" + String(b.dataset.id).slice(0, 40) : "");
+  if (act === "errCopy") { const L = [...list("errLog"), ...errLocal()].sort((a, b) => String(b.t).localeCompare(String(a.t))).slice(0, 30).map(x => [x.t, x.site || "main", x.ver, x.page, x.ctab, x.act, x.msg, (x.stack || "").split("\n")[1] || ""].join(" | ")).join("\n");
+    try { await navigator.clipboard.writeText(L || "אין שגיאות"); toast("הועתק ✓"); } catch (e) { modal(`<h2>יומן שגיאות</h2><textarea class="inp" style="width:100%;height:260px" dir="ltr">${esc(L)}</textarea><div class="row"><button class="btn" id="mNo">סגירה</button></div>`, (m, close) => m.querySelector("#mNo").onclick = close); } return; }
+  if (act === "errClear") { for (const x of list("errLog")) await api.remove("errLog", x.id); try { localStorage.removeItem(ERR_LS); } catch (e) {} errSeen.clear(); render(); toast("היומן נוקה"); return; }
   if (/^sv[A-Z]/.test(act) && !["svFill", "svAddRep", "svCutRep", "svSync"].includes(act)) return svClick(act, b);
   if (/^tk[A-Z]/.test(act)) return tkClick(act, b);
   if (/^bg[A-Z]/.test(act)) return bgClick(act, b);
@@ -5807,7 +5865,7 @@ $app.addEventListener("change", async e => {
   if (!t.dataset.edit) return;
   // שדה תאריך: בזמן הקלדת השנה הדפדפן מדווח שנים חלקיות (0002, 0020...) — לא שומרים עד שהשנה מלאה
   if (t.type === "date" && t.value && +t.value.slice(0, 4) < 1990) return;
-  const [col, id, key, type] = t.dataset.edit.split("|");
+  const [col, id, key, type] = t.dataset.edit.split("|"); lastAct = `edit:${col}|${key}`;
   let v = type === "b" ? t.checked : t.value.trim();
   if (type === "n") v = v === "" ? "" : Number(v.replace(",", "."));
   if (type === "m") v = moneyNum(v) ?? "";
@@ -5859,7 +5917,7 @@ $app.addEventListener("click", e => { const z = e.target.closest("#sumDrop"); if
 $app.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.classList.contains("cell")) e.target.blur(); });
 
 /* =====================================================================
-   כניסה (Firebase Authentication — מייל + סיסמה)
+   §26 כניסה (Firebase Authentication — מייל + סיסמה)
    ===================================================================== */
 function renderLogin(msg = "") {
   $app.innerHTML = `<div class="login"><form class="card" id="loginForm">
@@ -5885,7 +5943,7 @@ function renderPending() {
 }
 
 /* =====================================================================
-   הפעלה
+   §27 הפעלה
    ===================================================================== */
 const loadScript = src => new Promise((ok, fail) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s); });
 async function start() {
