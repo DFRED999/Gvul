@@ -120,8 +120,12 @@ h2 { font-size: 17px; margin: 0 0 12px; font-weight: 700; }
 @supports not (field-sizing: content) { .sheet textarea.cell { width: 100%; min-width: 150px; } }
 .sheet td.w-text { min-width: 220px; }
 .od-sum { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; } .od-sum > div { background: var(--bg); border-radius: 12px; padding: 8px 14px; display: flex; flex-direction: column; } .od-sum span { font-size: 12px; color: var(--muted); } .od-sum b { font-size: 18px; }
-.od-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.od-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; grid-auto-flow: dense; }
 .od-card { background: var(--surface); border: 1px solid var(--line); border-inline-start: 5px solid var(--cc, #7a5c3e); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 12px -10px rgba(0,0,0,.4); }
+.od-grp { grid-column: span 2; border: 2px solid var(--cc); border-radius: 16px; padding: 12px 14px; background: color-mix(in srgb, var(--cc) 6%, var(--surface)); display: flex; flex-direction: column; gap: 6px; }
+.od-grp > .od-h b { font-size: 16px; } .od-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 4px; }
+.od-card.od-part { padding: 9px 11px; border-radius: 11px; } .od-card.od-part .od-amt { font-size: 17px; } .od-no { font-weight: 700; color: var(--cc); }
+@media (max-width: 700px) { .od-grp { grid-column: auto; } }
 .od-card.fut { border-style: dashed; border-inline-start-style: solid; border-inline-start-color: #c9a43a; background: #fffcf3; }
 .od-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; } .od-h b { font-size: 16px; margin-inline-end: auto; }
 .od-amt { font-size: 22px; font-weight: 800; display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; } .od-amt small { font-size: 13px; color: var(--muted); font-weight: 500; } .od-amt .pill { font-size: 11.5px; font-weight: 600; }
@@ -5386,6 +5390,7 @@ const TABLE_DEFS = {
 };
 
 /** לשונית הזמנות של קבלן ראשי: כרטיס לכל הזמנה (מספרים, חתכים, תקציב מול אומדן, ביצוע) + הזמנות עתידיות מהאומדן */
+const OD_COLORS = ["#2f6db5", "#b8541c", "#6a4c9c", "#1d8a7a", "#a33b5c", "#7a6a1e", "#3b7d2e", "#5b6b7a", "#c27c0e", "#2b5f8a"];
 function ordersTab(d, c, ords, cov) {
   const R = (() => { try { return bgData(d); } catch (e) { return null; } })(), E = R?.earth.find(e => e.c.id === c.id), estOf = Object.fromEntries((E?.ords || []).map(x => [x.o.id, x]));
   const EO = execByOrders(d, c.id), exOf = Object.fromEntries(EO.ords.map(O => [O.o.id, O.overall])), col = cColor(d, c), LKline = id => { const l = bgLineOfOrder(id); return l ? RAW.budget[l] : null; };
@@ -5393,16 +5398,16 @@ function ordersTab(d, c, ords, cov) {
   const myLines = Object.entries(RAW.budget || {}).filter(([, x]) => x.kind === "extra" && !x.excluded && (x.contractorId === c.id || x.areaId === c.id));
   const loose = ords.filter(o => !o._secs && bgOrdAmt(o) > 0 && !LKline(o.id));
   const sorted = [...ords].sort((a, b) => (b._secs?.[1] ?? kdRange(b)?.hi ?? 0) - (a._secs?.[1] ?? kdRange(a)?.hi ?? 0));
-  const card = o => { const amt = bgOrdAmt(o), x = estOf[o.id], ex = exOf[o.id], ln = LKline(o.id), st = String(o.x_signer || "");
-    const stCls = /מאושר|הסתיים/.test(st) ? "ok" : /אין|ממתין|חסר/.test(st) ? "warn" : "";
-    return `<div class="od-card" style="--cc:${col}"><div class="od-h"><b>${esc(o.name || "הזמנה")}</b>${st ? `<span class="pill ${stCls}">${esc(st)}</span>` : ""}${ln ? `<span class="pill">${esc(ln.title || "")}</span>` : ""}</div>
+  const card = (o, P = {}) => { const amt = bgOrdAmt(o), x = estOf[o.id], ex = exOf[o.id], ln = LKline(o.id), st = String(ordStatusTxt(o) || ""), inG = !!P.part;
+    const stCls = /מאושר|הסתיים/.test(st) ? "ok" : /אין|ממתין|חסר|עתיד/.test(st) ? "warn" : "";
+    return `<div class="od-card ${inG ? "od-part" : ""}" style="--cc:${P.col || col}"><div class="od-h">${inG ? `<b style="color:var(--cc)">חלק ${P.part}</b>` : `<b>${esc(o.name || "הזמנה")}</b>${o.x_ordNo ? `<span class="pill od-no" dir="ltr">${f(o.x_ordNo)}</span>` : ""}${st ? `<span class="pill ${stCls}">${esc(st)}</span>` : ""}`}${ln ? `<span class="pill">${esc(ln.title || "")}</span>` : ""}</div>
       <div class="od-amt">${amt ? `${num(amt, 0)} <small>₪</small>` : `<span class="muted">אין תקציב</span>`}${x && x.diff !== null ? (Math.abs(x.diff) <= 1000 ? `<span class="pill ok">תואם אומדן</span>` : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${num(Math.round(x.diff), 0)} מול אומדן</span>`) : ""}</div>
       <div class="od-g">
         ${o._secs ? `<div><span>חתכים</span><b dir="ltr">${o._secs[1]}–${o._secs[0]}</b></div><div><span>אורך</span><b>${num(o._secLen || (o._secs[1] - o._secs[0]) * SECTION_M, 0)} מ׳</b></div>` : ""}
         ${kdRange(o) ? `<div><span>ק.ד.</span><b>${kdTxt(kdRange(o))}</b></div>` : ""}
         ${o._secParts?.length ? `<div class="w"><span>קטעי תכנון</span><b>${o._secParts.map(p => `${esc(p.office?.name || "")} ${esc(p.s.num)}`).join(" · ")}</b></div>` : ""}
-        ${o.x_ordNo ? `<div><span>מס׳ הזמנה</span><b dir="ltr">${f(o.x_ordNo)}</b></div>` : ""}${o.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o.x_reqNo)}</b></div>${(q => q && q.hasAmt ? `<div role="button" data-act="reqOpen" data-id="${q.no}" style="cursor:pointer" title="פירוט הדרישה"><span>יתרה בדרישה</span><b class="${q.free < -1 ? "rq-neg" : "rq-pos"}">${bgMM(q.free)}</b></div>` : "")(reqOfOrder(d, o))}` : ""}
-        ${o.x_sentDate ? `<div><span>נשלחה</span><b>${fmtD(o.x_sentDate)}</b></div>` : ""}${o.x_lzEnd ? `<div><span>סיום לפי לו״ז</span><b>${fmtD(o.x_lzEnd)}</b></div>` : ""}
+        ${inG ? "" : `${o.x_ordNo ? `<div><span>מס׳ הזמנה</span><b dir="ltr">${f(o.x_ordNo)}</b></div>` : ""}`}${!inG && o.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o.x_reqNo)}</b></div>${(q => q && q.hasAmt ? `<div role="button" data-act="reqOpen" data-id="${q.no}" style="cursor:pointer" title="פירוט הדרישה"><span>יתרה בדרישה</span><b class="${q.free < -1 ? "rq-neg" : "rq-pos"}">${bgMM(q.free)}</b></div>` : "")(reqOfOrder(d, o))}` : ""}
+        ${o.x_sentDate && !inG ? `<div><span>נשלחה</span><b>${fmtD(o.x_sentDate)}</b></div>` : ""}${o.x_lzEnd ? `<div><span>סיום לפי לו״ז</span><b>${fmtD(o.x_lzEnd)}</b></div>` : ""}
       </div>
       ${ex != null ? `<div class="od-ex"><span>ביצוע בתחום ההזמנה</span><em><i style="width:${Math.round(ex * 100)}%"></i></em><b>${Math.round(ex * 100)}%</b></div>` : ""}
       ${o.note ? `<div class="od-note">${esc(o.note)}</div>` : ""}
@@ -5415,11 +5420,20 @@ function ordersTab(d, c, ords, cov) {
       <div class="od-amt">${num(Math.round(l.est - l.cov), 0)} <small>₪</small>${l.cov ? `<span class="muted small"> מתוך ${num(Math.round(l.est), 0)}</span>` : ""}</div>${l.note ? `<div class="od-note">${esc(l.note)}</div>` : ""}
       ${isViewer() ? "" : `<div class="row" style="gap:6px;margin-top:auto"><button class="btn sm" data-act="odIssue" data-id="${l.x.id}" title="פותח הזמנה בטבלת ההזמנות של הקבלן ומקשר אותה לשורה באומדן">📝 הוצאת הזמנה</button><span class="spacer"></span>
         <button class="btn ghost sm" data-act="odMove" data-id="${l.x.id}" title="העברה לקבלן אחר">↔ העברה</button><button class="btn del" data-act="odDel" data-id="${l.x.id}" title="מחיקה מהאומדן">מחיקה</button></div>`}</div>`;
-  return `<div class="od-sum"><div><span>הזמנות</span><b>${ords.length}</b></div><div><span>תקציב בהזמנות</span><b>${num(tot, 0)} ₪</b></div>${len ? `<div><span>אורך לפי חתכים</span><b>${num(len, 0)} מ׳</b></div>` : ""}
+  const nOrd = new Set(ords.map(o => reqNorm(o.x_ordNo) || (reqNorm(o.x_reqNo) ? `r${reqNorm(o.x_reqNo)}|${String(o.name || "").replace(/\s+/g, "")}` : o.id))).size;
+  return `<div class="od-sum"><div><span>הזמנות</span><b>${nOrd}</b>${nOrd < ords.length ? `<small class="muted"> (${ords.length} חלקים)</small>` : ""}</div><div><span>תקציב בהזמנות</span><b>${num(tot, 0)} ₪</b></div>${len ? `<div><span>אורך לפי חתכים</span><b>${num(len, 0)} מ׳</b></div>` : ""}
       ${cov ? `<div><span>כיסוי הגזרה</span><b>${Math.round(cov.pct * 100)}%</b></div>` : ""}${fut.length ? `<div><span>עתידיות (מהאומדן)</span><b>${fut.length} · ${num(Math.round(futT), 0)} ₪</b></div>` : ""}
       <div class="od-tot"><span>סה״כ צפוי לקבלן</span><b>${num(Math.round(tot + futT), 0)} ₪</b><small>הזמנות ${num(tot, 0)} + עתידיות ${num(Math.round(futT), 0)}</small></div></div>
     ${loose.length && myLines.length ? `<div class="banner"><b>${loose.length} הזמנות לא משויכות לאומדן</b><span>בלי שיוך, הסכום שלהן לא יורד מהעתידיות ונספר פעמיים בסה״כ — בוחרים "שורת אומדן" בכרטיס.</span></div>` : ""}
-    <div class="od-grid">${sorted.map(card).join("") || `<p class="muted">אין הזמנות</p>`}</div>
+    <div class="od-grid">${(() => { // הזמנה = מס׳ הזמנה; כמה שורות עם אותו מספר (טווחי חתכים שונים) = חלקים של הזמנה אחת, במסגרת אחת בצבע אחד
+      const G = []; sorted.forEach(o => { const k = reqNorm(o.x_ordNo) || (reqNorm(o.x_reqNo) ? `r${reqNorm(o.x_reqNo)}|${String(o.name || "").replace(/\s+/g, "")}` : ""); const g = k && G.find(x => x.k === k); if (g) g.os.push(o); else G.push({ k, os: [o] }); });
+      return G.map((g, i) => { const oc = OD_COLORS[i % OD_COLORS.length]; if (g.os.length === 1) return card(g.os[0], { col: oc });
+        const o0 = g.os[0], T = g.os.reduce((t, o) => t + bgOrdAmt(o), 0), st = ordStatusTxt(o0), q = reqOfOrder(d, o0), stCls = /מאושר|הסתיים/.test(st) ? "ok" : /אין|ממתין|חסר|עתיד/.test(st) ? "warn" : "";
+        const pt = g.os.map((o, j) => ({ o, j })).sort((a, b) => bgOrdAmt(b.o) - bgOrdAmt(a.o));
+        return `<div class="od-grp" style="--cc:${oc}"><div class="od-h"><b>${esc(o0.name || "הזמנה")}${o0.x_ordNo ? ` · <span dir="ltr">${f(o0.x_ordNo)}</span>` : ` <span class="small muted">(טרם יצא מס׳ הזמנה)</span>`}</b>${st ? `<span class="pill ${stCls}">${esc(st)}</span>` : ""}<span class="pill od-no">${g.os.length} חלקים</span></div>
+          <div class="od-amt">${num(T, 0)} <small>₪ סה״כ</small></div>
+          <div class="od-g">${o0.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o0.x_reqNo)}</b></div>` : ""}${q && q.hasAmt ? `<div role="button" data-act="reqOpen" data-id="${q.no}" style="cursor:pointer" title="פירוט הדרישה"><span>יתרה בדרישה</span><b class="${q.free < -1 ? "rq-neg" : "rq-pos"}">${bgMM(q.free)}</b></div>` : ""}${o0.x_sentDate ? `<div><span>נשלחה</span><b>${fmtD(o0.x_sentDate)}</b></div>` : ""}</div>
+          <div class="od-parts">${pt.map(({ o }, j) => card(o, { col: oc, part: j + 1 })).join("")}</div></div>`; }).join(""); })() || `<p class="muted">אין הזמנות</p>`}</div>
     <div class="row" style="align-items:center;margin:18px 0 8px"><h3 style="margin:0">הזמנות עתידיות <span class="muted small">— מהאומדן; כשמוציאים הזמנה היא עוברת למעלה ומתעדכנת גם במסך התקציב</span></h3><span class="spacer"></span>${isViewer() ? "" : `<button class="btn ghost sm" data-act="odFuture" data-id="${c.id}">+ הזמנה עתידית</button>`}</div>
     <div class="od-grid">${fut.map(fcard).join("") || `<p class="muted small">אין הזמנות עתידיות לקבלן הזה באומדן.</p>`}</div>`;
 }
