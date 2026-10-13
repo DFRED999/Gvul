@@ -630,6 +630,19 @@ a.btn { text-decoration: none; }
 .dash-t tr.mg-bot td{box-shadow:inset 0 -3px 0 var(--gc)}
 .dash-t tr.mg-bot td:first-child{box-shadow:inset -3px -3px 0 var(--gc)}
 .dash-t tr.mg-bot td:last-child{box-shadow:inset 3px -3px 0 var(--gc)}
+/* תצוגה מוקטנת של כרטיסי ההזמנות */
+.od-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.od-card { padding: 8px 10px; border-radius: 10px; gap: 4px; border-inline-start-width: 4px; }
+.od-h b { font-size: 14px; } .od-h .pill { font-size: 11px; padding: 1px 6px; }
+.od-amt { font-size: 17px; gap: 6px; } .od-amt small { font-size: 11px; } .od-amt .pill { font-size: 11px; padding: 1px 6px; }
+.od-g { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 8px; } .od-g span { font-size: 10.5px; } .od-g b { font-size: 12.5px; }
+.od-ex { font-size: 11px; gap: 6px; } .od-ex em { height: 6px; }
+.od-note { font-size: 11.5px; padding: 2px 6px; }
+.od-grp { padding: 8px 10px; border-radius: 12px; gap: 4px; border-width: 1.5px; } .od-grp > .od-h b { font-size: 14px; }
+.od-parts { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px; margin-top: 2px; }
+.od-card.od-part { padding: 6px 8px; border-radius: 8px; } .od-card.od-part .od-amt { font-size: 14px; }
+.od-card.od-part .od-g > div.w, .od-card.od-part .od-g > div:nth-child(n+4) { display: none; }
+.od-sum { gap: 8px; margin-bottom: 8px; } .od-sum > div { padding: 5px 10px; border-radius: 10px; } .od-sum b { font-size: 15px; } .od-sum span { font-size: 11px; }
 </style>
 </head>
 <body>
@@ -5406,7 +5419,7 @@ function ordersTab(d, c, ords, cov) {
         ${o._secs ? `<div><span>חתכים</span><b dir="ltr">${o._secs[1]}–${o._secs[0]}</b></div><div><span>אורך</span><b>${num(o._secLen || (o._secs[1] - o._secs[0]) * SECTION_M, 0)} מ׳</b></div>` : ""}
         ${kdRange(o) ? `<div><span>ק.ד.</span><b>${kdTxt(kdRange(o))}</b></div>` : ""}
         ${o._secParts?.length ? `<div class="w"><span>קטעי תכנון</span><b>${o._secParts.map(p => `${esc(p.office?.name || "")} ${esc(p.s.num)}`).join(" · ")}</b></div>` : ""}
-        ${inG ? "" : `${o.x_ordNo ? `<div><span>מס׳ הזמנה</span><b dir="ltr">${f(o.x_ordNo)}</b></div>` : ""}`}${!inG && o.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o.x_reqNo)}</b></div>${(q => q && q.hasAmt ? `<div role="button" data-act="reqOpen" data-id="${q.no}" style="cursor:pointer" title="פירוט הדרישה"><span>יתרה בדרישה</span><b class="${q.free < -1 ? "rq-neg" : "rq-pos"}">${bgMM(q.free)}</b></div>` : "")(reqOfOrder(d, o))}` : ""}
+${!inG && o.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o.x_reqNo)}</b></div>${(q => q && q.hasAmt ? `<div role="button" data-act="reqOpen" data-id="${q.no}" style="cursor:pointer" title="פירוט הדרישה"><span>יתרה בדרישה</span><b class="${q.free < -1 ? "rq-neg" : "rq-pos"}">${bgMM(q.free)}</b></div>` : "")(reqOfOrder(d, o))}` : ""}
         ${o.x_sentDate && !inG ? `<div><span>נשלחה</span><b>${fmtD(o.x_sentDate)}</b></div>` : ""}${o.x_lzEnd ? `<div><span>סיום לפי לו״ז</span><b>${fmtD(o.x_lzEnd)}</b></div>` : ""}
       </div>
       ${ex != null ? `<div class="od-ex"><span>ביצוע בתחום ההזמנה</span><em><i style="width:${Math.round(ex * 100)}%"></i></em><b>${Math.round(ex * 100)}%</b></div>` : ""}
@@ -5430,9 +5443,9 @@ function ordersTab(d, c, ords, cov) {
       return G.map((g, i) => { const oc = OD_COLORS[i % OD_COLORS.length]; if (g.os.length === 1) return card(g.os[0], { col: oc });
         const o0 = g.os[0], T = g.os.reduce((t, o) => t + bgOrdAmt(o), 0), st = ordStatusTxt(o0), q = reqOfOrder(d, o0), stCls = /מאושר|הסתיים/.test(st) ? "ok" : /אין|ממתין|חסר|עתיד/.test(st) ? "warn" : "";
         const pt = g.os.map((o, j) => ({ o, j })).sort((a, b) => bgOrdAmt(b.o) - bgOrdAmt(a.o));
-        return `<div class="od-grp" style="--cc:${oc}"><div class="od-h"><b>${esc(o0.name || "הזמנה")}${o0.x_ordNo ? ` · <span dir="ltr">${f(o0.x_ordNo)}</span>` : ` <span class="small muted">(טרם יצא מס׳ הזמנה)</span>`}</b>${st ? `<span class="pill ${stCls}">${esc(st)}</span>` : ""}<span class="pill od-no">${g.os.length} חלקים</span></div>
+        return `<div class="od-grp" style="--cc:${oc}"><div class="od-h"><b>${esc(o0.name || "הזמנה")}${o0.x_ordNo ? ` · <span dir="ltr">${f(o0.x_ordNo)}</span>` : ` <span class="small muted">(טרם יצא מס׳ הזמנה)</span>`}</b>${st ? `<span class="pill ${stCls}">${esc(st)}</span>` : ""}${o0.x_reqNo ? `<span class="pill" dir="ltr" title="מס׳ דרישה">דרישה ${f(o0.x_reqNo)}</span>` : ""}<span class="pill od-no">${g.os.length} חלקים</span></div>
           <div class="od-amt">${num(T, 0)} <small>₪ סה״כ</small></div>
-          <div class="od-g">${o0.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o0.x_reqNo)}</b></div>` : ""}${q && q.hasAmt ? `<div role="button" data-act="reqOpen" data-id="${q.no}" style="cursor:pointer" title="פירוט הדרישה"><span>יתרה בדרישה</span><b class="${q.free < -1 ? "rq-neg" : "rq-pos"}">${bgMM(q.free)}</b></div>` : ""}${o0.x_sentDate ? `<div><span>נשלחה</span><b>${fmtD(o0.x_sentDate)}</b></div>` : ""}</div>
+          <div class="od-g">${q && q.hasAmt ? `<div role="button" data-act="reqOpen" data-id="${q.no}" style="cursor:pointer" title="פירוט הדרישה"><span>יתרה בדרישה</span><b class="${q.free < -1 ? "rq-neg" : "rq-pos"}">${bgMM(q.free)}</b></div>` : ""}${o0.x_sentDate ? `<div><span>נשלחה</span><b>${fmtD(o0.x_sentDate)}</b></div>` : ""}</div>
           <div class="od-parts">${pt.map(({ o }, j) => card(o, { col: oc, part: j + 1 })).join("")}</div></div>`; }).join(""); })() || `<p class="muted">אין הזמנות</p>`}</div>
     <div class="row" style="align-items:center;margin:18px 0 8px"><h3 style="margin:0">הזמנות עתידיות <span class="muted small">— מהאומדן; כשמוציאים הזמנה היא עוברת למעלה ומתעדכנת גם במסך התקציב</span></h3><span class="spacer"></span>${isViewer() ? "" : `<button class="btn ghost sm" data-act="odFuture" data-id="${c.id}">+ הזמנה עתידית</button>`}</div>
     <div class="od-grid">${fut.map(fcard).join("") || `<p class="muted small">אין הזמנות עתידיות לקבלן הזה באומדן.</p>`}</div>`;
