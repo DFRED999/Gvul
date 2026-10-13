@@ -242,6 +242,10 @@ body.dark .mt { filter: invert(1) hue-rotate(180deg); }
 .ov-msi em { position: absolute; bottom: 0; left: 0; right: 0; border-radius: 0; } .ov-msi span { font-size: 9.5px; color: var(--muted); text-align: center; line-height: 1.1; }
 .ov-sph { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 8px; } .ov-sph h2 { margin: 0; }
 .sm-l.sm-pad .sm-lab b { font-weight: 600; } .sm-l.sm-pad .sm-lab i { opacity: .6; }
+.rq-bar { display: flex; height: 10px; border-radius: 6px; background: #e6e9ee; overflow: hidden; } .rq-bar i { display: block; height: 100%; } .rq-bar .i { background: #2f7d4f; } .rq-bar .p { background: #e0b44c; } .rq-bar .a { background: #8e7cc3; }
+.rq-pos { color: #1c7fb5; } .rq-neg { color: #c0392b; } .rq-amt { width: 13ch; text-align: left; direction: ltr; } .rq-amt.miss { background: #fff4e5; border-color: #e0a050; } .rq-closed { opacity: .55; }
+.rq-sum { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 8px 0; } .rq-sum div { background: #f4f5f7; border-radius: 10px; padding: 8px; } .rq-sum span { display: block; font-size: 12px; color: var(--muted); } .rq-sum b { font-size: 15px; }
+.rq-al { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #eef0ec; } .rq-al span { flex: 1; } .rq-add { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; } .rq-add select { flex: 2; min-width: 220px; } .rq-add input { flex: 1; min-width: 120px; }
 .bkchip { all: unset; box-sizing: border-box; cursor: pointer; display: block; margin: 8px 12px 0; padding: 6px 10px; border-radius: 10px; font-size: 12.5px; background: rgba(255,255,255,.08); color: inherit; text-align: center; }
 .bkchip:hover { background: rgba(255,255,255,.16); } .bkchip.late { background: #b33a2b; color: #fff; font-weight: 700; }
 #errbar { position: fixed; bottom: 14px; inset-inline: 14px; z-index: 300; display: flex; gap: 10px; align-items: center; background: #8f1d1d; color: #fff; border-radius: 12px; padding: 10px 14px; box-shadow: 0 6px 20px rgba(0,0,0,.3); font-size: 14px; }
@@ -673,7 +677,7 @@ const SECTION_M = 20;          // מרחק בין חתכים (מ׳) — קבוע
 /* =====================================================================
    §2 עזרים
    ===================================================================== */
-const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "requests", "snapshots", "tasks", "mtgs", "budget", "tableConfig", "errLog", "users"];
+const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "requests", "snapshots", "tasks", "mtgs", "budget", "reqs", "tableConfig", "errLog", "users"];
 /* קבלנים ייעודיים — עובדים לרוחב הקו לפי התמחות (שערים, מבני חשמל, פינוי מוקשים, סבכות…) ומנוהלים לפי "פריטי עבודה" */
 const SPECIALTIES = ["ארון שקד", "חדר טרפו", "תט״ז", "שערים", "פינוי מוקשים", "סבכות למעבירי מים", "תקשורת", "מעבירי מים", "מעביר אירי", "אחר"];
 const ITEM_STATUS = ["טרם", "מתוכנן", "בביצוע", "הושלם", "HOLD", "מבוטל"];
@@ -963,7 +967,7 @@ const NAV_ALL = () => [
       : ["k:" + x.k, x.name, "", "", 0, (KIND_ICON[x.kind] || {}).c || "#8a9a90"]), ["compAdd", "+ רכיב חדש", "", "add"]] },
   { group: "תכנון", items: [["segments", "קטעי תכנון"], ["deliveries", "מסירות תוכניות"]] },
   { group: "ניהול שוטף", items: [["survey", "סקר שטח"], ["svcmp", "סקר מול דיווחים"], ["dq", "🩺 איכות נתונים", "", "", (() => { try { return dqChecks(D()).filter(c => c.sev === "red" && c.n).length; } catch { return 0; } })()]] },
-  { group: "דוחות", items: [["mreport", "דוח הנהלה"], ["budget", "💰 תקציב ואומדן"]] },
+  { group: "דוחות", items: [["mreport", "דוח הנהלה"], ["budget", "💰 תקציב ואומדן"], ["reqs", "🧾 דרישות ויתרות"]] },
   { group: "", items: [["settings", "הגדרות"]] },
 ];
 const PLANS = {
@@ -1045,7 +1049,7 @@ function renderInner() {
   document.body.classList.toggle("ro", isViewer());
   document.body.classList.toggle("dark", !!ui.dark); document.body.classList.toggle("present", !!ui.present);
   const p = ui.page;
-  const body = p === "overview" ? (weeklySnapshot(d), sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "budget" ? pageBudget(d) : p === "meeting" ? pageMeeting(d) : p === "mytasks" ? pageMyTasks(d) : p === "mtgarch" ? pageMtgArchive(d) : p === "power" ? pageIec(d) : p === "culverts" ? pageCulverts(d) : p.startsWith("k:") ? pageComp(d, p.slice(2)) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
+  const body = p === "overview" ? (weeklySnapshot(d), sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "budget" ? pageBudget(d) : p === "reqs" ? pageReqs(d) : p === "meeting" ? pageMeeting(d) : p === "mytasks" ? pageMyTasks(d) : p === "mtgarch" ? pageMtgArchive(d) : p === "power" ? pageIec(d) : p === "culverts" ? pageCulverts(d) : p.startsWith("k:") ? pageComp(d, p.slice(2)) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
     : p === "segments" ? pageSegments(d) : p === "deliveries" ? pageDeliveries(d) : p === "settings" ? pageSettings(d) : p === "mreport" ? pageMreport(d) : pagePlan(p);
   $app.innerHTML = `
   <div class="mtop"><button class="mbtn" data-act="menu" aria-label="תפריט" aria-expanded="${ui.menu ? "true" : "false"}"><span></span><span></span><span></span></button>
@@ -3646,6 +3650,91 @@ function pageBudget(d) {
     <div class="bg-lg small"><span><i class="ok"></i>כוסה במלואו</span><span><i class="part"></i>כוסה חלקית</span><span><i class="no"></i>טרם הוזמן</span><span><i class="x"></i>הוזמן ללא אומדן</span></div></div>
   <div class="card bg-att"><h2 style="margin-top:0">דורש תשומת לב <span class="muted small">(${A.length})</span></h2>${A.length ? `<ul>${A.map(a => `<li class="${a.sev}" data-act="${a.act}" data-id="${esc(a.id)}" role="button">${esc(a.t)}</li>`).join("")}</ul>` : `<p class="muted">אין חריגות 👍</p>`}</div></div></div>`;
 }
+/* ---------- דרישות ויתרות: דרישה תקציבית (סכום מתוקצב) ← הזמנות שיצאו עליה ← יתרה שאפשר לשייך לעבודות נוספות ----------
+   הדרישה מזוהה במספר שלה. הזמנה משויכת לפי "מס׳ דרישה" שבה. רשומת דרישה (reqs) שומרת סכום, תיאור ועבודות ששויכו ליתרה (alloc). */
+const reqNorm = v => String(v ?? "").replace(/\D/g, "");
+const reqAmt = v => { const t = String(v ?? "").trim(); if (!t) return 0; const n = bgN(t); return /מ[׳']|מיליון|מש["״]?ח/.test(t) ? n * 1e6 : /אלף|א[׳']/.test(t) ? n * 1e3 : n; };
+function ordStatusTxt(o) { const ks = new Set(); for (const k of ["orders", "orders__" + o.contractorId]) Object.entries(RAW.tableConfig?.[k]?.custom || {}).forEach(([id, c]) => { if (id !== "signer" && /^\s*סטטוס/.test(c?.label || "")) ks.add("x_" + id); });
+  return [o.x_signer, ...[...ks].map(k => o[k])].filter(Boolean).join(" · "); }
+const ordIssued = o => !!reqNorm(o.x_ordNo) && !/עתיד/.test(ordStatusTxt(o));
+function reqTable(d) {
+  const M = new Map(), get = no => { const n = reqNorm(no); if (!n) return null; if (!M.has(n)) M.set(n, { no: n, rec: null, orders: [], iec: null }); return M.get(n); };
+  d.reqs.forEach(r => { const x = get(r.no); if (x) x.rec = r; });
+  (RAW.tableConfig?.iec?.budgetReqs || []).forEach(r => { const x = get(r.no); if (x) x.iec = r; });
+  d.orders.forEach(o => { const x = get(o.x_reqNo); if (x) x.orders.push(o); });
+  return [...M.values()].map(x => {
+    const amount = x.rec && x.rec.amount !== "" && x.rec.amount != null ? reqAmt(x.rec.amount) : x.iec ? reqAmt(x.iec.amount) : 0, hasAmt = !!amount;
+    const iss = x.orders.filter(ordIssued), pl = x.orders.filter(o => !ordIssued(o)), sum = a => a.reduce((t, o) => t + bgOrdAmt(o), 0);
+    const al = Object.entries(x.rec?.alloc || {}).map(([id, a]) => ({ id, ...a })), alS = al.reduce((t, a) => t + reqAmt(a.amount), 0);
+    const issued = sum(iss), planned = sum(pl), cs = [...new Set([...x.orders.map(o => o.contractorId), x.rec?.contractorId].filter(Boolean))];
+    const nOrd = new Set(iss.map(o => reqNorm(o.x_ordNo))).size;
+    return { ...x, amount, hasAmt, iss, pl, al, issued, planned, alloc: alS, free: amount - issued - planned - alS, cs, nOrd,
+      title: x.rec?.title || (x.iec ? "חיבורי חח״י" : [...new Set(x.orders.map(o => o.name).filter(Boolean))].join(", ")), closed: x.rec?.status === "סגורה" };
+  }).sort((a, b) => (a.cs[0] ? 0 : 1) - (b.cs[0] ? 0 : 1) || byNorth(d.contractors.find(c => c.id === a.cs[0]) || {}, d.contractors.find(c => c.id === b.cs[0]) || {}) || a.no.localeCompare(b.no));
+}
+const reqOfOrder = (d, o) => { const n = reqNorm(o.x_reqNo); return n ? reqTable(d).find(r => r.no === n) : null; };
+function reqBar(r) { const T = Math.max(r.amount, r.issued + r.planned + r.alloc) || 1, w = v => (Math.max(0, v) / T * 100).toFixed(1);
+  return `<div class="rq-bar" title="הוזמן ${bgM(r.issued)} · טרם יצא ${bgM(r.planned)} · שויך ${bgM(r.alloc)} · פנוי ${bgM(r.free)}"><i class="i" style="width:${w(r.issued)}%"></i><i class="p" style="width:${w(r.planned)}%"></i><i class="a" style="width:${w(r.alloc)}%"></i></div>`; }
+function pageReqs(d) {
+  const L = reqTable(d), cn = id => d.contractors.find(c => c.id === id)?.name || "", F = ui.reqF || "all";
+  const P = { all: () => true, open: r => !r.closed, noamt: r => !r.hasAmt, over: r => r.hasAmt && r.free < -1, free: r => r.hasAmt && r.free > 1 && !r.closed };
+  const known = L.filter(r => r.hasAmt), tot = k => known.reduce((t, r) => t + r[k], 0);
+  const tile = (k, l, v, col) => `<div class="ch-t ${F === k ? "on" : ""}" data-act="reqF" data-id="${k}" role="button" style="border-top:4px solid ${col}${F === k ? `;box-shadow:0 0 0 2px ${col} inset` : ""}"><span>${l}</span><b>${v}</b></div>`;
+  const rows = L.filter(P[F] || P.all), ed = !isViewer();
+  return `<div class="ch-banner" style="--cc:#5b4a8b"><div><h1>דרישות ויתרות</h1><span>סכום הדרישה ← מה הוזמן עליה ← כמה נשאר. את היתרה אפשר לשייך לעבודות נוספות. הזמנה משויכת לדרישה לפי "מס׳ דרישה" שבטבלת ההזמנות.</span></div>
+    ${ed ? `<div class="row" style="gap:6px"><button class="btn ghost" data-act="reqPaste">📋 הדבקת סכומי דרישות מאקסל</button></div>` : ""}</div>
+  <div class="ch-tiles" style="--cc:#5b4a8b;grid-template-columns:repeat(5,minmax(0,1fr))">
+    ${tile("all", `סכום הדרישות (${known.length} מתוך ${L.length})`, bgMM(tot("amount")), "#5b4a8b")}${tile("open", "הוזמן — כל הדרישות", bgMM(L.reduce((t, r) => t + r.issued, 0)), "#2f7d4f")}${tile("free", "יתרה פנויה", bgMM(known.reduce((t, r) => t + Math.max(0, r.free), 0)), "#1c7fb5")}
+    ${tile("over", "חריגה מהדרישה", L.filter(P.over).length, "#c0392b")}${tile("noamt", "חסר סכום דרישה", L.filter(P.noamt).length, "#b86b1d")}</div>
+  <div class="card"><div class="tablewrap"><table class="sheet rq-t"><thead><tr><th>מס׳ דרישה</th><th>קבלן</th><th>תיאור</th><th>סכום הדרישה</th><th>הוזמן</th><th>טרם יצא</th><th>שויך ליתרה</th><th>יתרה פנויה</th><th style="min-width:140px">ניצול</th><th></th></tr></thead><tbody>
+    ${rows.map(r => `<tr class="${r.closed ? "rq-closed" : ""}"><td class="nowrap" dir="ltr"><b>${esc(r.no)}</b></td><td class="small">${r.cs.map(cn).map(esc).join(", ") || "—"}</td><td class="small">${esc(r.title)}</td>
+      <td>${ed ? `<input class="cell rq-amt ${r.hasAmt ? "" : "miss"}" data-req="${r.no}|amount" value="${r.hasAmt ? esc(num(Math.round(r.amount), 0)) : ""}" placeholder="סכום…" title="אפשר לכתוב גם 40 מ׳">` : r.hasAmt ? bgM(r.amount) : "—"}</td>
+      <td class="nowrap">${r.issued ? bgM(r.issued) : "—"}${r.nOrd > 1 ? ` <span class="small muted">(${r.nOrd} הזמנות)</span>` : ""}</td><td class="nowrap">${r.planned ? bgM(r.planned) : "—"}</td><td class="nowrap">${r.alloc ? bgM(r.alloc) : "—"}</td>
+      <td class="nowrap"><b class="${r.hasAmt ? (r.free < -1 ? "rq-neg" : "rq-pos") : "muted"}">${r.hasAmt ? bgM(r.free) : "חסר סכום"}</b></td><td>${r.hasAmt ? reqBar(r) : ""}</td>
+      <td><button class="btn ghost sm" data-act="reqOpen" data-id="${r.no}">פירוט</button></td></tr>`).join("") || `<tr><td colspan="10" class="c muted">אין דרישות בסינון הזה</td></tr>`}
+  </tbody></table></div>
+  <div class="bg-lg small" style="margin-top:8px"><span><i style="background:#2f7d4f"></i>הוזמן (יצא מס׳ הזמנה)</span><span><i style="background:#e0b44c"></i>טרם יצא / עתידי</span><span><i style="background:#8e7cc3"></i>שויך ליתרה</span><span><i style="background:#e6e9ee"></i>פנוי</span></div></div>`;
+}
+function reqModal(no) {
+  const d = D(), r = reqTable(d).find(x => x.no === no); if (!r) return;
+  const cn = id => d.contractors.find(c => c.id === id)?.name || "", ed = !isViewer();
+  const lines = bgLines(d, bgData(d)).filter(l => l.x && (!r.cs.length || r.cs.includes(l.col) || r.cs.includes(l.area)) && l.est - l.cov > 1);
+  const oRow = o => `<tr><td>${esc(o.name || "")}</td><td class="small">${esc(cn(o.contractorId))}</td><td dir="ltr" class="small">${esc(o.x_ordNo || "—")}</td><td class="small">${esc(ordStatusTxt(o) || "")}</td><td class="nowrap">${bgM(bgOrdAmt(o))}</td></tr>`;
+  modal(`<h2>דרישה <span dir="ltr">${esc(r.no)}</span>${r.cs.length ? ` · ${r.cs.map(cn).map(esc).join(", ")}` : ""}</h2>
+    <div class="rq-sum"><div><span>סכום הדרישה</span><b>${r.hasAmt ? bgM(r.amount) : "חסר"}</b></div><div><span>הוזמן</span><b>${bgM(r.issued)}</b></div><div><span>טרם יצא</span><b>${bgM(r.planned)}</b></div><div><span>שויך ליתרה</span><b>${bgM(r.alloc)}</b></div><div><span>יתרה פנויה</span><b class="${r.free < -1 ? "rq-neg" : "rq-pos"}">${r.hasAmt ? bgM(r.free) : "—"}</b></div></div>
+    ${r.hasAmt ? reqBar(r) : ""}
+    ${ed ? `<div class="row" style="gap:8px;margin-top:10px"><label class="field" style="flex:2">תיאור<input class="inp" id="rq_t" value="${esc(r.rec?.title || "")}" placeholder="${esc(r.title)}"></label><label class="field" style="flex:1">סכום<input class="inp" id="rq_a" value="${r.hasAmt ? esc(num(Math.round(r.amount), 0)) : ""}"></label><label class="field" style="flex:1">סטטוס<select class="inp" id="rq_s">${["פתוחה", "סגורה"].map(x => `<option ${x === (r.rec?.status || "פתוחה") ? "selected" : ""}>${x}</option>`).join("")}</select></label></div>` : ""}
+    <h3 style="margin:12px 0 4px">הזמנות על הדרישה <span class="small muted">(${r.orders.length})</span></h3>
+    ${r.orders.length ? `<div class="tablewrap" style="max-height:200px"><table class="sheet"><thead><tr><th>הזמנה</th><th>קבלן</th><th>מס׳ הזמנה</th><th>סטטוס</th><th>סכום</th></tr></thead><tbody>${[...r.iss, ...r.pl].map(oRow).join("")}</tbody></table></div>` : `<p class="small muted">עוד אין הזמנות עם מספר הדרישה הזה</p>`}
+    <h3 style="margin:12px 0 4px">שויך ליתרה <span class="small muted">— עבודות שמתוכננות לצאת מהיתרה</span></h3>
+    ${r.al.length ? r.al.map(a => `<div class="rq-al"><span>${esc(a.title || "")}${a.note ? ` <small class="muted">${esc(a.note)}</small>` : ""}</span><b>${bgM(reqAmt(a.amount))}</b>${ed ? `<button class="btn ghost sm" data-ral="${a.id}" title="הסרה">✕</button>` : ""}</div>`).join("") : `<p class="small muted">עוד לא שויכו עבודות</p>`}
+    ${ed ? `<div class="rq-add"><select class="inp" id="rq_l"><option value="">— בחירה משורות האומדן שעוד לא הוזמנו —</option>${lines.map((l, i) => `<option value="${i}">${esc(l.title)} · ${bgMM(l.est - l.cov)}</option>`).join("")}</select>
+      <input class="inp" id="rq_at" placeholder="או תיאור חופשי"><input class="inp" id="rq_aa" placeholder="סכום" style="max-width:140px"><button class="btn sm" id="rq_add">+ שיוך ליתרה</button></div>` : ""}
+    <div class="row" style="margin-top:12px">${ed ? `<button class="btn" id="mYes">שמירה</button>` : ""}<button class="btn ghost" id="mNo">סגירה</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close;
+    const rec = () => r.rec?.id;
+    const save = async patch => { if (rec()) await api.update("reqs", rec(), patch); else { const id = await api.add("reqs", { no: r.no, title: "", amount: "", status: "פתוחה", alloc: {}, ...patch }); r.rec = { id }; } };
+    if (!ed) return;
+    m.querySelector("#rq_l").onchange = e => { const l = lines[+e.target.value]; if (!l) return; m.querySelector("#rq_at").value = l.title; m.querySelector("#rq_aa").value = num(Math.round(l.est - l.cov), 0); };
+    m.querySelector("#rq_add").onclick = async () => { const t = m.querySelector("#rq_at").value.trim(), a = reqAmt(m.querySelector("#rq_aa").value); if (!t || !a) return toast("צריך תיאור וסכום");
+      const al = { ...(RAW.reqs?.[rec()]?.alloc || {}) }; al[newId()] = { title: t, amount: a, at: todayStr() }; await save({ alloc: al }); close(); reqModal(no); toast("שויך ליתרה ✓"); };
+    m.querySelectorAll("[data-ral]").forEach(b => b.onclick = async () => { const al = { ...(RAW.reqs?.[rec()]?.alloc || {}) }; delete al[b.dataset.ral]; await save({ alloc: al }); close(); reqModal(no); });
+    m.querySelector("#mYes").onclick = async () => { await save({ title: m.querySelector("#rq_t").value.trim(), amount: reqAmt(m.querySelector("#rq_a").value) || "", status: m.querySelector("#rq_s").value }); close(); render(); toast("נשמר ✓"); };
+  });
+}
+function reqPasteModal() {
+  modal(`<h2>הדבקת סכומי דרישות</h2><p class="small muted" style="margin:0">מעתיקים מאקסל שתי עמודות (או שלוש): <b>מספר דרישה</b> · <b>סכום</b> · תיאור (לא חובה). דרישה קיימת — הסכום מתעדכן; חדשה — נוספת.</p>
+    <textarea class="inp" id="rq_p" style="width:100%;height:220px;margin-top:8px" dir="ltr" placeholder="88057446	45000000"></textarea><div id="rq_pv" class="small" style="margin:6px 0"></div>
+    <div class="row"><button class="btn" id="mYes" disabled>עדכון</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close; let rows = [];
+    m.querySelector("#rq_p").oninput = e => { rows = e.target.value.split(/\r?\n/).map(l => l.split(/\t|;|,(?=\s*\d{5,})/).map(x => x.trim())).filter(c => reqNorm(c[0]).length >= 5 && reqAmt(c[1]) > 0).map(c => ({ no: reqNorm(c[0]), amount: reqAmt(c[1]), title: c[2] || "" }));
+      m.querySelector("#rq_pv").innerHTML = rows.length ? `נמצאו ${rows.length} דרישות: ${rows.slice(0, 6).map(r => `<span dir="ltr">${r.no}</span> ${bgMM(r.amount)}`).join(" · ")}${rows.length > 6 ? "…" : ""}` : `<span class="muted">לא נמצאו שורות תקינות (מספר דרישה + סכום)</span>`;
+      m.querySelector("#mYes").disabled = !rows.length; };
+    m.querySelector("#mYes").onclick = async () => { const ex = new Map(list("reqs").map(r => [reqNorm(r.no), r]));
+      for (const x of rows) { const r = ex.get(x.no); if (r) await api.update("reqs", r.id, { amount: x.amount, ...(x.title && !r.title ? { title: x.title } : {}) }); else await api.add("reqs", { no: x.no, amount: x.amount, title: x.title, status: "פתוחה", alloc: {} }); }
+      close(); render(); toast(`עודכנו ${rows.length} דרישות ✓`); };
+  });
+}
 /** חלון פירוט: רשימת השורות שבתא / שורה / עמודה */
 function bgOpen(act, id) {
   const d = D(), R = bgData(d), M = bgMatrix(d, R), cn = x => x ? (d.contractors.find(c => c.id === x)?.name || "") : "כללי / לא משויך"; ui.bgLast = [act, id];
@@ -5297,7 +5386,7 @@ function ordersTab(d, c, ords, cov) {
         ${o._secs ? `<div><span>חתכים</span><b dir="ltr">${o._secs[1]}–${o._secs[0]}</b></div><div><span>אורך</span><b>${num(o._secLen || (o._secs[1] - o._secs[0]) * SECTION_M, 0)} מ׳</b></div>` : ""}
         ${kdRange(o) ? `<div><span>ק.ד.</span><b>${kdTxt(kdRange(o))}</b></div>` : ""}
         ${o._secParts?.length ? `<div class="w"><span>קטעי תכנון</span><b>${o._secParts.map(p => `${esc(p.office?.name || "")} ${esc(p.s.num)}`).join(" · ")}</b></div>` : ""}
-        ${o.x_ordNo ? `<div><span>מס׳ הזמנה</span><b dir="ltr">${f(o.x_ordNo)}</b></div>` : ""}${o.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o.x_reqNo)}</b></div>` : ""}
+        ${o.x_ordNo ? `<div><span>מס׳ הזמנה</span><b dir="ltr">${f(o.x_ordNo)}</b></div>` : ""}${o.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o.x_reqNo)}</b></div>${(q => q && q.hasAmt ? `<div role="button" data-act="reqOpen" data-id="${q.no}" style="cursor:pointer" title="פירוט הדרישה"><span>יתרה בדרישה</span><b class="${q.free < -1 ? "rq-neg" : "rq-pos"}">${bgMM(q.free)}</b></div>` : "")(reqOfOrder(d, o))}` : ""}
         ${o.x_sentDate ? `<div><span>נשלחה</span><b>${fmtD(o.x_sentDate)}</b></div>` : ""}${o.x_lzEnd ? `<div><span>סיום לפי לו״ז</span><b>${fmtD(o.x_lzEnd)}</b></div>` : ""}
       </div>
       ${ex != null ? `<div class="od-ex"><span>ביצוע בתחום ההזמנה</span><em><i style="width:${Math.round(ex * 100)}%"></i></em><b>${Math.round(ex * 100)}%</b></div>` : ""}
@@ -5613,6 +5702,9 @@ $app.addEventListener("click", async e => {
   else if (act === "shRename") shModal();
   else if (act === "sepRun") sepModal();
   else if (act === "ttzMig") ttzMigModal();
+  else if (act === "reqOpen") reqModal(b.dataset.id);
+  else if (act === "reqPaste") reqPasteModal();
+  else if (act === "reqF") { ui.reqF = b.dataset.id; render(); }
   else if (act === "zoneAdd") { const c = RAW.contractors[b.dataset.id], Z = { ...(c.zones || {}) }, n = Object.keys(Z).length; Z[newId()] = { name: `אזור ${n + 1}`, secFrom: "", secTo: "", order: n + 1 }; await api.update("contractors", b.dataset.id, { zones: Z }); }
   else if (act === "zoneDel") { const [cid, zid] = b.dataset.id.split("|"), Z = { ...(RAW.contractors[cid].zones || {}) }; delete Z[zid]; await api.update("contractors", cid, { zones: Object.keys(Z).length ? Z : null }); }
   else if (act === "compAdd") compAddModal();
@@ -5817,6 +5909,8 @@ $app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?
   await api.put("tableConfig", "settings", { ...S, ovMetrics: defs.filter(x => next.includes(x)).length ? next.filter(x => defs.includes(x)) : ["fence"] }); });
 $app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?.zone) return; const [cid, zid, f] = t.dataset.zone.split("|"), c = RAW.contractors[cid]; if (!c) return;
   const Z = JSON.parse(JSON.stringify(c.zones || {})); Z[zid] = { ...(Z[zid] || {}), [f]: f === "name" ? t.value.trim() : (t.value.trim() === "" ? "" : Number(t.value)) }; await api.update("contractors", cid, { zones: Z }); });
+$app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?.req) return; const [no, k] = t.dataset.req.split("|"), r = list("reqs").find(x => reqNorm(x.no) === no), v = reqAmt(t.value);
+  if (r) await api.update("reqs", r.id, { [k]: v || "" }); else if (v) await api.add("reqs", { no, amount: v, title: "", status: "פתוחה", alloc: {} }); render(); });
 $app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.alq) return; ui.alQ = t.value; alApplyQ(); });
 $app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.gsearch) return; (ui.gsearch = ui.gsearch || {})[t.dataset.gsearch] = t.value; applyFilters(); applyGSearch(); });
 $app.addEventListener("change", async e => {
