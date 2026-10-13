@@ -3682,7 +3682,7 @@ function pageReqs(d) {
   const tile = (k, l, v, col) => `<div class="ch-t ${F === k ? "on" : ""}" data-act="reqF" data-id="${k}" role="button" style="border-top:4px solid ${col}${F === k ? `;box-shadow:0 0 0 2px ${col} inset` : ""}"><span>${l}</span><b>${v}</b></div>`;
   const rows = L.filter(P[F] || P.all), ed = !isViewer();
   return `<div class="ch-banner" style="--cc:#5b4a8b"><div><h1>דרישות ויתרות</h1><span>סכום הדרישה ← מה הוזמן עליה ← כמה נשאר. את היתרה אפשר לשייך לעבודות נוספות. הזמנה משויכת לדרישה לפי "מס׳ דרישה" שבטבלת ההזמנות.</span></div>
-    ${ed ? `<div class="row" style="gap:6px"><button class="btn ghost" data-act="reqPaste">📋 הדבקת סכומי דרישות מאקסל</button></div>` : ""}</div>
+    ${ed ? `<div class="row" style="gap:6px"><button class="btn" data-act="reqNew">+ דרישה חדשה</button><button class="btn ghost" data-act="reqPaste">📋 הדבקת סכומי דרישות מאקסל</button></div>` : ""}</div>
   <div class="ch-tiles" style="--cc:#5b4a8b;grid-template-columns:repeat(5,minmax(0,1fr))">
     ${tile("all", `סכום הדרישות (${known.length} מתוך ${L.length})`, bgMM(tot("amount")), "#5b4a8b")}${tile("open", "הוזמן — כל הדרישות", bgMM(L.reduce((t, r) => t + r.issued, 0)), "#2f7d4f")}${tile("free", "יתרה פנויה", bgMM(known.reduce((t, r) => t + Math.max(0, r.free), 0)), "#1c7fb5")}
     ${tile("over", "חריגה מהדרישה", L.filter(P.over).length, "#c0392b")}${tile("noamt", "חסר סכום דרישה", L.filter(P.noamt).length, "#b86b1d")}</div>
@@ -3720,6 +3720,21 @@ function reqModal(no) {
       const al = { ...(RAW.reqs?.[rec()]?.alloc || {}) }; al[newId()] = { title: t, amount: a, at: todayStr() }; await save({ alloc: al }); close(); reqModal(no); toast("שויך ליתרה ✓"); };
     m.querySelectorAll("[data-ral]").forEach(b => b.onclick = async () => { const al = { ...(RAW.reqs?.[rec()]?.alloc || {}) }; delete al[b.dataset.ral]; await save({ alloc: al }); close(); reqModal(no); });
     m.querySelector("#mYes").onclick = async () => { await save({ title: m.querySelector("#rq_t").value.trim(), amount: reqAmt(m.querySelector("#rq_a").value) || "", status: m.querySelector("#rq_s").value }); close(); render(); toast("נשמר ✓"); };
+  });
+}
+function reqNewModal() {
+  const cs = list("contractors");
+  modal(`<h2>דרישה חדשה</h2><p class="small muted" style="margin:0">אחרי השמירה הדרישה מופיעה בטבלה. הזמנה שתירשם עם אותו "מס׳ דרישה" תשויך אליה לבד, ואת היתרה אפשר לשייך לעבודות דרך "פירוט".</p>
+    <div class="row" style="gap:8px;margin-top:8px"><label class="field" style="flex:1">מספר דרישה<input class="inp" id="rn_no" dir="ltr" placeholder="88066xxx"></label><label class="field" style="flex:1">סכום<input class="inp" id="rn_a" placeholder="למשל 40 מ׳"></label><label class="field" style="flex:1">תאריך<input type="date" class="inp" id="rn_d" value="${todayStr()}"></label></div>
+    <div class="row" style="gap:8px"><label class="field" style="flex:1">קבלן<select class="inp" id="rn_c"><option value="">— עוד לא נקבע —</option>${cs.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label><label class="field" style="flex:2">תיאור<input class="inp" id="rn_t" placeholder="למה הדרישה — למשל: הזמנה 5, שערים נוספים"></label></div>
+    <p class="small" id="rn_m" style="color:#c0392b;min-height:1em;margin:4px 0"></p>
+    <div class="row"><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close; m.querySelector("#rn_no").focus();
+    m.querySelector("#mYes").onclick = async () => { const no = reqNorm(m.querySelector("#rn_no").value), a = reqAmt(m.querySelector("#rn_a").value), msg = t => m.querySelector("#rn_m").textContent = t;
+      if (no.length < 5) return msg("צריך מספר דרישה"); if (!a) return msg("צריך סכום");
+      const ex = list("reqs").find(r => reqNorm(r.no) === no), rec = { no, amount: a, date: m.querySelector("#rn_d").value, contractorId: m.querySelector("#rn_c").value, title: m.querySelector("#rn_t").value.trim(), status: "פתוחה" };
+      if (ex) await api.update("reqs", ex.id, rec); else await api.add("reqs", { ...rec, alloc: {} });
+      close(); ui.page = "reqs"; ui.reqF = "all"; render(); toast(ex ? "הדרישה עודכנה ✓" : "הדרישה נוספה ✓"); };
   });
 }
 function reqPasteModal() {
@@ -5704,6 +5719,7 @@ $app.addEventListener("click", async e => {
   else if (act === "ttzMig") ttzMigModal();
   else if (act === "reqOpen") reqModal(b.dataset.id);
   else if (act === "reqPaste") reqPasteModal();
+  else if (act === "reqNew") reqNewModal();
   else if (act === "reqF") { ui.reqF = b.dataset.id; render(); }
   else if (act === "zoneAdd") { const c = RAW.contractors[b.dataset.id], Z = { ...(c.zones || {}) }, n = Object.keys(Z).length; Z[newId()] = { name: `אזור ${n + 1}`, secFrom: "", secTo: "", order: n + 1 }; await api.update("contractors", b.dataset.id, { zones: Z }); }
   else if (act === "zoneDel") { const [cid, zid] = b.dataset.id.split("|"), Z = { ...(RAW.contractors[cid].zones || {}) }; delete Z[zid]; await api.update("contractors", cid, { zones: Object.keys(Z).length ? Z : null }); }
