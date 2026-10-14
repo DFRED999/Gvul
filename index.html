@@ -246,6 +246,7 @@ body.dark .mt { filter: invert(1) hue-rotate(180deg); }
 .ov-msi em { position: absolute; bottom: 0; left: 0; right: 0; border-radius: 0; } .ov-msi span { font-size: 9.5px; color: var(--muted); text-align: center; line-height: 1.1; }
 .ov-sph { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 8px; } .ov-sph h2 { margin: 0; }
 .sm-l.sm-pad .sm-lab b { font-weight: 600; } .sm-l.sm-pad .sm-lab i { opacity: .6; }
+.tk-is { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; } .tk-is legend { font-size: 12.5px; color: var(--muted); padding: 0 4px; } .tk-is[hidden] { display: none; }
 .rq-bar { display: flex; height: 10px; border-radius: 6px; background: #e6e9ee; overflow: hidden; } .rq-bar i { display: block; height: 100%; } .rq-bar .i { background: #2f7d4f; } .rq-bar .p { background: #e0b44c; } .rq-bar .a { background: #8e7cc3; }
 .rq-t tr.rq-row td { background: color-mix(in srgb, var(--rc) 15%, var(--surface)); } .rq-t tr.rq-row td:first-child { border-inline-start: 5px solid var(--rc); }
 .rq-pos { color: #1c7fb5; } .rq-neg { color: #c0392b; } .rq-amt { width: 13ch; text-align: left; direction: ltr; } .rq-amt.miss { background: #fff4e5; border-color: #e0a050; } .rq-closed { opacity: .55; }
@@ -3331,12 +3332,34 @@ async function tkSave(id, patch, logText) {
   if (!isMgr()) { p.reviewed = false; if (p.status === "סגור") p.status = "בוצע — לאישור"; }
   if (p.status === "סגור" && t.status !== "סגור") p.closedAt = todayStr();
   await api.update("tasks", id, p);
+  try { await tkToIssue({ ...t, ...p }, patch, logText); } catch (e) { logErr("tkSync", e.message, e.stack); }
+}
+/* ---------- משימה ↔ נושא פתוח של הקבלן: משימה עם קבלן מקושרת לנושא (issueId). עדכון בצד אחד מתעדכן בשני ---------- */
+const TK2IS = { "פתוח": "פתוח", "בטיפול": "בטיפול", "תקוע": "HOLD", "בוצע — לאישור": "בטיפול", "סגור": "סגור" };
+const IS2TK = { "פתוח": "פתוח", "בטיפול": "בטיפול", "HOLD": "תקוע", "סגור": "סגור" };
+async function tkToIssue(t, patch, logText) {   // משימה → נושא
+  const iss = t?.issueId && RAW.issues?.[t.issueId]; if (!iss) return;
+  const p = {}, today = todayStr();
+  if (patch.status && TK2IS[patch.status] && TK2IS[patch.status] !== iss.status) p.status = TK2IS[patch.status];
+  ["title", "kdFrom", "kdTo", "due", "category", "mgmt", "mgmtAsk"].forEach(k => { if (k in patch && patch[k] !== iss[k]) p[k] = patch[k]; });
+  if (patch.issueOwner !== undefined && patch.issueOwner !== iss.owner) p.owner = patch.issueOwner;
+  if (logText && !/^עודכנו פרטי המשימה$/.test(logText)) { const txt = `${logText}${t.ownerName ? ` (${t.ownerName})` : ""}`; p.last = txt; p.updated = today; p.history = { ...(iss.history || {}), [newId()]: { date: today, text: txt } }; }
+  if (Object.keys(p).length) await api.update("issues", t.issueId, p);
+}
+async function issueToTask(issueId, patch) {   // נושא → משימה (בלי לחזור שוב לנושא)
+  for (const t of list("tasks").filter(x => x.issueId === issueId && (x.status !== "סגור" || patch.status && patch.status !== "סגור"))) {
+    const p = {}, by = tkWho(), at = new Date().toISOString();
+    if (patch.status && IS2TK[patch.status] && IS2TK[patch.status] !== t.status) { p.status = IS2TK[patch.status]; if (p.status === "סגור") p.closedAt = todayStr(); }
+    const txt = patch.last ? `עדכון בנושא ${t.issueCode || ""}: ${patch.last}` : p.status ? `מצב (מהנושא ${t.issueCode || ""}): ${p.status}` : "";
+    if (txt) p.log = { ...(t.log || {}), [newId()]: { date: todayStr(), at, text: txt, by } };
+    if (Object.keys(p).length) await api.update("tasks", t.id, p);
+  }
 }
 async function tkApprove(id) {
   const t = RAW.tasks?.[id]; if (!t) return;
   const p = { reviewed: true, reviewedAt: new Date().toISOString(), reviewedBy: tkWho() };
   if (t.status === "בוצע — לאישור") Object.assign(p, { status: "סגור", closedAt: todayStr() });
-  await api.update("tasks", id, p); toast(p.status === "סגור" ? "המשימה נסגרה ✓" : "אושר ✓");
+  await api.update("tasks", id, p); if (p.status) await tkToIssue(t, { status: p.status }, "אושר ונסגר"); toast(p.status === "סגור" ? "המשימה נסגרה ✓" : "אושר ✓");
 }
 function tkCard(d, t, opt = {}) {
   const c = d.contractors.find(x => x.id === t.contractorId), L = tkLast(t), since = opt.since || "";
@@ -3388,15 +3411,21 @@ function pageMeeting(d) {
     <div class="ch-t ${review.length ? "t2" : ""}"><span>ממתין לאישור שלך</span><b>${review.length}</b><small>עדכונים של מתאמים</small></div>
     <div class="ch-t t3"><span>נסגרו מאז הישיבה</span><b>${closedSince.length}</b><small>מ־${fmtD(since)}</small></div></div>
   <div class="card"><h2 style="margin-top:0">קבלנים — מאז הישיבה הקודמת (${fmtD(since)})</h2><div class="tablewrap"><table class="sheet"><thead><tr><th>קבלן</th><th>ביצוע מצטבר</th><th>נוסף מאז</th><th>קצב לשבוע</th><th>תחזית סיום</th><th>יעד</th><th>מצב</th><th>משימות</th></tr></thead><tbody>${rows}</tbody></table></div></div>
-  <h2>משימות לפי אחראי</h2><div class="tk-cols">${cols || `<p class="muted">אין משימות. לחיצה על ״+ משימה״ כדי להתחיל.</p>`}</div>
+  <div class="row" style="align-items:center;margin:18px 0 8px"><h2 style="margin:0">משימות לפי אחראי</h2><span class="spacer"></span>${tkViewTog()}</div>
+  ${tkView() === "rows" ? tkRows(d, sortT([...open]), since) : `<div class="tk-cols">${cols || `<p class="muted">אין משימות. לחיצה על ״+ משימה״ כדי להתחיל.</p>`}</div>`}
   <div class="card" style="margin-top:14px"><h2 style="margin-top:0">הוסלם להנהלה <span class="muted small">— נושאים פתוחים שסומנו ״להנהלה״ (${esc_.length})</span></h2>
     ${esc_.length ? `<div class="tablewrap"><table class="sheet"><thead><tr><th>קוד</th><th>קבלן</th><th>נושא</th><th>נדרש מההנהלה</th><th>עדכון אחרון</th><th></th></tr></thead><tbody>${esc_.map(i => `<tr><td>${esc(i.code || "")}</td><td>${esc(d.contractors.find(c => c.id === i.contractorId)?.name || "")}</td><td><b>${esc(i.title || "")}</b></td><td>${esc(i.mgmtAsk || "")}</td><td class="small">${esc(i.last || "")}${i.updated ? `<div class="muted">${fmtD(i.updated)}</div>` : ""}</td>
       <td>${T.some(t => t.issueId === i.id && t.status !== "סגור") ? `<span class="pill ok">יש משימה</span>` : `<button class="btn ghost sm" data-act="tkFromIssue" data-id="${i.id}">→ משימה</button>`}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted small" style="margin:0">אין נושאים מסומנים ״להנהלה״. מסמנים בדף הקבלן ← נושאים פתוחים ← עמודה ״להנהלה״.</p>`}</div>`;
 }
+const TKV_LS = "border-tkview";
+const tkView = () => { try { return localStorage.getItem(TKV_LS) || "cards"; } catch (e) { return "cards"; } };
+const tkViewTog = () => `<div class="viewtabs" style="margin:0"><button class="btn ghost sm ${tkView() === "cards" ? "on" : ""}" data-act="tkView" data-id="cards">▦ קוביות</button><button class="btn ghost sm ${tkView() === "rows" ? "on" : ""}" data-act="tkView" data-id="rows">☰ שורות</button></div>`;
+function tkRows(d, T, since) { return renderSheet("tasks", T.map(t => ({ ...t, _since: since })), "אין משימות פתוחות", { del: false }); }
 function pageMyTasks(d) {
   const T = (d.tasks || []).filter(t => LOCAL ? true : tkMe(t)), open = T.filter(t => t.status !== "סגור"), closed = T.filter(t => t.status === "סגור");
   return `<div class="ch-banner" style="--cc:#2f6b4f"><div><h1>המשימות שלי</h1><span>${LOCAL ? "(עבודה מקומית — מוצגות כל המשימות)" : esc(me?.name || "")} · כל עדכון שלך נשלח לאישור מנהל־העל</span></div><button class="btn" data-act="tkNew">+ משימה</button></div>
-  <div class="tk-cols">${open.sort((a, b) => (tkLate(b) - tkLate(a)) || String(a.due || "9999").localeCompare(String(b.due || "9999"))).map(t => tkCard(d, t, { owner: LOCAL })).join("") || `<p class="muted">אין משימות פתוחות 👍</p>`}</div>
+  <div class="row" style="margin:10px 0"><span class="spacer"></span>${tkViewTog()}</div>
+  ${(o => tkView() === "rows" ? tkRows(d, o, "") : `<div class="tk-cols">${o.map(t => tkCard(d, t, { owner: LOCAL })).join("") || `<p class="muted">אין משימות פתוחות 👍</p>`}</div>`)(open.sort((a, b) => (tkLate(b) - tkLate(a)) || String(a.due || "9999").localeCompare(String(b.due || "9999"))))}
   ${closed.length ? `<details style="margin-top:14px"><summary>משימות שנסגרו (${closed.length})</summary><div class="tk-cols">${closed.map(t => tkCard(d, t, { owner: LOCAL })).join("")}</div></details>` : ""}`;
 }
 function pageMtgArchive(d) {
@@ -3415,19 +3444,30 @@ function tkForm(t = {}, preset = {}) {
     <div class="row" style="gap:8px;flex-wrap:wrap"><label class="field" style="flex:2">קבלן<select class="inp" id="tk_c"><option value="">כללי</option>${cs.map(c => `<option value="${c.id}" ${c.id === v.contractorId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
       <label class="field" style="flex:1">ק.ד. מ־<input class="inp" id="tk_k1" inputmode="decimal" value="${esc(v.kdFrom || "")}"></label><label class="field" style="flex:1">עד<input class="inp" id="tk_k2" inputmode="decimal" value="${esc(v.kdTo || "")}"></label></div>
     <label class="field">עדיפות<select class="inp" id="tk_pri">${TK_PRI.map(p => `<option ${p === (v.priority || "רגילה") ? "selected" : ""}>${p}</option>`).join("")}</select></label>
+    <fieldset class="tk-is" id="tk_is" ${v.contractorId ? "" : "hidden"}><legend>נושא פתוח אצל הקבלן${v.issueCode ? ` · <b dir="ltr">${esc(v.issueCode)}</b>` : " — ייפתח אוטומטית ויתעדכן יחד עם המשימה"}</legend>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><label class="field" style="flex:1">תחום<select class="inp" id="tk_cat">${ISSUE_CATS.map(k => `<option ${k === (v.category || "חסם") ? "selected" : ""}>${k}</option>`).join("")}</select></label>
+        <label class="field" style="flex:1">אחראי בנושא<select class="inp" id="tk_iown">${ISSUE_OWNERS.map(k => `<option ${k === (v.issueOwner || "מתאם הנדסי") ? "selected" : ""}>${k}</option>`).join("")}</select></label></div>
+      <label class="row small" style="gap:6px"><input type="checkbox" id="tk_mg" ${v.mgmt ? "checked" : ""}> להנהלה (יוצג בשקף הנושאים הדחופים)</label>
+      <label class="field" id="tk_mgw" ${v.mgmt ? "" : "hidden"}>נדרש מההנהלה<input class="inp" id="tk_mga" value="${esc(v.mgmtAsk || "")}"></label></fieldset>
     ${t.id ? "" : `<label class="field">הערה ראשונה (לא חובה)<input class="inp" id="tk_note"></label>`}
     <p class="small" id="tk_msg"></p>
     <div class="row">${t.id && isMgr() ? `<button class="btn ghost" id="tk_del" style="color:var(--warn)">מחיקה</button>` : ""}<span class="spacer"></span><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
     const q = s => m.querySelector(s); q("#mNo").onclick = close; q("#tk_title").focus();
+    q("#tk_c").onchange = () => { q("#tk_is").hidden = !q("#tk_c").value; }; q("#tk_mg").onchange = () => { q("#tk_mgw").hidden = !q("#tk_mg").checked; };
     if (q("#tk_del")) q("#tk_del").onclick = async () => { if (q("#tk_del").dataset.sure) { await api.remove("tasks", t.id); close(); toast("נמחק"); } else { q("#tk_del").dataset.sure = 1; q("#tk_del").textContent = "ללחוץ שוב למחיקה"; } };
     q("#mYes").onclick = async () => {
       const title = q("#tk_title").value.trim(); if (!title) { q("#tk_msg").textContent = "צריך לכתוב מה המשימה"; q("#tk_msg").style.color = "var(--warn)"; return; }
       const ownerName = q("#tk_owner").value.trim(), o = owners.find(x => x.name === ownerName);
-      const rec = { title, ownerName, ownerEmail: o?.email || "", due: q("#tk_due").value, contractorId: q("#tk_c").value, kdFrom: q("#tk_k1").value.trim(), kdTo: q("#tk_k2").value.trim(), priority: q("#tk_pri").value };
-      if (t.id) await tkSave(t.id, rec, "עודכנו פרטי המשימה");
+      const rec = { title, ownerName, ownerEmail: o?.email || "", due: q("#tk_due").value, contractorId: q("#tk_c").value, kdFrom: q("#tk_k1").value.trim(), kdTo: q("#tk_k2").value.trim(), priority: q("#tk_pri").value,
+        category: q("#tk_cat").value, issueOwner: q("#tk_iown").value, mgmt: q("#tk_mg").checked, mgmtAsk: q("#tk_mg").checked ? q("#tk_mga").value.trim() : "" };
+      const mkIssue = async note => { const today = todayStr(), iid = await api.add("issues", { contractorId: rec.contractorId, title, category: rec.category, kdFrom: rec.kdFrom, kdTo: rec.kdTo, owner: rec.issueOwner, status: "פתוח", opened: today, updated: today, due: rec.due, mgmt: rec.mgmt, mgmtAsk: rec.mgmtAsk,
+          last: note ? `${note} (${ownerName || "משימה"})` : `נפתחה משימה ל${ownerName || "צוות"}`, history: { [newId()]: { date: today, text: `נפתחה משימה ל${ownerName || "צוות"}${note ? ": " + note : ""}` } }, fromTask: true });
+        return iid ? { issueId: iid, issueCode: RAW.issues?.[iid]?.code || "" } : {}; };
+      if (t.id) { let link = {}; if (rec.contractorId && !t.issueId) link = await mkIssue(""); await tkSave(t.id, { ...rec, ...link }, "עודכנו פרטי המשימה"); }
       else { const note = q("#tk_note").value.trim(), at = new Date().toISOString();
         const log = { [newId()]: { date: todayStr(), at, text: note || "המשימה נפתחה", by: tkWho() } };
-        await api.add("tasks", { ...rec, status: "פתוח", createdAt: todayStr(), createdBy: tkWho(), reviewed: isMgr(), log, ...(preset.issueId ? { issueId: preset.issueId, issueCode: preset.issueCode || "" } : {}) }); }
+        const link = preset.issueId ? { issueId: preset.issueId, issueCode: preset.issueCode || "" } : rec.contractorId ? await mkIssue(note) : {};
+        await api.add("tasks", { ...rec, status: "פתוח", createdAt: todayStr(), createdBy: tkWho(), reviewed: isMgr(), log, ...link }); }
       close(); toast("נשמר ✓");
     };
   });
@@ -3485,6 +3525,7 @@ function tkPrint(m, w) {
 async function tkClick(act, b) {
   const id = b.dataset.id, t = id && RAW.tasks?.[id] ? { id, ...RAW.tasks[id] } : null;
   if (act === "tkNew") tkForm({}, id ? { ownerName: id === "ללא אחראי" ? "" : id } : {});
+  else if (act === "tkView") { try { localStorage.setItem(TKV_LS, id); } catch (e) {} render(); }
   else if (act === "tkEdit" && t) tkForm(t);
   else if (act === "tkUpd" && t) tkUpdForm(t);
   else if (act === "tkHist" && t) tkHistory(t);
@@ -5237,7 +5278,7 @@ const TABLE_DEFS = {
   ]; },
   issues: () => [
     { key: "code", label: "מס׳", cls: "nowrap c small", cell: x => `<b dir="ltr">${esc(x.code || "")}</b>` },
-    { key: "title", label: "נושא", cls: "w-place", cell: x => cellInput("issues", x, "title", "", `title="${esc(x.title)}"`) },
+    { key: "title", label: "נושא", cls: "w-place", cell: x => cellInput("issues", x, "title", "", `title="${esc(x.title)}"`) + (t => t ? `<div><span class="pill" style="background:#e3ecf6;color:#2b5f8a" title="מקושר למשימה — עדכון כאן מתעדכן גם במשימה">משימה של ${esc(t.ownerName || "צוות")} · ${esc(t.status)}</span></div>` : "")(list("tasks").find(t => t.issueId === x.id)) },
     { key: "category", label: "תחום", cell: x => `<select class="inp" id="f_issues_${x.id}_category" data-edit="issues|${x.id}|category">${ISSUE_CATS.map(k => `<option ${k === x.category ? "selected" : ""}>${k}</option>`).join("")}</select>` },
     { key: "kdFrom", label: "ק.ד. מ", cls: "w-kd", cell: x => cellInput("issues", x, "kdFrom", "kdin") },
     { key: "kdTo", label: "ק.ד. עד", cls: "w-kd", cell: x => cellInput("issues", x, "kdTo", "kdin") },
@@ -5279,6 +5320,18 @@ const TABLE_DEFS = {
     { key: "flag", label: "סנכרון", cls: "small", cell: i => i.padStatus === "הושלם" && !["הושלם", "בביצוע", "מבוטל"].includes(i.status) ? `<span class="pill" style="background:#d6ebf7;color:#14527a">משטח מוכן — ממתין ל${ui.page === "k:trafo" ? "התקנה" : "הצבה"}</span>` : ["הושלם", "בביצוע"].includes(i.status) && i.padStatus !== "הושלם" ? `<span class="pill warn">${ui.page === "k:trafo" ? "התקנה" : "הצבה"} בלי משטח מסומן</span>` : `<span class="muted">—</span>` },
     { key: "iec", label: "חיבור חח״י", cls: "small nowrap", cell: i => { const os = d.iecOrders.filter(o => o.itemId === i.id); return os.length ? os.map(o => `<button class="pill" style="border:0;cursor:pointer;background:${IEC_COLORS[o.stage] || "#eee"}" data-act="iecGo" data-id="${esc(o.orderNo)}">${esc(o.stage)} · <span dir="ltr">${esc(o.orderNo)}</span></button>`).join(" ") : `<span class="muted">—</span>`; } },
     { key: "note", label: "הערה", cls: "w-place", cell: i => cellInput("items", i, "note") },
+  ]; },
+  tasks: () => { const d = D(); return [
+    { key: "owner", label: "אחראי", cls: "nowrap", cell: t => `<b>${esc(t.ownerName || "ללא אחראי")}</b>` },
+    { key: "title", label: "משימה", cls: "w-place", cell: t => `<b>${esc(t.title || "")}</b>${t.issueCode ? ` <span class="pill small" dir="ltr" title="נושא פתוח מקושר">${esc(t.issueCode)}</span>` : ""}` },
+    { key: "contractor", label: "קבלן", cls: "small", cell: t => esc(d.contractors.find(c => c.id === t.contractorId)?.name || "כללי") },
+    { key: "kd", label: "ק.ד.", cls: "small nowrap", cell: t => t.kdFrom || t.kdTo ? esc(`${t.kdFrom || ""}${t.kdTo && t.kdTo !== t.kdFrom ? "–" + t.kdTo : ""}`) : "—" },
+    { key: "status", label: "מצב", cell: t => `<select class="inp tk-st" data-tkst="${t.id}" style="border-inline-start:4px solid ${TK_CLR[t.status] || "#4a6d93"}" ${isMgr() || tkMe(t) ? "" : "disabled"}>${TK_ST.filter(s => isMgr() || s !== "סגור").map(s => `<option ${s === t.status ? "selected" : ""}>${s}</option>`).join("")}</select>` },
+    { key: "due", label: "יעד", cls: "nowrap", cell: t => t.due ? `<span class="${tkLate(t) ? "pill warn" : ""}">${fmtD(t.due)}</span>` : "—" },
+    { key: "pri", label: "עדיפות", cls: "small", cell: t => t.priority === "גבוהה" ? `<span class="pill warn">גבוהה</span>` : "רגילה" },
+    { key: "last", label: "עדכון אחרון", cls: "small w-text", cell: t => { const L = tkLast(t); return L ? `<span class="muted">${fmtD(L.date)} · ${esc(L.by || "")}:</span> ${esc(L.text)}` : "—"; } },
+    { key: "flags", label: "", cls: "small", cell: t => [t.reviewed === false ? `<span class="pill" style="background:#fdf0dc;color:#9a5410">לאישור</span>` : "", t._since && t.status !== "סגור" && (!tkLast(t) || String(tkLast(t).date) < t._since) ? `<span class="pill" style="background:#eef1ec">לא עודכן</span>` : ""].join(" ") },
+    { key: "acts", label: "", cls: "nowrap", cell: t => `${isMgr() || tkMe(t) ? `<button class="btn ghost sm" data-act="tkUpd" data-id="${t.id}">✎ עדכון</button>` : ""}${isMgr() && t.reviewed === false ? `<button class="btn sm" data-act="tkOk" data-id="${t.id}">✓</button>` : ""}<button class="btn ghost sm" data-act="tkHist" data-id="${t.id}">היסטוריה</button>${isMgr() ? `<button class="btn ghost sm" data-act="tkEdit" data-id="${t.id}">פרטים</button>` : ""}` },
   ]; },
   grates: () => { const d = D(), R = grateReps(d); return [
     { key: "name", label: "מעביר", cls: "nowrap", cell: i => `<b dir="ltr">${esc(String(i.name || "").replace(/^מעביר\s*/, ""))}</b>` },
@@ -6022,8 +6075,11 @@ $app.addEventListener("change", async e => {
     const lastK = Object.keys(hist).sort((a, b) => String(hist[a].date).localeCompare(String(hist[b].date))).pop();
     if (lastK && hist[lastK].date === today) hist[lastK] = { ...hist[lastK], text: v };
     else if (v) hist[newId()] = { date: today, text: v };
-    return api.update(col, id, { history: hist, last: v, updated: v ? today : x.updated, notMentioned: null });
+    await api.update(col, id, { history: hist, last: v, updated: v ? today : x.updated, notMentioned: null });
+    if (col === "issues" && v) await issueToTask(id, { last: v });
+    return;
   }
+  if (col === "issues" && key === "status" && RAW.issues?.[id] && v !== RAW.issues[id].status) { await api.update(col, id, { status: v }); return issueToTask(id, { status: v }); }
   if (col === "iecOrders") {   // שינוי שלב נרשם בהיסטוריה; תאריך תשלום מקדם את השלב
     const o = RAW.iecOrders?.[id]; if (!o) return;
     const hist = (dt, txt) => ({ ...(o.history || {}), [newId()]: { date: dt, text: txt } });
