@@ -608,6 +608,9 @@ a.btn { text-decoration: none; }
 .login .card { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 14px; margin: 0; }
 .modal { position: fixed; inset: 0; background: rgba(20,26,22,.45); display: grid; place-items: center; z-index: 50; padding: 16px; }
 .modal .card { max-width: 420px; width: 100%; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+/* חלון גבוה ממסך קטן (לפטופ): החלון נגלל בתוכו, וכפתורי השמירה / ביטול נשארים תמיד גלויים בתחתית */
+.modal .card { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
+.modal .card > .row:last-child { position: sticky; bottom: -18px; z-index: 3; background: var(--surface, #fff); margin-bottom: -18px; padding: 10px 0 18px; border-top: 1px solid var(--line); }
 .modal { grid-template-columns: minmax(0, 1fr); }
 .modal .card { min-width: 0; justify-self: center; }
 .modal .svrange { flex-wrap: wrap; }
