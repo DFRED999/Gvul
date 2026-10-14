@@ -256,6 +256,7 @@ tr.ap-busy td { background: #eef7f0 !important; transition: background .2s; }
 .ad-lg i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin: 0 4px -2px; } .pm-more { color: #2f6db5; font-weight: 700; opacity: 0; transition: opacity .15s; } td.pm-n:hover .pm-more { opacity: 1; }
 .rq-bar { display: flex; height: 10px; border-radius: 6px; background: #e6e9ee; overflow: hidden; } .rq-bar i { display: block; height: 100%; } .rq-bar .i { background: #2f7d4f; } .rq-bar .p { background: #e0b44c; } .rq-bar .a { background: #8e7cc3; }
 .rq-t tr.rq-row td { background: color-mix(in srgb, var(--rc) 15%, var(--surface)); } .rq-t tr.rq-row td:first-child { border-inline-start: 5px solid var(--rc); }
+.rq-t tr.rq-gh td { background: var(--rc); color: #fff; font-weight: 800; font-size: 14px; padding: 6px 10px; } .rq-t tr.rq-sub td { background: color-mix(in srgb, var(--rc) 28%, var(--surface)); border-bottom: 3px solid var(--rc); }
 .rq-pos { color: #1c7fb5; } .rq-neg { color: #c0392b; } .rq-amt { width: 13ch; text-align: left; direction: ltr; } .rq-amt.miss { background: #fff4e5; border-color: #e0a050; } .rq-closed { opacity: .55; }
 .rq-sum { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 8px 0; } .rq-sum div { background: #f4f5f7; border-radius: 10px; padding: 8px; } .rq-sum span { display: block; font-size: 12px; color: var(--muted); } .rq-sum b { font-size: 15px; }
 .rq-al { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid #eef0ec; } .rq-al span { flex: 1; } .rq-add { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; } .rq-add select { flex: 2; min-width: 220px; } .rq-add input { flex: 1; min-width: 120px; }
@@ -3371,6 +3372,8 @@ async function tkSave(id, patch, logText) {
   try { await tkToIssue({ ...t, ...p }, patch, logText); } catch (e) { logErr("tkSync", e.message, e.stack); }
 }
 /* ---------- משימה ↔ נושא פתוח של הקבלן: משימה עם קבלן מקושרת לנושא (issueId). עדכון בצד אחד מתעדכן בשני ---------- */
+const IS_TK_F = { owner: "issueOwner", title: "title", category: "category", kdFrom: "kdFrom", kdTo: "kdTo", due: "due", mgmt: "mgmt", mgmtAsk: "mgmtAsk" };
+const IS_TK_L = { owner: "אחראי בנושא", title: "נושא", category: "תחום", kdFrom: "ק.ד. מ", kdTo: "ק.ד. עד", due: "תאריך יעד", mgmt: "להנהלה", mgmtAsk: "נדרש מההנהלה" };
 const TK2IS = { "פתוח": "פתוח", "בטיפול": "בטיפול", "תקוע": "HOLD", "בוצע — לאישור": "בטיפול", "סגור": "סגור" };
 const IS2TK = { "פתוח": "פתוח", "בטיפול": "בטיפול", "HOLD": "תקוע", "סגור": "סגור" };
 async function tkToIssue(t, patch, logText) {   // משימה → נושא
@@ -3483,7 +3486,8 @@ function pageMtgArchive(d) {
 }
 /** חלון משימה חדשה / עריכת פרטים */
 function tkForm(t = {}, preset = {}) {
-  const d = D(), owners = tkOwners(), cs = d.contractors, v = { ...preset, ...t };
+  const d = D(), owners = tkOwners(), cs = d.contractors, iss = t.issueId && RAW.issues?.[t.issueId];
+  const v = { ...preset, ...t, ...(iss ? { title: iss.title ?? t.title, category: iss.category, issueOwner: iss.owner, kdFrom: iss.kdFrom ?? t.kdFrom, kdTo: iss.kdTo ?? t.kdTo, due: iss.due ?? t.due, mgmt: !!iss.mgmt, mgmtAsk: iss.mgmtAsk || "", issueCode: iss.code || t.issueCode } : {}) };
   modal(`<h2>${t.id ? "פרטי משימה" : "משימה חדשה"}</h2>
     <label class="field">מה צריך לעשות<input class="inp" id="tk_title" value="${esc(v.title || "")}" placeholder="למשל: פגישה עם רשות העתיקות לפתרון בק.ד. 880–885"></label>
     <div class="row" style="gap:8px;flex-wrap:wrap"><label class="field" style="flex:1">אחראי<input class="inp" id="tk_owner" list="tk_ol" value="${esc(v.ownerName || "")}" placeholder="שם"><datalist id="tk_ol">${owners.map(o => `<option value="${esc(o.name)}">${esc(o.role || "")}</option>`).join("")}</datalist></label>
@@ -3791,20 +3795,26 @@ function pageReqs(d) {
   const known = L.filter(r => r.hasAmt), tot = k => known.reduce((t, r) => t + r[k], 0);
   const tile = (k, l, v, col) => `<div class="ch-t ${F === k ? "on" : ""}" data-act="reqF" data-id="${k}" role="button" style="border-top:4px solid ${col}${F === k ? `;box-shadow:0 0 0 2px ${col} inset` : ""}"><span>${l}</span><b>${v}</b></div>`;
   const rows = L.filter(P[F] || P.all), ed = !isViewer();
-  return `<div class="ch-banner" style="--cc:#5b4a8b"><div><h1>דרישות ויתרות</h1><span>סכום הדרישה ← מה הוזמן עליה ← כמה נשאר. את היתרה אפשר לשייך לעבודות נוספות. הזמנה משויכת לדרישה לפי "מס׳ דרישה" שבטבלת ההזמנות.</span></div>
-    ${ed ? `<div class="row" style="gap:6px"><button class="btn" data-act="reqNew">+ דרישה חדשה</button><button class="btn ghost" data-act="reqPaste">📋 הדבקת סכומי דרישות מאקסל</button></div>` : ""}</div>
-  <div class="ch-tiles" style="--cc:#5b4a8b;grid-template-columns:repeat(5,minmax(0,1fr))">
-    ${tile("all", `סכום הדרישות (${known.length} מתוך ${L.length})`, bgMM(tot("amount")), "#5b4a8b")}${tile("open", "הוזמן — כל הדרישות", bgMM(L.reduce((t, r) => t + r.issued, 0)), "#2f7d4f")}${tile("free", "יתרה פנויה", bgMM(known.reduce((t, r) => t + Math.max(0, r.free), 0)), "#1c7fb5")}
-    ${tile("over", "חריגה מהדרישה", L.filter(P.over).length, "#c0392b")}${tile("noamt", "חסר סכום דרישה", L.filter(P.noamt).length, "#b86b1d")}</div>
-  <div class="card"><div class="tablewrap"><table class="sheet rq-t"><thead><tr><th>מס׳ דרישה</th><th>קבלן</th><th>הזמנה</th><th>תיאור</th><th>סכום הדרישה</th><th>הוזמן</th><th>טרם יצא</th><th>שויך ליתרה</th><th>יתרה פנויה</th><th style="min-width:90px">ניצול</th><th></th></tr></thead><tbody>
-    ${rows.map(r => { const cc = r.cs[0] ? cColor(d, d.contractors.find(c => c.id === r.cs[0])) : "#9aa3ad";
+  const reqRow = r => { const cc = r.cs[0] ? cColor(d, d.contractors.find(c => c.id === r.cs[0])) : "#9aa3ad";
       const ords = [...new Map(r.orders.map(o => [reqNorm(o.x_ordNo) || "—" + String(o.name || "").replace(/\s+/g, ""), o])).values()];
       return `<tr class="rq-row ${r.closed ? "rq-closed" : ""}" style="--rc:${cc}"><td class="nowrap" dir="ltr"><b>${esc(r.no)}</b></td><td class="small nowrap"><b style="color:${cc}">${r.cs.map(cn).map(esc).join(", ") || "—"}</b></td>
       <td class="small">${ords.map(o => `<div class="nowrap">${esc(o.name || "הזמנה")} · ${o.x_ordNo ? `<span dir="ltr">${esc(o.x_ordNo)}</span>` : `<span class="muted">טרם יצא</span>`}</div>`).join("") || `<span class="muted">—</span>`}</td><td class="small">${esc(r.rec?.title || (r.iec ? "חיבורי חח״י" : ""))}</td>
       <td>${ed ? `<input class="cell rq-amt ${r.hasAmt ? "" : "miss"}" data-req="${r.no}|amount" value="${r.hasAmt ? esc(num(Math.round(r.amount), 0)) : ""}" placeholder="סכום…" title="אפשר לכתוב גם 40 מ׳">` : r.hasAmt ? bgM(r.amount) : "—"}</td>
       <td class="nowrap">${r.issued ? bgM(r.issued) : "—"}${r.nOrd > 1 ? ` <span class="small muted">(${r.nOrd} הזמנות)</span>` : ""}</td><td class="nowrap">${r.planned ? bgM(r.planned) : "—"}</td><td class="nowrap">${r.alloc ? bgM(r.alloc) : "—"}</td>
       <td class="nowrap"><b class="${r.hasAmt ? (r.free < -1 ? "rq-neg" : "rq-pos") : "muted"}">${r.hasAmt ? bgM(r.free) : "חסר סכום"}</b></td><td>${r.hasAmt ? reqBar(r) : ""}</td>
-      <td><button class="btn ghost sm" data-act="reqOpen" data-id="${r.no}">פירוט</button></td></tr>`; }).join("") || `<tr><td colspan="11" class="c muted">אין דרישות בסינון הזה</td></tr>`}
+      <td><button class="btn ghost sm" data-act="reqOpen" data-id="${r.no}">פירוט</button></td></tr>`; };
+  return `<div class="ch-banner" style="--cc:#5b4a8b"><div><h1>דרישות ויתרות</h1><span>סכום הדרישה ← מה הוזמן עליה ← כמה נשאר. את היתרה אפשר לשייך לעבודות נוספות. הזמנה משויכת לדרישה לפי "מס׳ דרישה" שבטבלת ההזמנות.</span></div>
+    ${ed ? `<div class="row" style="gap:6px"><button class="btn" data-act="reqNew">+ דרישה חדשה</button><button class="btn ghost" data-act="reqPaste">📋 הדבקת סכומי דרישות מאקסל</button></div>` : ""}</div>
+  <div class="ch-tiles" style="--cc:#5b4a8b;grid-template-columns:repeat(5,minmax(0,1fr))">
+    ${tile("all", `סכום הדרישות (${known.length} מתוך ${L.length})`, bgMM(tot("amount")), "#5b4a8b")}${tile("open", "הוזמן — כל הדרישות", bgMM(L.reduce((t, r) => t + r.issued, 0)), "#2f7d4f")}${tile("free", "יתרה פנויה", bgMM(known.reduce((t, r) => t + Math.max(0, r.free), 0)), "#1c7fb5")}
+    ${tile("over", "חריגה מהדרישה", L.filter(P.over).length, "#c0392b")}${tile("noamt", "חסר סכום דרישה", L.filter(P.noamt).length, "#b86b1d")}</div>
+  <div class="card"><div class="tablewrap"><table class="sheet rq-t"><thead><tr><th>מס׳ דרישה</th><th>קבלן</th><th>הזמנה</th><th>תיאור</th><th>סכום הדרישה</th><th>הוזמן</th><th>טרם יצא</th><th>שויך ליתרה</th><th>יתרה פנויה</th><th style="min-width:90px">ניצול</th><th></th></tr></thead><tbody>
+    ${(() => { const out = []; let curC = null, acc = null;
+      const flush = () => { if (!acc) return; const c = d.contractors.find(x => x.id === curC); out.push(`<tr class="rq-sub" style="--rc:${acc.cc}"><td colspan="4"><b>סה״כ ${esc(c?.name || "ללא קבלן")}</b> <span class="small muted">· ${acc.n} דרישות${acc.miss ? ` · ${acc.miss} בלי סכום` : ""}</span></td><td class="nowrap"><b>${acc.amt ? bgM(acc.amt) : "—"}</b></td><td class="nowrap"><b>${bgM(acc.iss)}</b></td><td class="nowrap">${acc.pl ? bgM(acc.pl) : "—"}</td><td class="nowrap">${acc.al ? bgM(acc.al) : "—"}</td><td class="nowrap"><b class="${acc.free < -1 ? "rq-neg" : "rq-pos"}">${acc.amt ? bgM(acc.free) : "—"}</b></td><td colspan="2">${acc.amt ? reqBar({ amount: acc.amt, issued: acc.iss, planned: acc.pl, alloc: acc.al, free: acc.free }) : ""}</td></tr>`); };
+      rows.forEach(r => { const k = r.cs[0] || ""; if (k !== curC) { flush(); curC = k; const c = d.contractors.find(x => x.id === k); acc = { cc: c ? cColor(d, c) : "#9aa3ad", n: 0, miss: 0, amt: 0, iss: 0, pl: 0, al: 0, free: 0 };
+          out.push(`<tr class="rq-gh" style="--rc:${acc.cc}"><td colspan="11">${esc(c?.name || "ללא קבלן")}</td></tr>`); }
+        acc.n++; acc.iss += r.issued; acc.pl += r.planned; acc.al += r.alloc; if (r.hasAmt) { acc.amt += r.amount; acc.free += r.free; } else acc.miss++; out.push(reqRow(r)); });
+      flush(); return out.join(""); })() || `<tr><td colspan="11" class="c muted">אין דרישות בסינון הזה</td></tr>`}
   </tbody></table></div>
   <div class="bg-lg small" style="margin-top:8px"><span><i style="background:#2f7d4f"></i>הוזמן (יצא מס׳ הזמנה)</span><span><i style="background:#e0b44c"></i>טרם יצא / עתידי</span><span><i style="background:#8e7cc3"></i>שויך ליתרה</span><span><i style="background:#e6e9ee"></i>פנוי</span></div></div>`;
 }
@@ -6190,6 +6200,10 @@ $app.addEventListener("change", async e => {
     return;
   }
   if (col === "issues" && key === "status" && RAW.issues?.[id] && v !== RAW.issues[id].status) { await api.update(col, id, { status: v }); return issueToTask(id, { status: v }); }
+  if (col === "issues" && IS_TK_F[key] && RAW.issues?.[id]) {   // שינוי בנושא (אחראי, תחום, ק.ד., יעד, להנהלה…) — מתעדכן גם במשימה המקושרת
+    await api.update(col, id, { [key]: v });
+    for (const t of list("tasks").filter(x => x.issueId === id)) if (t[IS_TK_F[key]] !== v) await api.update("tasks", t.id, { [IS_TK_F[key]]: v, log: { ...(t.log || {}), [newId()]: { date: todayStr(), at: new Date().toISOString(), text: `עודכן בנושא ${t.issueCode || ""}: ${IS_TK_L[key]} ← ${v === true ? "כן" : v === false ? "לא" : v || "—"}`, by: tkWho() } } });
+    return; }
   if (col === "iecOrders") {   // שינוי שלב נרשם בהיסטוריה; תאריך תשלום מקדם את השלב
     const o = RAW.iecOrders?.[id]; if (!o) return;
     const hist = (dt, txt) => ({ ...(o.history || {}), [newId()]: { date: dt, text: txt } });
