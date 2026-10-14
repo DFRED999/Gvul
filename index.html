@@ -247,6 +247,13 @@ body.dark .mt { filter: invert(1) hue-rotate(180deg); }
 .ov-sph { display: flex; align-items: baseline; gap: 10px; margin: 4px 0 8px; } .ov-sph h2 { margin: 0; }
 .sm-l.sm-pad .sm-lab b { font-weight: 600; } .sm-l.sm-pad .sm-lab i { opacity: .6; }
 .tk-is { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; } .tk-is legend { font-size: 12.5px; color: var(--muted); padding: 0 4px; } .tk-is[hidden] { display: none; }
+.ap-done { border: 1px solid #b9dcc4; background: #f3faf5; } .ap-dn { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 5px 0; border-bottom: 1px solid #e3efe6; font-size: 13.5px; } .ap-dn.no { opacity: .85; }
+tr.ap-busy td { background: #eef7f0 !important; transition: background .2s; }
+.modal .card.ad-card { max-width: 820px; } .ad-seg { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; } .ad-h { display: flex; gap: 8px; align-items: baseline; }
+.ad-bar { position: relative; height: 22px; background: #e6e9e4; border-radius: 6px; margin: 8px 0 4px; overflow: hidden; } .ad-bar i { position: absolute; top: 0; bottom: 0; } .ad-bar i.ok { background: #2f7d4f; } .ad-bar i.pd { background: #e0b44c; }
+.ad-bar .l, .ad-bar .r { position: absolute; bottom: 0; font-size: 10px; padding: 0 4px; color: #555; } .ad-bar .l { left: 0; } .ad-bar .r { right: 0; }
+.ad-gap { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; align-items: center; } .ad-gap > span:first-child { color: #9a4b00; font-weight: 700; } .ad-g { background: #fff4e5; border: 1px solid #f0c690; border-radius: 8px; padding: 2px 8px; } .ad-gap.ok { color: #2f7d4f; font-weight: 700; }
+.ad-lg i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin: 0 4px -2px; } .pm-more { color: #2f6db5; font-weight: 700; opacity: 0; transition: opacity .15s; } td.pm-n:hover .pm-more { opacity: 1; }
 .rq-bar { display: flex; height: 10px; border-radius: 6px; background: #e6e9ee; overflow: hidden; } .rq-bar i { display: block; height: 100%; } .rq-bar .i { background: #2f7d4f; } .rq-bar .p { background: #e0b44c; } .rq-bar .a { background: #8e7cc3; }
 .rq-t tr.rq-row td { background: color-mix(in srgb, var(--rc) 15%, var(--surface)); } .rq-t tr.rq-row td:first-child { border-inline-start: 5px solid var(--rc); }
 .rq-pos { color: #1c7fb5; } .rq-neg { color: #c0392b; } .rq-amt { width: 13ch; text-align: left; direction: ltr; } .rq-amt.miss { background: #fff4e5; border-color: #e0a050; } .rq-closed { opacity: .55; }
@@ -2818,6 +2825,34 @@ function zonesBlock(d, c) {
         <td>${isViewer() ? "" : `<button class="lnk" data-act="zoneDel" data-id="${c.id}|${z.id}">מחיקה</button>`}</td></tr>`; }).join("")}</tbody></table></div>`
       : `<p class="muted small" style="margin:6px 0 0">עוד לא הוגדרו אזורים. לחברת חשמל — שלוש הנפות, כל אחת מחתך עד חתך. מלאכה במטרים (למשל ״השחלת כבלים״) תוצג לפי נפה.</p>`}</div>`;
 }
+/** פירוט מלאכה (כמו "פירוט" באתר הדיווח): לכל קטע תכנון — פס מה אושר / ממתין / חסר, רשימת הטווחים שנשארו, וכל הדיווחים */
+function actDetailModal(cid, aid) {
+  const d = D(), c = d.contractors.find(x => x.id === cid), A = RAW.activities?.[aid]; if (!c || !A) return;
+  const M = v => `${num(v * SECTION_M, 0)} מ׳`, who = p => esc(p.reportedByName || (p.reportedBy || "משרד").split("@")[0]);
+  const stp = p => p.review === "לבדיקה" ? `<span class="pill warn">ממתין</span>` : `<span class="pill ok">אושר</span>`;
+  const P = d.progress.filter(p => p.contractorId === cid && p.activityId === aid && p.review !== "נדחה");
+  let body = "", head = "";
+  if (isUnitAct(A)) {
+    const ok = P.filter(p => !p.review).reduce((t, p) => t + (+p.qty || 0), 0), pd = P.filter(p => p.review === "לבדיקה").reduce((t, p) => t + (+p.qty || 0), 0), r = execState(d, cid).rows.find(x => x.a.id === aid), plan = r?.plan || +A.planQty || 0;
+    head = `בוצעו ${r?.done ?? ok}${pd ? ` · ממתינים ${pd}` : ""}${plan ? ` · מתוך ${plan} · נשארו ${Math.max(0, plan - (r?.done ?? ok) - pd)}` : ""}`;
+    body = `<h3>הדיווחים <span class="muted small">(${P.length}, מהחדש לישן)</span></h3>${P.length ? `<div class="tablewrap"><table class="sheet"><thead><tr><th>תאריך</th><th>כמות</th><th>מיקום / פריטים</th><th>מדווח</th><th>סטטוס</th></tr></thead><tbody>${P.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(p => `<tr><td>${fmtD(p.date)}</td><td><b>${+p.qty || 0} יח׳</b></td><td class="small">${esc(p.loc || "")}</td><td class="small">${who(p)}</td><td>${stp(p)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">עוד אין דיווחים</p>`}`;
+  } else {
+    const S = P.filter(hasSecs), segs = designOfC(d, c).filter(x => x.s.secFrom !== "" && x.s.secTo !== ""); let tDone = 0, tAll = 0;
+    body = segs.map(x => { const lo = Math.min(+x.s.secFrom, +x.s.secTo), hi = Math.max(+x.s.secFrom, +x.s.secTo), W = hi - lo || 1, pos = v => ((Math.max(lo, Math.min(hi, v)) - lo) / W * 100).toFixed(2);
+      const ps = S.filter(p => p.segmentId === x.s.id), ok = mergeIvs(ps.filter(p => !p.review).map(ivOfP)), pd = mergeIvs(ps.filter(p => p.review === "לבדיקה").map(ivOfP)), all = mergeIvs(ps.map(ivOfP));
+      const done = ok.reduce((t, [p, q]) => t + Math.max(0, Math.min(q, hi) - Math.max(p, lo)), 0); tDone += done; tAll += W;
+      const gaps = []; let cur = lo; all.forEach(([p, q]) => { if (p > cur) gaps.push([cur, Math.min(p, hi)]); cur = Math.max(cur, q); }); if (cur < hi) gaps.push([cur, hi]);
+      const kd = (p, q) => { const k1 = sec2kd(x.s, p), k2 = sec2kd(x.s, q); return k1 == null || k2 == null ? "" : ` · ק.ד. ${num(Math.min(k1, k2), 1)}–${num(Math.max(k1, k2), 1)}`; };
+      const bars = (arr, cl) => arr.map(([p, q]) => `<i class="${cl}" style="left:${pos(p)}%;width:${Math.max(.4, pos(q) - pos(p))}%"></i>`).join("");
+      return `<div class="ad-seg"><div class="ad-h"><b>${esc((x.office?.name || "") + " " + x.s.num)}</b><span class="muted small">חתכים ${lo}–${hi}</span><span class="spacer"></span><b>${M(done)}</b><span class="muted small">מתוך ${M(W)} · ${Math.round(done / W * 100)}%</span></div>
+        <div class="ad-bar" dir="ltr">${bars(ok, "ok")}${bars(pd, "pd")}<span class="l">${lo}</span><span class="r">${hi}</span></div>
+        ${gaps.length ? `<div class="ad-gap"><span>עוד לא בוצע:</span>${gaps.map(([p, q]) => `<span class="ad-g"><b dir="ltr">${p}–${q}</b>${kd(p, q)} · ${M(q - p)}</span>`).join("")}</div>` : `<div class="ad-gap ok">✓ הקטע הושלם</div>`}</div>`; }).join("") || `<p class="muted">לקבלן אין קטעי תכנון עם חתכים</p>`;
+    head = `בוצע ${M(tDone)} מתוך ${M(tAll)} (${tAll ? Math.round(tDone / tAll * 100) : 0}%) · <span class="ad-lg"><i style="background:#2f7d4f"></i>אושר <i style="background:#e0b44c"></i>ממתין לאישור <i style="background:#e6e9e4"></i>עוד לא בוצע</span>`;
+    const segN = p => { const s = d.designSegments.find(y => y.id === p.segmentId), o = s && d.designOffices.find(y => y.id === s.officeId); return s ? `${o?.name || ""} ${s.num}` : ""; };
+    body += `<h3>מה דווח <span class="muted small">(${S.length} דיווחים, לפי סדר החתכים)</span></h3>${S.length ? `<div class="tablewrap" style="max-height:300px"><table class="sheet"><thead><tr><th>חתכים</th><th>קטע</th><th>אורך</th><th>תאריך</th><th>מדווח</th><th>סטטוס</th></tr></thead><tbody>${S.slice().sort((a, b) => ivOfP(a)[0] - ivOfP(b)[0]).map(p => `<tr><td dir="ltr">${ivOfP(p).join("–")}</td><td class="small">${esc(segN(p))}</td><td>${M(ivOfP(p)[1] - ivOfP(p)[0])}</td><td>${fmtD(p.date)}</td><td class="small">${who(p)}</td><td>${stp(p)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">עוד אין דיווחים</p>`}`;
+  }
+  modal(`<div class="ad"><h2 style="margin:0">${esc(svShort(A.name))} — ${esc(c.name)}</h2><div class="muted small" style="margin:4px 0 10px">${head}</div>${body}<div class="row" style="margin-top:10px"><button class="btn ghost" id="mNo">סגירה</button></div></div>`, (m, close) => { m.querySelector("#mNo").onclick = close; m.querySelector(".card").classList.add("ad-card"); });
+}
 function execTab(d, c) {
   const st = execState(d, c.id), f = ui.pf;
   if (!st.ds.length) return `<p class="muted">צריך קודם גבולות גזרה (ק.ד. מ–עד) וקטעי תכנון בטווח שלה.</p>`;
@@ -2839,7 +2874,7 @@ function execTab(d, c) {
   const cellH = (cl, I) => cl.pct === null ? `<td class="pm-c muted">—</td>`
     : `<td class="pm-c" style="--m:${I.c}"><i style="width:${Math.round(cl.pct * 100)}%"></i><b>${cl.done ? n0(cl.done) : "0"}</b> <small>${Math.round(cl.pct * 100)}%</small></td>`;
   const pmRow = (r, mode, nCols) => { const I = icoOf(r.a), w = Math.max(0, (r.done || 0) - (wkOf[r.a.id] || 0)), u = r.unit ? "יח׳" : "מ׳";
-    const name = `<td class="pm-n"><div><span class="pm-i" style="--m:${I.c};--mi:${I.ink || "#fff"}">${I.i}</span><span>${esc(svShort(r.a.name))}${r.unit ? ` <small class="muted">ביחידות</small>` : ""}</span></div></td>`;
+    const name = `<td class="pm-n" data-act="actDet" data-id="${c.id}|${r.a.id}" role="button" title="פירוט — מה בוצע ומה נשאר" style="cursor:pointer"><div><span class="pm-i" style="--m:${I.c};--mi:${I.ink || "#fff"}">${I.i}</span><span>${esc(svShort(r.a.name))}${r.unit ? ` <small class="muted">ביחידות</small>` : ""} <small class="pm-more">פירוט ›</small></span></div></td>`;
     const tot = `<td class="pm-t" style="--m:${I.c}"><div class="pm-top"><div class="pm-big">${n0(r.done || 0)} <small>${u}</small></div><div class="pm-sub">מתוך ${r.plan ? n0(r.plan) : "?"} · <span>${r.pct === null ? "—" : Math.round(r.pct * 100) + "%"}</span></div></div><div class="pm-bar"><em style="width:${r.pct === null ? 0 : Math.round(r.pct * 100)}%"></em></div></td>`;
     const wk = `<td class="pm-w">${w > 0 ? `+${n0(w)}<small> ${u}</small>` : `<span class="muted">—</span>`}</td>`;
     const src = mode === "ord" ? (eoOf[r.a.id] || []) : r.cells;
@@ -2987,9 +3022,10 @@ const daysSince = s => s ? Math.floor((Date.now() - new Date(s + "T12:00:00")) /
 async function bulkPatch(col, ids, patch) {
   if (!ids.length || denyWrite(col, ids[0], patch)) return;
   const st = stamp();
-  if (LOCAL) { ids.forEach(id => { if (RAW[col][id]) RAW[col][id] = { ...RAW[col][id], ...patch, ...st }; }); touched(); render(); return; }
-  const upd = {}; ids.forEach(id => Object.entries({ ...patch, ...st }).forEach(([k, v]) => upd[`${col}/${id}/${k}`] = v));
-  await fb.database().ref(DB_ROOT).update(fbSafe(upd));
+  if (LOCAL) { ids.forEach(id => { if (RAW[col][id]) RAW[col][id] = { ...RAW[col][id], ...patch, ...st }; }); touched(); render(); return true; }
+  // עדכון מרובה־נתיבים: המפתחות הם נתיבים ("progress/<id>/review") — אסור להעביר אותם דרך fbSafe (שהופך "/" ל-"_" וכך הכתיבה הלכה למפתח זבל ולא לדיווח)
+  const upd = {}; ids.forEach(id => Object.entries({ ...patch, ...st }).forEach(([k, v]) => { if (v !== undefined) upd[`${col}/${fbKey(id)}/${fbKey(k)}`] = v && typeof v === "object" ? fbSafe(v) : v; }));
+  try { await fb.database().ref(DB_ROOT).update(upd); return true; } catch (e) { writeFail(col)(e); logErr("bulkPatch", e?.message || e, e?.stack); return false; }
 }
 /** מה לא תקין בדיווח: חפיפה, חתכים מחוץ לקטע / לגזרת הקבלן, חסרים נתונים, בקשת תיקון */
 function progFlags(d, p) {
@@ -3355,6 +3391,16 @@ async function issueToTask(issueId, patch) {   // נושא → משימה (בל�
     if (Object.keys(p).length) await api.update("tasks", t.id, p);
   }
 }
+/** משימות שנפתחו לפני החיבור (יש קבלן, אין נושא) — פותחים להן נושא אצל הקבלן ומקשרים */
+const tkUnlinked = cid => list("tasks").filter(t => t.contractorId && !t.issueId && t.status !== "סגור" && (!cid || t.contractorId === cid));
+async function tkLinkAll(cid) {
+  const T = tkUnlinked(cid); for (const t of T) { const today = todayStr(), L = tkLast(t);
+    const iid = await api.add("issues", { contractorId: t.contractorId, title: t.title || "משימה", category: t.category || "חסם", kdFrom: t.kdFrom || "", kdTo: t.kdTo || "", owner: t.issueOwner || "מתאם הנדסי", status: TK2IS[t.status] || "פתוח",
+      opened: t.createdAt || today, updated: today, due: t.due || "", mgmt: !!t.mgmt, mgmtAsk: t.mgmtAsk || "", last: L ? `${L.text} (${t.ownerName || "משימה"})` : `משימה של ${t.ownerName || "הצוות"}`,
+      history: { [newId()]: { date: today, text: `חובר למשימה של ${t.ownerName || "הצוות"}` } }, fromTask: true });
+    if (iid) await api.update("tasks", t.id, { issueId: iid, issueCode: RAW.issues?.[iid]?.code || "" }); }
+  toast(`חוברו ${T.length} משימות לנושאים ✓`);
+}
 async function tkApprove(id) {
   const t = RAW.tasks?.[id]; if (!t) return;
   const p = { reviewed: true, reviewedAt: new Date().toISOString(), reviewedBy: tkWho() };
@@ -3411,6 +3457,7 @@ function pageMeeting(d) {
     <div class="ch-t ${review.length ? "t2" : ""}"><span>ממתין לאישור שלך</span><b>${review.length}</b><small>עדכונים של מתאמים</small></div>
     <div class="ch-t t3"><span>נסגרו מאז הישיבה</span><b>${closedSince.length}</b><small>מ־${fmtD(since)}</small></div></div>
   <div class="card"><h2 style="margin-top:0">קבלנים — מאז הישיבה הקודמת (${fmtD(since)})</h2><div class="tablewrap"><table class="sheet"><thead><tr><th>קבלן</th><th>ביצוע מצטבר</th><th>נוסף מאז</th><th>קצב לשבוע</th><th>תחזית סיום</th><th>יעד</th><th>מצב</th><th>משימות</th></tr></thead><tbody>${rows}</tbody></table></div></div>
+  ${(n => n && isMgr() ? `<div class="banner"><b>${n} משימות עם קבלן עוד לא מופיעות בנושאים הפתוחים שלו</b><span>הן נפתחו לפני החיבור בין משימות לנושאים. לחיצה פותחת לכל אחת נושא אצל הקבלן ומקשרת ביניהם.</span><button class="btn sm" data-act="tkLink">חיבור לנושאים</button></div>` : "")(tkUnlinked().length)}
   <div class="row" style="align-items:center;margin:18px 0 8px"><h2 style="margin:0">משימות לפי אחראי</h2><span class="spacer"></span>${tkViewTog()}</div>
   ${tkView() === "rows" ? tkRows(d, sortT([...open]), since) : `<div class="tk-cols">${cols || `<p class="muted">אין משימות. לחיצה על ״+ משימה״ כדי להתחיל.</p>`}</div>`}
   <div class="card" style="margin-top:14px"><h2 style="margin-top:0">הוסלם להנהלה <span class="muted small">— נושאים פתוחים שסומנו ״להנהלה״ (${esc_.length})</span></h2>
@@ -3525,6 +3572,7 @@ function tkPrint(m, w) {
 async function tkClick(act, b) {
   const id = b.dataset.id, t = id && RAW.tasks?.[id] ? { id, ...RAW.tasks[id] } : null;
   if (act === "tkNew") tkForm({}, id ? { ownerName: id === "ללא אחראי" ? "" : id } : {});
+  else if (act === "tkLink") { await tkLinkAll(id || ""); render(); }
   else if (act === "tkView") { try { localStorage.setItem(TKV_LS, id); } catch (e) {} render(); }
   else if (act === "tkEdit" && t) tkForm(t);
   else if (act === "tkUpd" && t) tkUpdForm(t);
@@ -3928,6 +3976,60 @@ function pageSvCmp(d) {
       <td>${r.repNo.length ? `<span class="pill warn">${M(len(r.repNo))}</span> ${rng(r.repNo, r)}` : `<span class="pill ok">אין</span>`}</td>
       <td>${r.notRep.length ? `<span class="pill">${M(len(r.notRep))}${r.notRepPend ? ` · ${M(r.notRepPend)} ממתינים לאישור` : ""}</span> ${rng(r.notRep, r, true)}` : `<span class="pill ok">אין</span>`}</td></tr>`).join("")}</tbody></table></div></div>`; }).join("")}`;
 }
+/* ---------- אישור / דחייה / עריכה של דיווח — עם משוב מיידי, "טופלו עכשיו" עם ביטול, וסיבת דחייה שהמפקח רואה ---------- */
+async function apDecide(ids, review, note, btn) {
+  if (btn) { const tr = btn.closest("tr"); if (tr) { tr.classList.add("ap-busy"); tr.querySelectorAll("button").forEach(x => x.disabled = true); const c = btn.closest("td"); if (c) c.innerHTML = `<span class="pill ${review ? "" : "ok"}">${review ? "⏳ נשמר…" : "⏳ מאשר…"}</span>`; } }
+  const ok = await bulkPatch("progress", ids, { review, reviewNote: note || "", reviewedAt: new Date().toISOString(), reviewedBy: me?.name || user?.email || "" });
+  if (!ok) return;
+  ui.apDone = [...ids.map(id => ({ id, review, at: Date.now() })), ...(ui.apDone || []).filter(x => !ids.includes(x.id))].slice(0, 40);
+  render(); toast(review ? `${ids.length > 1 ? ids.length + " דיווחים סומנו" : "סומן"} ׳לא להכניס׳` : `${ids.length > 1 ? ids.length + " דיווחים אושרו" : "אושר"} ✓ — נספר בביצוע`);
+}
+function apDoneBlock(d) {
+  const L = (ui.apDone || []).map(x => ({ ...x, p: d.progress.find(p => p.id === x.id) })).filter(x => x.p && x.p.review !== "לבדיקה"); if (!L.length) return "";
+  const cn = id => d.contractors.find(c => c.id === id)?.name || "", an = id => svShort(RAW.activities?.[id]?.name || "—");
+  const len = p => isUnitAct(RAW.activities?.[p.activityId]) ? `${p.qty || "?"} יח׳` : hasSecs(p) ? `${num(Math.abs(p.secTo - p.secFrom) * SECTION_M, 0)} מ׳` : "";
+  return `<div class="card ap-done"><div class="row" style="align-items:center;margin-bottom:6px"><b>טופלו עכשיו (${L.length})</b><span class="small muted">— אושרו כבר נספרים בגרף הקבלן. אפשר להחזיר לתור.</span><span class="spacer"></span><button class="btn ghost sm" data-act="apDoneClr">ניקוי הרשימה</button></div>
+    ${L.map(({ p }) => `<div class="ap-dn ${p.review ? "no" : "ok"}"><span class="pill ${p.review ? "warn" : "ok"}">${p.review ? "✗ לא הוכנס" : "✓ אושר"}</span><b>${esc(cn(p.contractorId))}</b><span>${esc(an(p.activityId))}</span><span class="small muted" dir="ltr">${hasSecs(p) ? `${p.secFrom}–${p.secTo}` : ""}</span><span class="small">${len(p)}</span>${p.reviewNote ? `<span class="small muted">· ${esc(p.reviewNote)}</span>` : ""}<span class="spacer"></span><button class="btn ghost sm" data-act="apUndo" data-id="${p.id}">↩ ביטול</button></div>`).join("")}</div>`;
+}
+function apRejectModal(ids) {
+  const R = ["חתכים שגויים", "כפילות — כבר דווח", "לא בוצע בשטח", "מלאכה שגויה", "תאריך שגוי"];
+  modal(`<h2>לא להכניס${ids.length > 1 ? ` — ${ids.length} דיווחים` : ""}</h2><p class="small muted" style="margin:0">הדיווח לא ייספר בביצוע. הסיבה תוצג למפקח באתר הדיווחים ("לא אושר"). אפשר להחזיר לתור בכל רגע.</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px">${R.map(r => `<button class="chip-f" data-rr="${esc(r)}">${esc(r)}</button>`).join("")}</div>
+    <label class="field">סיבה (לא חובה)<textarea class="inp" id="ap_r" rows="2" placeholder="למשל: החתכים 4740–4790 כבר דווחו ב־11/10"></textarea></label>
+    <div class="row"><button class="btn" id="mYes" style="background:#b8452f;border-color:#b8452f">לא להכניס</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close;
+    m.querySelectorAll("[data-rr]").forEach(c => c.onclick = () => { const t = m.querySelector("#ap_r"); t.value = t.value ? `${t.value}; ${c.dataset.rr}` : c.dataset.rr; });
+    m.querySelector("#mYes").onclick = async () => { const note = m.querySelector("#ap_r").value.trim(); close(); ui.apSel = {}; await apDecide(ids, "נדחה", note); };
+  });
+}
+function apEditModal(id) {
+  const d = D(), p = d.progress.find(x => x.id === id); if (!p) return;
+  const c = d.contractors.find(x => x.id === p.contractorId), acts = d.activities.filter(a => a.contractorId === p.contractorId).sort(byOrder), segs = designOfC(d, c || {});
+  const unit = () => isUnitAct(RAW.activities?.[m0.querySelector("#ae_a").value]); let m0;
+  modal(`<h2>עריכת דיווח — ${esc(c?.name || "")}</h2><p class="small muted" style="margin:0">דווח ע״י ${esc(p.reportedByName || (p.reportedBy || "משרד").split("@")[0])}${p.note ? ` · הערת המפקח: ${esc(p.note)}` : ""}</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><label class="field" style="flex:1">תאריך<input type="date" class="inp" id="ae_d" value="${esc(p.date || "")}"></label>
+      <label class="field" style="flex:2">מלאכה<select class="inp" id="ae_a">${acts.map(a => `<option value="${a.id}" ${a.id === p.activityId ? "selected" : ""}>${esc(a.name)}</option>`).join("")}</select></label></div>
+    <div class="row" id="ae_sec" style="gap:8px;flex-wrap:wrap"><label class="field" style="flex:2">קטע תכנון<select class="inp" id="ae_s">${segs.map(x => `<option value="${x.s.id}" ${x.s.id === p.segmentId ? "selected" : ""}>${esc((x.office?.name || "") + " " + x.s.num)} (${esc(x.s.secFrom)}–${esc(x.s.secTo)})</option>`).join("")}</select></label>
+      <label class="field" style="flex:1">מחתך<input class="inp" id="ae_f" inputmode="numeric" value="${esc(p.secFrom ?? "")}"></label><label class="field" style="flex:1">עד חתך<input class="inp" id="ae_t" inputmode="numeric" value="${esc(p.secTo ?? "")}"></label></div>
+    <div class="row" id="ae_u" style="gap:8px"><label class="field" style="flex:1">כמות (יח׳)<input class="inp" id="ae_q" inputmode="numeric" value="${esc(p.qty ?? "")}"></label><label class="field" style="flex:2">מיקום<input class="inp" id="ae_l" value="${esc(p.loc || "")}"></label></div>
+    <label class="field">הערת המשרד (לא חובה)<input class="inp" id="ae_n" value="${esc(p.officeNote || "")}" placeholder="מה תוקן — יוצג בהיסטוריה"></label>
+    <p class="small" id="ae_m" style="min-height:1em;margin:0"></p>
+    <div class="row"><button class="btn" id="ae_ok">שמירה ואישור</button><button class="btn ghost" id="mYes">שמירה בלבד</button><span class="spacer"></span><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    m0 = m; const sync = () => { const u = unit(); m.querySelector("#ae_sec").hidden = u; m.querySelector("#ae_u").hidden = !u; }; sync(); m.querySelector("#ae_a").onchange = sync;
+    m.querySelector("#mNo").onclick = close;
+    const save = async approve => { const u = unit(), q = s => m.querySelector(s).value.trim(), msg = t => { m.querySelector("#ae_m").textContent = t; m.querySelector("#ae_m").style.color = "var(--warn)"; };
+      const patch = { date: q("#ae_d"), activityId: q("#ae_a"), officeNote: q("#ae_n"), editedBy: me?.name || user?.email || "מקומי", editedAt: new Date().toISOString() };
+      if (u) { const n = Number(q("#ae_q")); if (!(n > 0)) return msg("צריך כמות"); Object.assign(patch, { qty: n, loc: q("#ae_l"), segmentId: "", secFrom: "", secTo: "" }); }
+      else { const f = Number(q("#ae_f")), t = Number(q("#ae_t")), sg = segs.find(x => x.s.id === q("#ae_s"))?.s; if (isNaN(f) || isNaN(t) || f === t || q("#ae_f") === "" || q("#ae_t") === "") return msg("צריך חתך התחלה וחתך סוף");
+        if (sg && sg.secFrom !== "" && (Math.min(f, t) < Math.min(+sg.secFrom, +sg.secTo) || Math.max(f, t) > Math.max(+sg.secFrom, +sg.secTo))) return msg(`החתכים מחוץ לקטע (${sg.secFrom}–${sg.secTo})`);
+        Object.assign(patch, { segmentId: q("#ae_s"), secFrom: f, secTo: t, byKd: false }); }
+      if (approve) Object.assign(patch, { review: "", reviewNote: "", reviewedAt: new Date().toISOString(), reviewedBy: me?.name || user?.email || "" });
+      const ok = await bulkPatch("progress", [id], patch); if (!ok) return; close();
+      if (approve) ui.apDone = [{ id, review: "", at: Date.now() }, ...(ui.apDone || []).filter(x => x.id !== id)];
+      render(); toast(approve ? "תוקן ואושר ✓ — נספר בביצוע" : "הדיווח עודכן ✓"); };
+    m.querySelector("#ae_ok").onclick = () => save(true); m.querySelector("#mYes").onclick = () => save(false);
+  });
+}
 function pageApprovals(d) {
   const pend = d.progress.filter(p => p.review === "לבדיקה"), F = ui.apF = ui.apF || { c: "", who: "", show: "" };
   const rows = pend.map(p => ({ p, f: progFlags(d, p) })), clean = rows.filter(r => !r.f.length);
@@ -3947,7 +4049,7 @@ function pageApprovals(d) {
       <td class="c nowrap" dir="ltr">${hasSecs(p) ? `${p.secFrom}–${p.secTo}` : "—"}</td><td class="c nowrap">${kd(p)}</td><td class="c nowrap"><b>${m(r)}</b></td>
       <td class="small" style="max-width:240px"><div class="ap-note" title="${esc(p.note || "")}">${esc(p.note || "")}</div></td>
       <td>${r.f.length ? r.f.map(([t, sv]) => `<span class="pill ${sv === "red" ? "warn" : ""} ap-fl">${esc(t)}</span>`).join(" ") : `<span class="pill ok">תקין</span>`}</td>
-      <td class="nowrap"><button class="btn sm" data-act="apOk" data-id="${p.id}">אישור</button> <button class="btn ghost sm" data-act="apNo" data-id="${p.id}" title="לא נספר בביצוע">לא להכניס</button></td></tr>`; };
+      <td class="nowrap"><button class="btn sm" data-act="apOk" data-id="${p.id}">אישור</button> <button class="btn ghost sm" data-act="apEdit" data-id="${p.id}" title="תיקון חתכים / מלאכה / תאריך לפני אישור">✎ עריכה</button> <button class="btn ghost sm" data-act="apNo" data-id="${p.id}" title="לא נספר בביצוע — אפשר לכתוב סיבה למפקח">לא להכניס</button></td></tr>`; };
   return `<div class="ch-banner" style="--cc:#2f6b4f"><div><h1>✔ אישור דיווחים</h1><span>כל הדיווחים של המפקחים שממתינים לאישור — מכל הקבלנים. רק דיווח מאושר נספר בביצוע, בדשבורד ובמצגת.</span></div></div>
   <div class="ch-tiles sg-tiles" style="--cc:#2f6b4f">
     <div class="ch-t t1"><span>ממתינים לאישור</span><b>${pend.length}</b><small>${cs.length} קבלנים · ${whos.length} מדווחים</small></div>
@@ -3955,6 +4057,7 @@ function pageApprovals(d) {
     <div class="ch-t ${rows.length - clean.length ? "t2" : ""}"><span>דורשים בדיקה</span><b>${rows.length - clean.length}</b><small>חפיפה / חתכים / תיקון</small></div>
     <div class="ch-t"><span>מטרים ממתינים</span><b>${num(pend.filter(hasSecs).reduce((t, p) => t + Math.abs(p.secTo - p.secFrom) * SECTION_M, 0), 0)}</b><small>מ׳ שעוד לא נספרים</small></div>
   </div>
+  ${apDoneBlock(d)}
   ${pend.length ? `<div class="card ap-bar">
     <div class="ap-fr"><span>קבלן:</span>${chip("c", "", "הכל", !F.c)}${cs.map(c => chip("c", c.id, `${esc(c.name)} (${pend.filter(p => p.contractorId === c.id).length})`, F.c === c.id)).join("")}</div>
     <div class="ap-fr"><span>מדווח:</span>${chip("who", "", "הכל", !F.who)}${whos.map(w => chip("who", w, `${esc(w)} (${pend.filter(p => who(p) === w).length})`, F.who === w)).join("")}</div>
@@ -4066,7 +4169,8 @@ function issuesTab(d, c) {
   const rows = all.filter(x => showClosed || x.status !== "סגור").sort((a, b) =>
     codeN(a) - codeN(b) || String(a.code || "").localeCompare(String(b.code || "")) || String(a.opened || "").localeCompare(String(b.opened || "")));
   const cnt = s => all.filter(x => x.status === s).length;
-  return `${requestsBlock(d, c)}<div class="row" style="margin-bottom:10px">
+  const un = tkUnlinked(c.id);
+  return `${requestsBlock(d, c)}${un.length && isMgr() ? `<div class="banner"><b>${un.length} משימות פתוחות לקבלן הזה עוד לא מופיעות כאן</b><span>${un.map(t => esc(`${t.title} (${t.ownerName || "—"})`)).slice(0, 3).join(" · ")}${un.length > 3 ? "…" : ""}</span><button class="btn sm" data-act="tkLink" data-id="${c.id}">הוספה לנושאים</button></div>` : ""}<div class="row" style="margin-bottom:10px">
       ${ISSUE_STATUS.map(s => `<span class="pill ${s === "סגור" ? "ok" : s === "HOLD" ? "warn" : ""}">${s}: ${cnt(s)}</span>`).join("")}
       <span class="spacer"></span>
       <label class="row small"><input type="checkbox" id="autoSum" data-act="autoSum" ${RAW.tableConfig?.issues?.autoSummary !== false ? "checked" : ""}> עדכון אוטומטי מסיכום</label>
@@ -4625,8 +4729,9 @@ async function mgmtDeck(asOf, theme = "color") {
         y += rh; }
       if (notYet.length) T(sl, `טרם החלו: ${notYet.map(svShort).join(" · ")}`, { x: LX + 0.15, y: 6.64, w: LW - 0.3, h: 0.3, fontSize: 8.5, color: MUT, fit: "shrink" });
       // שמאל: עדכונים + חסמים בכרטיסים
-      const upd = iss.flatMap(i => Object.values(i.history || {}).filter(h => inWeek(h.date)).map(h => ({ i, h }))).sort((a, b) => String(b.h.date).localeCompare(String(a.h.date)));
-      const block = open.filter(i => i.status === "HOLD" || i.category === "חסם").sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
+      // רק נושאים שסומנו "להנהלה" נכנסים למצגת (עדכונים השבוע + חסמים / HOLD)
+      const upd = iss.filter(i => i.mgmt).flatMap(i => Object.values(i.history || {}).filter(h => inWeek(h.date)).map(h => ({ i, h }))).sort((a, b) => String(b.h.date).localeCompare(String(a.h.date)));
+      const block = open.filter(i => i.mgmt && (i.status === "HOLD" || i.category === "חסם")).sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
       const bl = (arr, f) => arr.length ? arr.map(f) : [{ text: "—", options: { color: MUT } }];
       const cut = (t, n) => t.length > n ? t.slice(0, n - 1) + "…" : t, tag = i => i.code ? ` · ${i.code}` : "";
       const CX = 0.3, CW = LX - 0.3 - 0.18;
@@ -5804,6 +5909,7 @@ $app.addEventListener("click", async e => {
   else if (act === "shRename") shModal();
   else if (act === "sepRun") sepModal();
   else if (act === "ttzMig") ttzMigModal();
+  else if (act === "actDet") { const [cid, aid] = String(b.dataset.id).split("|"); actDetailModal(cid, aid); }
   else if (act === "reqOpen") reqModal(b.dataset.id);
   else if (act === "reqPaste") reqPasteModal();
   else if (act === "reqNew") reqNewModal();
@@ -5916,8 +6022,12 @@ $app.addEventListener("click", async e => {
   else if (act === "apSel") { const S2 = ui.apSel = ui.apSel || {}; if (b.checked) S2[b.dataset.id] = 1; else delete S2[b.dataset.id]; render(); }
   else if (act === "apSelClr") { ui.apSel = {}; render(); }
   else if (act === "apSelGrp") { const d = D(), S2 = ui.apSel = ui.apSel || {}; d.progress.filter(p => p.review === "לבדיקה" && p.contractorId === b.dataset.id && !progFlags(d, p).length).forEach(p => S2[p.id] = 1); render(); }
-  else if (act === "apOk" || act === "apNo") { await bulkPatch("progress", [b.dataset.id], { review: act === "apOk" ? "" : "נדחה", reviewedAt: new Date().toISOString(), reviewedBy: me?.name || user?.email || "" }); toast(act === "apOk" ? "אושר ✓" : "סומן ׳לא להכניס׳"); }
-  else if (act === "apSelOk" || act === "apSelNo") { const ids = Object.keys(ui.apSel || {}); ui.apSel = {}; await bulkPatch("progress", ids, { review: act === "apSelOk" ? "" : "נדחה", reviewedAt: new Date().toISOString(), reviewedBy: me?.name || user?.email || "" }); toast(`${ids.length} דיווחים ${act === "apSelOk" ? "אושרו ✓" : "סומנו ׳לא להכניס׳"}`); }
+  else if (act === "apOk") await apDecide([b.dataset.id], "", "", b);
+  else if (act === "apNo") apRejectModal([b.dataset.id]);
+  else if (act === "apEdit") apEditModal(b.dataset.id);
+  else if (act === "apDoneClr") { ui.apDone = []; render(); }
+  else if (act === "apUndo") { const ok = await bulkPatch("progress", [b.dataset.id], { review: "לבדיקה", reviewNote: "", reviewedAt: "", reviewedBy: "" }); if (ok) { ui.apDone = (ui.apDone || []).filter(x => x.id !== b.dataset.id); render(); toast("הוחזר לתור ↩"); } }
+  else if (act === "apSelOk" || act === "apSelNo") { const ids = Object.keys(ui.apSel || {}); if (!ids.length) return; if (act === "apSelNo") return apRejectModal(ids); ui.apSel = {}; await apDecide(ids, "", "", b); }
   else if (act === "apAllClean") { const d = D(), F = ui.apF || {}, who = p => p.reportedByName || (p.reportedBy ? String(p.reportedBy).split("@")[0] : "משרד");
     const ids = d.progress.filter(p => p.review === "לבדיקה" && (!F.c || p.contractorId === F.c) && (!F.who || who(p) === F.who) && !progFlags(d, p).length).map(p => p.id);
     if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = `בטוח? לאשר ${ids.length} דיווחים`; setTimeout(() => { if (b.isConnected) render(); }, 4000); return; }
@@ -6180,6 +6290,9 @@ async function start() {
           const v2 = s2.val();
           // Firebase ריק — טוענים גיבוי ידנית: הגדרות ← נתונים וגיבוי ← טעינת גיבוי
           for (const c of DATA_COLS) RAW[c] = (v2 || {})[c] || {};
+          // ניקוי חד־פעמי: מפתחות זבל שנוצרו מבאג באישור מרוכז ("progress_<id>_review" בשורש) — לא נתונים, רק לכלוך
+          if (!window.__junkDone && isMgr() && v2) { window.__junkDone = true; const junk = Object.keys(v2).filter(k => !COLS.includes(k) && COLS.includes(k.split("_")[0]) && k.split("_").length >= 3);
+            if (junk.length) root.update(Object.fromEntries(junk.map(k => [k, null]))).then(() => console.info("cleaned", junk.length)).catch(() => {}); }
           META.source = "Firebase"; META.savedAt = new Date().toISOString(); render();
         });
         const c2 = acc.on("value", s3 => { RAW.users = s3.val() || {}; render(); }, () => {});
