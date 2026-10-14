@@ -37,6 +37,11 @@ input, select, textarea { font: inherit; border: 1px solid #c9cdc5; border-radiu
 .top { padding: 10px 14px; } .date { display: flex; align-items: center; gap: 6px; margin-inline-start: auto; font-size: 14px; color: var(--muted); } .date input { padding: 8px; }
 .where { position: sticky; top: 0; z-index: 5; border: 2px solid var(--accent); box-shadow: 0 8px 14px -10px rgba(0,0,0,.35); }
 .chip.sm { padding: 7px 11px; font-size: 14px; } .sec, .kd { margin-top: 8px; } .kd { background: #eef4fb; border-radius: 10px; padding: 6px 8px; } .kd .num { font-size: 17px; width: 96px; }
+.my-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-bottom: 6px; } .my-head > b { font-size: 17px; } .my-stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 13px; color: var(--muted); } .my-stats .pend { color: #9a6a00; } .my-stats .rej, .my-sub .rej { color: #b8452f; }
+.my-tools { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--line); margin-bottom: 6px; } .my-tools .row { gap: 6px; flex-wrap: wrap; align-items: center; } .my-tools select, .my-tools input { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid #cfd3cc; border-radius: 8px; } .my-tools input { flex: 1; min-width: 160px; }
+.my-gh { display: flex; justify-content: space-between; align-items: baseline; background: #eef2ec; border-radius: 8px; padding: 5px 10px; margin: 10px 0 2px; font-weight: 700; font-size: 14px; } .my-gh small { font-weight: 400; color: var(--muted); }
+.my-r { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 6px 2px; border-bottom: 1px solid #eef0ec; font-size: 14px; } .my-m { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; } .my-w { color: #444; font-size: 13px; } .my-l { font-weight: 700; color: var(--accent); }
+.my-st { display: flex; gap: 6px; align-items: center; } .my-sub { grid-column: 1 / -1; font-size: 12px; color: var(--muted); } .my-st .btn.my-del { padding: 3px 8px; font-size: 12px; min-height: 0; } .my-r[hidden], .my-g[hidden] { display: none; }
 .gres { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-height: 250px; overflow-y: auto; overscroll-behavior: contain; } .gres:empty { display: none; }
 .gi { display: flex; align-items: center; gap: 8px; text-align: right; font: inherit; font-size: 14.5px; border: 1px solid #d5d9d1; background: #fff; border-radius: 10px; padding: 8px 10px; cursor: pointer; } .gi b { font-size: 16px; min-width: 64px; } .gi span { flex: 1; color: var(--muted); font-size: 13px; } .gi em { font-style: normal; font-size: 12px; background: #dff0e3; color: #23633b; border-radius: 8px; padding: 2px 7px; } .gi em.pd { background: #fff0c2; color: #7a5a00; } .gi.on { border-color: var(--accent); background: #eef5ff; }
 .usum { font-size: 14px; margin: 2px 0 6px; } .usum b { font-size: 16px; color: var(--g, #2e7d4f); } .usum b.pd { color: #9a6a00; } .usum .hint { margin-top: 2px; }
@@ -558,6 +563,53 @@ function rqList() {
     ${tools}${shown.map(item).join("") || `<p class="hint">אין פניות שמתאימות לסינון</p>`}
     ${!open && all.length > 3 ? `<button class="rqtog wide" data-rqtog="1">▾ להצגת כל ${all.length} הפניות, חיפוש ומיון</button>` : ""}</div>`;
 }
+/* ---------- "הדיווחים שלי": מקופל (היום + ממתינים), פתוח עם מיון (תאריך / חתך / ק.ד.), סינון, חיפוש וקיבוץ ---------- */
+const MY_LS = "rep-my-v1";
+const myCfg = () => { if (!S.my) { let v = {}; try { v = JSON.parse(localStorage.getItem(MY_LS) || "{}"); } catch (e) {} S.my = { open: false, sort: v.sort || "date", st: v.st || "all", act: "", cid: "", q: "" }; } return S.my; };
+const mySave = () => { try { localStorage.setItem(MY_LS, JSON.stringify({ sort: S.my.sort, st: S.my.st })); } catch (e) {} };
+const SEGC = {}; const segOfP = p => { const c = D.contractors?.[p.contractorId]; if (!c) return null; const k = p.contractorId; if (!SEGC[k] || SEGC[k].src !== D.designSegments) SEGC[k] = { src: D.designSegments, L: segsOf({ id: k, ...c }) }; return SEGC[k].L.find(x => x.id === p.segmentId) || null; };
+const weekStart = () => { const d = new Date(today() + "T00:00"); d.setDate(d.getDate() - d.getDay()); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const DOW = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
+function myRow(p, show) {
+  const a = D.activities?.[p.activityId], s = segOfP(p), u = !!p.qty && !(p.secFrom !== "" && p.secFrom != null);
+  const len = u ? `${p.qty} יח׳` : `${(Math.abs(p.secTo - p.secFrom) * SECTION_M).toLocaleString("he-IL")} מ׳`;
+  const where = u ? esc(p.loc || "") : `<span dir="ltr">${rng(esc(p.secFrom), esc(p.secTo))}</span>${s ? ` · ק.ד. ${kdOf(s, p.secFrom)}–${kdOf(s, p.secTo)}` : ""}${show.seg && s ? ` · ${esc(s.label)}` : ""}`;
+  const st = p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span><button class="btn ghost my-del" data-del="${p.id}">מחיקה</button>` : p.review === "נדחה" ? `<span class="pill p2">לא אושר</span>` : `<span class="pill p1">אושר ✓</span>`;
+  const sub = [show.date ? fmtD(p.date) : "", show.c ? esc(D.contractors?.[p.contractorId]?.name || "") : "", p.review === "נדחה" && p.reviewNote ? `<b class="rej">סיבה: ${esc(p.reviewNote)}</b>` : "", p.note ? `<span title="${esc(p.note)}">${esc(p.note.length > 90 ? p.note.slice(0, 89) + "…" : p.note)}</span>` : ""].filter(Boolean).join(" · ");
+  const txt = [a?.name, p.note, p.loc, p.reviewNote, p.secFrom, p.secTo, s?.label, D.contractors?.[p.contractorId]?.name].join(" ").toLowerCase();
+  return `<div class="my-r" data-s="${esc(txt)}"><div class="my-m"><b>${esc(short(a?.name || "—"))}</b><span class="my-w">${where}</span><span class="my-l">${len}</span></div><div class="my-st">${st}</div>${sub ? `<div class="my-sub">${sub}</div>` : ""}</div>`;
+}
+function myList() {
+  const C = myCfg(), all = list("progress").filter(p => p.reportedBy === me.email), multiC = new Set(all.map(p => p.contractorId)).size > 1;
+  const m = p => p.qty && !(p.secFrom !== "" && p.secFrom != null) ? 0 : Math.abs(p.secTo - p.secFrom) * SECTION_M;
+  const ws = weekStart(), wk = all.filter(p => (p.date || "") >= ws), pend = all.filter(p => p.review === "לבדיקה");
+  const stats = `<div class="my-stats"><span>השבוע: <b>${wk.length}</b> דיווחים · <b>${wk.reduce((t, p) => t + m(p), 0).toLocaleString("he-IL")}</b> מ׳</span>${pend.length ? `<span class="pend">ממתינים לאישור: <b>${pend.length}</b></span>` : ""}${all.filter(p => p.review === "נדחה").length ? `<span class="rej">לא אושרו: <b>${all.filter(p => p.review === "נדחה").length}</b></span>` : ""}</div>`;
+  const head = `<div class="my-head"><b>הדיווחים שלי</b>${stats}</div>`;
+  if (!all.length) return `<div class="card">${head}<p class="hint">עוד אין דיווחים</p></div>`;
+  const byDate = (a, b) => String(b.date).localeCompare(String(a.date)) || String(b.updatedAt).localeCompare(String(a.updatedAt));
+  if (!C.open) { let quick = all.filter(p => p.date === today() || p.review === "לבדיקה").sort(byDate), lbl = "היום וממתינים לאישור"; if (!quick.length) { quick = all.slice().sort(byDate).slice(0, 5); lbl = "האחרונים"; }
+    const more = quick.length - 8;
+    return `<div class="card my">${head}<div class="my-gh"><span>${lbl}</span>${more > 0 ? `<small>מוצגים 8 מתוך ${quick.length}</small>` : ""}</div>${quick.slice(0, 8).map(p => myRow(p, { date: true, c: multiC, seg: true })).join("")}<button class="rqtog wide" data-myopen="1">▾ כל הדיווחים (${all.length}) — מיון לפי תאריך, חתך או ק.ד., סינון וחיפוש</button></div>`; }
+  const acts = [...new Set(all.map(p => p.activityId))].map(id => [id, D.activities?.[id]?.name || "—"]).sort((a, b) => a[1].localeCompare(b[1], "he")), cs = [...new Set(all.map(p => p.contractorId))];
+  const F = all.filter(p => (C.st === "all" || (C.st === "pend" ? p.review === "לבדיקה" : C.st === "ok" ? !p.review : p.review === "נדחה")) && (!C.act || p.activityId === C.act) && (!C.cid || p.contractorId === C.cid));
+  const chip = (k, v, l, n) => `<button class="chip sm ${C[k] === v ? "on" : ""}" data-myk="${k}" data-myv="${v}">${l}${n != null ? ` <small>${n}</small>` : ""}</button>`;
+  const cnt = f => all.filter(f).length;
+  const tools = `<div class="my-tools"><div class="row"><span class="hint">מיון:</span>${chip("sort", "date", "📅 תאריך")}${chip("sort", "sec", "חתך")}${chip("sort", "kd", "ק.ד.")}</div>
+    <div class="row"><span class="hint">סטטוס:</span>${chip("st", "all", "הכל", all.length)}${chip("st", "pend", "ממתין", cnt(p => p.review === "לבדיקה"))}${chip("st", "ok", "אושר", cnt(p => !p.review))}${chip("st", "rej", "לא אושר", cnt(p => p.review === "נדחה"))}</div>
+    <div class="row"><select id="my_act"><option value="">כל המלאכות</option>${acts.map(([id, n]) => `<option value="${id}" ${C.act === id ? "selected" : ""}>${esc(short(n))}</option>`).join("")}</select>
+      ${cs.length > 1 ? `<select id="my_c"><option value="">כל הקבלנים</option>${cs.map(id => `<option value="${id}" ${C.cid === id ? "selected" : ""}>${esc(D.contractors?.[id]?.name || "")}</option>`).join("")}</select>` : ""}
+      <input id="my_q" placeholder="חיפוש: הערה, מעביר, תט״ז…" value="${esc(C.q)}"><span class="hint" id="my_n"></span></div></div>`;
+  let groups = [];
+  if (C.sort === "date") { const G = new Map(); F.slice().sort(byDate).forEach(p => { const k = p.date || "—"; if (!G.has(k)) G.set(k, []); G.get(k).push(p); });
+    groups = [...G].map(([k, ps]) => ({ h: k === "—" ? "ללא תאריך" : `יום ${DOW[new Date(k + "T00:00").getDay()]} ${fmtD(k)}`, ps, show: { c: multiC, seg: true } })); }
+  else { const G = new Map(), units = []; F.forEach(p => { const sg = segOfP(p); if (!sg || p.secFrom === "" || p.secFrom == null) { units.push(p); return; } if (!G.has(sg.id)) G.set(sg.id, { sg, ps: [] }); G.get(sg.id).ps.push(p); });
+    const kv = (sg, p) => kdNum(String(kdOf(sg, Math.min(+p.secFrom, +p.secTo))).replace("≈", "")) ?? 0;
+    groups = [...G.values()].sort((a, b) => Math.max(kdNum(b.sg.kdFrom), kdNum(b.sg.kdTo)) - Math.max(kdNum(a.sg.kdFrom), kdNum(a.sg.kdTo)))
+      .map(({ sg, ps }) => ({ h: `${sg.label} · חתכים ${sg.lo}–${sg.hi}`, ps: ps.sort((a, b) => C.sort === "kd" ? kv(sg, b) - kv(sg, a) : Math.min(+a.secFrom, +a.secTo) - Math.min(+b.secFrom, +b.secTo) || byDate(a, b)), show: { date: true, c: multiC } }));
+    if (units.length) groups.push({ h: "ביחידות (בלי חתכים)", ps: units.sort(byDate), show: { date: true, c: multiC } }); }
+  const body = groups.map(g => `<div class="my-g"><div class="my-gh"><span>${esc(g.h)}</span><small>${g.ps.length} דיווחים${g.ps.some(m) ? ` · ${g.ps.reduce((t, p) => t + m(p), 0).toLocaleString("he-IL")} מ׳` : ""}</small></div>${g.ps.map(p => myRow(p, g.show)).join("")}</div>`).join("") || `<p class="hint">אין דיווחים בסינון הזה</p>`;
+  return `<div class="card my" id="mycard">${head}${tools}<div id="my_body">${body}</div><button class="rqtog wide" data-myopen="0">▴ סגירה — רק היום וממתינים</button></div>`;
+}
 function grRes() { const q = S.gq || "", r = linkFind(q); if (!r.length) return normQ(q) ? `<div class="hint">לא נמצא — לבדוק את המספר / הק.ד.</div>` : "";
   return r.map(i => `<button class="gi ${S.gsel.includes(i.id) ? "on" : ""}" data-gi="${i.id}"><b dir="ltr">${esc(i.lab)}</b><span>${i.kdFrom ? `ק.ד. ${esc(i.kdFrom)}` : ""}${i.x_sec ? ` · חתך <span dir="ltr">${esc(i.x_sec)}</span>` : ""}${LK?.kind === "מעבירי מים" ? ` · ${esc(D.contractors?.[i.contractorId]?.name || "")}` : ""}</span>${i.gd ? `<em class="${i.gd === "ממתין" ? "pd" : ""}">${i.gd === "ממתין" ? "ממתין לאישור" : LK?.kind === "מעבירי מים" ? "יש סבכה ✓" : "בוצע ✓"}</em>` : ""}</button>`).join(""); }
 function view() {
@@ -576,7 +628,7 @@ function view() {
   const seg = segs.find(s => s.id === S.segId);
   const selName = sel.length <= 2 ? sel.map(a => short(a.name)).join(" + ") : `${short(sel[0].name)} + עוד ${sel.length - 1}`;
   const m = !unit && S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? Math.abs(S.to - S.from) * SECTION_M : null;
-  const mine = list("progress").filter(p => p.reportedBy === me.email).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, 25);
+
   const actName = id => D.activities?.[id]?.name || "—", segName = id => segs.find(s => s.id === id)?.label || "";
   const actTile = a => { const G = actGroup(a), M = matOf(a); return `<button class="act ${S.acts.includes(a.id) ? "on" : ""} ${M?.ink ? "lt" : ""}" data-a="${a.id}" style="--g:${M?.c || G.color};--gt:${G.tint}${M?.ink ? `;--fg:${M.ink}` : ""}"><i class="ico">${M ? SV(M.i) : agIcon(G.key)}</i><span>${tileName(short(a.name))}${isUA(a) ? ` <small>(יח׳)</small>` : ""}</span><i class="tick">${S.acts.includes(a.id) ? "✓" : ""}</i></button>`; };
   const nNew = rqNew().length;
@@ -612,10 +664,8 @@ function view() {
       <button class="btn ghost" id="dupFix" title="כשהדיווח הקודם שגוי — נשלח עם הערה לבדיקת מנהל הפרויקט">בקשת תיקון</button><button class="btn ghost" id="dupNo">ביטול</button></div></div>` : ""}
   <div class="sendbar"><div class="sum">${S.msg ? `<div class="msg ${S.err ? "err" : "ok"}" style="margin:0 0 2px">${esc(S.msg)}</div>` : ""}${act ? `<b>${esc(selName)}</b> · ${gr ? (S.gsel.length ? `${S.gsel.length} ${isC ? "סבכות" : "יח׳"} · ${S.gsel.map(id => esc(labOf(D.items[id]))).join(", ")}` : isC ? "איזה מעביר?" : "איזה פריט?") : unit ? (S.qty ? S.qty + " יח׳" : "כמות?") : m !== null ? `${rng(S.from, S.to)} · ${m.toLocaleString("he-IL")} מ׳` : "חתכים?"}${sel.length > 1 && m !== null ? ` · ${sel.length} מלאכות` : ""}` : "בחר מלאכה — אפשר כמה"}</div><button class="btn" id="send">שליחת דיווח</button></div>
   </div>
-  <div class="card"><b>הדיווחים שלי</b> <span class="hint">— ממתין לאישור עד שמנהל הפרויקט מאשר</span>
-    ${mine.map(p => `<div class="rep"><div class="t"><b>${esc(actName(p.activityId))}</b><small>${fmtD(p.date)} · ${esc(D.contractors?.[p.contractorId]?.name || "")} · ${p.qty ? `${p.qty} יח׳${p.loc ? ` · ${esc(p.loc)}` : ""}` : `${esc(segName(p.segmentId))} ${rng(esc(p.secFrom), esc(p.secTo))}${(s => s ? ` · ק.ד. ${kdOf(s, p.secFrom)}–${kdOf(s, p.secTo)}` : "")(segs.find(x => x.id === p.segmentId))} (${(Math.abs(p.secTo - p.secFrom) * SECTION_M).toLocaleString("he-IL")} מ׳)`}${p.note ? " · " + esc(p.note) : ""}</small></div>
-      ${p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span><button class="btn ghost" data-del="${p.id}" style="padding:6px 10px">מחיקה</button>` : p.review === "נדחה" ? `<span class="pill p2">לא אושר</span>` : `<span class="pill p1">אושר ✓</span>`}</div>`).join("") || `<p class="hint">עוד אין דיווחים</p>`}
-  </div>${rqList()}${covModal(c, seg, acts)}${unit ? unitModal(act, c.id) : ""}${rqModal(c)}`;
+  ${myList()}
+${rqList()}${covModal(c, seg, acts)}${unit ? unitModal(act, c.id) : ""}${rqModal(c)}`;
   fitTiles();
   $("out").onclick = () => fb.auth().signOut();
   if ($("wkopen")) $("wkopen").onclick = () => wkModal(D, cids, S.cid, me.name || user.email);
@@ -631,6 +681,13 @@ function view() {
       try { await fb.database().ref(`${ROOT}/requests`).push(rec); S.rq = null; S.rqOpen = false; S.msg = "הפנייה נשלחה ✓ — התשובה תופיע ב״הפניות שלי״"; S.err = false; }
       catch (e) { S.rqMsg = "השליחה נכשלה — אין הרשאה (צריך לעדכן את כללי Firebase) או אין חיבור"; }
       view(); }; }
+  app.querySelectorAll("[data-myopen]").forEach(b => b.onclick = () => { myCfg().open = b.dataset.myopen === "1"; view(); if (S.my.open) setTimeout(() => $("mycard")?.scrollIntoView({ behavior: "smooth" }), 30); });
+  app.querySelectorAll("[data-myk]").forEach(b => b.onclick = () => { S.my[b.dataset.myk] = b.dataset.myv; mySave(); view(); });
+  if ($("my_act")) $("my_act").onchange = e => { S.my.act = e.target.value; view(); };
+  if ($("my_c")) $("my_c").onchange = e => { S.my.cid = e.target.value; view(); };
+  const myFilt = () => { const q = (S.my?.q || "").trim().toLowerCase(); let n = 0, t = 0; document.querySelectorAll("#my_body .my-r").forEach(el => { t++; const ok = !q || el.dataset.s.includes(q); el.hidden = !ok; if (ok) n++; });
+    document.querySelectorAll("#my_body .my-g").forEach(g => g.hidden = ![...g.querySelectorAll(".my-r")].some(r => !r.hidden)); if ($("my_n")) $("my_n").textContent = q ? `${n} מתוך ${t}` : `${t} דיווחים`; };
+  if ($("my_q")) { $("my_q").oninput = e => { S.my.q = e.target.value; myFilt(); }; myFilt(); }
   app.querySelectorAll("[data-rqtog]").forEach(b => b.onclick = () => { S.rqAll = !S.rqAll; view(); if (S.rqAll) setTimeout(() => $("rqcard")?.scrollIntoView({ behavior: "smooth" }), 30); });
   app.querySelectorAll("[data-rqst]").forEach(b => b.onclick = () => { S.rqF.st = b.dataset.rqst; view(); });
   app.querySelectorAll("[data-rqsort]").forEach(b => b.onclick = () => { S.rqF.sort = b.dataset.rqsort; view(); });
@@ -711,7 +768,7 @@ function view() {
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-12i";
+const VER = "2026-10-14b";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
