@@ -1,3 +1,4 @@
+index.html — קוד האתר הראשי (15/10/2026)
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -3496,7 +3497,7 @@ function pageMtgArchive(d) {
 }
 /** חלון משימה חדשה / עריכת פרטים */
 function tkForm(t = {}, preset = {}) {
-  const d = D(), owners = tkOwners(), cs = d.contractors, iss = t.issueId && RAW.issues?.[t.issueId];
+  const d = D(), owners = tkOwners(), cs = d.contractors, iss = (t.issueId || preset.issueId) && RAW.issues?.[t.issueId || preset.issueId];
   const v = { ...preset, ...t, ...(iss ? { priority: iss.priority || t.priority, title: iss.title ?? t.title, category: iss.category, issueOwner: iss.owner, kdFrom: iss.kdFrom ?? t.kdFrom, kdTo: iss.kdTo ?? t.kdTo, due: iss.due ?? t.due, mgmt: !!iss.mgmt, mgmtAsk: iss.mgmtAsk || "", issueCode: iss.code || t.issueCode } : {}) };
   modal(`<h2>${t.id ? "פרטי משימה" : "משימה חדשה"}</h2>
     <label class="field">מה צריך לעשות<input class="inp" id="tk_title" value="${esc(v.title || "")}" placeholder="למשל: פגישה עם רשות העתיקות לפתרון בק.ד. 880–885"></label>
@@ -3528,7 +3529,8 @@ function tkForm(t = {}, preset = {}) {
       else { const note = q("#tk_note").value.trim(), at = new Date().toISOString();
         const log = { [newId()]: { date: todayStr(), at, text: note || "המשימה נפתחה", by: tkWho() } };
         const link = preset.issueId ? { issueId: preset.issueId, issueCode: preset.issueCode || "" } : rec.contractorId ? await mkIssue(note) : {};
-        await api.add("tasks", { ...rec, status: "פתוח", createdAt: todayStr(), createdBy: tkWho(), reviewed: isMgr(), log, ...link }); }
+        const tid = await api.add("tasks", { ...rec, status: "פתוח", createdAt: todayStr(), createdBy: tkWho(), reviewed: isMgr(), log, ...link });
+        if (preset.issueId && tid) try { await tkToIssue({ ...rec, ...link }, rec, `נפתחה משימה${note ? ": " + note : ""}`); } catch (e) { logErr("tkSync", e.message, e.stack); } }
       close(); toast("נשמר ✓");
     };
   });
@@ -3625,6 +3627,7 @@ function tkPrint(m, w) {
 async function tkClick(act, b) {
   const id = b.dataset.id, t = id && RAW.tasks?.[id] ? { id, ...RAW.tasks[id] } : null;
   if (act === "tkNew") tkForm({}, id ? { ownerName: id === "ללא אחראי" ? "" : id } : {});
+  else if (act === "tkNewC") tkForm({}, { contractorId: id });
   else if (act === "tkLink") { await tkLinkAll(id || ""); render(); }
   else if (act === "tkView") { try { localStorage.setItem(TKV_LS, id); } catch (e) {} render(); }
   else if (act === "tkEdit" && t) tkForm(t);
@@ -3633,7 +3636,7 @@ async function tkClick(act, b) {
   else if (act === "tkOk") await tkApprove(id);
   else if (act === "tkSum") tkSummary();
   else if (act === "tkPrint") { const m = RAW.mtgs?.[id]; if (m) tkPrint({ id, ...m }); }
-  else if (act === "tkFromIssue") { const i = RAW.issues?.[id]; if (i) tkForm({}, { title: `${i.title || ""}${i.mgmtAsk ? " — " + i.mgmtAsk : ""}`, contractorId: i.contractorId, kdFrom: i.kdFrom || "", kdTo: i.kdTo || "", issueId: id, issueCode: i.code || "" }); }
+  else if (act === "tkFromIssue") { const i = RAW.issues?.[id]; if (i) tkForm({}, { title: `${i.title || ""}`, contractorId: i.contractorId, kdFrom: i.kdFrom || "", kdTo: i.kdTo || "", issueId: id, issueCode: i.code || "" }); }
 }
 document.addEventListener("change", async e => { const s = e.target.closest?.("[data-tkst]"); if (!s) return; const id = s.dataset.tkst, t = RAW.tasks?.[id]; if (!t || s.value === t.status) return; await tkSave(id, { status: s.value }, `מצב: ${s.value}`); toast("עודכן ✓"); });
 
@@ -4235,6 +4238,7 @@ function issuesTab(d, c) {
       <span class="spacer"></span>
       <label class="row small"><input type="checkbox" id="autoSum" data-act="autoSum" ${RAW.tableConfig?.issues?.autoSummary !== false ? "checked" : ""}> עדכון אוטומטי מסיכום</label>
       <label class="row small"><input type="checkbox" id="showClosed" data-act="showClosed" ${showClosed ? "checked" : ""}> הצג גם סגורים</label>
+      <button class="btn ghost sm" data-act="tkNewC" data-id="${c.id}" title="נושא חדש + משימה לאחראי מהצוות">+ משימה</button>
       <button class="btn ghost sm" data-act="addIssue" data-id="${c.id}">+ נושא</button>
     </div>
     <div class="row" style="margin-bottom:10px;gap:8px">
@@ -5452,6 +5456,7 @@ const TABLE_DEFS = {
     { key: "status", label: "סטטוס", cell: x => `<select class="inp st-${ISSUE_STATUS.indexOf(x.status)}" id="f_issues_${x.id}_status" data-edit="issues|${x.id}|status">${ISSUE_STATUS.map(k => `<option ${k === x.status ? "selected" : ""}>${k}</option>`).join("")}</select>` },
     { key: "last", label: "מצב אחרון", cls: "small w-text", cell: x => cellInput("issues", x, "last", "", 'title="עדכון כאן נשמר כעדכון של היום בהיסטוריה"').replace('|last"', '|last|L"') + (x.notMentioned && x.status !== "סגור" ? ` <span class="pill warn" title="ייתכן שנסגר — לבדיקה">לא הוזכר בסיכום ${fmtD(x.notMentioned)}</span>` : "") },
     { key: "updated", label: "עדכון אחרון", cls: "nowrap c", cell: x => { const n = daysSince(x.updated); return `<span style="${x.status !== "סגור" && n > 30 ? "color:var(--warn);font-weight:700" : ""}">${fmtD(x.updated)}</span>`; } },
+    { key: "task", label: "משימה", cls: "c nowrap", cell: x => (t => t ? `<button class="btn ghost sm tk-has" data-act="tkEdit" data-id="${t.id}" title="פתיחת המשימה">${esc(t.ownerName || "ללא אחראי")} · ${esc(t.status)}</button>` : x.status === "סגור" ? "" : `<button class="btn ghost sm" data-act="tkFromIssue" data-id="${x.id}" title="פתיחת משימה לנושא — הנושא והמשימה יתעדכנו יחד">→ משימה</button>`)(list("tasks").find(t => t.issueId === x.id && t.status !== "סגור") || list("tasks").find(t => t.issueId === x.id)) },
     { key: "hist", label: "היסטוריה", cls: "c", cell: x => `<button class="btn ghost sm" data-act="issueHist" data-id="${x.id}">${Object.keys(x.history || {}).length} עדכונים</button>` },
     { key: "mgmt", label: "להנהלה", cls: "c", cell: x => `<input type="checkbox" id="f_issues_${x.id}_mgmt" ${x.mgmt ? "checked" : ""} data-edit="issues|${x.id}|mgmt|b" aria-label="לסטטוס הנהלה" title="יוצג בשקף הנושאים הדחופים להנהלה">` },
     { key: "mgmtAsk", label: "נדרש מההנהלה", cls: "w-place", cell: x => cellInput("issues", x, "mgmtAsk") },
