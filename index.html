@@ -124,6 +124,10 @@ h2 { font-size: 17px; margin: 0 0 12px; font-weight: 700; }
 .w-lc { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; min-width: 170px; } .w-iss { font: inherit; text-align: right; font-size: 12px; background: #fff4e6; border: 1px solid #f1c48d; border-radius: 7px; padding: 3px 7px; cursor: pointer; max-width: 320px; } .w-iss.u { background: #fde8e4; border-color: #f0a99c; } .w-iss.l b { color: var(--warn); } .w-iss small { display: block; color: #6b6355; }
 .w-add { font: inherit; font-size: 11.5px; color: #2f6b4f; font-weight: 700; border: 1px dashed #9cbfae; border-radius: 7px; padding: 1px 7px; background: #f4faf6; cursor: pointer; }
 .qn-ch.link { background: #fbf1e3; border-color: #e6cfa8; color: #6b4a1c; font-weight: 700; } .qn-ch.dec { background: #f2ecfa; border-color: #d9c8ef; color: #6a3f99; font-weight: 700; }
+.ch-t.iss-hot { background: linear-gradient(160deg, #fff4ea, #ffe3cf); border: 2px solid #e8892b !important; cursor: pointer; box-shadow: 0 3px 12px rgba(232,137,43,.25); transition: transform .12s, box-shadow .12s; }
+.ch-t.iss-hot:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(232,137,43,.35); } .ch-t.iss-hot > span { color: #a4520c; font-weight: 800; } .ch-t.iss-hot b { color: #b3261e; } .ch-t.iss-hot em { font-style: normal; font-size: 11px; font-weight: 700; background: #e8892b; color: #fff; border-radius: 999px; padding: 1px 7px; margin-inline-start: 4px; }
+.ch-t.iss-hot.urg { animation: issPulse 2.4s ease-in-out infinite; } @keyframes issPulse { 0%, 100% { box-shadow: 0 3px 12px rgba(232,137,43,.25); } 50% { box-shadow: 0 0 0 4px rgba(192,57,43,.25), 0 3px 14px rgba(192,57,43,.3); } }
+.ch-t.iss-hot.on { background: #e8892b; } .ch-t.iss-hot.on > span, .ch-t.iss-hot.on b, .ch-t.iss-hot.on small { color: #fff; } .ch-t.iss-hot.on em { background: #fff; color: #a4520c; }
 .navback { position: sticky; top: 8px; z-index: 40; display: inline-flex; align-items: center; gap: 4px; margin: 0 0 8px; padding: 6px 14px; border-radius: 999px; border: 1px solid #b9cbe0; background: #eaf2fb; color: #24507e; font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 2px 8px rgba(30,60,90,.12); }
 .navback:hover { background: #dbe9f8; }
 .qn { border: 2px solid #f0c94b; background: #fffdf3; } .qn-in { display: flex; gap: 8px; } .qn-in .inp { flex: 1; font-size: 16px; padding: 10px 12px; }
@@ -2267,7 +2271,7 @@ function contractorHero(d, c, { ords, cov }) {
       ${tile("t1", "🧱 גדר עומדת", num(Math.round(FZ.stand), 0), `מתוך ${m(now.km)} מ׳ · יסוד ${num(Math.round(FZ.found), 0)} · גמורה ${num(Math.round(FZ.done), 0)} · כל המלאכות ${now.overall === null ? "—" : Math.round(now.overall * 100) + "%"}`, `data-act="ctab" data-id="progress" role="button"`)}
       ${tile("t2", "השבוע", w > 0.0005 ? `+${m(w)}` : "—", w > 0.0005 ? "מ׳ ב-7 הימים האחרונים" : "ללא ביצוע השבוע", `data-act="ctab" data-id="progress" role="button"`)}
       ${tile("t3", "החודש", mm > 0.0005 ? `+${m(mm)}` : "—", mm > 0.0005 ? "מ׳ ב-30 הימים האחרונים" : "ללא ביצוע החודש", `data-act="ctab" data-id="progress" role="button"`)}
-      ${tile("t4", "נושאים פתוחים", open.length, `${(u => u ? `🔴 ${u} דחופים · ` : "")(open.filter(i => priN(i.priority) === "דחוף").length)}${hold ? `HOLD: ${hold}` : "אין HOLD"}${mg ? ` · ${mg} להנהלה` : ""}`, `data-act="ctab" data-id="issues" role="button"`)}
+      ${tile(`t4 iss-hot ${open.some(i => priN(i.priority) === "דחוף") ? "urg" : ""}`, "⚠ נושאים פתוחים <em>לחיצה ←</em>", open.length, `${(u => u ? `🔴 ${u} דחופים · ` : "")(open.filter(i => priN(i.priority) === "דחוף").length)}${hold ? `HOLD: ${hold}` : "אין HOLD"}${mg ? ` · ${mg} להנהלה` : ""}`, `data-act="ctab" data-id="issues" role="button"`)}
       ${tile("t5", "הזמנות", ords.length, cov ? `כיסוי הגזרה ${Math.round(cov.pct * 100)}%` : "—", `data-act="ctab" data-id="orders" role="button"`)}
       ${tile("t6", "תוכניות נמסרו", dv === null ? "—" : Math.round(dv * 100) + "%", "מהגזרה", `data-act="ctab" data-id="deliveries" role="button"`)}
       ${(a => tile("t7", "פריטים", a.length, `${a.filter(i => i.status === "הושלם").length} הושלמו · מעבירים, שקד`, `data-act="ctab" data-id="culverts" role="button"`))(d.items.filter(i => i.contractorId === c.id))}
@@ -3640,7 +3644,7 @@ function pageWork(d) {
       <div class="card"><div class="row" style="align-items:center;gap:8px"><h2 style="margin:0">ארכיון דיונים</h2><span class="spacer"></span><select class="inp sm" data-wd="t"><option value="">כל הסוגים</option>${MTG_TYPES.map(t => `<option ${t === TF ? "selected" : ""}>${t}</option>`).join("")}</select><select class="inp sm" data-wd="c"><option value="">כל הקבלנים</option>${d.contractors.map(c => `<option value="${c.id}" ${c.id === CF ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
       ${A.length ? `<div class="tablewrap"><table class="sheet" style="margin-top:8px"><thead><tr><th>תאריך</th><th>סוג</th><th>דיון</th><th>קבלן</th><th>משתתפים</th><th>נרשם</th><th></th></tr></thead><tbody>${A.map(m => `<tr><td class="nowrap">${fmtD(m.date)}</td><td>${esc(m.type || "ישיבה שבועית")}</td><td><b>${esc(m.title || (isV2(m) ? "דיון" : "ישיבה שבועית"))}</b>${isV2(m) && m.open ? ` <span class="pill warn">פתוח</span>` : ""}</td><td>${esc(RAW.contractors?.[m.contractorId]?.name || "")}</td><td class="small">${esc(m.attendees || "")}</td>
         <td class="small">${isV2(m) ? `${mtgTasks(m.id).length} משימות · ${mtgDecs(m).length} החלטות · ${mtgUpds(m.id).length} עדכונים` : `${(m.opened || []).length} נפתחו · ${(m.closed || []).length} נסגרו`}</td>
-        <td class="nowrap">${isV2(m) ? `<button class="btn ghost sm" data-act="wDisc" data-id="${m.id}">פתיחה</button> <button class="btn ghost sm" data-act="wSum" data-id="${m.id}">סיכום</button>` : `<button class="btn ghost sm" data-act="wOldPrint" data-id="${m.id}">פתיחה / PDF</button>`}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">אין דיונים. "+ דיון חדש" — לישיבה שבועית, דיון עם מתכנן, רשות, קבלן…</p>`}</div>`; }
+        <td class="nowrap">${isV2(m) ? `<button class="btn ghost sm" data-act="wDisc" data-id="${m.id}">פתיחה</button> <button class="btn ghost sm" data-act="wSum" data-id="${m.id}">סיכום</button>` : `<button class="btn ghost sm" data-act="wOldPrint" data-id="${m.id}">פתיחה / PDF</button>`}${mtgCanDel(m) ? ` <button class="btn ghost sm" data-act="wDiscDel" data-id="${m.id}" title="מחיקת הדיון" style="color:var(--warn)">🗑</button>` : ""}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">אין דיונים. "+ דיון חדש" — לישיבה שבועית, דיון עם מתכנן, רשות, קבלן…</p>`}</div>`; }
   else { const C = d.issues.filter(i => i.status === "סגור").sort((a, b) => String(b.closedAt || b.updated || "").localeCompare(String(a.closedAt || a.updated || ""))).slice(0, 150);
     body = `<div class="card"><h2 style="margin-top:0">נסגרו לאחרונה <span class="muted small">(${C.length})</span></h2>${C.length ? `<div class="tablewrap"><table class="sheet"><thead><tr><th>קוד</th><th>נושא</th><th>קבלן</th><th>מי טיפל</th><th>נסגר</th><th>עדכון אחרון</th><th></th></tr></thead><tbody>${C.map(i => `<tr><td dir="ltr"><b>${esc(i.code || "")}</b></td><td><a href="#" data-act="wEdit" data-id="${i.id}">${esc(i.title || "")}</a></td><td>${esc(RAW.contractors?.[i.contractorId]?.name || "כללי")}</td><td>${esc(i.owner || "")}</td><td>${fmtD(i.closedAt || i.updated)}</td><td class="small">${esc(i.last || "")}</td><td>${isViewer() ? "" : `<button class="btn ghost sm" data-act="wReopen" data-id="${i.id}">פתיחה מחדש</button>`}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">אין</p>`}</div>`; }
   const tabB = (k, l, n) => `<button class="w-tb ${tab === k ? "on" : ""}" data-act="wTab" data-id="${k}">${l}${n != null ? ` <small>${n}</small>` : ""}</button>`;
@@ -3665,7 +3669,7 @@ function pageDisc(d, mid) {
     : m.contractorId ? open.filter(i => i.contractorId === m.contractorId && i.src?.id !== mid) : [];
   const prevOpen = prev && isV2(prev) ? mtgTasks(prev.id).filter(i => i.status !== "סגור") : [];
   return `<div class="ch-banner" style="--cc:#34557a"><div><h1>${esc(m.title || "דיון")}</h1><span>${fmtD(m.date)} · ${esc(m.type || "")}${c ? " · " + esc(c.name) : ""}${m.by ? " · פתח: " + esc(m.by) : ""} · ${m.open ? "מתנהל" : "הסתיים"}</span></div>
-    <div class="row" style="gap:6px"><button class="btn" data-act="wSum" data-id="${mid}">📄 סיכום ושליחה</button>${ed ? (m.open ? `<button class="btn ghost" data-act="wDiscEnd" data-id="${mid}">סיום הדיון</button>` : `<button class="btn ghost" data-act="wDiscReopen" data-id="${mid}">פתיחה מחדש</button>`) : ""}<button class="btn ghost" data-act="wTabGo" data-id="disc">כל הדיונים</button></div></div>
+    <div class="row" style="gap:6px"><button class="btn" data-act="wSum" data-id="${mid}">📄 סיכום ושליחה</button>${ed ? (m.open ? `<button class="btn ghost" data-act="wDiscEnd" data-id="${mid}">סיום הדיון</button>` : `<button class="btn ghost" data-act="wDiscReopen" data-id="${mid}">פתיחה מחדש</button>`) : ""}<button class="btn ghost" data-act="wTabGo" data-id="disc">כל הדיונים</button>${mtgCanDel(m) ? `<button class="btn ghost" data-act="wDiscDel" data-id="${mid}" style="color:var(--warn)">🗑 מחיקה</button>` : ""}</div></div>
     <div class="card"><div class="w-df">
       <label class="field" style="flex:2">כותרת<input class="inp" data-wm="title" value="${esc(m.title || "")}" ${ed ? "" : "disabled"}></label>
       <label class="field">סוג<select class="inp" data-wm="type" ${ed ? "" : "disabled"}>${MTG_TYPES.map(t => `<option ${t === m.type ? "selected" : ""}>${t}</option>`).join("")}</select></label>
@@ -3694,6 +3698,18 @@ async function wDiscNew(type = "", cid = "") {
     auto(); q("#nd_t").onchange = q("#nd_c").onchange = auto; q("#nd_n").oninput = () => { q("#nd_n").dataset.touched = 1; };
     q("#mYes").onclick = async () => { const id = await api.add("mtgs", { v: 2, type: q("#nd_t").value, contractorId: q("#nd_c").value, title: q("#nd_n").value.trim(), attendees: q("#nd_a").value.trim(), date: todayStr(), by: tkWho(), open: true, createdAt: new Date().toISOString(), dec: {} });
       close(); if (id) { ui.page = "disc:" + id; location.hash = ui.page; render(); scrollTo(0, 0); setTimeout(() => document.getElementById("qn_t")?.focus(), 80); } };
+  });
+}
+const mtgCanDel = m => !isViewer() && (isMgr() || (m.by && m.by === tkWho()));
+/** מחיקת דיון: המשימות שנפתחו בו נשארות כנושאים (רק בלי הקישור לדיון). העדכונים נשארים בהיסטוריה של הנושאים */
+function wDiscDel(mid) {
+  const m = RAW.mtgs?.[mid]; if (!m) return; const T = isV2(m) ? mtgTasks(mid) : [];
+  modal(`<h2>מחיקת דיון</h2><p><b>${esc(m.title || m.type || "ישיבה")}</b> · ${fmtD(m.date)}</p>
+    <p class="small">${T.length ? `${T.length} המשימות שנפתחו בדיון <b>יישארו</b> כנושאים פתוחים (רק בלי הקישור לדיון). ` : ""}ההחלטות והסיכום של הדיון יימחקו. העדכונים שנכתבו לנושאים נשארים בהיסטוריה שלהם.</p>
+    <div class="row"><button class="btn" id="mYes" style="background:var(--warn);border-color:var(--warn)">מחיקה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (mm, close) => {
+    mm.querySelector("#mNo").onclick = close;
+    mm.querySelector("#mYes").onclick = async () => { if (T.length) await bulkPatch("issues", T.map(i => i.id), { src: null }); await api.remove("mtgs", mid); close(); toast("הדיון נמחק");
+      if (ui.page === "disc:" + mid) { ui.page = "work"; ui.wtab = "disc"; location.hash = "work"; render(); } };
   });
 }
 /* ---------- סיכום דיון: PDF / Word / מייל / העתקה ---------- */
@@ -3791,6 +3807,7 @@ async function wClick(act, b) {
     const mid = m?.id || await api.add("mtgs", { v: 2, type: "ישיבה שבועית", contractorId: "", title: "ישיבה שבועית", attendees: teamNames().join(", "), date: todayStr(), by: tkWho(), open: true, createdAt: new Date().toISOString(), dec: {} });
     if (mid) { ui.page = "disc:" + mid; location.hash = ui.page; render(); scrollTo(0, 0); } }
   else if (act === "wDisc") { ui.page = "disc:" + id; location.hash = ui.page; render(); scrollTo(0, 0); }
+  else if (act === "wDiscDel") wDiscDel(id);
   else if (act === "wDiscEnd") { await api.update("mtgs", id, { open: false, closedAt: todayStr() }); wSum(id); }
   else if (act === "wDiscReopen") await api.update("mtgs", id, { open: true });
   else if (act === "wSum") wSum(id);
