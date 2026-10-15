@@ -106,13 +106,15 @@ h2 { font-size: 17px; margin: 0 0 12px; font-weight: 700; }
 .sheet thead { position: sticky; top: 0; z-index: 3; box-shadow: 0 2px 0 #c3d9e6; }
 .sheet { border-collapse: collapse; width: 100%; font-size: 14px; }
 .sheet tr.al-hl > td { background: #ffe2c2 !important; } .sheet tr.al-hl { outline: 2px solid #e8892b; outline-offset: -2px; }
+.gt-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; } .gt-chip { font: inherit; cursor: pointer; border: 1px solid #d8c7a8; background: #fbf5ea; color: #5c4220; border-radius: 10px; padding: 6px 12px; } .gt-chip.on { background: #7a5a2f; color: #fff; border-color: #7a5a2f; } .gt-chip small { opacity: .75; }
 .navback { position: sticky; top: 8px; z-index: 40; display: inline-flex; align-items: center; gap: 4px; margin: 0 0 8px; padding: 6px 14px; border-radius: 999px; border: 1px solid #b9cbe0; background: #eaf2fb; color: #24507e; font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 2px 8px rgba(30,60,90,.12); }
 .navback:hover { background: #dbe9f8; }
 .qn { border: 2px solid #f0c94b; background: #fffdf3; } .qn-in { display: flex; gap: 8px; } .qn-in .inp { flex: 1; font-size: 16px; padding: 10px 12px; }
 .qn-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; min-height: 26px; } .qn-ch { background: #eef3ea; border: 1px solid #d3dfcc; border-radius: 999px; padding: 2px 10px; font-size: 13px; } .qn-ch.miss { background: #f5f5f5; color: #8a8f94; border-style: dashed; } .qn-ch.up { background: #e3ecf6; border-color: #b9cbe0; color: #24507e; font-weight: 700; }
 .qn-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 12px; }
 .qn-card { text-align: right; font: inherit; cursor: pointer; background: #fff8cf; border: 1px solid #ecd98a; border-top: 4px solid var(--rc); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.08); transform: rotate(-.4deg); }
-.qn-card:nth-child(2n) { transform: rotate(.5deg); } .qn-card:hover { transform: none; box-shadow: 0 3px 10px rgba(0,0,0,.14); } .qn-card span { font-size: 12.5px; color: #5d665f; } .qn-card .pill { align-self: flex-start; }
+.qn-card:nth-child(2n) { transform: rotate(.5deg); } .qn-card:hover { transform: none; box-shadow: 0 3px 10px rgba(0,0,0,.14); } .qn-card { position: relative; } .qn-x { position: absolute; top: 4px; left: 6px; color: #9a8a4a; font-size: 13px !important; padding: 0 4px; border-radius: 4px; } .qn-x:hover { background: #f3e3a0; color: #5a4a10 !important; }
+.qn-card span { font-size: 12.5px; color: #5d665f; } .qn-card .pill { align-self: flex-start; }
 .sheet tr.fresh > td { background: #fff4c7 !important; } .sheet tr.fresh { outline: 2px solid #e0a800; outline-offset: -2px; }
 .sheet th[data-act="sortCol"] { cursor: pointer; user-select: none; } .sheet th[data-act="sortCol"]:hover { background: #cfe4f2; } .sheet th.sorted { background: #c6def0; } .sarr { font-size: 10px; color: #2d6cb8; }
 .sheet th { background: var(--head); color: var(--head-ink); font-weight: 700; font-size: 13px; padding: 7px 6px; border: 1px solid #c3d9e6; white-space: nowrap; text-align: center; }
@@ -1451,7 +1453,7 @@ function gratesBlock(d) {
 }
 /** רכיבי הפרויקט — דף לכל סוג פריט, מכל הגזרות ומכל הקבלנים. רכיבים נוספים נשמרים בהגדרות (tableConfig/settings/components) */
 const COMPS_BASE = [["trafo", "חדרי טרפו", "חדר טרפו"], ["cab", "ארונות שקד", "ארון שקד"], ["culv", "מעבירי מים", "מעבירי מים"], ["air", "מעבירים איריים", "מעביר אירי"], ["grate", "סבכות", "סבכות למעבירי מים"],
-  ["@power", "חיבורי חח״י"], ["@sites", "אתרי איסוף"], ["gate", "שערים", "שערים"], ["ttz", "תט״זים", "תט״ז"], ["mine", "פינוי מוקשים", "פינוי מוקשים"]];
+  ["@power", "חיבורי חח״י"], ["@sites", "אתרי איסוף"], ["gate", "שערים ומחסומים", "שערים"], ["ttz", "תט״זים", "תט״ז"], ["mine", "פינוי מוקשים", "פינוי מוקשים"]];
 const comps = () => [...COMPS_BASE.map(([k, name, kind]) => ({ k, name, kind })), ...Object.entries(RAW.tableConfig?.settings?.components || {}).map(([k, x]) => ({ k: "x" + k, name: x.name, kind: x.kind || x.name, custom: true }))];
 const compOf = kind => comps().find(x => x.kind === kind);
 function pageComp(d, key) {
@@ -1468,9 +1470,12 @@ function pageComp(d, key) {
   const kd = i => kdNum(i.kdFrom) ?? -1;
   return `<div class="ch-banner" style="--cc:${I.c}"><div><h1>${esc(C.name)}</h1><span>כל ה${esc(C.name)} בפרויקט — מכל הגזרות. ביצוע: ${execs.map(c => esc(c.name)).join(", ") || "—"}. עדכון כאן מתעדכן בכל האתר.</span></div></div>
     <div class="ch-tiles" style="--cc:${I.c};grid-template-columns:repeat(${byArea.length + (none.length ? 1 : 0) + 1},minmax(0,1fr))">${tile("כל הקו", its, I.c, "")}${byArea.map(x => tile(x.m.name, x.a, cColor(d, x.m), `data-act="nav" data-id="c:${x.m.id}" role="button" ${isMain(d.contractors.find(c => c.id === its.find(i => mainAt(d, i)?.id === x.m.id)?.contractorId) || {}) ? 'data-ctab="culverts"' : ""}`)).join("")}${none.length ? tile("ללא גזרה", none, "#8a9a90", "") : ""}</div>
+    ${key === "gate" ? (() => { const ts = gateTypes().filter(t => its.some(i => gateT(i) === t)), on = ui.filt.items?.c?.gateType?.[0];
+      return ts.length ? `<div class="gt-row"><span class="small muted">לפי סוג:</span>${ts.map(t => { const a = its.filter(i => gateT(i) === t), dn = a.filter(i => i.status === "הושלם").length;
+        return `<button class="gt-chip ${on === t ? "on" : ""}" data-act="gtFilt" data-id="${esc(t)}" title="${on === t ? "ביטול הסינון" : "להציג רק " + esc(t)}"><b>${esc(t)}</b> ${dn}/${a.filter(i => i.status !== "מבוטל").length} <small>הושלמו</small></button>`; }).join("")}</div>` : ""; })() : ""}
     <div class="card"><div class="tablewrap"><table class="sheet">${statHead("גזרה")}<tbody>${byArea.map(x => statRow(esc(x.m.name), itemStats(x.a))).join("")}${none.length ? statRow("ללא גזרה", itemStats(none)) : ""}${statRow("סה״כ", itemStats(its))}</tbody></table></div>
     <h2 style="margin-top:16px">${esc(C.name)} <span class="small muted">(${its.length}) — הכפתורים מעל הטבלה מסננים לפי גזרה, קבלן וסטטוס</span></h2>${renderSheet("items", [...its].sort((a, b) => kd(b) - kd(a)), "אין פריטים")}
-    <div class="row" style="margin-top:10px;gap:8px">${sp && !isViewer() ? `<button class="btn ghost sm" data-act="addItem" data-id="${sp}" data-kind="${esc(C.kind)}">+ ${esc(C.kind)}</button>` : `<span class="small muted">מוסיפים פריט בדף הקבלן המבצע (חוצץ ״פריטים״).</span>`}</div></div>`;
+    <div class="row" style="margin-top:10px;gap:8px">${sp && !isViewer() ? (key === "gate" ? gateTypes().map(t => `<button class="btn ghost sm" data-act="addItem" data-id="${sp}" data-kind="שערים" data-gt="${esc(t)}">+ ${esc(t)}</button>`).join("") + `<button class="btn ghost sm" data-act="addItem" data-id="${sp}" data-kind="שערים" data-gt="__new">+ סוג חדש…</button>` : `<button class="btn ghost sm" data-act="addItem" data-id="${sp}" data-kind="${esc(C.kind)}">+ ${esc(C.kind)}</button>`) : `<span class="small muted">מוסיפים פריט בדף הקבלן המבצע (חוצץ ״פריטים״).</span>`}</div></div>`;
 }
 /** דף התט״זים — שתי שכבות: הכנת משטח (קבלני הגזרה) והצבה (חח״י) */
 function pageTtz(d, C) {
@@ -2641,6 +2646,20 @@ const ofT = (a, b) => `${a}<span class="ofT"> מתוך ${b}</span>`;
 const statRow = (label, st, extra = "") => `<tr><td><b>${label}</b>${extra}</td><td class="c">${st.total}</td><td class="c">${st.done}</td><td class="c">${st.prog}</td><td class="c">${st.plan}</td><td class="c">${st.notyet}</td><td class="c">${st.hold}</td>
   <td class="c" style="${heatBg(st.total ? st.done / st.total : null)}"><b>${st.total ? ofT(st.done, st.total) : "—"}</b><div class="small">${st.total ? Math.round(st.done / st.total * 100) + "%" : ""}</div></td><td class="c small">${st.km ? `<b>${ofT(num(Math.round(st.kmDone * 1000), 0), MTR(st.km))}</b><div class="small">${Math.round(st.kmDone / st.km * 100)}%</div>` : "—"}</td></tr>`;
 const statHead = first => `<thead><tr><th>${first}</th><th>סה״כ</th><th>הושלמו</th><th>בביצוע</th><th>מתוכננים</th><th>טרם</th><th>HOLD</th><th>הושלמו מתוך</th><th>אורך (טווחים)</th></tr></thead>`;
+/* ---------- סוגי שערים: שער / מחסום / פשפש + סוגים שמגדירים (הגדרות: settings.gateTypes). פריט "שערים" בלי סוג = שער ---------- */
+const GATE_T0 = ["שער", "מחסום", "פשפש"];
+const gateTypes = () => [...new Set([...GATE_T0, ...(RAW.tableConfig?.settings?.gateTypes || []), ...list("items").filter(i => i.kind === "שערים" && i.gateType).map(i => i.gateType)])];
+const gateT = i => i.gateType || "שער";
+function gateTypeModal(done) {
+  modal(`<h2>סוג חדש</h2><label class="field">שם הסוג<input class="inp" id="gt_n" placeholder="למשל: שער כפול, מחסום הידראולי, מעבר הולכי רגל"></label><p class="small muted" id="gt_m"></p>
+    <div class="row"><button class="btn" id="mYes">הוספה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    const q = m.querySelector("#gt_n"); q.focus(); m.querySelector("#mNo").onclick = () => { close(); done(null); };
+    const go = async () => { const n = q.value.trim(); if (!n) return; if (!gateTypes().includes(n)) { const S = { ...(RAW.tableConfig?.settings || {}) }; delete S.updatedAt; delete S.updatedBy; S.gateTypes = [...(S.gateTypes || []), n]; await api.put("tableConfig", "settings", S); } close(); done(n); };
+    m.querySelector("#mYes").onclick = go; q.onkeydown = e => { if (e.key === "Enter") go(); };
+  });
+}
+document.addEventListener("change", e => { const s = e.target; if (!s.matches?.('select[data-edit$="|gateType"]') || s.value !== "__new") return; e.stopImmediatePropagation();
+  const id = s.dataset.edit.split("|")[1], it = RAW.items?.[id]; s.value = gateT(it || {}); gateTypeModal(async n => { if (n) { await api.update("items", id, { gateType: n }); toast(`סוג "${n}" נוסף ✓`); } }); }, true);
 const KIND_PLURAL = { "ארון שקד": "ארונות שקד", "חדר טרפו": "חדרי טרפו", "תט״ז": "תט״זים", "שערים": "שערים", "פינוי מוקשים": "קטעי פינוי מוקשים", "סבכות למעבירי מים": "סבכות למעבירי מים", "מעבירי מים": "מעבירי מים", "מעביר אירי": "מעברים איריים" };
 function specialistDash(d, S) {
   const sp = d.contractors.filter(c => !isMain(c)); if (!sp.length) return "";
@@ -3606,7 +3625,7 @@ function qnParse(raw) {
   else if (cut(new RegExp(QN_W + "(?:עד\\s+)?סוף\\s+(?:ה)?שבוע\\s+הבא" + QN_E)) || cut(new RegExp(QN_W + "(?:עד\\s+)?(?:ב)?שבוע\\s+הבא" + QN_E))) P.due = addDays(T0, 4 - dow + 7);
   else if (cut(new RegExp(QN_W + "(?:עד\\s+)?סוף\\s+(?:ה)?שבוע" + QN_E))) P.due = addDays(T0, dow <= 4 ? 4 - dow : 4 - dow + 7);
   else if ((m = cut(new RegExp(QN_W + "(?:עוד|בעוד|תוך)\\s+(\\d+)?\\s*(יום|ימים|שבוע|שבועות|שבועיים)" + QN_E)))) { const n = m[2] === "שבועיים" ? 14 : (+m[1] || 1) * (/שבוע/.test(m[2]) ? 7 : 1); P.due = addDays(T0, n); }
-  else { for (let k = 0; k < 6 && !P.due; k++) { const [full, l] = QN_DOW[k]; if (cut(new RegExp(QN_W + "(?:עד\\s+)?(?:ב?יום\\s+(?:" + full + "|" + l + "[׳']?)|ב?" + full + ")" + QN_E))) P.due = nextDow(k); } }
+  else { for (let k = 0; k < 6 && !P.due; k++) { const [full, l] = QN_DOW[k]; if (cut(new RegExp(QN_W + "(?:(?:עד\\s+)?ב?יום\\s+(?:" + full + "|" + l + "[׳']?)|ב" + full + "|עד\\s+" + full + ")" + QN_E))) P.due = nextDow(k); } }
   // ק.ד.
   if ((m = raw.match(/ק\s*[.״"']?\s*ד\s*[.׳']?\s*(\d{2,4}(?:\.\d+)?)(?:\s*[-–]\s*(\d{2,4}(?:\.\d+)?))?/))) { P.kdFrom = m[2] && +m[2] > +m[1] ? m[2] : m[1]; P.kdTo = m[2] ? (+m[2] > +m[1] ? m[1] : m[2]) : ""; }
   // מעביר BC-xx
@@ -3620,7 +3639,7 @@ function qnParse(raw) {
   // כותרת: בלי האחראי בהתחלה, בלי מילות חשיבות ותאריך
   let ti = P.title;
   ti = ti.replace(new RegExp(QN_W + "(דחוף|בדחיפות)" + QN_E, "g"), " ").replace(/!+/g, " ");
-  if (P.due) ti = ti.replace(/(?:עד|ל|ב)?\s*\d{1,2}[\/.]\d{1,2}(?:[\/.]\d{2,4})?/, " ").replace(new RegExp("(?:^|\\s)(?:עד\\s+)?(?:מחר|היום|סוף\\s+(?:ה)?שבוע(?:\\s+הבא)?|(?:ב)?שבוע\\s+הבא|(?:עוד|בעוד|תוך)\\s+\\d*\\s*(?:יום|ימים|שבוע|שבועות|שבועיים)|ב?יום\\s+(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|[אבגדהו][׳']?)|ב?(?:ראשון|שני|שלישי|רביעי|חמישי|שישי))(?=$|\\s|[,.])"), " ");
+  if (P.due) ti = ti.replace(/(?:עד|ל|ב)?\s*\d{1,2}[\/.]\d{1,2}(?:[\/.]\d{2,4})?/, " ").replace(new RegExp("(?:^|\\s)(?:עד\\s+)?(?:מחר|היום|סוף\\s+(?:ה)?שבוע(?:\\s+הבא)?|(?:ב)?שבוע\\s+הבא|(?:עוד|בעוד|תוך)\\s+\\d*\\s*(?:יום|ימים|שבוע|שבועות|שבועיים)|ב?יום\\s+(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|[אבגדהו][׳']?)|ב(?:ראשון|שני|שלישי|רביעי|חמישי|שישי))(?=$|\\s|[,.])"), " ");
   P.title = ti.replace(/\s{2,}/g, " ").replace(/^[\s,.:;—–-]+|[\s,.:;—–-]+$/g, "").trim() || raw;
   return P;
 }
@@ -3645,11 +3664,11 @@ async function qnAdd(raw) {
 }
 function qnBlock(d, since) {
   if (isViewer()) return "";
-  const L = (d.tasks || []).filter(t => t.qn && t.qn >= since).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)) || 0).reverse();
+  const L = (d.tasks || []).filter(t => t.qn && !t.qnOff && t.status !== "סגור").sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)) || 0).reverse();
   const card = t => { const c = d.contractors.find(x => x.id === t.contractorId);
-    return `<button class="qn-card" style="--rc:${c ? cColor(d, c) : "#9aa3ad"}" data-act="tkEdit" data-id="${t.id}" title="לחיצה — עריכת המשימה"><b>${esc(t.title)}</b>
-      <span>${esc(t.ownerName || "ללא אחראי")}${c ? " · " + esc(c.name) : ""}${t.kdFrom ? ` · ק.ד. ${t.kdTo ? esc(t.kdTo) + "–" : ""}${esc(t.kdFrom)}` : ""}${t.due ? " · עד " + fmtD(t.due) : ""}${t.issueCode ? ` · <span dir="ltr" style="white-space:nowrap">${esc(t.issueCode)}</span>` : ""}</span>${priN(t.priority) && priN(t.priority) !== "בינוני" ? priPill(t.priority) : ""}</button>`; };
-  return `<div class="card qn"><div class="row" style="align-items:baseline;gap:8px;margin-bottom:6px"><h2 style="margin:0">✏️ פתק מהיר</h2><span class="muted small">שורה אחת ← Enter. משימה נשמרת מיד ונכנסת לנושאים הפתוחים של הקבלן. קוד של נושא קיים (AV-14) ← עדכון לנושא.</span></div>
+    return `<div class="qn-card" style="--rc:${c ? cColor(d, c) : "#9aa3ad"}" data-act="tkEdit" data-id="${t.id}" role="button" title="לחיצה — עריכת המשימה"><span class="qn-x" data-act="qnOff" data-id="${t.id}" role="button" title="להוריד מהלוח (המשימה נשארת במשימות הפתוחות)">✕</span><b>${esc(t.title)}</b>
+      <span>${esc(t.ownerName || "ללא אחראי")}${c ? " · " + esc(c.name) : ""}${t.kdFrom ? ` · ק.ד. ${t.kdTo ? esc(t.kdTo) + "–" : ""}${esc(t.kdFrom)}` : ""}${t.due ? " · עד " + fmtD(t.due) : ""}${t.issueCode ? ` · <span dir="ltr" style="white-space:nowrap">${esc(t.issueCode)}</span>` : ""}</span>${priN(t.priority) && priN(t.priority) !== "בינוני" ? priPill(t.priority) : ""}</div>`; };
+  return `<div class="card qn"><div class="row" style="align-items:baseline;gap:8px;margin-bottom:6px"><h2 style="margin:0">✏️ פתק מהיר</h2><span class="muted small">שורה אחת ← Enter. משימה נשמרת מיד ונכנסת למשימות ולנושאים הפתוחים של הקבלן. קוד של נושא קיים (AV-14) ← עדכון לנושא. הפתקים יורדים מהלוח בשמירת סיכום הישיבה (או ✕) — המשימות עצמן נשארות.</span></div>
     <div class="qn-in"><input class="inp" id="qn_t" autocomplete="off" placeholder="למשל: נועם — לתאם עם רשות העתיקות בבראשי ק.ד. 430-434 עד יום ה׳ דחוף"><button class="btn" data-act="qnAdd">הוספה ↵</button></div>
     <div class="qn-chips" id="qn_c"><span class="muted small">מזהה לבד: אחראי (שם בתחילת השורה) · קבלן · ק.ד. · BC-17 · תאריך (עד 20/10, מחר, יום ה׳, סוף השבוע, שבוע הבא) · דחוף / !</span></div>
     ${L.length ? `<div class="qn-board">${L.map(card).join("")}</div>` : ""}</div>`;
@@ -3709,7 +3728,8 @@ function tkSummary() {
       const w = window.open("", "_blank"), sn = t => ({ id: t.id, title: t.title || "", owner: t.ownerName || "", status: t.status || "", due: t.due || "", c: d.contractors.find(c => c.id === t.contractorId)?.name || "", last: tkLast(t)?.text || "" });
       const disc = agendaItems(d).map(({ i, note }) => ({ id: i.id, code: i.code || "", title: i.title || "", c: d.contractors.find(c => c.id === i.contractorId)?.name || "", pri: priN(i.priority), status: i.status || "", note: note || "", last: note ? "" : (i.last || "") }));
       const rec = { date: todayStr(), since, attendees: m.querySelector("#mt_who").value.trim(), notes: m.querySelector("#mt_notes").value.trim(), by: tkWho(), opened: opened.map(sn), closed: closed.map(sn), open: open.map(sn), issues: disc };
-      const id = await api.add("mtgs", rec); await agSet({ items: {}, notes: {}, hidden: {} }); close(); toast("הסיכום נשמר בארכיון ✓ — רשימת הדיון התאפסה לישיבה הבאה"); tkPrint({ id, ...rec }, w);
+      const id = await api.add("mtgs", rec); await agSet({ items: {}, notes: {}, hidden: {} });
+      const qnIds = list("tasks").filter(t => t.qn && !t.qnOff).map(t => t.id); if (qnIds.length) await bulkPatch("tasks", qnIds, { qnOff: todayStr() }); close(); toast("הסיכום נשמר בארכיון ✓ — רשימת הדיון התאפסה לישיבה הבאה"); tkPrint({ id, ...rec }, w);
     };
   });
 }
@@ -5291,8 +5311,10 @@ function customColDef(col, c) {
 function orderedCols(table, store = table) {
   const all = [...TABLE_DEFS[table](), ...customOf(table).filter(c => !(table === "orders" && c.id === "signer")).map(c => customColDef(store, c))];   // "סטטוס" של הזמנה — עמודה קבועה (x_signer)
   const ord = tcfg(table).order || [];
-  const pos = k => { const i = ord.indexOf(k); return i < 0 ? 1e6 + all.findIndex(c => c.key === k) : i; };
-  return all.sort((a, b) => pos(a.key) - pos(b.key));
+  if (!ord.length) return all;
+  // עמודה חדשה שלא בסדר השמור — נכנסת מיד אחרי העמודה שלפניה בהגדרה (ולא בסוף הטבלה)
+  const P = {}; let last = -1, sub = 0; all.forEach(c => { const i = ord.indexOf(c.key); if (i >= 0) { last = i; sub = 0; P[c.key] = i; } else P[c.key] = last + 0.001 * ++sub; });
+  return all.sort((a, b) => P[a.key] - P[b.key]);
 }
 async function saveOrder(table, keys) { await setCfg(table, { order: keys }); }
 
@@ -5638,6 +5660,8 @@ const TABLE_DEFS = {
   items: () => { const d = D(), R = grateReps(d); return [
     { key: "kind", label: "התמחות", cell: i => { const c = d.contractors.find(x => x.id === i.contractorId), sp = specsOf(c || {}), ks = [...new Set([...(sp.length ? sp : SPECIALTIES), i.kind].filter(Boolean))];
       return `<select class="inp" id="f_items_${i.id}_kind" data-edit="items|${i.id}|kind">${ks.map(k => `<option ${k === i.kind ? "selected" : ""}>${esc(k)}</option>`).join("")}</select>`; } },
+    ...(ui.page === "k:gate" || (ui.page.startsWith("c:") && specsOf(RAW.contractors?.[ui.page.slice(2)] || {}).includes("שערים")) ? [{ key: "gateType", label: "סוג", cell: i => i.kind !== "שערים" ? "" :
+      `<select class="inp" id="f_items_${i.id}_gateType" data-edit="items|${i.id}|gateType">${gateTypes().map(k => `<option value="${esc(k)}" ${k === gateT(i) ? "selected" : ""}>${esc(k)}</option>`).join("")}<option value="__new">+ סוג חדש…</option></select>` }] : []),
     { key: "name", label: "תיאור", cls: "w-place", cell: i => cellInput("items", i, "name") + (i.conflict ? `<div><span class="pill" style="background:#fde2c8;color:#9a4b00;cursor:help" title="${esc(i.conflict)}">סתירה — לבדיקה</span></div>` : "") },
     { key: "kdFrom", label: "ק.ד. מ", cls: "w-kd", cell: i => cellInput("items", i, "kdFrom", "kdin") + (kdNum(i.kdFrom) === null ? (k => k === null ? "" : `<div class="small muted nowrap" title="משוער לפי הנ.צ. ביחס לנקודות עם ק.ד. ידוע — לא נשמר. כדאי לאמת ולהקליד.">≈${k} לפי נ.צ.</div>`)(kdEst(d, i)) : "") },
     { key: "kdTo", label: "ק.ד. עד", cls: "w-kd", cell: i => cellInput("items", i, "kdTo", "kdin") },
@@ -6098,6 +6122,8 @@ $app.addEventListener("click", async e => {
   else if (act === "ttzMig") ttzMigModal();
   else if (act === "agAdd") agAddModal();
   else if (act === "navBack") navBack();
+  else if (act === "gtFilt") { const t = b.dataset.id, cur = ui.filt.items?.c?.gateType?.[0]; ui.filt.items = { ...(ui.filt.items || {}), c: { ...(ui.filt.items?.c || {}), gateType: cur === t ? [] : [t] } }; render(); }
+  else if (act === "qnOff") { await api.update("tasks", b.dataset.id, { qnOff: todayStr() }); }
   else if (act === "qnAdd") { const inp = document.getElementById("qn_t"); if (inp?.value.trim()) { const v = inp.value; inp.value = ""; await qnAdd(v); setTimeout(() => document.getElementById("qn_t")?.focus({ preventScroll: true }), 30); } }
   else if (act === "agDel") { const A = AG(), id = b.dataset.id, items = { ...(A.items || {}) }; delete items[id]; await agSet({ items, hidden: { ...(A.hidden || {}), [id]: todayStr() } }); }
   else if (act === "actDet") { const [cid, aid] = String(b.dataset.id).split("|"); actDetailModal(cid, aid); }
@@ -6267,7 +6293,8 @@ $app.addEventListener("click", async e => {
   else if (act === "dashSector") { ui.dashSector = b.dataset.id; render(); }
   else if (act === "period") { ui.period = b.dataset.id; render(); }
   else if (act === "addItem") { const c = RAW.contractors[b.dataset.id];
-    await addFresh("items", { contractorId: b.dataset.id, kind: b.dataset.kind || specsOf(c || {})[0] || "", name: "", kdFrom: "", kdTo: "", status: "מתוכנן", plannedDate: "", doneDate: "", note: "" }); }
+    if (b.dataset.gt === "__new") return gateTypeModal(async n => { if (n) await addFresh("items", { contractorId: b.dataset.id, kind: "שערים", gateType: n, name: "", kdFrom: "", kdTo: "", status: "מתוכנן", plannedDate: "", doneDate: "", note: "" }); });
+    await addFresh("items", { ...(b.dataset.gt ? { gateType: b.dataset.gt } : {}), contractorId: b.dataset.id, kind: b.dataset.kind || specsOf(c || {})[0] || "", name: "", kdFrom: "", kdTo: "", status: "מתוכנן", plannedDate: "", doneDate: "", note: "" }); }
   else if (act === "bulkItems") bulkItemsModal(b.dataset.id);
   else if (act === "spMove") spMoveModal(b.dataset.id);
   else if (act === "issuesDoc") issuesDoc(b.dataset.id);
