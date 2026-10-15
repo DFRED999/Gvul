@@ -130,6 +130,7 @@ h2 { font-size: 17px; margin: 0 0 12px; font-weight: 700; }
 .ch-t.iss-hot.on { background: #e8892b; } .ch-t.iss-hot.on > span, .ch-t.iss-hot.on b, .ch-t.iss-hot.on small { color: #fff; } .ch-t.iss-hot.on em { background: #fff; color: #a4520c; }
 .w-leads { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 12px 0 0; } .w-lb { font: inherit; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 12px 4px 8px; cursor: pointer; font-weight: 700; } .w-lb small { background: #eef1ec; border-radius: 999px; padding: 0 7px; font-weight: 700; } .w-lb.on { background: #34557a; color: #fff; border-color: #34557a; } .w-lb.on .w-who { color: #fff; } .w-lb.on small { background: rgba(255,255,255,.25); }
 .w-lead { font-size: 11.5px; color: #34557a; font-weight: 700; margin-top: 2px; } .ld-g { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 10px; margin: 6px 0 10px; } .ld-g .field { margin: 0; }
+.dq-l { columns: 1 !important; padding: 0 14px 10px !important; list-style: none; } .dq-l li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 1px solid #f0f1ee; } .dq-a { display: flex; gap: 4px; flex-shrink: 0; } .dq-ig { color: #7a828a; }
 .navback { position: sticky; top: 8px; z-index: 40; display: inline-flex; align-items: center; gap: 4px; margin: 0 0 8px; padding: 6px 14px; border-radius: 999px; border: 1px solid #b9cbe0; background: #eaf2fb; color: #24507e; font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 2px 8px rgba(30,60,90,.12); }
 .navback:hover { background: #dbe9f8; }
 .qn { border: 2px solid #f0c94b; background: #fffdf3; } .qn-in { display: flex; gap: 8px; } .qn-in .inp { flex: 1; font-size: 16px; padding: 10px 12px; }
@@ -3128,11 +3129,14 @@ function progFlags(d, p) {
    §17 איכות נתונים — כל מה ש"לא מסתדר", עם מעבר לתיקון
    ===================================================================== */
 function dqChecks(d) {
-  const C = [], add = (key, sev, title, lines, go, hint = "") => C.push({ key, sev, title, n: lines.length, lines, go, hint });
+  const C = [], IG = dqIgn(), add = (key, sev, title, lines, go, hint = "") => { const all = lines.map(l => typeof l === "string" ? { t: l } : l).map(l => ({ ...l, k: `${key}|${l.id || l.t}` })), L = all.filter(l => !IG[l.k]);
+    C.push({ key, sev, title, n: IG["*" + key] ? 0 : L.length, lines: IG["*" + key] ? [] : L, hidden: IG["*" + key] ? all : all.filter(l => IG[l.k]), off: !!IG["*" + key], go, hint }); };
+  const itGo = i => { const K = compOf(i.kind); return K ? { page: "k:" + K.k, rid: i.id } : { page: "c:" + i.contractorId, ctab: isMain(RAW.contractors?.[i.contractorId] || {}) ? "culverts" : "items", rid: i.id }; };
+  const cn = id => d.contractors.find(c => c.id === id)?.name || "";
   const oN = s => `${d.designOffices.find(o => o.id === s.officeId)?.name || ""} ${s.num}`, mains = d.contractors.filter(isMain);
   // קטעי תכנון
-  add("segNoSec", "red", "קטעי תכנון בלי חתכים — האורך לא מחושב", d.designSegments.filter(x => secLenKm(x) === null).map(x => `${oN(x)} · ק.ד. ${x.kdFrom || "?"}–${x.kdTo || "?"}`), { page: "segments" });
-  add("segNoKd", "red", "קטעי תכנון בלי ק.ד.", d.designSegments.filter(x => !kdRange(x)).map(oN), { page: "segments" });
+  add("segNoSec", "red", "קטעי תכנון בלי חתכים — האורך לא מחושב", d.designSegments.filter(x => secLenKm(x) === null).map(x => ({ id: x.id, t: `${oN(x)} · ק.ד. ${x.kdFrom || "?"}–${x.kdTo || "?"}`, go: { page: "segments", rid: x.id } })), { page: "segments" });
+  add("segNoKd", "red", "קטעי תכנון בלי ק.ד.", d.designSegments.filter(x => !kdRange(x)).map(x => ({ id: x.id, t: oN(x), go: { page: "segments", rid: x.id } })), { page: "segments" });
   const segOv = []; const ss = d.designSegments.filter(kdRange).sort((a, b) => kdRange(a).lo - kdRange(b).lo);
   for (let i = 1; i < ss.length; i++) { const a = kdRange(ss[i - 1]), b = kdRange(ss[i]); if (b.lo < a.hi - 0.05) segOv.push(`${oN(ss[i - 1])} ↔ ${oN(ss[i])} · ק.ד. ${num(b.lo, 1)}–${num(Math.min(a.hi, b.hi), 1)}`); }
   add("segOv", "orange", "קטעי תכנון חופפים בק.ד.", segOv, { page: "segments" }, "ייתכן שזה מכוון (קטע שפוצל) — לבדוק");
@@ -3150,27 +3154,31 @@ function dqChecks(d) {
   add("actNoStage", "orange", "מלאכות בלי שלב — לא נספרות בדשבורד", d.activities.filter(a => !a.stage && isMain(d.contractors.find(c => c.id === a.contractorId) || {})).map(a => `${d.contractors.find(c => c.id === a.contractorId)?.name || ""} · ${a.name}`), { page: "settings", setTab: "activities" });
   const okP = d.progress.filter(p => !p.review), segs = Object.fromEntries(d.designSegments.map(x => [x.id, x]));
   add("progOut", "red", "דיווחים מאושרים מחוץ לחתכי הקטע", okP.filter(p => { if (!hasSecs(p)) return false; const x = segs[p.segmentId]; if (!x || x.secFrom === "") return false; const [lo, hi] = ivOfP(p); return lo < Math.min(+x.secFrom, +x.secTo) || hi > Math.max(+x.secFrom, +x.secTo); })
-    .map(p => `${d.contractors.find(c => c.id === p.contractorId)?.name || ""} · ${fmtD(p.date)} · ${RAW.activities?.[p.activityId]?.name || ""} · ${p.secFrom}–${p.secTo}`), { page: "approvals" });
-  add("progNoSec", "orange", "דיווחים מאושרים בלי חתכים (לא נספרים)", okP.filter(p => !hasSecs(p) && !isUnitAct(RAW.activities?.[p.activityId])).map(p => `${d.contractors.find(c => c.id === p.contractorId)?.name || ""} · ${fmtD(p.date)} · ${RAW.activities?.[p.activityId]?.name || "מלאכה נמחקה"}`), { page: "approvals" });
-  add("progNoAct", "red", "דיווחים של מלאכה שנמחקה", d.progress.filter(p => !RAW.activities?.[p.activityId]).map(p => `${d.contractors.find(c => c.id === p.contractorId)?.name || ""} · ${fmtD(p.date)}`), { page: "approvals" });
+    .map(p => ({ id: p.id, t: `${cn(p.contractorId)} · ${fmtD(p.date)} · ${RAW.activities?.[p.activityId]?.name || ""} · ${p.secFrom}–${p.secTo}`, go: { page: "c:" + p.contractorId, ctab: "progress" } })), { page: "approvals" });
+  add("progNoSec", "orange", "דיווחים מאושרים בלי חתכים (לא נספרים)", okP.filter(p => !hasSecs(p) && !isUnitAct(RAW.activities?.[p.activityId])).map(p => ({ id: p.id, t: `${cn(p.contractorId)} · ${fmtD(p.date)} · ${RAW.activities?.[p.activityId]?.name || "מלאכה נמחקה"}`, go: { page: "c:" + p.contractorId, ctab: "progress" }, del: "progress" })), { page: "approvals" });
+  add("progNoAct", "red", "דיווחים של מלאכה שנמחקה", d.progress.filter(p => !RAW.activities?.[p.activityId]).map(p => ({ id: p.id, t: `${cn(p.contractorId)} · ${fmtD(p.date)}${p.secFrom !== "" && p.secFrom != null ? ` · חתכים ${p.secFrom}–${p.secTo}` : ""}`, del: "progress" })), { page: "approvals" });
   // פריטים
   const its = d.items.filter(i => i.status !== "מבוטל");
-  const topC = (arr, tab) => { const n = {}; arr.forEach(x => n[x.contractorId] = (n[x.contractorId] || 0) + 1); const k = Object.keys(n).sort((a, b) => n[b] - n[a])[0]; return k ? { page: "c:" + k, ctab: tab } : null; };
-  add("itNoKd", "orange", "פריטים בלי ק.ד.", its.filter(i => kdNum(i.kdFrom) === null).map(i => `${d.contractors.find(c => c.id === i.contractorId)?.name || ""} · ${i.name || i.kind}`), topC(its.filter(i => kdNum(i.kdFrom) === null), "items"));
-  add("itNoMain", "orange", "פריטים מחוץ לגזרות הקבלנים הראשיים", its.filter(i => kdNum(i.kdFrom) !== null && !mainAt(d, i)).map(i => `${i.name || i.kind} · ק.ד. ${itemTxt(i)}`), topC(its.filter(i => kdNum(i.kdFrom) !== null && !mainAt(d, i)), "items"));
-  add("itConf", "red", "פריטים עם סתירה בנתונים (מידות / מיקום)", its.filter(i => i.conflict).map(i => `${i.name || i.kind} · ${String(i.conflict).slice(0, 110)}`), topC(its.filter(i => i.conflict), "items"));
+  add("itNoKd", "orange", "פריטים בלי ק.ד.", its.filter(i => kdNum(i.kdFrom) === null).map(i => ({ id: i.id, t: `${cn(i.contractorId)} · ${i.name || i.kind}`, go: itGo(i) })), null);
+  add("itNoMain", "orange", "פריטים מחוץ לגזרות הקבלנים הראשיים", its.filter(i => kdNum(i.kdFrom) !== null && !mainAt(d, i)).map(i => ({ id: i.id, t: `${i.name || i.kind} · ק.ד. ${itemTxt(i)}`, go: itGo(i) })), null, "אם הק.ד. נכון — להרחיב את גבולות הגזרה של הקבלן, או להתעלם");
+  add("itConf", "red", "פריטים עם סתירה בנתונים (מידות / מיקום)", its.filter(i => i.conflict).map(i => ({ id: i.id, t: `${i.name || i.kind} · ${String(i.conflict).slice(0, 110)}`, go: itGo(i), fix: "conf" })), null, "אחרי שבדקת — ״✓ נבדק״ מסיר את הסימון מהפריט");
   // נושאים, הזמנות, מסירות
-  add("issStale", "orange", "נושאים פתוחים בלי עדכון מעל 30 יום", d.issues.filter(i => i.status !== "סגור" && i.updated && daysSince(i.updated) > 30).map(i => `${i.code || ""} ${i.title} · עודכן ${fmtD(i.updated)}`), { page: "alerts" });
+  add("issStale", "orange", "נושאים פתוחים בלי עדכון מעל 30 יום", d.issues.filter(i => i.status !== "סגור" && i.updated && daysSince(i.updated) > 30).map(i => ({ id: i.id, t: `${i.code || ""} ${i.title} · עודכן ${fmtD(i.updated)}`, upd: i.id })), null, "״✎ עדכון״ — כותבים מה המצב (או סוגרים), והנושא יורד מהרשימה");
   add("ordOut", "orange", "הזמנות שחורגות מגבולות הגזרה או בלי ק.ד.", d.orders.filter(o => { const c = d.contractors.find(x => x.id === o.contractorId), r = kdRange(o), cr = c && kdRange(c); return !r || (cr && (r.lo < cr.lo - 0.05 || r.hi > cr.hi + 0.05)); })
-    .map(o => `${d.contractors.find(x => x.id === o.contractorId)?.name || ""} · ${o.name || "הזמנה"} · ${o.kdFrom || "?"}–${o.kdTo || "?"}`), topC(d.orders.filter(o => { const c = d.contractors.find(x => x.id === o.contractorId), r = kdRange(o), cr = c && kdRange(c); return !r || (cr && (r.lo < cr.lo - 0.05 || r.hi > cr.hi + 0.05)); }), "orders"));
-  add("dlNoC", "orange", "מסירות תוכניות בלי קבלן", d.deliveries.filter(x => !x.contractorId).map(x => `${fmtD(x.date)} · ${x.kind || ""} ${x.title || ""}`), { page: "deliveries" });
+    .map(o => ({ id: o.id, t: `${cn(o.contractorId)} · ${o.name || "הזמנה"} · ${o.kdFrom || "?"}–${o.kdTo || "?"}`, go: { page: "c:" + o.contractorId, ctab: "orders" } })), null);
+  add("dlNoC", "orange", "מסירות תוכניות בלי קבלן", d.deliveries.filter(x => !x.contractorId).map(x => ({ id: x.id, t: `${fmtD(x.date)} · ${x.kind || ""} ${x.title || ""}`, go: { page: "deliveries", rid: x.id } })), { page: "deliveries" });
   return C;
 }
+const dqIgn = () => RAW.tableConfig?.dq?.ign || {};
+async function dqSetIgn(k, on) { const D0 = { ...(RAW.tableConfig?.dq || {}) }; delete D0.updatedAt; delete D0.updatedBy; const ign = { ...(D0.ign || {}) }; if (on) ign[k] = { at: todayStr(), by: tkWho() }; else delete ign[k]; await api.put("tableConfig", "dq", { ...D0, ign }); }
 function pageDQ(d) {
   const C = dqChecks(d), red = C.filter(c => c.n && c.sev === "red"), org = C.filter(c => c.n && c.sev === "orange"), ok = C.filter(c => !c.n);
+  const ed = !isViewer(), hidT = C.reduce((t, c) => t + c.hidden.length, 0);
+  const li = (c, l) => `<li><span>${esc(l.t)}</span><span class="dq-a">${l.go ? `<button class="btn ghost sm" data-act="dqLine" data-id="${esc(c.key)}" data-k="${esc(l.k)}">פתיחה ←</button>` : ""}${ed && l.upd ? `<button class="btn ghost sm" data-act="wUpd" data-id="${esc(l.upd)}">✎ עדכון</button>` : ""}${ed && l.fix === "conf" ? `<button class="btn ghost sm" data-act="dqConf" data-id="${esc(l.id)}">✓ נבדק</button>` : ""}${ed && l.del && isMgr() ? `<button class="btn ghost sm" data-act="dqDel" data-id="${esc(l.del)}|${esc(l.id)}" style="color:var(--warn)">מחיקה</button>` : ""}${ed ? `<button class="btn ghost sm dq-ig" data-act="dqIgn" data-id="${esc(l.k)}" title="להסתיר מהרשימה — לא משנה את הנתונים">התעלמות</button>` : ""}</span></li>`;
   const card = c => `<details class="dq ${c.sev} ${c.n ? "" : "ok"}" ${c.n && c.n <= 6 ? "open" : ""}><summary><span class="dq-n">${c.n || "✓"}</span><b>${esc(c.title)}</b>${c.hint && c.n ? `<span class="muted small">${esc(c.hint)}</span>` : ""}<span class="spacer"></span>
-      ${c.go && c.n ? `<button class="btn ghost sm" data-act="dqGo" data-id="${c.key}">לתיקון ←</button>` : ""}</summary>
-    ${c.n ? `<ul>${c.lines.slice(0, 60).map(l => `<li>${esc(l)}</li>`).join("")}${c.n > 60 ? `<li class="muted">…ועוד ${c.n - 60}</li>` : ""}</ul>` : ""}</details>`;
+      ${c.go && c.n ? `<button class="btn ghost sm" data-act="dqGo" data-id="${c.key}">לתיקון ←</button>` : ""}${ed && c.n ? `<button class="btn ghost sm dq-ig" data-act="dqIgn" data-id="*${c.key}" title="להסתיר את כל הבדיקה">התעלמות מהכל</button>` : ""}</summary>
+    ${c.n ? `<ul class="dq-l">${c.lines.slice(0, 80).map(l => li(c, l)).join("")}${c.n > 80 ? `<li class="muted">…ועוד ${c.n - 80}</li>` : ""}</ul>` : ""}</details>`;
+  const hidList = hidT ? `<details class="card"><summary><b>הוסתרו ${hidT}</b> <span class="muted small">— שורות שסימנת "התעלמות". אפשר להחזיר</span></summary><ul class="dq-l">${C.flatMap(c => c.off ? [`<li><span><b>${esc(c.title)}</b> (כל הבדיקה)</span><span class="dq-a"><button class="btn ghost sm" data-act="dqUnign" data-id="*${c.key}">החזרה</button></span></li>`] : c.hidden.map(l => `<li><span><span class="muted">${esc(c.title)}:</span> ${esc(l.t)}</span><span class="dq-a"><button class="btn ghost sm" data-act="dqUnign" data-id="${esc(l.k)}">החזרה</button></span></li>`)).join("")}</ul></details>` : "";
   return `<div class="ch-banner" style="--cc:#4a6d93"><div><h1>🩺 איכות נתונים</h1><span>כל מה שלא מסתדר בנתונים — כדי שהמספרים בדשבורד ובמצגת יהיו אמינים. מתעדכן לבד כשמתקנים.</span></div></div>
   <div class="ch-tiles sg-tiles" style="--cc:#4a6d93">
     <div class="ch-t ${red.length ? "t2" : "t3"}"><span>בעיות חמורות</span><b>${red.length}</b><small>${red.reduce((t, c) => t + c.n, 0)} רשומות</small></div>
@@ -3178,7 +3186,7 @@ function pageDQ(d) {
     <div class="ch-t t3"><span>בדיקות תקינות</span><b>${ok.length}</b><small>מתוך ${C.length} בדיקות</small></div>
     <div class="ch-t"><span>ציון</span><b>${Math.round(ok.length / C.length * 100)}%</b><small>בדיקות שעברו</small></div></div>
   ${[...red, ...org].map(card).join("")}
-  ${ok.length ? `<div class="card"><b>✓ תקין:</b> <span class="muted small">${ok.map(c => esc(c.title)).join(" · ")}</span></div>` : ""}`;
+  ${ok.length ? `<div class="card"><b>✓ תקין:</b> <span class="muted small">${ok.map(c => esc(c.title)).join(" · ")}</span></div>` : ""}${hidList}`;
 }
 /* =====================================================================
    §18 סקר שטח מול דיווחים — איפה הסקר אומר אחרת ממה שדווח (בחתכים, האחרון בסקר גובר)
@@ -6319,6 +6327,12 @@ $app.addEventListener("click", async e => {
   }
   else if (act === "svAddRep" || act === "svCutRep" || act === "svSync") svSyncModal(act, b.dataset.id);
   else if (act === "svFill") { const [cid, sid, aid, a, z] = b.dataset.id.split("|"); Object.assign(ui.pf, { actId: aid, segId: sid, secFrom: Number(a), secTo: Number(z), msg: "" }); ui.page = "c:" + cid; ui.ctab = "progress"; render(); setTimeout(() => document.getElementById("pf_from")?.scrollIntoView({ block: "center" }), 50); }
+  else if (act === "dqIgn") { await dqSetIgn(b.dataset.id, true); toast("הוסתר ✓ (אפשר להחזיר בתחתית הדף)"); }
+  else if (act === "dqUnign") { await dqSetIgn(b.dataset.id, false); toast("הוחזר"); }
+  else if (act === "dqConf") { await api.update("items", b.dataset.id, { conflict: null }); toast("סומן כנבדק ✓"); }
+  else if (act === "dqDel") { const [col, rid] = b.dataset.id.split("|"); if (b.dataset.sure) { await api.remove(col, rid); toast("נמחק"); } else { b.dataset.sure = 1; b.textContent = "ללחוץ שוב למחיקה"; } }
+  else if (act === "dqLine") { const c = dqChecks(D()).find(x => x.key === b.dataset.id), l = c?.lines.find(x => x.k === b.dataset.k), g = l?.go; if (!g) return;
+    if (g.rid) wGoHl(g.page, g.ctab, g.rid); else { if (g.ctab) ui.ctab = g.ctab; ui.page = g.page; location.hash = g.page; render(); scrollTo(0, 0); } }
   else if (act === "dqGo") { const c = dqChecks(D()).find(x => x.key === b.dataset.id); if (c?.go) { Object.assign(ui, c.go.setTab ? { setTab: c.go.setTab } : {}, c.go.ctab ? { ctab: c.go.ctab } : {}); ui.page = c.go.page; location.hash = c.go.page; render(); scrollTo(0, 0); } }
   else if (act === "darkTog") { ui.dark = !ui.dark; try { localStorage.setItem("dark", ui.dark ? "1" : "0"); } catch (e) {} render(); }
   else if (act === "presTog") { ui.present = !ui.present; ui.menu = false; if (!ui.present) { presAutoSet(false); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} } else { try { document.documentElement.requestFullscreen?.(); } catch (e) {} if (!presPages().includes(ui.page)) ui.page = "overview"; } render(); scrollTo(0, 0); }
