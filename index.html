@@ -128,6 +128,8 @@ h2 { font-size: 17px; margin: 0 0 12px; font-weight: 700; }
 .ch-t.iss-hot:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(232,137,43,.35); } .ch-t.iss-hot > span { color: #a4520c; font-weight: 800; } .ch-t.iss-hot b { color: #b3261e; } .ch-t.iss-hot em { font-style: normal; font-size: 11px; font-weight: 700; background: #e8892b; color: #fff; border-radius: 999px; padding: 1px 7px; margin-inline-start: 4px; }
 .ch-t.iss-hot.urg { animation: issPulse 2.4s ease-in-out infinite; } @keyframes issPulse { 0%, 100% { box-shadow: 0 3px 12px rgba(232,137,43,.25); } 50% { box-shadow: 0 0 0 4px rgba(192,57,43,.25), 0 3px 14px rgba(192,57,43,.3); } }
 .ch-t.iss-hot.on { background: #e8892b; } .ch-t.iss-hot.on > span, .ch-t.iss-hot.on b, .ch-t.iss-hot.on small { color: #fff; } .ch-t.iss-hot.on em { background: #fff; color: #a4520c; }
+.w-leads { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 12px 0 0; } .w-lb { font: inherit; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 12px 4px 8px; cursor: pointer; font-weight: 700; } .w-lb small { background: #eef1ec; border-radius: 999px; padding: 0 7px; font-weight: 700; } .w-lb.on { background: #34557a; color: #fff; border-color: #34557a; } .w-lb.on .w-who { color: #fff; } .w-lb.on small { background: rgba(255,255,255,.25); }
+.w-lead { font-size: 11.5px; color: #34557a; font-weight: 700; margin-top: 2px; } .ld-g { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 10px; margin: 6px 0 10px; } .ld-g .field { margin: 0; }
 .navback { position: sticky; top: 8px; z-index: 40; display: inline-flex; align-items: center; gap: 4px; margin: 0 0 8px; padding: 6px 14px; border-radius: 999px; border: 1px solid #b9cbe0; background: #eaf2fb; color: #24507e; font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 2px 8px rgba(30,60,90,.12); }
 .navback:hover { background: #dbe9f8; }
 .qn { border: 2px solid #f0c94b; background: #fffdf3; } .qn-in { display: flex; gap: 8px; } .qn-in .inp { flex: 1; font-size: 16px; padding: 10px 12px; }
@@ -3436,13 +3438,46 @@ const tkWho = () => me?.name || user?.email || "מקומי";
 const W_TEAM_ROLES = ["סופר מנהל", "מנהל", "מתאם", "מתאם איסוף"];
 const teamNames = () => { const us = Object.values(RAW.users || {}).filter(u => u.active && W_TEAM_ROLES.includes(u.role)).map(u => u.name || (u.email || "").split("@")[0]).filter(Boolean);
   const fromIss = list("issues").map(i => i.owner).filter(o => o && !ISSUE_OWNERS.includes(o));
-  return [...new Set([...us, ...fromIss])].sort((a, b) => a.localeCompare(b, "he")); };
+  return [...new Set([...leadCfg().team, ...us, ...fromIss])]; };
 const ownerOpts = cur => { const T = teamNames(); return [...T, ...ISSUE_OWNERS.filter(o => !T.includes(o)), ...(cur && !T.includes(cur) && !ISSUE_OWNERS.includes(cur) ? [cur] : [])]; };
 const isTeam = o => !!o && !ISSUE_OWNERS.includes(o);
 const W_AV = ["#2d6cb8", "#8a4fb5", "#2f8a6b", "#c0612b", "#5a6fa8", "#a8455a"];
 const wWho = o => !o ? `<span class="muted">—</span>` : isTeam(o) ? `<span class="w-who"><span class="w-av" style="background:${W_AV[[...o].reduce((t, ch) => t + ch.charCodeAt(0), 0) % W_AV.length]}">${esc(o.slice(0, 1))}</span>${esc(o)}</span>` : `<span class="w-who w-ext">${esc(o)}</span>`;
 const wLate = i => !!i.due && i.status !== "סגור" && i.due < todayStr();
-const wMine = i => !!me?.name && i.owner === me.name;
+/* ---------- אחראי צוות (מי מאיתנו מוביל): נועם / תומר / משה / גילי. נקבע לבד לפי כללים שבהגדרה (settings.leads), ואפשר לשנות לנושא בודד (lead) ----------
+   כללים: חח״י / חשמל → אחראי חשמל; אתרי איסוף → אחראי איסוף; אחרת — לפי הקבלן (קבלן ייעודי עם ק.ד. — לפי קבלן הגזרה באזור) */
+const LEAD_DEF = { team: ["נועם", "תומר", "משה", "גילי"], iec: "גילי", sites: "משה", byName: [[/אבידן/, "נועם"], [/לביב/, "נועם"], [/בראשי/, "תומר"], [/ערן/, "תומר"]] };
+const leadCfg = () => { const S = RAW.tableConfig?.settings?.leads; const c = S?.contractors || {};
+  list("contractors").forEach(x => { if (c[x.id] === undefined) { const m = LEAD_DEF.byName.find(([re]) => re.test(x.name || "")); if (m) c[x.id] = m[1]; } });
+  return { team: S?.team?.length ? S.team : LEAD_DEF.team, iec: S?.iec ?? LEAD_DEF.iec, sites: S?.sites ?? LEAD_DEF.sites, contractors: c }; };
+const W_ELEC_K = new Set(["ארון שקד", "תט״ז", "חדר טרפו"]);
+const isElec = i => i.contractorId === IEC_CID || /חשמל|חח["״]?י/.test(RAW.contractors?.[i.contractorId]?.name || "") || i.category === "חשמל ותקשורת" || i.owner === "חח״י"
+  || Object.keys(i.links || {}).some(k => k.startsWith("o:") || (k.startsWith("i:") && W_ELEC_K.has(RAW.items?.[k.slice(2)]?.kind)));
+const isSites = i => /איסוף/.test([i.title, i.category, RAW.contractors?.[i.contractorId]?.name].join(" "));
+function leadAuto(i, C = leadCfg()) {
+  if (C.team.includes(i.owner)) return i.owner;
+  if (isElec(i) && C.iec) return C.iec;
+  if (isSites(i) && C.sites) return C.sites;
+  let cid = i.contractorId; const c = RAW.contractors?.[cid];
+  if (c && !isMain(c) && kdNum(i.kdFrom) !== null) { const m = mainAt(D(), { kdFrom: i.kdFrom, kdTo: i.kdTo }); if (m) cid = m.id; }
+  return C.contractors[cid] || "";
+}
+const leadOf = (i, C) => i.lead || leadAuto(i, C);
+const wMine = i => !!me?.name && (i.owner === me.name || leadOf(i) === me.name);
+function leadModal() {
+  const C = leadCfg(), d = D(), opt = v => `<option value="">—</option>${C.team.map(n => `<option ${n === v ? "selected" : ""}>${esc(n)}</option>`).join("")}`;
+  modal(`<h2>אחראי צוות — חלוקה</h2><p class="small muted" style="margin-top:0">מי מאיתנו מוביל את הנושאים. נקבע לבד לכל נושא לפי הכללים כאן; אפשר לשנות לנושא בודד בחלון העריכה שלו.</p>
+    <label class="field">אנשי הצוות (מופרדים בפסיק)<input class="inp" id="ld_t" value="${esc(C.team.join(", "))}"></label>
+    <div class="row" style="gap:8px"><label class="field" style="flex:1">חח״י וחשמל<select class="inp" id="ld_i">${opt(C.iec)}</select></label><label class="field" style="flex:1">אתרי איסוף<select class="inp" id="ld_s">${opt(C.sites)}</select></label></div>
+    <b class="small">לפי קבלן</b><div class="ld-g">${d.contractors.map(c => `<label class="field"><span>${esc(c.name)}</span><select class="inp" data-ldc="${c.id}">${opt(C.contractors[c.id])}</select></label>`).join("")}</div>
+    <div class="row"><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    const q = x => m.querySelector(x); q("#mNo").onclick = close;
+    q("#ld_t").onchange = () => { const T = q("#ld_t").value.split(/[,،]/).map(x => x.trim()).filter(Boolean); m.querySelectorAll("select").forEach(sl => { const v = sl.value; sl.innerHTML = `<option value="">—</option>${T.map(n => `<option ${n === v ? "selected" : ""}>${esc(n)}</option>`).join("")}`; }); };
+    q("#mYes").onclick = async () => { const S = { ...(RAW.tableConfig?.settings || {}) }; delete S.updatedAt; delete S.updatedBy;
+      S.leads = { team: q("#ld_t").value.split(/[,،]/).map(x => x.trim()).filter(Boolean), iec: q("#ld_i").value, sites: q("#ld_s").value, contractors: Object.fromEntries([...m.querySelectorAll("[data-ldc]")].map(x => [x.dataset.ldc, x.value])) };
+      await api.put("tableConfig", "settings", S); close(); toast("החלוקה נשמרה ✓"); };
+  });
+}
 /* ---------- קישורים: "i:<פריט>", "o:<הזמנת חח״י>" ---------- */
 const KIND_EMO = { "שערים": "🚪", "מעבירי מים": "💧", "מעביר אירי": "🌀", "ארון שקד": "🔌", "תט״ז": "⚡", "חדר טרפו": "🏠", "פינוי מוקשים": "⚠️", "סבכות למעבירי מים": "▦" };
 function linkOf(k) {
@@ -3553,6 +3588,7 @@ function issueEdit(id, preset = {}) {
     <label class="field">נושא / מה צריך לעשות<input class="inp" id="ie_t" value="${esc(x.title || "")}"></label>
     <div class="row" style="gap:8px;flex-wrap:wrap"><label class="field" style="flex:1">מי מטפל<input class="inp" id="ie_o" list="ie_ol" value="${esc(x.owner || "")}" placeholder="תומר / נועם / מתכנן / רשות…"><datalist id="ie_ol">${ownerOpts(x.owner).map(o => `<option value="${esc(o)}">`).join("")}</datalist></label>
       <label class="field" style="flex:1">קבלן<select class="inp" id="ie_c"><option value="">כללי</option>${d.contractors.map(c => `<option value="${c.id}" ${c.id === x.contractorId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
+      <label class="field" style="flex:1">אחראי צוות<select class="inp" id="ie_ld"><option value="">אוטומטי${(a => a ? ` (${esc(a)})` : "")(leadAuto(x))}</option>${leadCfg().team.map(n => `<option ${n === x.lead ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>
       <label class="field" style="flex:1">יעד<input class="inp" type="date" id="ie_d" value="${esc(x.due || "")}"></label></div>
     <div class="row" style="gap:8px;flex-wrap:wrap"><label class="field" style="flex:1">חשיבות<select class="inp" id="ie_p">${PRI.map(p => `<option ${p === (priN(x.priority) || "בינוני") ? "selected" : ""}>${p}</option>`).join("")}</select></label>
       <label class="field" style="flex:1">סטטוס<select class="inp" id="ie_s">${ISSUE_STATUS.map(s => `<option ${s === x.status ? "selected" : ""}>${s}</option>`).join("")}</select></label>
@@ -3575,7 +3611,7 @@ function issueEdit(id, preset = {}) {
     q("#mYes").onclick = async () => {
       const title = q("#ie_t").value.trim(); if (!title) { q("#ie_t").style.outline = "2px solid var(--warn)"; return; }
       const rec = { title, owner: q("#ie_o").value.trim(), contractorId: q("#ie_c").value, due: q("#ie_d").value, priority: q("#ie_p").value, status: q("#ie_s").value, category: q("#ie_g").value,
-        kdFrom: q("#ie_k1").value.trim(), kdTo: q("#ie_k2").value.trim(), mgmt: q("#ie_m").checked, mgmtAsk: q("#ie_m").checked ? q("#ie_ma").value.trim() : "", links }, note = q("#ie_u").value.trim();
+        kdFrom: q("#ie_k1").value.trim(), kdTo: q("#ie_k2").value.trim(), mgmt: q("#ie_m").checked, mgmtAsk: q("#ie_m").checked ? q("#ie_ma").value.trim() : "", links, lead: q("#ie_ld").value }, note = q("#ie_u").value.trim();
       if (!id) { const st = rec.status; delete rec.status; const nid = await wCreate({ ...rec, ...(preset.src ? { src: preset.src } : {}) }, note); if (nid && st !== "פתוח") await wUpd(nid, "", { status: st }); }
       else { const patch = {}; Object.keys(rec).forEach(k => { if (JSON.stringify(rec[k] ?? "") !== JSON.stringify(x[k] ?? (k === "links" ? {} : ""))) patch[k] = rec[k]; });
         if (patch.contractorId !== undefined && patch.contractorId !== x.contractorId) patch.code = nextIssueCode(patch.contractorId);
@@ -3604,7 +3640,7 @@ function wRow(d, i, mid = "") {
   return `<tr class="${i.unseen && isMgr() ? "w-unseen" : ""}"><td class="nowrap"><b dir="ltr">${esc(i.code || "")}</b></td>
     <td><a href="#" class="w-t" data-act="wEdit" data-id="${i.id}">${esc(i.title || "")}</a><div class="small muted">${esc(i.category || "")}${i.src?.id && i.src.id !== mid ? ` · מ<a href="#" data-act="wDisc" data-id="${esc(i.src.id)}">${esc(i.src.t || "דיון")} ${fmtD(i.src.d)}</a>` : ""}${i.mgmt ? " · להנהלה" : ""}${i.status === "HOLD" ? " · HOLD" : ""}</div></td>
     <td>${wLinkChips(i) || (i.kdFrom ? `<span class="lk lk-kd">📍 ק.ד. ${i.kdTo ? esc(i.kdTo) + "–" : ""}${esc(i.kdFrom)}</span>` : "")}</td>
-    <td>${wWho(i.owner)}</td><td>${priPill(i.priority)}</td><td class="nowrap ${late ? "w-late" : ""}">${fmtD(i.due) || "—"}</td>
+    <td>${wWho(i.owner)}${(l => l && l !== i.owner ? `<div class="w-lead" title="אחראי צוות${i.lead ? "" : " (אוטומטי)"}">↳ ${esc(l)}</div>` : "")(leadOf(i))}</td><td>${priPill(i.priority)}</td><td class="nowrap ${late ? "w-late" : ""}">${fmtD(i.due) || "—"}</td>
     <td class="small" style="max-width:300px">${i.unseen && isMgr() ? `<span class="w-dot" title="עדכון שעוד לא ראית"></span>` : ""}${esc(i.last || "")}<div class="muted">${fmtD(i.updated)}</div></td>
     <td class="nowrap">${isViewer() ? "" : `<button class="btn ghost sm" data-act="wUpd" data-id="${i.id}" ${mid ? `data-mid="${esc(mid)}"` : ""}>✎ עדכון</button> <button class="btn ghost sm" data-act="wClose" data-id="${i.id}" title="סגירת הנושא">✓</button>`}</td></tr>`;
 }
@@ -3616,9 +3652,9 @@ function wTable(d, L, mid = "", empty = "אין נושאים") {
   return `<div class="tablewrap"><table class="sheet w-tab">${W_HEAD}<tbody>${groups.map(g => { const a = L.filter(i => wGroupKey(d, i) === g).sort(wSort), c = g && d.contractors.find(x => x.id === g);
     return `<tr class="w-gh" style="--rc:${c ? cColor(d, c) : "#8a9a90"}"><td colspan="8"><b>${esc(c?.name || "כללי")}</b> <span class="muted small">· ${a.length} פתוחים${(n => n ? ` · ${n} דחופים` : "")(a.filter(i => priN(i.priority) === "דחוף").length)}${(n => n ? ` · ${n} באיחור` : "")(a.filter(wLate).length)}</span></td></tr>${a.map(i => wRow(d, i, mid)).join("")}`; }).join("")}</tbody></table></div>`;
 }
-const wf = () => ui.wf || (ui.wf = { cid: "", owner: !isMgr() && me?.name ? me.name : "", pri: "", q: "", late: false, unseen: false });
-function wFilter(L) { const F = wf(), q = qnNorm(F.q).toLowerCase();
-  return L.filter(i => (!F.cid || (F.cid === "-" ? !RAW.contractors?.[i.contractorId] : i.contractorId === F.cid)) && (!F.owner || i.owner === F.owner) && (!F.pri || priN(i.priority) === F.pri) && (!F.late || wLate(i)) && (!F.unseen || i.unseen)
+const wf = () => ui.wf || (ui.wf = { cid: "", owner: "", lead: !isMgr() && me?.name && leadCfg().team.includes(me.name) ? me.name : "", pri: "", q: "", late: false, unseen: false });
+function wFilter(L) { const F = wf(), q = qnNorm(F.q).toLowerCase(), C = leadCfg();
+  return L.filter(i => (!F.cid || (F.cid === "-" ? !RAW.contractors?.[i.contractorId] : i.contractorId === F.cid)) && (!F.owner || i.owner === F.owner) && (!F.lead || (F.lead === "-" ? !leadOf(i, C) : leadOf(i, C) === F.lead)) && (!F.pri || priN(i.priority) === F.pri) && (!F.late || wLate(i)) && (!F.unseen || i.unseen)
     && (!q || qnNorm([i.code, i.title, i.last, i.owner, ...linksOf(i).map(l => l.lab)].join(" ")).toLowerCase().includes(q))); }
 const MTG_TYPES = ["ישיבה שבועית", "מתכנן", "רשות", "קבלן", "פיקוח", "אחר"];
 const isV2 = m => m.v === 2;
@@ -3629,16 +3665,18 @@ const mtgDecs = m => Object.values(m.dec || {}).sort((a, b) => String(a.at).loca
 function pageWork(d) {
   const tab = ui.wtab || "all", F = wf(), open = d.issues.filter(i => i.status !== "סגור"), L = wFilter(open), unseen = open.filter(i => i.unseen).length;
   const oldT = Object.values(RAW.tasks || {}).filter(t => !t.migrated).length, openM = mtgList().filter(m => isV2(m) && m.open);
-  const owners = [...new Set([...teamNames(), ...open.map(i => i.owner).filter(Boolean)])];
+  const owners = [...new Set([...teamNames(), ...open.map(i => i.owner).filter(Boolean)])], LC = leadCfg(), lOf = i => leadOf(i, LC);
+  const lcnt = n => open.filter(i => n === "-" ? !lOf(i) : lOf(i) === n).length;
+  const leadBar = `<div class="w-leads"><span class="muted small">אחראי צוות:</span>${LC.team.map(n => `<button class="w-lb ${F.lead === n ? "on" : ""}" data-act="wLead" data-id="${esc(n)}">${wWho(n)}<small>${lcnt(n)}</small></button>`).join("")}${lcnt("-") ? `<button class="w-lb ${F.lead === "-" ? "on" : ""}" data-act="wLead" data-id="-">ללא אחראי <small>${lcnt("-")}</small></button>` : ""}<button class="w-lb ${!F.lead ? "on" : ""}" data-act="wLead" data-id="">הכל <small>${open.length}</small></button>${isMgr() ? `<button class="btn ghost sm" data-act="wLeadCfg" title="מי אחראי על איזה קבלן / חח״י / איסוף">⚙ חלוקה</button>` : ""}</div>`;
   const sel = (k, opts, lab) => `<select class="inp sm" data-wf="${k}"><option value="">${lab}</option>${opts.map(([v, l]) => `<option value="${esc(v)}" ${F[k] === v ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
   const filters = `<div class="w-filt">${sel("cid", [...d.contractors.map(c => [c.id, c.name]), ["-", "כללי"]], "כל הקבלנים")}${sel("owner", owners.map(o => [o, o]), "כל המטפלים")}${sel("pri", PRI.map(p => [p, p]), "כל החשיבויות")}
     <label class="row small"><input type="checkbox" data-wf="late" ${F.late ? "checked" : ""}> רק באיחור</label>${isMgr() ? `<label class="row small"><input type="checkbox" data-wf="unseen" ${F.unseen ? "checked" : ""}> רק עדכונים חדשים</label>` : ""}
-    <input class="inp sm" data-wf="q" value="${esc(F.q)}" placeholder="חיפוש: קוד, נושא, שער…" style="min-width:180px">${me?.name ? `<button class="btn ghost sm ${F.owner === me.name ? "on" : ""}" data-act="wMine">רק שלי</button>` : ""}<span class="spacer"></span><span class="muted small">${L.length} מתוך ${open.length} פתוחים</span></div>`;
+    <input class="inp sm" data-wf="q" value="${esc(F.q)}" placeholder="חיפוש: קוד, נושא, שער…" style="min-width:180px"><span class="spacer"></span><span class="muted small">${L.length} מתוך ${open.length} פתוחים</span></div>`;
   let body = "";
   if (tab === "all") body = `<div class="card">${filters}${wTable(d, L, "", "אין נושאים פתוחים בסינון הזה")}</div>`;
-  else if (tab === "owner") { const cols = owners.map(o => [o, L.filter(i => i.owner === o)]).filter(([o, a]) => a.length || teamNames().includes(o)).concat([["", L.filter(i => !i.owner)]]).filter(([o, a]) => o || a.length);
-    body = `<div class="card">${filters}<div class="w-cols">${cols.map(([o, a]) => `<div class="w-col"><div class="w-ch">${o ? wWho(o) : "<b>בלי מטפל</b>"}<span class="muted small">${a.length}${a.filter(wLate).length ? ` · <b class="w-late">${a.filter(wLate).length} באיחור</b>` : ""}</span></div>
-      ${a.sort(wSort).map(i => { const c = d.contractors.find(x => x.id === i.contractorId); return `<div class="w-card ${i.unseen && isMgr() ? "w-unseen" : ""}" style="--rc:${c ? cColor(d, c) : "#9aa3ad"}" data-act="wEdit" data-id="${i.id}" role="button"><b>${esc(i.title || "")}</b><span><span dir="ltr">${esc(i.code || "")}</span> · ${esc(c?.name || "כללי")}${i.due ? ` · <span class="${wLate(i) ? "w-late" : ""}">יעד ${fmtD(i.due)}</span>` : ""}</span>${priN(i.priority) && priN(i.priority) !== "בינוני" ? priPill(i.priority) : ""}${i.last ? `<small>${esc(String(i.last).slice(0, 90))}</small>` : ""}</div>`; }).join("") || `<p class="muted small">אין</p>`}</div>`).join("")}</div></div>`; }
+  else if (tab === "owner") { const cols = [...LC.team.map(o => [o, L.filter(i => lOf(i) === o)]), ["", L.filter(i => !lOf(i))]].filter(([o, a]) => o || a.length);
+    body = `<div class="card">${filters}<div class="w-cols">${cols.map(([o, a]) => `<div class="w-col"><div class="w-ch">${o ? wWho(o) : "<b>ללא אחראי צוות</b>"}<span class="muted small">${a.length}${a.filter(wLate).length ? ` · <b class="w-late">${a.filter(wLate).length} באיחור</b>` : ""}</span></div>
+      ${a.sort(wSort).map(i => { const c = d.contractors.find(x => x.id === i.contractorId); return `<div class="w-card ${i.unseen && isMgr() ? "w-unseen" : ""}" style="--rc:${c ? cColor(d, c) : "#9aa3ad"}" data-act="wEdit" data-id="${i.id}" role="button"><b>${esc(i.title || "")}</b><span><span dir="ltr">${esc(i.code || "")}</span> · ${esc(c?.name || "כללי")}${i.owner && i.owner !== o ? ` · מטפל: ${esc(i.owner)}` : ""}${i.due ? ` · <span class="${wLate(i) ? "w-late" : ""}">יעד ${fmtD(i.due)}</span>` : ""}</span>${priN(i.priority) && priN(i.priority) !== "בינוני" ? priPill(i.priority) : ""}${i.last ? `<small>${esc(String(i.last).slice(0, 90))}</small>` : ""}</div>`; }).join("") || `<p class="muted small">אין</p>`}</div>`).join("")}</div></div>`; }
   else if (tab === "disc") { const TF = ui.wdt || "", CF = ui.wdc || "", A = mtgList().filter(m => (!TF || (m.type || "ישיבה שבועית") === TF) && (!CF || m.contractorId === CF));
     body = `${openM.length ? `<div class="card"><h2 style="margin-top:0">דיונים פתוחים</h2><div class="w-dl">${openM.map(m => `<button class="w-dc" data-act="wDisc" data-id="${m.id}"><b>${esc(m.title || "דיון")}</b><span>${fmtD(m.date)} · ${esc(m.type || "")}${m.by ? " · " + esc(m.by) : ""}</span><small>${mtgTasks(m.id).length} משימות · ${mtgDecs(m).length} החלטות · ${mtgUpds(m.id).length} עדכונים</small></button>`).join("")}</div></div>` : ""}
       <div class="card"><div class="row" style="align-items:center;gap:8px"><h2 style="margin:0">ארכיון דיונים</h2><span class="spacer"></span><select class="inp sm" data-wd="t"><option value="">כל הסוגים</option>${MTG_TYPES.map(t => `<option ${t === TF ? "selected" : ""}>${t}</option>`).join("")}</select><select class="inp sm" data-wd="c"><option value="">כל הקבלנים</option>${d.contractors.map(c => `<option value="${c.id}" ${c.id === CF ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
@@ -3653,7 +3691,7 @@ function pageWork(d) {
     ${oldT && isMgr() ? `<div class="banner"><b>${oldT} משימות מהמבנה הקודם עוד לא אוחדו לנושאים</b><span>לחיצה מורידה גיבוי ואז מעבירה כל משימה לנושא שלה (או פותחת נושא) — עם המטפל, היעד, החשיבות וכל העדכונים.</span><button class="btn sm" data-act="wMigrate">איחוד עכשיו</button></div>` : ""}
     ${unseen && isMgr() ? `<div class="banner w-ub"><b><span class="w-dot"></span>${unseen} עדכונים של הצוות שעוד לא ראית</b><span class="spacer"></span><button class="btn ghost sm" data-act="wUnseenOnly">להציג רק אותם</button><button class="btn ghost sm" data-act="wSeenAll">סימון הכל כנקרא</button></div>` : ""}
     ${isViewer() ? "" : qnLine()}
-    <div class="w-tabs">${tabB("all", "הכל", open.length)}${tabB("owner", "לפי מי מטפל")}${tabB("disc", "דיונים", openM.length ? openM.length + " פתוחים" : null)}${tabB("closed", "סגורים")}</div>${body}`;
+    ${leadBar}<div class="w-tabs">${tabB("all", "הכל", open.length)}${tabB("owner", "לפי אחראי צוות")}${tabB("disc", "דיונים", openM.length ? openM.length + " פתוחים" : null)}${tabB("closed", "סגורים")}</div>${body}`;
 }
 /* ---------- דיון ---------- */
 function mtgPrev(m) {   // הדיון הקודם עם אותו גורם: אותו סוג + אותו קבלן (בישיבה שבועית — הישיבה השבועית הקודמת, גם בפורמט הישן)
@@ -3799,7 +3837,8 @@ async function wClick(act, b) {
   else if (act === "wReopen") { await wUpd(id, "", { status: "פתוח" }); toast("נפתח מחדש"); }
   else if (act === "wTab") { ui.wtab = id; render(); }
   else if (act === "wTabGo") { ui.wtab = id; ui.page = "work"; location.hash = "work"; render(); scrollTo(0, 0); }
-  else if (act === "wMine") { const F = wf(); F.owner = F.owner === me?.name ? "" : me?.name || ""; render(); }
+  else if (act === "wLead") { wf().lead = id; render(); }
+  else if (act === "wLeadCfg") leadModal();
   else if (act === "wUnseenOnly") { wf().unseen = true; ui.wtab = "all"; render(); }
   else if (act === "wSeenAll") { const ids = list("issues").filter(i => i.unseen).map(i => i.id); if (ids.length) await bulkPatch("issues", ids, { unseen: null }); toast("סומן כנקרא ✓"); }
   else if (act === "wNewDisc") wDiscNew();
@@ -5661,6 +5700,7 @@ const TABLE_DEFS = {
     { key: "kdFrom", label: "ק.ד. מ", cls: "w-kd", cell: x => cellInput("issues", x, "kdFrom", "kdin") },
     { key: "kdTo", label: "ק.ד. עד", cls: "w-kd", cell: x => cellInput("issues", x, "kdTo", "kdin") },
     { key: "owner", label: "מי מטפל", cell: x => `<select class="inp" id="f_issues_${x.id}_owner" data-edit="issues|${x.id}|owner"><option value=""></option>${ownerOpts(x.owner).map(k => `<option ${k === x.owner ? "selected" : ""}>${esc(k)}</option>`).join("")}</select>` },
+    { key: "lead", label: "אחראי צוות", cell: x => `<select class="inp" id="f_issues_${x.id}_lead" data-edit="issues|${x.id}|lead"><option value="">${(l => l ? "אוטו׳: " + esc(l) : "—")(leadAuto(x))}</option>${leadCfg().team.map(k => `<option ${k === x.lead ? "selected" : ""}>${esc(k)}</option>`).join("")}</select>` },
     { key: "status", label: "סטטוס", cell: x => `<select class="inp st-${ISSUE_STATUS.indexOf(x.status)}" id="f_issues_${x.id}_status" data-edit="issues|${x.id}|status">${ISSUE_STATUS.map(k => `<option ${k === x.status ? "selected" : ""}>${k}</option>`).join("")}</select>` },
     { key: "last", label: "מצב אחרון", cls: "small w-text", cell: x => cellInput("issues", x, "last", "", 'title="עדכון כאן נשמר כעדכון של היום בהיסטוריה"').replace('|last"', '|last|L"') + (x.notMentioned && x.status !== "סגור" ? ` <span class="pill warn" title="ייתכן שנסגר — לבדיקה">לא הוזכר בסיכום ${fmtD(x.notMentioned)}</span>` : "") },
     { key: "updated", label: "עדכון אחרון", cls: "nowrap c", cell: x => { const n = daysSince(x.updated); return `<span style="${x.status !== "סגור" && n > 30 ? "color:var(--warn);font-weight:700" : ""}">${fmtD(x.updated)}</span>`; } },
