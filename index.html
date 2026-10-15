@@ -105,6 +105,15 @@ h2 { font-size: 17px; margin: 0 0 12px; font-weight: 700; }
 .tablewrap { overflow: auto; max-height: calc(100vh - 80px); }
 .sheet thead { position: sticky; top: 0; z-index: 3; box-shadow: 0 2px 0 #c3d9e6; }
 .sheet { border-collapse: collapse; width: 100%; font-size: 14px; }
+.sheet tr.al-hl > td { background: #ffe2c2 !important; } .sheet tr.al-hl { outline: 2px solid #e8892b; outline-offset: -2px; }
+.navback { position: sticky; top: 8px; z-index: 40; display: inline-flex; align-items: center; gap: 4px; margin: 0 0 8px; padding: 6px 14px; border-radius: 999px; border: 1px solid #b9cbe0; background: #eaf2fb; color: #24507e; font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 2px 8px rgba(30,60,90,.12); }
+.navback:hover { background: #dbe9f8; }
+.qn { border: 2px solid #f0c94b; background: #fffdf3; } .qn-in { display: flex; gap: 8px; } .qn-in .inp { flex: 1; font-size: 16px; padding: 10px 12px; }
+.qn-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; min-height: 26px; } .qn-ch { background: #eef3ea; border: 1px solid #d3dfcc; border-radius: 999px; padding: 2px 10px; font-size: 13px; } .qn-ch.miss { background: #f5f5f5; color: #8a8f94; border-style: dashed; } .qn-ch.up { background: #e3ecf6; border-color: #b9cbe0; color: #24507e; font-weight: 700; }
+.qn-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 12px; }
+.qn-card { text-align: right; font: inherit; cursor: pointer; background: #fff8cf; border: 1px solid #ecd98a; border-top: 4px solid var(--rc); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.08); transform: rotate(-.4deg); }
+.qn-card:nth-child(2n) { transform: rotate(.5deg); } .qn-card:hover { transform: none; box-shadow: 0 3px 10px rgba(0,0,0,.14); } .qn-card span { font-size: 12.5px; color: #5d665f; } .qn-card .pill { align-self: flex-start; }
+.sheet tr.fresh > td { background: #fff4c7 !important; } .sheet tr.fresh { outline: 2px solid #e0a800; outline-offset: -2px; }
 .sheet th[data-act="sortCol"] { cursor: pointer; user-select: none; } .sheet th[data-act="sortCol"]:hover { background: #cfe4f2; } .sheet th.sorted { background: #c6def0; } .sarr { font-size: 10px; color: #2d6cb8; }
 .sheet th { background: var(--head); color: var(--head-ink); font-weight: 700; font-size: 13px; padding: 7px 6px; border: 1px solid #c3d9e6; white-space: nowrap; text-align: center; }
 .sheet td { border: 1px solid var(--line); padding: 3px 4px; vertical-align: middle; }
@@ -1057,8 +1066,27 @@ function fixIrish() {
   if (bad.length) setTimeout(async () => { for (const i of bad) await api.update("items", i.id, { kind: "מעביר אירי" }); }, 0);
 }
 /** רינדור עם רשת ביטחון: שגיאה במסך אחד לא משאירה דף ריק — נרשמת ביומן ומוצג כרטיס עם דרך חזרה */
+/* ---------- חזרה למסך הקודם: כל מעבר מסך נרשם; כפתור "→ חזרה" וגם כפתור החזרה של הדפדפן / העכבר ---------- */
+const NAVH = []; let NAV_LAST = null, NAV_BACK = false;
+const navKey = st => st.page + (st.page.startsWith("c:") ? "|" + st.ctab : st.page === "settings" ? "|" + st.setTab : "");
+function navTrack() {
+  const cur = { page: ui.page, ctab: ui.ctab, setTab: ui.setTab };
+  if (NAV_LAST && navKey(NAV_LAST) !== navKey(cur) && !NAV_BACK) { NAVH.push({ ...NAV_LAST, y: scrollY }); if (NAVH.length > 40) NAVH.shift(); }
+  NAV_LAST = cur; NAV_BACK = false;
+}
+function navLabel(st) {
+  if (st.page.startsWith("c:")) { const c = RAW.contractors?.[st.page.slice(2)]; return `${c?.name || "קבלן"}${(t => t ? " · " + t[1] : "")(C_TABS.find(t => t[0] === st.ctab) || (st.ctab === "items" ? [0, "פריטים"] : null))}`; }
+  try { return NAV().flatMap(g => g.items).find(i => i[0] === st.page)?.[1] || (st.page === "mtgarch" ? "ארכיון ישיבות" : "המסך הקודם"); } catch (e) { return "המסך הקודם"; }
+}
+function navBack() {
+  const st = NAVH.pop(); if (!st) return; NAV_BACK = true; ui.page = st.page; ui.ctab = st.ctab; ui.setTab = st.setTab;
+  if (location.hash.slice(1) !== st.page) location.hash = st.page; render(); requestAnimationFrame(() => scrollTo(0, st.y || 0));
+}
+const navBackBtn = () => NAVH.length ? `<button class="navback" data-act="navBack" title="חזרה למסך הקודם (גם Alt+← או כפתור החזרה בעכבר)">→ חזרה: ${esc(navLabel(NAVH[NAVH.length - 1]))}</button>` : "";
+addEventListener("hashchange", () => { const h = decodeURIComponent(location.hash.slice(1)); if (!h || h === ui.page) return;
+  if (NAVH.length && NAVH[NAVH.length - 1].page === h) return navBack(); ui.page = h; render(); });
 function render() {
-  LISTC = new Map();
+  LISTC = new Map(); try { navTrack(); } catch (e) {}
   try { renderInner(); }
   catch (e) { logErr("render", e?.message || e, e?.stack);
     $app.innerHTML = `<div class="card errcard" style="margin:20px"><h2 style="margin-top:0">שגיאה בהצגת המסך</h2><p class="small muted" dir="ltr" style="text-align:left">${esc(String(e?.message || e))}</p><p>השגיאה נרשמה ביומן השגיאות (הגדרות ← יומן שגיאות). שום נתון לא נמחק.</p>
@@ -1104,11 +1132,11 @@ function renderInner() {
     ${ui.present ? `<div class="pres-bar"><button data-act="presPrev" title="הקודם (←)">‹</button><span>${esc(nav.flatMap(g => g.items).find(i => i[0] === p)?.[1] || "")}</span><button data-act="presNext" title="הבא (→)">›</button>
       <button data-act="presAuto" class="${ui.presAuto ? "on" : ""}">${ui.presAuto ? "⏸ עצירה" : "▶ הצגה אוטומטית"}</button><button data-act="presTog">✕ יציאה</button></div>` : ""}
     <main class="main">
-      ${dataBar()}
+      ${navBackBtn()}${dataBar()}
       ${body}
     </main>
   </div>`;
-  applyFilters(); applyGSearch(); applySorts(); if (ui.page === "alerts") alApplyQ();
+  applyFilters(); applyGSearch(); applySorts(); pinFresh(); if (ui.page === "alerts") alApplyQ();
   if (p === "map") initMap(d);
   document.querySelectorAll("details").forEach(el => { if (openDet.has(keyOf(el))) el.open = true; });
   const wraps = [...document.querySelectorAll(".tablewrap")];
@@ -1700,18 +1728,18 @@ function autoAlerts(d) {
         if (table === "orders" && /הסתיימ|הוארכ|נסגר/.test([r.x_signer, r.note].join(" "))) return;
         const s = sevDate(v, 30); if (!s) return;
         add({ key: `date:${uk}:${v}`, cat: "תאריך", sev: s, date: v, title: `${r.name || r.title || "רשומה"}${r.contractorId ? ` (${cname(r.contractorId)})` : ""} — ${c.label} ${s === "red" ? "עבר" : "בעוד " + daysTo(v) + " ימים"}: ${fmtD(v)}`,
-          hint: table === "orders" ? "להאריך את ההזמנה / לעדכן תאריך — או לסמן כטופל." : "", go: r.contractorId ? { page: "c:" + r.contractorId, ctab: table } : null });
+          hint: table === "orders" ? "להאריך את ההזמנה / לעדכן תאריך — או לסמן כטופל." : "", go: r.contractorId ? { page: "c:" + r.contractorId, ctab: table === "items" && isMain(RAW.contractors?.[r.contractorId] || {}) ? "culverts" : table, ids: [r.id] } : null });
       }); }); });
   // פריטי עבודה שעבר התאריך המתוכנן שלהם
   const late = d.items.filter(i => i.plannedDate && ["טרם", "מתוכנן", "בביצוע"].includes(i.status) && i.plannedDate < T);
   [...new Set(late.map(i => i.contractorId))].forEach(cid => { const a = late.filter(i => i.contractorId === cid);
     add({ key: `itemlate:${cid}:${a.length}`, cat: "תאריך", sev: "red", title: `${a.length} פריטים של ${cname(cid)} עברו את התאריך המתוכנן`, lines: a.sort((x, y) => x.plannedDate.localeCompare(y.plannedDate)).map(i => `${i.name || i.kind} · ${fmtD(i.plannedDate)} · ${i.status}`),
-      hint: "לעדכן תאריך חדש או סטטוס.", go: { page: "c:" + cid, ctab: "items" } }); });
+      hint: "לעדכן תאריך חדש או סטטוס.", go: { page: "c:" + cid, ctab: isMain(RAW.contractors?.[cid] || {}) ? "culverts" : "items", ids: a.map(i => i.id) } }); });
   // נושאים פתוחים — תאריך יעד
   const dueIss = d.issues.filter(x => x.status !== "סגור" && x.due && daysTo(x.due) <= 7);
   [...new Set(dueIss.map(x => x.contractorId))].forEach(cid => { const a = dueIss.filter(x => x.contractorId === cid), red = a.some(x => daysTo(x.due) < 0);
     add({ key: `issdue:${cid}:${a.map(x => x.id + x.due).join()}`, cat: "תאריך", sev: red ? "red" : "orange", title: `${a.length} נושאים פתוחים של ${cname(cid)} ${red ? "עברו את תאריך היעד" : "מגיעים לתאריך היעד השבוע"}`,
-      lines: a.map(x => `${x.code || ""} ${x.title} · יעד ${fmtD(x.due)}`), go: { page: "c:" + cid, ctab: "issues" } }); });
+      lines: a.map(x => `${x.code || ""} ${x.title} · יעד ${fmtD(x.due)}`), go: { page: "c:" + cid, ctab: "issues", ids: a.map(x => x.id) } }); });
   // קבלן שעובד ואין עליו דיווח כמה ימים (רק קבלן שכבר דווח עליו בעבר מאתר הדיווח)
   const quiet = Number(RAW.tableConfig?.settings?.quietDays) || 7;
   d.contractors.filter(isMain).forEach(c => { const ps = d.progress.filter(p => p.contractorId === c.id && p.reportedBy && p.date); if (!ps.length) return;
@@ -1726,7 +1754,7 @@ function autoAlerts(d) {
   // דיווחי ביצוע שממתינים לבדיקה
   const pend = d.progress.filter(p => p.review === "לבדיקה");
   if (pend.length) { const cids = [...new Set(pend.map(p => p.contractorId))];
-    add({ key: `review:${pend.length}`, cat: "מעקב", sev: "blue", title: `${pend.length} דיווחי ביצוע ממתינים לבדיקה (לא נספרים בדשבורד)`, lines: cids.map(c => `${cname(c)}: ${pend.filter(p => p.contractorId === c).length}`), go: { page: "c:" + cids[0], ctab: "progress" } }); }
+    add({ key: `review:${pend.length}`, cat: "מעקב", sev: "blue", title: `${pend.length} דיווחי ביצוע ממתינים לבדיקה (לא נספרים בדשבורד)`, lines: cids.map(c => `${cname(c)}: ${pend.filter(p => p.contractorId === c).length}`), go: { page: "approvals" } }); }
   return out;
 }
 function allAlerts(d) {
@@ -3469,6 +3497,7 @@ function pageMeeting(d) {
     <div class="ch-t ${late.length ? "t2" : ""}"><span>באיחור</span><b>${late.length}</b><small>עבר תאריך היעד</small></div>
     <div class="ch-t ${review.length ? "t2" : ""}"><span>ממתין לאישור שלך</span><b>${review.length}</b><small>עדכונים של מתאמים</small></div>
     <div class="ch-t t3"><span>נסגרו מאז הישיבה</span><b>${closedSince.length}</b><small>מ־${fmtD(since)}</small></div></div>
+  ${qnBlock(d, since)}
   <div class="card"><h2 style="margin-top:0">קבלנים — מאז הישיבה הקודמת (${fmtD(since)})</h2><div class="tablewrap"><table class="sheet"><thead><tr><th>קבלן</th><th>ביצוע מצטבר</th><th>נוסף מאז</th><th>קצב לשבוע</th><th>תחזית סיום</th><th>יעד</th><th>מצב</th><th>משימות</th></tr></thead><tbody>${rows}</tbody></table></div></div>
   ${(n => n && isMgr() ? `<div class="banner"><b>${n} משימות עם קבלן עוד לא מופיעות בנושאים הפתוחים שלו</b><span>הן נפתחו לפני החיבור בין משימות לנושאים. לחיצה פותחת לכל אחת נושא אצל הקבלן ומקשרת ביניהם.</span><button class="btn sm" data-act="tkLink">חיבור לנושאים</button></div>` : "")(tkUnlinked().length)}
   <div class="row" style="align-items:center;margin:18px 0 8px"><h2 style="margin:0">משימות לפי אחראי</h2><span class="spacer"></span>${tkViewTog()}</div>
@@ -3553,6 +3582,80 @@ function tkHistory(t) {
     <div style="max-height:50vh;overflow:auto">${L.map(x => `<div style="border-bottom:1px solid var(--line);padding:6px 0"><b>${fmtD(x.date)}</b> · <span class="muted">${esc(x.by || "")}</span><div>${esc(x.text)}</div></div>`).join("") || `<p class="muted">אין עדכונים</p>`}</div>
     <div class="row"><button class="btn ghost" id="mNo">סגירה</button></div>`, (m, close) => { m.querySelector("#mNo").onclick = close; });
 }
+/* ---------- פתק מהיר בישיבה: שורה אחת בעברית רגילה ← משימה (נשמרת מיד) או עדכון לנושא קיים (קוד AV-14 וכו׳) ----------
+   מזהה: אחראי (שם בתחילת השורה או שם מוכר), קבלן, ק.ד., מעביר BC-xx, תאריך יעד (עד 20/10 · מחר · יום ה׳ · סוף השבוע · שבוע הבא · עוד 3 ימים), חשיבות (דחוף / ! / גבוה) */
+const qnNorm = t => String(t || "").replace(/["״׳'`.]/g, "").replace(/\s+/g, " ").trim();
+const QN_W = "(?:^|[^\u05D0-\u05EAA-Za-z0-9])", QN_E = "(?=$|[^\u05D0-\u05EAA-Za-z0-9])";
+const QN_STOP = new Set(["חשמל", "פינוי", "מוקשים", "משה", "קבלן"]);
+const qnCKeys = c => { const k = qnNorm(String(c.name || "").replace(/\(.*?\)/g, "")).split(" ").filter(w => w.length >= 3 && !QN_STOP.has(w)); return [...new Set([...k, ...k.filter(w => w.startsWith("ה") && w.length > 3).map(w => w.slice(1))])]; };
+const QN_DOW = [["ראשון", "א"], ["שני", "ב"], ["שלישי", "ג"], ["רביעי", "ד"], ["חמישי", "ה"], ["שישי", "ו"]];
+function qnParse(raw) {
+  const d = D(), P = { raw, title: raw }; let t = " " + raw + " ";
+  const cut = re => { const m = t.match(re); if (m) t = t.replace(m[0], " "); return m; };
+  // נושא קיים לפי קוד → עדכון
+  const ic = raw.match(/\b([A-Za-z]{2,3})-(\d{1,4})\b/g)?.map(x => x.toUpperCase()).find(x => !/^BC-/.test(x) && d.issues.some(i => String(i.code || "").toUpperCase() === x));
+  if (ic) { const iss = d.issues.find(i => String(i.code || "").toUpperCase() === ic); P.issue = iss; P.note = raw.replace(new RegExp(ic.replace("-", "\\s*-\\s*"), "i"), "").replace(/^[\s:—–-]+|[\s:—–-]+$/g, "").trim(); return P; }
+  // חשיבות
+  if (cut(new RegExp(QN_W + "(דחוף|בדחיפות)" + QN_E)) || cut(/!!+/)) P.pri = "דחוף"; else if (cut(new RegExp(QN_W + "(חשוב|גבוה|גבוהה)" + QN_E)) || cut(/!/)) P.pri = "גבוה";
+  // תאריך
+  const T0 = todayStr(), dow = new Date(T0 + "T00:00").getDay(), nextDow = (k, plus = 0) => addDays(T0, ((k - dow + 7) % 7 || 7) + plus);
+  let m;
+  if ((m = cut(/(?:עד|ל|ב)?\s*(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?/))) { const y = m[3] ? (m[3].length === 2 ? "20" + m[3] : m[3]) : T0.slice(0, 4); P.due = `${y}-${String(m[2]).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}`; if (!m[3] && P.due < T0) P.due = `${+y + 1}${P.due.slice(4)}`; }
+  else if (cut(new RegExp(QN_W + "(?:עד\\s+)?מחר" + QN_E))) P.due = addDays(T0, 1);
+  else if (cut(new RegExp(QN_W + "(?:עד\\s+)?היום" + QN_E))) P.due = T0;
+  else if (cut(new RegExp(QN_W + "(?:עד\\s+)?סוף\\s+(?:ה)?שבוע\\s+הבא" + QN_E)) || cut(new RegExp(QN_W + "(?:עד\\s+)?(?:ב)?שבוע\\s+הבא" + QN_E))) P.due = addDays(T0, 4 - dow + 7);
+  else if (cut(new RegExp(QN_W + "(?:עד\\s+)?סוף\\s+(?:ה)?שבוע" + QN_E))) P.due = addDays(T0, dow <= 4 ? 4 - dow : 4 - dow + 7);
+  else if ((m = cut(new RegExp(QN_W + "(?:עוד|בעוד|תוך)\\s+(\\d+)?\\s*(יום|ימים|שבוע|שבועות|שבועיים)" + QN_E)))) { const n = m[2] === "שבועיים" ? 14 : (+m[1] || 1) * (/שבוע/.test(m[2]) ? 7 : 1); P.due = addDays(T0, n); }
+  else { for (let k = 0; k < 6 && !P.due; k++) { const [full, l] = QN_DOW[k]; if (cut(new RegExp(QN_W + "(?:עד\\s+)?(?:ב?יום\\s+(?:" + full + "|" + l + "[׳']?)|ב?" + full + ")" + QN_E))) P.due = nextDow(k); } }
+  // ק.ד.
+  if ((m = raw.match(/ק\s*[.״"']?\s*ד\s*[.׳']?\s*(\d{2,4}(?:\.\d+)?)(?:\s*[-–]\s*(\d{2,4}(?:\.\d+)?))?/))) { P.kdFrom = m[2] && +m[2] > +m[1] ? m[2] : m[1]; P.kdTo = m[2] ? (+m[2] > +m[1] ? m[1] : m[2]) : ""; }
+  // מעביר BC-xx
+  if ((m = raw.match(/\bBC\s*-?\s*(\d{1,4})\b/i))) { const it = d.items.find(i => new RegExp("\\bBC\\s*-?\\s*0*" + m[1] + "\\b", "i").test(i.name || "")); if (it) { P.item = it; if (!P.kdFrom) { P.kdFrom = it.kdFrom || ""; P.kdTo = ""; } P.cid = it.contractorId; } }
+  // אחראי: "שם — ..." בתחילת השורה, או שם מוכר בטקסט
+  const owners = tkOwners().map(o => o.name).filter(Boolean);
+  if ((m = raw.match(/^\s*([\u05D0-\u05EA0-9"״'׳.]+(?:\s+[\u05D0-\u05EA0-9"״'׳.]+)?)\s*[—–:\-]\s+/))) { P.owner = owners.find(o => o === m[1] || o.split(" ")[0] === m[1]) || m[1]; P.title = raw.slice(m[0].length); t = t.replace(m[1], " "); }
+  else { const nt = qnNorm(t); for (const o of owners) { const f = qnNorm(o).split(" ")[0]; if (f.length >= 2 && new RegExp(QN_W + "(?:ל|עם\\s+)?" + f + QN_E).test(nt)) { P.owner = o; break; } } }
+  // קבלן
+  if (!P.cid) { const nt = " " + qnNorm(raw) + " "; let best = null; d.contractors.forEach(c => qnCKeys(c).forEach(k => { const i = nt.search(new RegExp(QN_W + "[ובלמהש]{0,2}" + k + QN_E)); if (i >= 0 && (!best || k.length > best.k.length)) best = { c, k }; })); if (best) P.cid = best.c.id; }
+  // כותרת: בלי האחראי בהתחלה, בלי מילות חשיבות ותאריך
+  let ti = P.title;
+  ti = ti.replace(new RegExp(QN_W + "(דחוף|בדחיפות)" + QN_E, "g"), " ").replace(/!+/g, " ");
+  if (P.due) ti = ti.replace(/(?:עד|ל|ב)?\s*\d{1,2}[\/.]\d{1,2}(?:[\/.]\d{2,4})?/, " ").replace(new RegExp("(?:^|\\s)(?:עד\\s+)?(?:מחר|היום|סוף\\s+(?:ה)?שבוע(?:\\s+הבא)?|(?:ב)?שבוע\\s+הבא|(?:עוד|בעוד|תוך)\\s+\\d*\\s*(?:יום|ימים|שבוע|שבועות|שבועיים)|ב?יום\\s+(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|[אבגדהו][׳']?)|ב?(?:ראשון|שני|שלישי|רביעי|חמישי|שישי))(?=$|\\s|[,.])"), " ");
+  P.title = ti.replace(/\s{2,}/g, " ").replace(/^[\s,.:;—–-]+|[\s,.:;—–-]+$/g, "").trim() || raw;
+  return P;
+}
+function qnChips(P) {
+  const d = D(), c = P.cid && d.contractors.find(x => x.id === P.cid), ch = (i, v, cls = "") => `<span class="qn-ch ${cls}">${i} ${esc(v)}</span>`;
+  if (P.issue) return ch("↻", `עדכון לנושא ${P.issue.code} — ${P.issue.title || ""}`, "up") + (P.note ? ch("📝", P.note) : "");
+  return [ch("📌", P.title), P.owner ? ch("👤", P.owner) : ch("👤", "ללא אחראי", "miss"), c ? ch("🏗", c.name) : ch("🏗", "כללי (בלי קבלן)", "miss"), P.item ? ch("💧", P.item.name || "") : "",
+    P.kdFrom ? ch("📍", `ק.ד. ${P.kdTo ? P.kdTo + "–" : ""}${P.kdFrom}`) : "", P.due ? ch("📅", `${DOW_HE[new Date(P.due + "T00:00").getDay()]} ${fmtD(P.due)}`) : "", P.pri ? ch(P.pri === "דחוף" ? "🔴" : "🟠", P.pri) : ""].join("");
+}
+const DOW_HE = ["יום א׳", "יום ב׳", "יום ג׳", "יום ד׳", "יום ה׳", "יום ו׳", "שבת"];
+async function qnAdd(raw) {
+  raw = String(raw || "").trim(); if (!raw) return; const P = qnParse(raw), today = todayStr();
+  if (P.issue) { if (!P.note) return toast("מה העדכון לנושא " + P.issue.code + "?"); await agNoteSave(P.issue.id, P.note, true); toast(`העדכון נכנס לנושא ${P.issue.code} ולסיכום הישיבה ✓`); return; }
+  const o = tkOwners().find(x => x.name === P.owner), title = P.title;
+  const rec = { title, ownerName: P.owner || "", ownerEmail: o?.email || "", due: P.due || "", contractorId: P.cid || "", kdFrom: P.kdFrom || "", kdTo: P.kdTo || "", priority: P.pri || "בינוני", category: "אחר", issueOwner: "מתאם הנדסי", mgmt: false, mgmtAsk: "" };
+  let link = {};
+  if (rec.contractorId) { const iid = await api.add("issues", { contractorId: rec.contractorId, title, category: rec.category, kdFrom: rec.kdFrom, kdTo: rec.kdTo, owner: rec.issueOwner, status: "פתוח", opened: today, updated: today, due: rec.due, mgmt: false, mgmtAsk: "", priority: rec.priority,
+      last: `נפתחה בישיבה — משימה ל${rec.ownerName || "צוות"}`, history: { [newId()]: { date: today, text: `נפתחה בישיבה ${fmtD(today)} — משימה ל${rec.ownerName || "צוות"}` } }, fromTask: true });
+    if (iid) link = { issueId: iid, issueCode: RAW.issues?.[iid]?.code || "" }; }
+  await api.add("tasks", { ...rec, status: "פתוח", createdAt: today, createdBy: tkWho(), reviewed: isMgr(), qn: today, qnRaw: raw, log: { [newId()]: { date: today, at: new Date().toISOString(), text: "נפתחה מפתק בישיבה", by: tkWho() } }, ...link });
+  toast(`נוספה משימה${rec.ownerName ? " ל" + rec.ownerName : ""} ✓`);
+}
+function qnBlock(d, since) {
+  if (isViewer()) return "";
+  const L = (d.tasks || []).filter(t => t.qn && t.qn >= since).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)) || 0).reverse();
+  const card = t => { const c = d.contractors.find(x => x.id === t.contractorId);
+    return `<button class="qn-card" style="--rc:${c ? cColor(d, c) : "#9aa3ad"}" data-act="tkEdit" data-id="${t.id}" title="לחיצה — עריכת המשימה"><b>${esc(t.title)}</b>
+      <span>${esc(t.ownerName || "ללא אחראי")}${c ? " · " + esc(c.name) : ""}${t.kdFrom ? ` · ק.ד. ${t.kdTo ? esc(t.kdTo) + "–" : ""}${esc(t.kdFrom)}` : ""}${t.due ? " · עד " + fmtD(t.due) : ""}${t.issueCode ? ` · <span dir="ltr" style="white-space:nowrap">${esc(t.issueCode)}</span>` : ""}</span>${priN(t.priority) && priN(t.priority) !== "בינוני" ? priPill(t.priority) : ""}</button>`; };
+  return `<div class="card qn"><div class="row" style="align-items:baseline;gap:8px;margin-bottom:6px"><h2 style="margin:0">✏️ פתק מהיר</h2><span class="muted small">שורה אחת ← Enter. משימה נשמרת מיד ונכנסת לנושאים הפתוחים של הקבלן. קוד של נושא קיים (AV-14) ← עדכון לנושא.</span></div>
+    <div class="qn-in"><input class="inp" id="qn_t" autocomplete="off" placeholder="למשל: נועם — לתאם עם רשות העתיקות בבראשי ק.ד. 430-434 עד יום ה׳ דחוף"><button class="btn" data-act="qnAdd">הוספה ↵</button></div>
+    <div class="qn-chips" id="qn_c"><span class="muted small">מזהה לבד: אחראי (שם בתחילת השורה) · קבלן · ק.ד. · BC-17 · תאריך (עד 20/10, מחר, יום ה׳, סוף השבוע, שבוע הבא) · דחוף / !</span></div>
+    ${L.length ? `<div class="qn-board">${L.map(card).join("")}</div>` : ""}</div>`;
+}
+document.addEventListener("input", e => { if (e.target.id !== "qn_t") return; const v = e.target.value.trim(), box = document.getElementById("qn_c"); if (box) box.innerHTML = v ? qnChips(qnParse(v)) : ""; });
+document.addEventListener("keydown", async e => { if (e.target.id !== "qn_t" || e.key !== "Enter" || e.isComposing) return; e.preventDefault(); const inp = e.target, v = inp.value; if (!v.trim()) return; inp.value = ""; await qnAdd(v); setTimeout(() => document.getElementById("qn_t")?.focus({ preventScroll: true }), 30); });
 /** סיכום ישיבה: נשמר בארכיון ונפתח להדפסה / PDF */
 /* ---------- נושאים לדיון בישיבה: אוטומטי (דחוף / להנהלה) + ידני. "עדכון מהישיבה" נכנס לנושא (ולמשימה המקושרת) ולסיכום ---------- */
 const AG = () => RAW.tableConfig?.agenda || {};
@@ -3584,8 +3687,9 @@ function agAddModal() {
     m.querySelectorAll("[data-agp]").forEach(b => b.onclick = async () => { const id = b.dataset.agp, A = AG(); await agSet({ items: { ...(A.items || {}), [id]: todayStr() }, hidden: Object.fromEntries(Object.entries(A.hidden || {}).filter(([k]) => k !== id)) }); b.remove(); toast("נוסף לדיון ✓"); });
   });
 }
-async function agNoteSave(id, txt) {
-  const A = AG(); await agSet({ notes: { ...(A.notes || {}), [id]: txt } });
+async function agNoteSave(id, txt, add) {
+  const A = AG(); if (add) { const prev = A.notes?.[id]; txt = prev ? `${prev} · ${txt}` : txt; }
+  await agSet({ notes: { ...(A.notes || {}), [id]: txt }, ...(add ? { items: { ...(A.items || {}), [id]: todayStr() }, hidden: Object.fromEntries(Object.entries(A.hidden || {}).filter(([k]) => k !== id)) } : {}) });
   const x = RAW.issues?.[id]; if (!x || !txt) return; const today = todayStr(), hist = { ...(x.history || {}) }, v = `ישיבה ${fmtD(today)}: ${txt}`;
   const lastK = Object.keys(hist).sort((a, b) => String(hist[a].date).localeCompare(String(hist[b].date))).pop();
   if (lastK && hist[lastK].date === today && /^ישיבה /.test(hist[lastK].text || "")) hist[lastK] = { ...hist[lastK], text: v }; else hist[newId()] = { date: today, text: v };
@@ -5217,7 +5321,7 @@ function renderSheet(table, rows, emptyText, { store = table, del = true } = {})
     <th><span class="fcount"></span>${nOn ? ` <button class="btn ghost sm" data-act="filtClear" data-table="${table}">ניקוי</button>` : ""}</th></tr>` : "";
   return `<div class="fchips" data-for="${table}"></div><div class="tablewrap"><table class="sheet" data-table="${table}">
     <thead><tr>${cols.map(c => `<th data-k="${c.key}" data-act="sortCol" data-table="${table}" title="לחיצה ממיינת לפי העמודה (עולה / יורד / ברירת מחדל)">${esc(c.label)}<span class="sarr"></span></th>`).join("")}<th class="colbtn"><span class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn ghost sm ${nOn ? "on" : ""}" data-act="filt" data-table="${table}" title="סינון לפי עמודה">סינון${nOn ? ` (${nOn})` : ""}</button><button class="btn ghost sm" data-act="cols" data-table="${table}" title="ניהול עמודות">עמודות</button><button class="btn ghost sm" data-act="xlsx" title="הפקת אקסל של הטבלה כפי שהיא מוצגת (כולל סינון)">אקסל</button></span></th></tr>${filtRow}</thead>
-    <tbody>${lazySelects(rows.map(r => `<tr${(bg => bg ? ` style="background:${bg}"` : "")(rowTint(table, r))}>${cols.map(c => `<td data-k="${c.key}" class="${c.cls || ""}" ${c.style ? `style="${c.style(r)}"` : ""}>${c.cell(r)}</td>`).join("")}<td>${del ? `<button class="btn del" data-act="del" data-col="${store}" data-id="${r.id}">מחיקה</button>` : ""}</td></tr>`).join("")
+    <tbody>${lazySelects(rows.map(r => `<tr data-rid="${esc(r.id)}"${FRESH.has(r.id) ? ' class="fresh"' : ""}${(bg => bg ? ` style="background:${bg}"` : "")(rowTint(table, r))}>${cols.map(c => `<td data-k="${c.key}" class="${c.cls || ""}" ${c.style ? `style="${c.style(r)}"` : ""}>${c.cell(r)}</td>`).join("")}<td>${del ? `<button class="btn del" data-act="del" data-col="${store}" data-id="${r.id}">מחיקה</button>` : ""}</td></tr>`).join("")
       || `<tr><td colspan="${cols.length + 1}" class="c muted">${emptyText}</td></tr>`, rows.length)}</tbody>${foot}
   </table></div>`;
 }
@@ -5259,6 +5363,21 @@ function applySorts() {
     keyed.forEach(x => body.appendChild(x.tr));
   });
 }
+/* ---------- שורה חדשה (+ פריט / + הזמנה / + נושא): נשארת בראש הטבלה ומודגשת עד שממלאים ק.ד. (או נושא) ויוצאים ממנה — ואז עוברת למקומה ---------- */
+const FRESH = new Set(), FRESH_KEY = { items: "kdFrom", orders: "kdFrom", issues: "title" };
+function pinFresh() {
+  document.querySelectorAll("table.sheet[data-table] tbody").forEach(body => [...body.querySelectorAll(":scope > tr.fresh")].reverse().forEach(tr => { tr.hidden = false; body.prepend(tr); }));
+}
+async function addFresh(col, rec) {
+  const id = await api.add(col, rec); if (!id) return id; FRESH.add(id); render();
+  setTimeout(() => { const tr = document.querySelector(`tr.fresh[data-rid="${CSS.escape(id)}"]`); if (!tr) return; const w = tr.closest(".tablewrap"); if (w) w.scrollTop = 0; (w || tr).scrollIntoView({ block: "start" }); scrollBy(0, -70);
+    const f = tr.querySelector("input:not([type=checkbox]):not([type=date]), textarea"); f?.focus(); }, 60);
+  return id;
+}
+document.addEventListener("focusout", e => { const tr = e.target.closest?.("tr.fresh"); if (!tr) return;
+  const id = tr.dataset.rid; setTimeout(() => { if (document.activeElement?.closest?.("tr")?.dataset.rid === id || document.querySelector(".modal")) return; const col = tr.closest("table")?.dataset.table, k = FRESH_KEY[col] || "kdFrom", v = RAW[col]?.[id]?.[k];
+    if (v == null || String(v).trim() === "" || (col === "issues" && v === "נושא חדש")) return;
+    FRESH.delete(id); if (!document.activeElement || document.activeElement === document.body) render(); else document.querySelectorAll(`tr.fresh[data-rid="${CSS.escape(id)}"]`).forEach(x => x.classList.remove("fresh")); }, 400); });
 function applyGSearch() {
   document.querySelectorAll("[data-gsearch]").forEach(inp => { const t = inp.dataset.gsearch, q = (ui.gsearch?.[t] || "").trim().toLowerCase(); if (!q) return;
     document.querySelectorAll(`table.sheet[data-table="${t}"] tbody tr`).forEach(tr => { if (!tr.querySelector("td[colspan]") && !tr.innerText.toLowerCase().includes(q)) tr.hidden = true; }); });
@@ -5949,7 +6068,7 @@ $app.addEventListener("click", async e => {
         if (Object.keys(L).length) await api.update("tableConfig", "activityPresets", { lists: L }); }; });
   else if (act === "addAct") askActivityOrder(b.dataset.id, null, 0, { isNew: true });
   else if (act === "blk") { const [t, ...rest] = b.dataset.info.split("\n"); modal(`<h2>${esc(t)}</h2>${rest.filter(Boolean).map(l => `<p class="small" style="margin:0">${esc(l)}</p>`).join("")}<div class="row"><span class="spacer"></span><button class="btn ghost" id="mNo">סגירה</button></div>`, (m, close) => { m.querySelector("#mNo").onclick = close; m.querySelector("#mNo").focus(); }); }
-  else if (act === "addIssue") { const id = await api.add("issues", { contractorId: b.dataset.id, title: "נושא חדש", category: "חסם", kdFrom: "", kdTo: "", owner: "", status: "פתוח", opened: todayStr(), updated: todayStr(), last: "", history: {} }); }
+  else if (act === "addIssue") { const id = await addFresh("issues", { contractorId: b.dataset.id, title: "נושא חדש", category: "חסם", kdFrom: "", kdTo: "", owner: "", status: "פתוח", opened: todayStr(), updated: todayStr(), last: "", history: {} }); }
   else if (act === "issueHist") issueModal(b.dataset.id);
   else if (act === "iecHist") iecHistModal(b.dataset.id);
   else if (act === "iecDist") { ui.iec.dist = b.dataset.id; render(); }
@@ -5969,13 +6088,17 @@ $app.addEventListener("click", async e => {
     RAW.tableConfig?.alertsAck ? await api.update("tableConfig", "alertsAck", { acks: A }) : await api.put("tableConfig", "alertsAck", { acks: A }); }
   else if (act === "alGo") { const a = allAlerts(D()).find(x => x.key === b.dataset.id), g = a?.go; if (!g) return;
     if (g.page === "power") ui.iec = { dist: "", kind: g.kind || "", stage: g.stage || "", q: g.q || "", showOff: false };
-    if (g.ctab) ui.ctab = g.ctab;
-    ui.page = g.page; location.hash = g.page; render(); window.scrollTo(0, 0); }
+    if (g.ctab) ui.ctab = g.ctab; else if (g.page.startsWith("c:")) ui.ctab = isMain(RAW.contractors?.[g.page.slice(2)] || {}) ? "progress" : "items";
+    ui.page = g.page; location.hash = g.page; render(); window.scrollTo(0, 0);
+    if (g.ids?.length) setTimeout(() => { const trs = g.ids.map(id => document.querySelector(`tr[data-rid="${CSS.escape(id)}"]`)).filter(Boolean); trs.forEach(tr => { tr.hidden = false; tr.classList.add("al-hl"); });
+      trs[0]?.scrollIntoView({ block: "center" }); if (trs.length) toast(`${trs.length} השורות מההתראה מסומנות בכתום`); }, 80); }
   else if (act === "mergeFile") pickMergeFile();
   else if (act === "shRename") shModal();
   else if (act === "sepRun") sepModal();
   else if (act === "ttzMig") ttzMigModal();
   else if (act === "agAdd") agAddModal();
+  else if (act === "navBack") navBack();
+  else if (act === "qnAdd") { const inp = document.getElementById("qn_t"); if (inp?.value.trim()) { const v = inp.value; inp.value = ""; await qnAdd(v); setTimeout(() => document.getElementById("qn_t")?.focus({ preventScroll: true }), 30); } }
   else if (act === "agDel") { const A = AG(), id = b.dataset.id, items = { ...(A.items || {}) }; delete items[id]; await agSet({ items, hidden: { ...(A.hidden || {}), [id]: todayStr() } }); }
   else if (act === "actDet") { const [cid, aid] = String(b.dataset.id).split("|"); actDetailModal(cid, aid); }
   else if (act === "reqOpen") reqModal(b.dataset.id);
@@ -6126,7 +6249,7 @@ $app.addEventListener("click", async e => {
         for (const it of list("items").filter(i => i.contractorId === b.dataset.id)) await api.remove("items", it.id); await api.remove("contractors", b.dataset.id); ui.page = "overview"; location.hash = "overview"; render(); }; });
   }
   else if (act === "addOrder") { const n = list("orders").filter(o => o.contractorId === b.dataset.id).length;
-    await api.add("orders", { contractorId: b.dataset.id, name: `הזמנה ${n + 1}`, kdFrom: "", kdTo: "", secFrom: "", secTo: "", lengthKm: "", note: "", order: Date.now() }); }
+    await addFresh("orders", { contractorId: b.dataset.id, name: `הזמנה ${n + 1}`, kdFrom: "", kdTo: "", secFrom: "", secTo: "", lengthKm: "", note: "", order: Date.now() }); }
   else if (act === "editLink") editLink(b.dataset.col, b.dataset.id, b.dataset.key);
   else if (act === "cols") colsModal(b.dataset.table);
   else if (act === "xlsx") { const t = b.closest("table"); if (t) exportTables([t], `${pageTitle()} - ${tableTitle(t, 0)}`); }
@@ -6144,7 +6267,7 @@ $app.addEventListener("click", async e => {
   else if (act === "dashSector") { ui.dashSector = b.dataset.id; render(); }
   else if (act === "period") { ui.period = b.dataset.id; render(); }
   else if (act === "addItem") { const c = RAW.contractors[b.dataset.id];
-    await api.add("items", { contractorId: b.dataset.id, kind: b.dataset.kind || specsOf(c || {})[0] || "", name: "", kdFrom: "", kdTo: "", status: "מתוכנן", plannedDate: "", doneDate: "", note: "" }); }
+    await addFresh("items", { contractorId: b.dataset.id, kind: b.dataset.kind || specsOf(c || {})[0] || "", name: "", kdFrom: "", kdTo: "", status: "מתוכנן", plannedDate: "", doneDate: "", note: "" }); }
   else if (act === "bulkItems") bulkItemsModal(b.dataset.id);
   else if (act === "spMove") spMoveModal(b.dataset.id);
   else if (act === "issuesDoc") issuesDoc(b.dataset.id);
