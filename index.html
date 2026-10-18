@@ -1677,7 +1677,7 @@ function pageIec(d) {
   const pipe = IEC_STAGES.filter(s => s !== "בוטל" || F.showOff).map(s => { const n = s === "בוטל" ? all.filter(o => o.stage === s && inDist(o)).length : stCount(s);
     return `<button class="pstep ${F.stage === s ? "on" : ""}" data-act="iecStage" data-id="${esc(s)}" style="background:${IEC_COLORS[s]}" ${n ? "" : "disabled"}><b>${n}</b><span>${s}</span></button>`; }).join(`<span class="parr">‹</span>`);
   const distRows = IEC_DISTRICTS.map(ds => { const a = live.filter(o => o.district === ds);
-    return `<tr><td><b>${ds}</b></td><td class="c">${a.filter(o => o.kind !== "הזמנה מרכזת").length}</td>${["הוזמן", "שובר מקדמה", "מקדמה שולמה", "שובר משלים", "משלים שולם", "מתואם חיבור", "חובר"].map(s => `<td class="c">${a.filter(o => o.stage === s).length || ""}</td>`).join("")}
+    return `<tr><td><b>${ds}</b></td><td class="c">${a.filter(o => o.kind !== "הזמנה מרכזת").length}</td>${["הוזמן", "שובר מקדמה", "מקדמה שולמה", "שובר משלים", "משלים שולם", "מתואם חיבור", "חובר"].map(s => { const n = a.filter(o => o.stage === s).length; return n ? `<td class="c"><a href="#" data-act="iecDS" data-id="${esc(ds)}|${esc(s)}" title="הצגת ההזמנות">${n}</a></td>` : `<td class="c"></td>`; }).join("")}
       <td class="c">${ils(sum(a, o => mn(o.amount)))}</td><td class="c">${ils(sum(a, iecPaid))}</td><td class="c">${ils(sum(a, iecBalance))}</td><td class="c">${ils(sum(a, iecToPay)) === "0" ? "" : ils(sum(a, iecToPay))}</td></tr>`; }).join("");
   const bud = RAW.tableConfig?.iec?.budgetReqs || [];
   const kindOpts = ["", ...IEC_KINDS].map(k => `<option value="${esc(k)}" ${k === F.kind ? "selected" : ""}>${k || "כל הסוגים"}${k ? ` (${all.filter(o => o.kind === k && inDist(o)).length})` : ""}</option>`).join("");
@@ -4046,9 +4046,9 @@ function pageSites(d) {
         <td><span class="pill" style="background:${PHASE_CLR[p]};color:#fff">${p}</span></td>
         <td style="min-width:190px">${siteBar(P, "#4a6d93")}<div class="small"><b>${P.done}/${P.total}</b> ${P.next ? `· הבא: ${esc(P.next.t)}` : "· ✓"}</div></td>
         <td style="min-width:200px">${B.filter(b => buildOrdered(b) || b.kind === "זמני").map(b => { const E = stepProg(siteExecSteps(s, b, T), b.steps), o = buildOrder(b); return `<div class="st-b"><span class="small"><b>${b.kind}</b> · ${esc(RAW.contractors?.[buildCid(b)]?.name || b.contractor || "—")}${o?.x_ordNo ? " · " + esc(o.x_ordNo) : ""}</span>${siteBar(E, b.kind === "זמני" ? "#c96a12" : "#2f6b4f")}</div>`; }).join("") || `<span class="muted small">טרם הוזמן</span>`}</td>
-        <td class="small">${iec.map(o => `<span class="pill" style="background:${IEC_COLORS[o.stage] || "#eee"}">${esc(o.stage || "")}</span>`).join(" ") || `<span class="muted">—</span>`}</td>
+        <td class="small">${iec.map(o => `<button class="pill" style="border:0;cursor:pointer;background:${IEC_COLORS[o.stage] || "#eee"}" data-act="wGoLink" data-id="o:${o.id}" title="${esc(o.orderNo || "")} — מעבר לחיבורי חח״י">${esc(o.stage || "")}</button>`).join(" ") || `<span class="muted">—</span>`}</td>
         <td class="small nowrap">${est ? bgMM(est) : `<span class="muted">—</span>`}</td>
-        <td onclick="event.stopPropagation()">${wLinkCell("s:" + s.id)}</td>
+        <td>${wLinkCell("s:" + s.id)}</td>
         <td class="small nowrap ${daysSince(siteLast(s)) > 30 && live(s) ? "w-late" : ""}">${fmtD(siteLast(s)) || "—"}</td></tr>`; };
     body = `<div class="card">${L.length ? `<div class="tablewrap"><table class="sheet st-tab"><thead><tr><th>אתר</th><th>שלב</th><th>תכנון</th><th>ביצוע</th><th>חח״י</th><th>אומדן</th><th>⚠ נושאים</th><th>עדכון</th></tr></thead><tbody>${L.map(row).join("")}</tbody></table></div>` : `<p class="muted">אין אתרים בסינון הזה</p>`}</div>`;
   }
@@ -4106,9 +4106,9 @@ function pageSite(d, sid) {
     <div class="sb-two"><div class="card"><h2 style="margin-top:0">⚠ נושאים וחסמים</h2>${wLinkCell("s:" + sid)}
       ${sugg.length ? `<div class="sk-sugg"><b class="small">נושאים שמזכירים את האתר ועוד לא מקושרים:</b>${sugg.map(i => `<div class="row" style="gap:6px;align-items:center"><a href="#" data-act="wEdit" data-id="${i.id}"><b dir="ltr">${esc(i.code || "")}</b> ${esc(i.title || "")}</a>${ed ? `<button class="btn sm" data-act="siteLinkIss" data-id="${sid}|${i.id}">קשר לאתר</button>` : ""}</div>`).join("")}</div>` : ""}
       ${s.note ? `<p class="small" style="margin:8px 0 0"><b>הערות:</b> ${esc(s.note)}</p>` : ""}</div>
-      <div class="card"><h2 style="margin-top:0">חח״י ותקציב</h2>${iec.map(o => `<div class="small">⚡ ${esc(o.name || "")} · ${esc(o.orderNo || "—")} · <span class="pill" style="background:${IEC_COLORS[o.stage] || "#eee"}">${esc(o.stage || "")}</span>${ed ? ` <b data-act="siteIecDel" data-id="${sid}|${o.id}" role="button" class="w-x">✕</b>` : ""}</div>`).join("") || `<div class="small muted">אין הזמנת חח״י מקושרת</div>`}
+      <div class="card"><h2 style="margin-top:0">חח״י ותקציב</h2>${iec.map(o => `<div class="small"><a href="#" data-act="wGoLink" data-id="o:${o.id}" title="מעבר להזמנה בחיבורי חח״י">⚡ ${esc(o.name || "")} · ${esc(o.orderNo || "—")} · <span class="pill" style="background:${IEC_COLORS[o.stage] || "#eee"}">${esc(o.stage || "")}</span> ↗</a>${ed ? ` <b data-act="siteIecDel" data-id="${sid}|${o.id}" role="button" class="w-x">✕</b>` : ""}</div>`).join("") || `<div class="small muted">אין הזמנת חח״י מקושרת</div>`}
         ${ed ? `<select class="inp sm" data-siec="${sid}" style="margin-top:4px"><option value="">+ קישור הזמנת חח״י…</option>${iecAll.filter(o => !s.iec?.[o.id]).map(o => `<option value="${o.id}">${esc(o.name || "")} · ${esc(o.orderNo || "—")}</option>`).join("")}</select>` : ""}
-        <div class="small" style="margin-top:8px">💰 אומדן: <b>${est ? bgMM(est) : "—"}</b>${(o => o.length && o.reduce((t, x) => t + bgOrdAmt(x), 0) ? ` · הוזמן: <b>${bgMM(o.reduce((t, x) => t + bgOrdAmt(x), 0))}</b>` : "")(B.map(buildOrder).filter(Boolean))}</div>
+        <div class="small" style="margin-top:8px">💰 <a href="#" data-act="nav" data-id="budget" title="מעבר לתקציב ואומדן">אומדן ↗</a>: <b>${est ? bgMM(est) : "—"}</b>${(o => o.length && o.reduce((t, x) => t + bgOrdAmt(x), 0) ? ` · הוזמן: <b>${bgMM(o.reduce((t, x) => t + bgOrdAmt(x), 0))}</b>` : "")(B.map(buildOrder).filter(Boolean))}</div>
         <label class="field" style="margin-top:4px">שורת אומדן<select class="inp sm" ${ed ? `data-sef="${sid}|budget"` : "disabled"}><option value="">—</option>${bud.map(x => `<option value="${x.id}" ${x.id === s.budget ? "selected" : ""}>${esc(x.title || "")} · ${bgMM(bgN(x.mast) + bgN(x.build))}</option>`).join("")}</select></label></div></div>
     <details class="card sk-det"><summary><b>✎ פרטי האתר</b> <span class="muted small">— שם, סוג, אזור, מצב, מיקום, תורן, מבנה</span></summary><div class="w-df" style="margin-top:8px">${fld("name", "שם", 2)}${sel("type", "סוג", SITE_TYPES)}${sel("region", "אזור", SITE_REG)}${sel("status", "מצב", SITE_STATUS)}
       ${fld("line", "שורת דוח")}${fld("kd", "ק.ד.")}${fld("coord", "נ.צ. (ITM)", 1.5)}${fld("tower", "גובה תורן")}${fld("building", "גודל מבנה")}${fld("azimuth", "אזימוט")}
@@ -6537,6 +6537,7 @@ $app.addEventListener("click", async e => {
   else if (act === "issueHist") issueModal(b.dataset.id);
   else if (act === "iecHist") iecHistModal(b.dataset.id);
   else if (act === "iecDist") { ui.iec.dist = b.dataset.id; render(); }
+  else if (act === "iecDS") { const [ds, st] = b.dataset.id.split("|"); ui.iec = { ...ui.iec, dist: ds, stage: st, q: "" }; render(); document.querySelector('table[data-table="iecOrders"]')?.scrollIntoView({ block: "start" }); }
   else if (act === "iecStage") { ui.iec.stage = ui.iec.stage === b.dataset.id ? "" : b.dataset.id; render(); }
   else if (act === "iecGo") { ui.iec = { dist: "", kind: "", stage: "", q: b.dataset.id, showOff: true }; ui.page = "power"; location.hash = "power"; render(); window.scrollTo(0, 0); }
   else if (act === "addIec") { const F = ui.iec || {};
