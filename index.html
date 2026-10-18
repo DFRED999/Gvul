@@ -161,6 +161,8 @@ table.mx { border-collapse: separate; border-spacing: 2px; width: 100%; font-siz
 .sk-build { border: 1px solid var(--line); border-inline-start: 4px solid #2f6b4f; border-radius: 10px; padding: 8px 12px; margin-top: 8px; } .sk-build.tmp { border-inline-start-color: #c96a12; }
 .sk-sugg { margin-top: 8px; border: 1px dashed #e6cfa8; background: #fffaf2; border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
 .sk-det > summary { cursor: pointer; } .sk-h3 { font-size: 14px; margin: 14px 0 0; color: #34557a; } .sk-ll { display: flex; flex-direction: column; gap: 5px; max-height: 50vh; overflow: auto; margin-bottom: 10px; }
+.sk-rep { border: 1px solid var(--line); border-radius: 10px; padding: 14px; max-height: 60vh; overflow: auto; background: #fff; font-size: 12px; }
+.modal .card:has(.sk-rep) { max-width: 1100px; width: 96vw; }
 .modal .card:has(.tp-list), .modal .card:has(.sk-ll) { max-width: 920px; width: 95vw; }
 .tp-list { display: flex; flex-direction: column; gap: 4px; max-height: 55vh; overflow: auto; } .tp-row { display: flex; gap: 6px; align-items: center; } .tp-row [data-tpn] { flex: 1; min-width: 160px; }
 .st-note { flex: 1; min-width: 140px; } .st-subs { display: flex; gap: 4px; width: 100%; padding-inline-start: 30px; } .st-sub { font: inherit; font-size: 11.5px; border: 1px solid #d5d9d1; border-inline-start: 4px solid var(--sc); background: #fff; border-radius: 6px; padding: 1px 7px; cursor: pointer; }
@@ -4053,7 +4055,7 @@ function pageSites(d) {
     body = `<div class="card">${L.length ? `<div class="tablewrap"><table class="sheet st-tab"><thead><tr><th>אתר</th><th>שלב</th><th>תכנון</th><th>ביצוע</th><th>חח״י</th><th>אומדן</th><th>⚠ נושאים</th><th>עדכון</th></tr></thead><tbody>${L.map(row).join("")}</tbody></table></div>` : `<p class="muted">אין אתרים בסינון הזה</p>`}</div>`;
   }
   return `<div class="ch-banner" style="--cc:#1f7a8c"><div><h1>📡 אתרי איסוף</h1><span>${S.length} אתרים · תכנון (סטטוטוריקה עד היתר) ← ביצוע (מהזמנה לקבלן) · אחראי צוות: ${esc(leadCfg().sites || "—")}</span></div>
-    <div class="row" style="gap:6px"><span class="sb-views">${vb("board", "לוח")}${vb("matrix", "מטריצה")}${vb("table", "טבלה")}</span>${isViewer() ? "" : `<button class="btn" data-act="siteNew">+ אתר</button>`}${isMgr() ? `<button class="btn ghost" data-act="siteTplEd">⚙ שלבים</button>` : ""}</div></div>
+    <div class="row" style="gap:6px"><span class="sb-views">${vb("board", "לוח")}${vb("matrix", "מטריצה")}${vb("table", "טבלה")}</span><button class="btn ghost" data-act="siteRep">📄 דוח סטטוס</button>${isViewer() ? "" : `<button class="btn" data-act="siteNew">+ אתר</button>`}${isMgr() ? `<button class="btn ghost" data-act="siteTplEd">⚙ שלבים</button>` : ""}</div></div>
     ${S.length ? "" : `<div class="banner"><b>עוד אין אתרים ברשימה.</b><span>הנתונים מהאתר הישן נכנסים מקובץ (הגדרות ← נתונים וגיבוי ← "הוספת נתונים מקובץ"), או מוסיפים ב״+ אתר״.</span></div>`}
     ${sugg.length && !isViewer() ? `<div class="banner"><b>${sugg.length} נושאים מזכירים אתר איסוף אבל עוד לא מקושרים אליו</b><span>${esc(sugg.slice(0, 3).map(x => `${x.i.code} → ${x.s.name}`).join(" · "))}${sugg.length > 3 ? "…" : ""}</span><button class="btn sm" data-act="siteLinkAll">לבדוק ולקשר</button></div>` : ""}
     <div class="ch-tiles sg-tiles" style="--cc:#1f7a8c">${kpi("", "אתרים", S.length, `${cnt(siteBig)} גדולים · ${cnt(s => s.type === "קטן")} קטנים · ${cnt(s => s.type === "קו מים")} קו מים`)}${kpi("בתכנון", "בתכנון", cnt(s => ph(s) === "בתכנון"), "עד היתר בנייה", "t1")}${kpi(null, "ממתינים להזמנה", waitOrd.length, "התכנון הושלם")}${kpi("בביצוע", "בביצוע", cnt(s => ph(s) === "בביצוע"), "יצאה הזמנה")}
@@ -4172,11 +4174,89 @@ function siteLinkAllModal() {
       for (const { s, i } of sel) await api.update("issues", i.id, { links: { ...(RAW.issues[i.id]?.links || {}), ["s:" + s.id]: true } }); close(); toast(`קושרו ${sel.length} נושאים ✓`); };
   });
 }
+/* ---------- דוח סטטוס אתרי איסוף (PDF / Word / העתקה) — לפי הסינון שבמסך ---------- */
+function sitesFiltered() {
+  const T = siteTpl(), F = ui.sf || {}, inTab = s => !F.tab || F.tab === "all" || (F.tab === "big" ? siteBig(s) : F.tab === "small" ? s.type === "קטן" : s.type === "קו מים");
+  return list("sites").filter(s => inTab(s) && (!F.reg || s.region === F.reg) && (!F.ph || sitePhase(s, T) === F.ph) && (!F.q || qnNorm([s.name, s.line, s.note].join(" ")).includes(qnNorm(F.q))))
+    .sort((a, b) => SITE_TYPES.indexOf(a.type) - SITE_TYPES.indexOf(b.type) || String(a.name).localeCompare(String(b.name), "he", { numeric: true }));
+}
+/** שלבים שהושלמו מאז תאריך — מכל האתרים (תכנון וביצוע) */
+function siteDoneSince(S, from, T) {
+  const out = [];
+  for (const s of S) {
+    for (const x of sitePlanSteps(s, T)) { const v = s.plan?.[x.id]; if (v?.st === "הושלם" && v.date >= from) out.push({ s, t: x.t, w: "תכנון", d: v.date }); }
+    for (const b of siteBuilds(s)) for (const x of siteExecSteps(s, b, T)) { const v = b.steps?.[x.id]; if (v?.st === "הושלם" && v.date >= from) out.push({ s, t: x.t, w: "ביצוע " + b.kind, d: v.date }); }
+  }
+  return out.sort((a, b) => b.d.localeCompare(a.d));
+}
+function siteRepHtml(o) {
+  const T = siteTpl(), S = sitesFiltered(), ph = s => sitePhase(s, T), F = ui.sf || {}, live = s => !["מוקפא", "בוטל", "הושלם"].includes(ph(s));
+  const th = t => `<th style="background:#1f7a8c;color:#fff;text-align:right;padding:4px 6px;border:1px solid #1f7a8c;font-size:10.5pt">${t}</th>`, td = (t, st = "") => `<td style="border:1px solid #cfd8d3;padding:4px 6px;vertical-align:top;${st}">${t}</td>`;
+  const tbl = (head, rows) => `<table style="width:100%;border-collapse:collapse;font-size:10pt"><tr>${head.map(th).join("")}</tr>${rows.join("")}</table>`;
+  const flt = [F.tab && F.tab !== "all" ? { big: "גדולים", small: "קטנים", water: "קו מים" }[F.tab] : "", F.reg, F.ph, F.q ? `"${F.q}"` : ""].filter(Boolean).join(" · ");
+  const PH = ["בתכנון", "ממתין להזמנה", "בביצוע", "הושלם", "מוקפא", "בוטל"], phX = s => ph(s) === "בתכנון" && siteCol(s, T) === "ממתין להזמנה" ? "ממתין להזמנה" : ph(s);
+  const grpT = [["גדולים", siteBig], ["קטנים", s => s.type === "קטן"], ["קו מים", s => s.type === "קו מים"]];
+  const sum = tbl(["", ...PH, "סה״כ"], grpT.map(([l, f]) => { const a = S.filter(f); return a.length ? `<tr>${td(`<b>${l}</b>`)}${PH.map(p => td(a.filter(s => phX(s) === p).length || "", "text-align:center")).join("")}${td(`<b>${a.length}</b>`, "text-align:center")}</tr>` : ""; })
+    .concat(`<tr>${td("<b>סה״כ</b>")}${PH.map(p => td(`<b>${S.filter(s => phX(s) === p).length || ""}</b>`, "text-align:center")).join("")}${td(`<b>${S.length}</b>`, "text-align:center")}</tr>`));
+  const clr = { d: "#3f9a63", c: "#f1c75b", p: "#eceee9", na: "#f7f7f5" };
+  const mcell = (steps, map, g, dim) => { const a = steps.filter(x => x.g === g); if (!a.length) return td("", `background:${clr.na}`);
+    const st = a.map(x => map?.[x.id]?.st || "טרם").filter(x => x !== "לא נדרש"), dn = st.filter(x => x === "הושלם").length, ip = st.some(x => x === "בתהליך");
+    const k = !st.length ? "na" : dn === st.length ? "d" : dn || ip ? "c" : "p";
+    return td(st.length ? (a.length > 1 ? `${dn}/${st.length}` : dn ? "✓" : ip ? "●" : "") : "—", `background:${clr[k]};text-align:center;${k === "d" ? "color:#fff;" : ""}${dim ? "opacity:.45;" : ""}`); };
+  const matrix = tbl(["אתר", ...SITE_PG, ...SITE_EG.map(g => "ביצוע: " + g)], S.map(s => { const perm = siteBuilds(s).find(b => b.kind !== "זמני") || { steps: {} };
+    return `<tr>${td(`<b>${esc(s.name)}</b> <span style="color:#777;font-size:8.5pt">${esc(s.type || "")}${["מוקפא", "בוטל"].includes(ph(s)) ? " · " + ph(s) : ""}</span>`)}${SITE_PG.map(g => mcell(sitePlanSteps(s, T), s.plan, g)).join("")}${SITE_EG.map(g => mcell(siteExecSteps(s, perm, T), perm.steps, g, !buildOrdered(perm))).join("")}</tr>`; }));
+  const iss = s => issuesOfLink("s:" + s.id);
+  const bySite = tbl(["אתר", "סוג · אזור", "שלב", "השלב הבא", "תכנון", "הזמנה (דרישה / הזמנה)", "עדכון אחרון"], S.map(s => { const N = siteNow(s, T), P = stepProg(sitePlanSteps(s, T), s.plan), os = siteBuilds(s).map(b => [b, buildOrder(b)]).filter(x => x[1]), l = siteLast(s);
+    return `<tr>${td(`<b>${esc(s.name)}</b>`)}${td(`${esc(s.type || "")} · ${esc(s.region || "")}`)}${td(phX(s))}${td(["מוקפא", "בוטל"].includes(ph(s)) ? esc(s.note || "") : N.next ? esc(N.next.t) : "✓")}${td(`${P.done}/${P.total}`, "text-align:center")}
+      ${td(os.map(([b, x]) => `${b.kind === "זמני" ? "זמני: " : ""}${esc(x.x_reqNo || "—")} / ${esc(x.x_ordNo || "—")}`).join("<br>") || "—")}${td(`${fmtD(l) || "—"}${l && live(s) && daysSince(l) > 30 ? ` <b style="color:#b3261e">(${daysSince(l)} יום)</b>` : ""}`)}</tr>`; }));
+  const I = S.flatMap(s => iss(s).map(i => ({ s, i })));
+  const issT = I.length ? tbl(["אתר", "קוד", "נושא / חסם", "חשיבות", "אחראי", "יעד", "מצב אחרון"], I.map(({ s, i }) => `<tr>${td(`<b>${esc(s.name)}</b>`)}${td(esc(i.code || ""), "direction:ltr")}${td(esc(i.title || ""))}${td(esc(priN(i.priority) || ""), priN(i.priority) === "דחוף" ? "color:#b3261e;font-weight:700" : "")}${td(esc([i.owner, leadOf(i)].filter(Boolean).filter((v, k, a) => a.indexOf(v) === k).join(" / ")))}${td(fmtD(i.due) || "—")}${td(esc(i.last || ""))}</tr>`)) : "<p>אין נושאים פתוחים.</p>";
+  const stale = S.filter(s => live(s) && daysSince(siteLast(s)) > 30), wait = S.filter(s => live(s) && siteCol(s, T) === "ממתין להזמנה");
+  const att = `<p><b>בלי התקדמות מעל 30 יום (${stale.length}):</b> ${stale.map(s => `${esc(s.name)} (${siteLast(s) ? daysSince(siteLast(s)) + " יום" : "לא עודכן"})`).join(" · ") || "אין"}</p>
+    <p><b>ממתינים להזמנת ביצוע (${wait.length}):</b> ${wait.map(s => esc(s.name)).join(" · ") || "אין"}</p>
+    <p><b>חסמים דחופים (${I.filter(x => priN(x.i.priority) === "דחוף").length}):</b> ${I.filter(x => priN(x.i.priority) === "דחוף").map(x => `${esc(x.s.name)} — ${esc(x.i.title || "")}`).join(" · ") || "אין"}</p>`;
+  const from = o.days ? addDays(todayStr(), -o.days) : "", done = from ? siteDoneSince(S, from, T) : [];
+  const prog = from ? (done.length ? tbl(["תאריך", "אתר", "שלב", ""], done.map(x => `<tr>${td(fmtD(x.d))}${td(`<b>${esc(x.s.name)}</b>`)}${td(esc(x.t))}${td(x.w, "color:#777")}</tr>`)) : "<p>לא נסגרו שלבים בתקופה הזו.</p>") : "";
+  const h2 = t => `<h2 style="font-size:13pt;color:#1f7a8c;margin:16px 0 6px;border-bottom:2px solid #1f7a8c;padding-bottom:2px">${t}</h2>`;
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline"><h1 style="font-size:17pt;margin:0">דוח סטטוס — אתרי איסוף</h1><b style="color:#34557a">ב.ד. אטלס</b></div>
+    <div style="color:#5a665f">${fmtD(todayStr())} · ${S.length} אתרים${flt ? " · סינון: " + esc(flt) : ""} · אחראי: ${esc(leadCfg().sites || "—")}</div>
+    ${h2("1. תמונת מצב")}${sum}
+    ${h2("2. דורש תשומת לב")}${att}
+    ${from ? h2(`3. מה התקדם מאז ${fmtD(from)} (${done.length} שלבים)`) + prog : ""}
+    ${h2(`${from ? 4 : 3}. התקדמות לפי שלבים`)}${matrix}<p style="font-size:8.5pt;color:#777">ירוק — הושלם · צהוב — בתהליך / חלקי (הושלמו מתוך) · אפור — טרם · ✓ / ● שלב בודד · עמודות ביצוע חיוורות — טרם הוזמן</p>
+    ${o.full ? `${h2(`${from ? 5 : 4}. פירוט לפי אתר`)}${bySite}${h2(`${from ? 6 : 5}. נושאים וחסמים פתוחים (${I.length})`)}${issT}` : ""}`;
+}
+function siteRepText(o) {
+  const T = siteTpl(), S = sitesFiltered(), from = o.days ? addDays(todayStr(), -o.days) : "";
+  const L = [`דוח סטטוס — אתרי איסוף · ${fmtD(todayStr())}`, `${S.length} אתרים: ${["בתכנון", "בביצוע", "הושלם", "מוקפא"].map(p => `${p} ${S.filter(s => sitePhase(s, T) === p).length}`).join(" · ")}`];
+  if (from) { const d = siteDoneSince(S, from, T); L.push("", `התקדם מאז ${fmtD(from)}:`, ...(d.length ? d.map(x => `• ${x.s.name} — ${x.t}`) : ["—"])); }
+  const I = S.flatMap(s => issuesOfLink("s:" + s.id).map(i => `• ${s.name} — ${i.title}${priN(i.priority) === "דחוף" ? " (דחוף)" : ""}`));
+  L.push("", "חסמים פתוחים:", ...(I.length ? I : ["—"]));
+  return L.join("\n");
+}
+function siteRepModal() {
+  const o = { full: false, days: 14 };
+  modal(`<h2 style="margin:0">📄 דוח סטטוס — אתרי איסוף</h2><p class="small muted" style="margin:2px 0 6px">לפי הסינון שבמסך (סוג / אזור / שלב / חיפוש). הכל נלקח מהנתונים — אין מה להקליד.</p>
+    <div class="row" style="gap:14px;flex-wrap:wrap;align-items:center"><span class="w-tabs" style="margin:0"><button class="w-tb on" data-rf="0">להנהלה (מקוצר)</button><button class="w-tb" data-rf="1">מלא (לעבודה)</button></span>
+      <label class="small row" style="gap:6px">מה התקדם ב־<select class="inp sm" id="rp_d"><option value="7">7 ימים</option><option value="14" selected>14 ימים</option><option value="30">30 יום</option><option value="0">בלי</option></select></label></div>
+    <div class="sk-rep" id="rp_v"></div>
+    <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn" id="rp_p">⬇ PDF / הדפסה</button><button class="btn ghost" id="rp_w">⬇ Word</button><button class="btn ghost" id="rp_c">📋 העתקה (וואטסאפ)</button><span class="spacer"></span><button class="btn ghost" id="mNo">סגירה</button></div>`, (m, close) => {
+    const q = s => m.querySelector(s), draw = () => { q("#rp_v").innerHTML = siteRepHtml(o); m.querySelectorAll("[data-rf]").forEach(b => b.classList.toggle("on", +b.dataset.rf === +o.full)); };
+    m.querySelectorAll("[data-rf]").forEach(b => b.onclick = () => { o.full = b.dataset.rf === "1"; draw(); });
+    q("#rp_d").onchange = e => { o.days = +e.target.value; draw(); }; q("#mNo").onclick = close; draw();
+    const name = `דוח אתרי איסוף ${fmtD(todayStr()).replace(/\//g, ".")}`;
+    q("#rp_p").onclick = () => { const w = window.open("", "_blank"); if (!w) return alertMsg("הדפדפן חסם חלון חדש — יש לאפשר חלונות קופצים"); w.document.open();
+      w.document.write(`<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>${name}</title><style>${MTG_CSS}@page{size:A4 landscape;margin:10mm}table{page-break-inside:auto}tr{page-break-inside:avoid}h2{page-break-after:avoid;break-after:avoid}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body><div class="np"><button onclick="print()">הדפסה / שמירה כ־PDF</button></div>${siteRepHtml(o)}</body></html>`); w.document.close(); };
+    q("#rp_w").onclick = () => saveFile(name + ".doc", new Blob(["" + `<html><head><meta charset="utf-8"><style>@page Section1{size:841.9pt 595.3pt;mso-page-orientation:landscape;margin:1.5cm}div.Section1{page:Section1}body{font-family:Arial;direction:rtl;font-size:10pt}</style></head><body dir="rtl"><div class="Section1">${siteRepHtml(o)}</div></body></html>`], { type: "application/msword" }));
+    q("#rp_c").onclick = async () => { try { await navigator.clipboard.writeText(siteRepText(o)); toast("הדוח הועתק ✓"); } catch (e) { alertMsg("ההעתקה נחסמה בדפדפן"); } };
+  });
+}
 async function siteClick(act, b) {
   const [sid, a1, a2, a3] = (b.dataset.id || "").split("|"), s = RAW.sites?.[sid];
   if (act === "siteOpen") { if (b.dataset.g) ui.siteDet = b.dataset.id; ui.page = "site:" + b.dataset.id; location.hash = ui.page; render(); scrollTo(0, 0); }
   else if (act === "siteF") { const [k, v] = b.dataset.id.split("|"), F = ui.sf; F[k] = k === "ph" && F.ph === v ? "" : v; render(); }
   else if (act === "siteNew") siteNewModal();
+  else if (act === "siteRep") siteRepModal();
   else if (act === "siteTplEd") siteTplModal();
   else if (act === "siteLinkAll") siteLinkAllModal();
   else if (act === "siteLinkGo" && s) { const i = RAW.issues?.[a1]; if (i && !isViewer()) await api.update("issues", a1, { links: { ...(i.links || {}), ["s:" + sid]: true } }); ui.page = "site:" + sid; location.hash = ui.page; render(); scrollTo(0, 0); }
