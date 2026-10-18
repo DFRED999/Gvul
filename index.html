@@ -3171,6 +3171,50 @@ function progFlags(d, p) {
 /* =====================================================================
    §17 איכות נתונים — כל מה ש"לא מסתדר", עם מעבר לתיקון
    ===================================================================== */
+/* ---------- בדיקות חח״י: הצלבה בין הזמנות חח״י לפריטים באתר (משמש באיכות נתונים ובדוח "פערים מול חח״י") ----------
+   כל שורה: { id, t, dist (נפה), kd, go, link? }. נפה של פריט = הנפה של הזמנת חח״י הקרובה אליו בק.ד. */
+const IEC_NOITEM_K = new Set(["הזמנה מרכזת", "אתר איסוף", "העתקת עמוד"]);
+function iecChecks(d) {
+  const O = d.iecOrders.filter(o => o.stage !== "בוטל"), out = [], T = todayStr();
+  const withKd = O.filter(o => o.district && kdNum(o.kd) !== null);
+  const distOf = k => { if (k === null) return ""; let b = null, bd = 1e9; for (const o of withKd) { const x = Math.abs(kdNum(o.kd) - k); if (x < bd) { bd = x; b = o; } } return b?.district || ""; };
+  const oL = (o, extra = "") => ({ id: o.id, t: `${o.orderNo || "ללא מס׳"} · ${o.name || o.kind || ""}${extra}`, dist: o.district || distOf(kdNum(o.kd)), kd: kdNum(o.kd), go: { page: "power", q: o.orderNo || o.name || "" } });
+  const iGo = i => { const K = compOf(i.kind); return K ? { page: "k:" + K.k, rid: i.id } : { page: "c:" + i.contractorId, ctab: isMain(RAW.contractors?.[i.contractorId] || {}) ? "culverts" : "items", rid: i.id }; };
+  const iNm = i => { const n = String(i.name || "").trim(), k = i.kdFrom ? ` ק.ד. ${i.kdFrom}` : ""; return (n.startsWith(i.kind) ? n : `${i.kind}${n ? " · " + n : ""}`) + (/\d/.test(n) ? "" : k); };
+  const iL = (i, extra = "") => ({ id: i.id, t: `${iNm(i)} · ${RAW.contractors?.[i.contractorId]?.name || ""}${extra}`, dist: distOf(kdNum(i.kdFrom)), kd: kdNum(i.kdFrom), go: iGo(i) });
+  const add = (key, sev, title, lines, x = {}) => { if (lines.length) out.push({ key, sev, title, lines: lines.sort((a, b) => IEC_DISTRICTS.indexOf(a.dist) - IEC_DISTRICTS.indexOf(b.dist) || (a.kd ?? 1e9) - (b.kd ?? 1e9)), ...x }); };
+  // 1. הזמנה ופריט באותו ק.ד. שלא מקושרים — פער אחד (במקום "הזמנה בלי סוג" + "מתקן בלי הזמנה")
+  const linked = new Set(O.filter(o => o.itemId).map(o => o.itemId));
+  const freeO = O.filter(o => !o.itemId && !IEC_NOITEM_K.has(o.kind));
+  const freeI = d.items.filter(i => W_ELEC_K.has(i.kind) && !linked.has(i.id) && !/מבוטל|בוטל|לא נדרש/.test(i.status || ""));
+  const pairs = [], usedI = new Set(), usedO = new Set();
+  const cand = []; for (const o of freeO) { const k = kdNum(o.kd); if (k === null) continue; for (const i of freeI) { const ki = kdNum(i.kdFrom); if (ki === null || Math.abs(ki - k) > 0.6) continue; const bad = !!o.kind && !["לבירור", "אחר", i.kind].includes(o.kind); cand.push({ o, i, x: Math.abs(ki - k) + (bad ? 1 : 0) }); } }
+  cand.sort((a, b) => a.x - b.x).forEach(c => { if (usedO.has(c.o.id) || usedI.has(c.i.id)) return; usedO.add(c.o.id); usedI.add(c.i.id); pairs.push(c); });
+  add("iecLink", "orange", "הזמנת חח״י ופריט באותו ק.ד. — לא מקושרים", pairs.map(({ o, i }) => ({ ...oL(o), t: `${o.orderNo || "ללא מס׳"}${o.kind && o.kind !== i.kind ? ` (${o.kind}${["לבירור", "אחר"].includes(o.kind) ? "" : " — ⚠ סוג שונה"})` : ""} ↔ ${iNm(i)} · ${RAW.contractors?.[i.contractorId]?.name || ""}`, link: o.id + "|" + i.id })),
+    { hint: "״🔗 קישור״ מחבר את ההזמנה לפריט וקובע לה את סוג המתקן", dq: true });
+  add("iecNoItem", "orange", "הזמנות חח״י שלא מקושרות לשום פריט באתר", freeO.filter(o => !usedO.has(o.id)).map(o => oL(o, o.kind === "לבירור" ? " · סוג לבירור" : "")), { hint: "אין פריט באתר באותו ק.ד. — להוסיף פריט או לבדוק את הק.ד.", dq: true });
+  add("iecNoOrder", "orange", "מתקנים באתר בלי הזמנת חח״י", freeI.filter(i => !usedI.has(i.id)).map(i => iL(i)), { hint: "לפתוח הזמנה בחח״י, או לסמן את הפריט ״לא נדרש״", dq: true });
+  // 2. סתירות בין הפריט להזמנה
+  const byItem = new Map(O.filter(o => o.itemId).map(o => [o.itemId, o]));
+  add("iecDoneOpen", "orange", "פריט מסומן ״הושלם״ אבל חח״י עוד לא חיבר", d.items.filter(i => i.status === "הושלם" && byItem.has(i.id) && !IEC_DONE.has(byItem.get(i.id).stage)).map(i => iL(i, ` · חח״י: ${byItem.get(i.id).stage} (${byItem.get(i.id).orderNo || ""})`)),
+    { hint: "לבדוק שהסטטוס נכון — ולדרוש מחח״י מועד חיבור", dq: true });
+  add("iecDoneNoDate", "orange", "מתקני חשמל ״הושלם״ בלי תאריך ביצוע", d.items.filter(i => W_ELEC_K.has(i.kind) && i.status === "הושלם" && !i.doneDate).map(i => ({ ...iL(i), sh: i.kdFrom ? String(i.kdFrom) : (i.name || "") })), { dq: true, compact: true });
+  // 3. שדות חסרים / סותרים בהזמנה
+  const grp = o => o.district + "|" + o.kind, hasB = {}; O.forEach(o => { const g = grp(o); hasB[g] = hasB[g] || [0, 0]; hasB[g][1]++; if (String(o.budgetNo || "").trim()) hasB[g][0]++; });
+  add("iecNoBudget", "orange", "הזמנות חח״י בלי מספר תקציב (כשלשאר ההזמנות מאותו סוג ונפה יש)", O.filter(o => o.stage !== "טרם הוזמן" && !String(o.budgetNo || "").trim() && hasB[grp(o)][0] >= hasB[grp(o)][1] / 2).map(o => oL(o)), { dq: true });
+  add("iecExc", "orange", "חיבור חריג עם סכום / תשלום בלי מספר הזמנה", O.filter(o => (o.excAdvanceDate || bgN(o.excAmount) || bgN(o.excAdvance)) && !String(o.excNo || "").trim()).map(o => oL(o, o.excAdvanceDate ? ` · שולם ${fmtD(o.excAdvanceDate)}` : "")), { dq: true });
+  const byNo = {}; O.filter(o => o.orderNo).forEach(o => (byNo[o.orderNo] = byNo[o.orderNo] || []).push(o));
+  add("iecDup", "red", "מספר הזמנת חח״י שמופיע יותר מפעם אחת", Object.values(byNo).filter(a => a.length > 1).flat().map(o => oL(o, ` · ${o.stage}`)), { dq: true });
+  // 4. כסף ולוחות זמנים (בדוח בלבד — בלוח ההתראות הם כבר מופיעים)
+  for (const st of IEC_PAY) { const a = O.filter(o => o.stage === st), due = a.reduce((s, o) => s + iecToPay(o), 0);
+    add("iecPay:" + st, a.some(o => daysSince(o.stageDate) > 30) ? "red" : "blue", `${a.length} הזמנות ב׳${st}׳ — ממתינות לתשלום שלנו`, a.map(o => oL(o, `${iecToPay(o) ? ` · ${ils(iecToPay(o))} ₪` : ""}${o.stageDate ? ` · מאז ${fmtD(o.stageDate)}` : ""}`)), { sub: due ? `${ils(due)} ₪ ללא מע״מ · ${ils(due * (1 + iecVat()))} ₪ כולל מע״מ` : "" }); }
+  add("iecValid", "red", "שוברים שפג תוקפם או יפוג בתוך 14 יום", O.filter(o => o.validUntil && !IEC_DONE.has(o.stage) && o.stage !== "משלים שולם" && daysTo(o.validUntil) <= 14).map(o => oL(o, ` · ${daysTo(o.validUntil) < 0 ? "פג ב־" : "יפוג ב־"} ${fmtD(o.validUntil)}`)));
+  add("iecStuck", "orange", "הזמנות באותו שלב יותר מ־45 יום", O.filter(o => !IEC_DONE.has(o.stage) && !IEC_PAY.has(o.stage) && o.stage !== "משלים שולם" && o.stageDate && daysSince(o.stageDate) > 45).map(o => oL(o, ` · ${o.stage} מאז ${fmtD(o.stageDate)}`)));
+  add("iecPaidNot", "orange", "שולמו במלואן ועוד לא חוברו — לדרוש מועד חיבור", O.filter(o => o.stage === "משלים שולם").map(o => ({ ...oL(o), sh: o.kd ? String(o.kd) : (o.name || o.orderNo || "") })), { compact: true });
+  return out;
+}
+/** טווח ק.ד. של קבוצת שורות ("ק.ד. 203–301") */
+const kdSpan = L => { const k = L.map(l => l.kd).filter(x => x !== null && x !== undefined && x < 5000); if (!k.length) return ""; const lo = Math.min(...k), hi = Math.max(...k); return lo === hi ? `ק.ד. ${num(lo, 0)}` : `ק.ד. ${num(lo, 0)}–${num(hi, 0)}`; };
 function dqChecks(d) {
   const C = [], IG = dqIgn(), add = (key, sev, title, lines, go, hint = "") => { const all = lines.map(l => typeof l === "string" ? { t: l } : l).map(l => ({ ...l, k: `${key}|${l.id || l.t}` })), L = all.filter(l => !IG[l.k]);
     C.push({ key, sev, title, n: IG["*" + key] ? 0 : L.length, lines: IG["*" + key] ? [] : L, hidden: IG["*" + key] ? all : all.filter(l => IG[l.k]), off: !!IG["*" + key], go, hint }); };
@@ -3209,6 +3253,8 @@ function dqChecks(d) {
   add("issStale", "orange", "נושאים פתוחים בלי עדכון מעל 30 יום", d.issues.filter(i => i.status !== "סגור" && i.updated && daysSince(i.updated) > 30).map(i => ({ id: i.id, t: `${i.code || ""} ${i.title} · עודכן ${fmtD(i.updated)}`, upd: i.id })), null, "״✎ עדכון״ — כותבים מה המצב (או סוגרים), והנושא יורד מהרשימה");
   add("ordOut", "orange", "הזמנות שחורגות מגבולות הגזרה או בלי ק.ד.", d.orders.filter(o => { const c = d.contractors.find(x => x.id === o.contractorId), r = kdRange(o), cr = c && kdRange(c); return !r || (cr && (r.lo < cr.lo - 0.05 || r.hi > cr.hi + 0.05)); })
     .map(o => ({ id: o.id, t: `${cn(o.contractorId)} · ${o.name || "הזמנה"} · ${o.kdFrom || "?"}–${o.kdTo || "?"}`, go: { page: "c:" + o.contractorId, ctab: "orders" } })), null);
+  // חח״י — הצלבה בין הזמנות לפריטים ושדות חסרים
+  iecChecks(d).filter(c => c.dq).forEach(c => add(c.key, c.sev, c.title, c.lines.map(l => ({ id: l.id, t: (l.dist ? l.dist + " · " : "") + l.t, go: l.go, ...(l.link ? { fix: "link", link: l.link } : {}) })), { page: "power" }, c.hint || ""));
   add("dlNoC", "orange", "מסירות תוכניות בלי קבלן", d.deliveries.filter(x => !x.contractorId).map(x => ({ id: x.id, t: `${fmtD(x.date)} · ${x.kind || ""} ${x.title || ""}`, go: { page: "deliveries", rid: x.id } })), { page: "deliveries" });
   return C;
 }
@@ -3217,7 +3263,7 @@ async function dqSetIgn(k, on) { const D0 = { ...(RAW.tableConfig?.dq || {}) }; 
 function pageDQ(d) {
   const C = dqChecks(d), red = C.filter(c => c.n && c.sev === "red"), org = C.filter(c => c.n && c.sev === "orange"), ok = C.filter(c => !c.n);
   const ed = !isViewer(), hidT = C.reduce((t, c) => t + c.hidden.length, 0);
-  const li = (c, l) => `<li><span>${esc(l.t)}</span><span class="dq-a">${l.go ? `<button class="btn ghost sm" data-act="dqLine" data-id="${esc(c.key)}" data-k="${esc(l.k)}">פתיחה ←</button>` : ""}${ed && l.upd ? `<button class="btn ghost sm" data-act="wUpd" data-id="${esc(l.upd)}">✎ עדכון</button>` : ""}${ed && l.fix === "conf" ? `<button class="btn ghost sm" data-act="dqConf" data-id="${esc(l.id)}">✓ נבדק</button>` : ""}${ed && l.del && isMgr() ? `<button class="btn ghost sm" data-act="dqDel" data-id="${esc(l.del)}|${esc(l.id)}" style="color:var(--warn)">מחיקה</button>` : ""}${ed ? `<button class="btn ghost sm dq-ig" data-act="dqIgn" data-id="${esc(l.k)}" title="להסתיר מהרשימה — לא משנה את הנתונים">התעלמות</button>` : ""}</span></li>`;
+  const li = (c, l) => `<li><span>${esc(l.t)}</span><span class="dq-a">${l.go ? `<button class="btn ghost sm" data-act="dqLine" data-id="${esc(c.key)}" data-k="${esc(l.k)}">פתיחה ←</button>` : ""}${ed && l.upd ? `<button class="btn ghost sm" data-act="wUpd" data-id="${esc(l.upd)}">✎ עדכון</button>` : ""}${ed && l.fix === "link" ? `<button class="btn ghost sm" data-act="dqLink" data-id="${esc(l.link)}">🔗 קישור</button>` : ""}${ed && l.fix === "conf" ? `<button class="btn ghost sm" data-act="dqConf" data-id="${esc(l.id)}">✓ נבדק</button>` : ""}${ed && l.del && isMgr() ? `<button class="btn ghost sm" data-act="dqDel" data-id="${esc(l.del)}|${esc(l.id)}" style="color:var(--warn)">מחיקה</button>` : ""}${ed ? `<button class="btn ghost sm dq-ig" data-act="dqIgn" data-id="${esc(l.k)}" title="להסתיר מהרשימה — לא משנה את הנתונים">התעלמות</button>` : ""}</span></li>`;
   const card = c => `<details class="dq ${c.sev} ${c.n ? "" : "ok"}" ${c.n && c.n <= 6 ? "open" : ""}><summary><span class="dq-n">${c.n || "✓"}</span><b>${esc(c.title)}</b>${c.hint && c.n ? `<span class="muted small">${esc(c.hint)}</span>` : ""}<span class="spacer"></span>
       ${c.go && c.n ? `<button class="btn ghost sm" data-act="dqGo" data-id="${c.key}">לתיקון ←</button>` : ""}${ed && c.n ? `<button class="btn ghost sm dq-ig" data-act="dqIgn" data-id="*${c.key}" title="להסתיר את כל הבדיקה">התעלמות מהכל</button>` : ""}</summary>
     ${c.n ? `<ul class="dq-l">${c.lines.slice(0, 80).map(l => li(c, l)).join("")}${c.n > 80 ? `<li class="muted">…ועוד ${c.n - 80}</li>` : ""}</ul>` : ""}</details>`;
@@ -3749,14 +3795,10 @@ function gapChecks(p) {
   const ign = k => /^(issdue|issmgmt|unseen)/.test(k || "");
   if (p.k.startsWith("c:")) A.filter(a => !ign(a.key) && (a.go?.page === p.k || (p.l && String(a.title).includes(p.l)))).forEach(a => out.push({ t: a.title, sub: a.sub, lines: a.lines || [], sev: a.sev }));
   if (p.k === "iec") {
-    A.filter(a => /^iec/.test(a.key || "")).forEach(a => out.push({ t: a.title, sub: a.sub, lines: a.lines || [], sev: a.sev }));
-    const has = new Set(d.iecOrders.filter(o => o.stage !== "בוטל" && o.itemId).map(o => o.itemId));
-    const miss = d.items.filter(i => W_ELEC_K.has(i.kind) && !has.has(i.id) && !/בוטל|לא נדרש/.test(i.status || ""));
-    if (miss.length) out.push({ t: `${miss.length} מתקנים בלי הזמנת חח״י`, sev: "orange", lines: miss.sort((a, b) => (kdNum(a.kdFrom) ?? 0) - (kdNum(b.kdFrom) ?? 0)).map(i => `${i.kind} · ${i.name || "ק.ד. " + (i.kdFrom || "?")} · ${RAW.contractors?.[i.contractorId]?.name || ""}`) });
+    const ORD = ["iecPay:שובר מקדמה", "iecPay:שובר משלים", "iecValid", "iecDup", "iecStuck", "iecPaidNot", "iecDoneOpen", "iecLink", "iecNoOrder", "iecNoItem", "iecDoneNoDate", "iecNoBudget", "iecExc"];
+    iecChecks(d).sort((a, b) => ORD.indexOf(a.key) - ORD.indexOf(b.key)).forEach(c => out.push({ t: c.lines.length + " · " + c.title.replace(/^\d+ /, ""), sub: [c.sub, c.hint].filter(Boolean).join(" · "), lines: c.lines, sev: c.sev, compact: c.compact }));
     const sNo = list("sites").filter(s => !["מוקפא", "בוטל"].includes(s.status) && !Object.keys(s.iec || {}).length);
-    if (sNo.length) out.push({ t: `${sNo.length} אתרי איסוף בלי הזמנת חח״י מקושרת`, sev: "blue", lines: sNo.map(s => s.name) });
-    const paidNot = d.iecOrders.filter(o => o.stage === "משלים שולם");
-    if (paidNot.length) out.push({ t: `${paidNot.length} הזמנות ששולמו במלואן ועוד לא חוברו — לדרוש מועד חיבור`, sev: "orange", lines: paidNot.map(o => `${o.orderNo} · ${o.name}${o.stageDate ? " · שולם " + fmtD(o.stageDate) : ""}`) });
+    if (sNo.length) out.push({ t: `${sNo.length} · אתרי איסוף בלי הזמנת חח״י מקושרת`, sev: "blue", lines: sNo.map(s => s.name) });
   }
   if (p.k === "sites") {
     const live = list("sites").filter(s => !["מוקפא", "בוטל", "הושלם"].includes(sitePhase(s, T)));
@@ -3774,6 +3816,12 @@ function gapChecks(p) {
 function gapPrevMtg(p) {
   return mtgList().find(m => isV2(m) && (m.party === p.k || (p.cid && !m.party && m.contractorId === p.cid && m.type === "קבלן")));
 }
+/** שורות ממצא: אם יש נפה — מקובצות לפי נפה עם טווח הק.ד.; בלי חיתוך */
+function gapLines(L, compact) {
+  const O = L.map(l => typeof l === "string" ? { t: l } : l), ds = [...new Set(O.map(l => l.dist || ""))];
+  if (ds.length === 1 && !ds[0]) return O.map(l => "• " + esc(l.t)).join("<br>");
+  return ds.map(dd => { const a = O.filter(l => (l.dist || "") === dd); return `<div style="margin-top:3px"><b style="color:#34557a">${esc(dd || "ללא נפה")}</b> <span style="color:#777">(${a.length}${kdSpan(a) ? " · " + kdSpan(a) : ""})</span><br>${compact && a.length > 6 && a.every(l => l.sh) ? "ק.ד. " + a.map(l => esc(l.sh)).join(" · ") : a.map(l => "• " + esc(l.t)).join("<br>")}</div>`; }).join("");
+}
 function gapHtml(p) {
   const { dir, ment } = gapIssues(p), CK = gapChecks(p), pm = gapPrevMtg(p), pmOpen = pm ? mtgTasks(pm.id).filter(i => i.status !== "סגור") : [];
   const th = t => `<th style="background:#34557a;color:#fff;text-align:right;padding:4px 6px;border:1px solid #34557a;font-size:10pt">${t}</th>`, td = (t, st = "") => `<td style="border:1px solid #cfd6de;padding:4px 6px;vertical-align:top;${st}">${t}</td>`;
@@ -3782,7 +3830,7 @@ function gapHtml(p) {
   const itab = (L, short) => `<table style="width:100%;border-collapse:collapse;font-size:9.5pt"><tr>${["קוד", "נושא", ...(p.k.startsWith("c:") ? [] : ["קבלן"]), "מי מטפל / אחראי", "חשיבות", "יעד", short ? "" : "מצב אחרון"].filter(x => x !== "").map(th).join("")}</tr>${L.map(i => `<tr>${td(`<b>${esc(i.code || "")}</b>`, "direction:ltr;text-align:right;white-space:nowrap")}${td(`<b>${esc(i.title || "")}</b>${linksOf(i).length ? `<br><span style="color:#777;font-size:8.5pt">${esc(linksOf(i).map(l => l.lab).join(" · "))}</span>` : ""}`)}${p.k.startsWith("c:") ? "" : td(esc(cn(i)))}
       ${td(esc([i.owner, leadOf(i)].filter(Boolean).filter((v, k, a) => a.indexOf(v) === k).join(" / ") || "—"))}${td(esc(priN(i.priority) || ""), priN(i.priority) === "דחוף" ? "color:#b3261e;font-weight:700" : "")}${td(fmtD(i.due) || "—", wLate(i) ? "color:#b3261e;font-weight:700" : "")}${short ? "" : td(`${esc(i.last || "")}${i.updated ? `<br><span style="color:#777;font-size:8.5pt">${fmtD(i.updated)}</span>` : ""}`)}</tr>`).join("")}</table>`;
   const SEV = { red: "#b3261e", orange: "#c96a12", blue: "#34557a" };
-  const ck = CK.map(c => `<div style="margin:6px 0 10px;border-inline-start:4px solid ${SEV[c.sev] || "#34557a"};padding-inline-start:8px"><b>${esc(c.t)}</b>${c.sub ? `<div style="color:#555;font-size:9.5pt">${esc(c.sub)}</div>` : ""}<div style="font-size:9.5pt;color:#333">${c.lines.slice(0, 25).map(x => "• " + esc(x)).join("<br>")}${c.lines.length > 25 ? `<br>… ועוד ${c.lines.length - 25}` : ""}</div></div>`).join("");
+  const ck = CK.map(c => `<div style="margin:6px 0 10px;border-inline-start:4px solid ${SEV[c.sev] || "#34557a"};padding-inline-start:8px"><b>${esc(c.t)}</b>${c.sub ? `<div style="color:#555;font-size:9.5pt">${esc(c.sub)}</div>` : ""}<div style="font-size:9.5pt;color:#333">${gapLines(c.lines, c.compact)}</div></div>`).join("");
   const urg = dir.filter(i => priN(i.priority) === "דחוף").length, late = dir.filter(wLate).length;
   let n = 0; const H = t => h2(`${++n}. ${t}`);
   return `<div style="display:flex;justify-content:space-between;align-items:baseline"><h1 style="font-size:17pt;margin:0">פערים מול ${esc(p.l)}</h1><b style="color:#34557a">ב.ד. אטלס</b></div>
@@ -3880,7 +3928,7 @@ function pageDisc(d, mid) {
       ${T.length ? wTable(d, T, mid) : ""}
       ${U.length ? `<div class="w-ups"><b class="small">עדכונים לנושאים קיימים</b>${U.map(({ i, h }) => `<div class="w-dec"><span class="w-k upd">עדכון</span><a href="#" data-act="wEdit" data-id="${i.id}" dir="ltr">${esc(i.code || "")}</a> ${esc(i.title || "")} — ${esc(h.text)}</div>`).join("")}</div>` : ""}
       ${!T.length && !DC.length && !U.length ? `<p class="muted small" style="margin:0">עוד לא נרשם כלום. כותבים בשורה למעלה ולוחצים Enter.</p>` : ""}</div>
-    ${gC.length ? `<details class="card" open><summary><b>ממצאים מהנתונים מול ${esc(gp.l)}</b> <span class="muted small">(${gC.length})</span></summary>${gC.map(x => `<div class="small" style="margin-top:6px"><b>${esc(x.t)}</b>${x.sub ? ` <span class="muted">${esc(x.sub)}</span>` : ""}<div class="muted">${esc(x.lines.slice(0, 12).join(" · "))}${x.lines.length > 12 ? " …" : ""}</div></div>`).join("")}</details>` : ""}
+    ${gC.length ? `<details class="card" open><summary><b>ממצאים מהנתונים מול ${esc(gp.l)}</b> <span class="muted small">(${gC.length})</span></summary>${gC.map(x => `<div class="small" style="margin-top:6px"><b>${esc(x.t)}</b>${x.sub ? ` <span class="muted">${esc(x.sub)}</span>` : ""}<div class="muted">${esc(x.lines.slice(0, 12).map(l => l.t || l).join(" · "))}${x.lines.length > 12 ? " …" : ""}</div></div>`).join("")}</details>` : ""}
     ${review.length ? `<div class="card"><h2 style="margin-top:0">${gp ? "על סדר היום — מול " + esc(gp.l) : m.type === "ישיבה שבועית" ? "לעבור עליהם" : "נושאים פתוחים של " + esc(c?.name || "")} <span class="muted small">(${review.length})${m.type === "ישיבה שבועית" ? ` — דחופים, להנהלה, באיחור, עדכונים חדשים ומה שהשתנה מאז ${fmtD(since)}. "✎ עדכון" כאן נרשם בסיכום` : ""}</span></h2>${wTable(d, review, mid)}</div>` : ""}
     ${gI?.ment.length ? `<details class="card"><summary><b>רק מוזכר</b> <span class="muted small">(${gI.ment.length}) — נושאים של אחרים שבהם ${esc(gp.l)} מוזכר</span></summary>${wTable(d, gI.ment.filter(i => i.src?.id !== mid), mid)}</details>` : ""}`;
 }
@@ -6856,9 +6904,12 @@ $app.addEventListener("click", async e => {
   else if (act === "svFill") { const [cid, sid, aid, a, z] = b.dataset.id.split("|"); Object.assign(ui.pf, { actId: aid, segId: sid, secFrom: Number(a), secTo: Number(z), msg: "" }); ui.page = "c:" + cid; ui.ctab = "progress"; render(); setTimeout(() => document.getElementById("pf_from")?.scrollIntoView({ block: "center" }), 50); }
   else if (act === "dqIgn") { await dqSetIgn(b.dataset.id, true); toast("הוסתר ✓ (אפשר להחזיר בתחתית הדף)"); }
   else if (act === "dqUnign") { await dqSetIgn(b.dataset.id, false); toast("הוחזר"); }
+  else if (act === "dqLink") { const [oid, iid] = b.dataset.id.split("|"), o = RAW.iecOrders?.[oid], it = RAW.items?.[iid]; if (!o || !it) return;
+    await api.update("iecOrders", oid, { itemId: iid, ...(!o.kind || ["לבירור", "אחר"].includes(o.kind) ? { kind: it.kind } : {}) }); toast("ההזמנה קושרה לפריט ✓"); }
   else if (act === "dqConf") { await api.update("items", b.dataset.id, { conflict: null }); toast("סומן כנבדק ✓"); }
   else if (act === "dqDel") { const [col, rid] = b.dataset.id.split("|"); if (b.dataset.sure) { await api.remove(col, rid); toast("נמחק"); } else { b.dataset.sure = 1; b.textContent = "ללחוץ שוב למחיקה"; } }
   else if (act === "dqLine") { const c = dqChecks(D()).find(x => x.key === b.dataset.id), l = c?.lines.find(x => x.k === b.dataset.k), g = l?.go; if (!g) return;
+    if (g.page === "power") ui.iec = { dist: "", kind: "", stage: "", q: g.q || "", showOff: true };
     if (g.rid) wGoHl(g.page, g.ctab, g.rid); else { if (g.ctab) ui.ctab = g.ctab; ui.page = g.page; location.hash = g.page; render(); scrollTo(0, 0); } }
   else if (act === "dqGo") { const c = dqChecks(D()).find(x => x.key === b.dataset.id); if (c?.go) { Object.assign(ui, c.go.setTab ? { setTab: c.go.setTab } : {}, c.go.ctab ? { ctab: c.go.ctab } : {}); ui.page = c.go.page; location.hash = c.go.page; render(); scrollTo(0, 0); } }
   else if (act === "darkTog") { ui.dark = !ui.dark; try { localStorage.setItem("dark", ui.dark ? "1" : "0"); } catch (e) {} render(); }
