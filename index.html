@@ -161,6 +161,9 @@ table.mx { border-collapse: separate; border-spacing: 2px; width: 100%; font-siz
 .sk-build { border: 1px solid var(--line); border-inline-start: 4px solid #2f6b4f; border-radius: 10px; padding: 8px 12px; margin-top: 8px; } .sk-build.tmp { border-inline-start-color: #c96a12; }
 .sk-sugg { margin-top: 8px; border: 1px dashed #e6cfa8; background: #fffaf2; border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
 .sk-det > summary { cursor: pointer; } .sk-h3 { font-size: 14px; margin: 14px 0 0; color: #34557a; } .sk-ll { display: flex; flex-direction: column; gap: 5px; max-height: 50vh; overflow: auto; margin-bottom: 10px; }
+.gp-parties { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; } .gp-g { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; } .gp-g > span { min-width: 78px; }
+.gp-p { font: inherit; font-size: 13px; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 3px 11px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; } .gp-p small { color: var(--muted); } .gp-p.on { background: #34557a; color: #fff; border-color: #34557a; } .gp-p.on small { color: #dbe6f2; }
+.btn.gp-btn { background: #f0c94b; border-color: #f0c94b; color: #1b2127; }
 .sk-rep { border: 1px solid var(--line); border-radius: 10px; padding: 14px; max-height: 60vh; overflow: auto; background: #fff; font-size: 12px; }
 .modal .card:has(.sk-rep) { max-width: 1100px; width: 96vw; }
 .modal .card:has(.tp-list), .modal .card:has(.sk-ll) { max-width: 920px; width: 95vw; }
@@ -3712,6 +3715,109 @@ const mtgList = () => list("mtgs").sort((a, b) => String(b.date).localeCompare(S
 const mtgTasks = mid => list("issues").filter(i => i.src?.id === mid);
 const mtgUpds = mid => list("issues").flatMap(i => Object.values(i.history || {}).filter(h => h.mtg === mid && i.src?.id !== mid).map(h => ({ i, h })));
 const mtgDecs = m => Object.values(m.dec || {}).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+/* ---------- מצע לדיון / דוח פערים מול גורם — מכל האתר, בלחיצה אחת ----------
+   "מול מי" נבנה לבד ממה שרשום באתר: קבלנים, גורמי חוץ (מי מטפל בנושאים), תחומים (חח״י, איסוף) ואחראי צוות.
+   לכל גורם: נושאים ישירים (קבלן / מי מטפל / תחום / אחראי), בדיקות מהנתונים (התראות, חח״י, אתרים, אישורים), הדיון הקודם מולו, ונושאים שהוא רק מוזכר בהם. */
+const gapAliasRe = al => al.length ? new RegExp("(?:^|[^\\u05D0-\\u05EA])[והבלמשכ]{0,2}(?:" + al.map(a => a.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")(?=$|[^\\u05D0-\\u05EA])") : null;
+function gapParties() {
+  const team = leadCfg().team, P = [], tn = new Set(team.map(qnNorm));
+  for (const c of list("contractors").sort((a, b) => byNorth(a, b))) {
+    if (c.id === IEC_CID) continue;
+    const words = String(c.name || "").split(/\s+/).filter(w => !/[.״"']/.test(w) && qnNorm(w).length >= 3 && !tn.has(qnNorm(w)));
+    const full = qnNorm(c.name), al = [...new Set([full.length >= 3 ? full : "", ...(words.length === 1 ? words.map(qnNorm) : [])].filter(Boolean))];
+    P.push({ k: "c:" + c.id, g: "קבלנים", l: c.name, al, direct: i => i.contractorId === c.id, type: "קבלן", cid: c.id });
+  }
+  P.push({ k: "iec", g: "תחומים", l: "חח״י — חיבורי חשמל", al: ["חחי", "חברת חשמל", "חברת החשמל"], direct: i => isElec(i) || qnNorm(i.owner) === "חחי", type: "רשות" });
+  P.push({ k: "sites", g: "תחומים", l: "איסוף — אתרי איסוף", al: ["איסוף"], direct: isSites, type: "איסוף" });
+  const own = [...new Set([...ISSUE_OWNERS, ...list("issues").map(i => i.owner).filter(Boolean)])].filter(o => !team.includes(o) && !["קבלן", "חח״י"].includes(o) && qnNorm(o) !== "חחי" && !teamNames().includes(o));
+  const XAL = { "רשות העתיקות": ["עתיקות"], "רט״ג": ["רשות הטבע", "רשות הטבע והגנים"], "משהב״ט": ["משרד הביטחון"], "מתכנן": ["המתכנן", "משרד התכנון"] };
+  for (const o of own) { const n = qnNorm(o); P.push({ k: "o:" + o, g: "גורמים", l: o, al: [...(n.length >= 3 ? [n] : []), ...(XAL[o] || []).map(qnNorm)], direct: i => i.owner === o, type: /מתכנן/.test(o) ? "מתכנן" : /פיקוח/.test(o) ? "פיקוח" : "רשות" }); }
+  for (const t of team) P.push({ k: "t:" + t, g: "אחראי צוות", l: t, al: [], direct: i => leadOf(i) === t || i.owner === t, type: "אחר" });
+  P.forEach(p => { p.re = gapAliasRe(p.al); });
+  return P;
+}
+const gapText = i => qnNorm([i.title, i.last, i.owner, ...Object.values(i.history || {}).map(h => h.text)].join(" "));
+function gapIssues(p) {
+  const open = list("issues").filter(i => i.status !== "סגור"), dir = open.filter(p.direct).sort(wSort);
+  const ment = p.re ? open.filter(i => !dir.includes(i) && p.re.test(gapText(i))).sort(wSort) : [];
+  return { dir, ment };
+}
+/** בדיקות מהנתונים לגורם: התראות אוטומטיות, חח״י (מתקנים בלי הזמנה), אתרים ואישורים שממתינים */
+function gapChecks(p) {
+  const d = D(), out = [], T = siteTpl();
+  let A = []; try { A = autoAlerts(d); } catch (e) { }
+  const ign = k => /^(issdue|issmgmt|unseen)/.test(k || "");
+  if (p.k.startsWith("c:")) A.filter(a => !ign(a.key) && (a.go?.page === p.k || (p.l && String(a.title).includes(p.l)))).forEach(a => out.push({ t: a.title, sub: a.sub, lines: a.lines || [], sev: a.sev }));
+  if (p.k === "iec") {
+    A.filter(a => /^iec/.test(a.key || "")).forEach(a => out.push({ t: a.title, sub: a.sub, lines: a.lines || [], sev: a.sev }));
+    const has = new Set(d.iecOrders.filter(o => o.stage !== "בוטל" && o.itemId).map(o => o.itemId));
+    const miss = d.items.filter(i => W_ELEC_K.has(i.kind) && !has.has(i.id) && !/בוטל|לא נדרש/.test(i.status || ""));
+    if (miss.length) out.push({ t: `${miss.length} מתקנים בלי הזמנת חח״י`, sev: "orange", lines: miss.sort((a, b) => (kdNum(a.kdFrom) ?? 0) - (kdNum(b.kdFrom) ?? 0)).map(i => `${i.kind} · ${i.name || "ק.ד. " + (i.kdFrom || "?")} · ${RAW.contractors?.[i.contractorId]?.name || ""}`) });
+    const sNo = list("sites").filter(s => !["מוקפא", "בוטל"].includes(s.status) && !Object.keys(s.iec || {}).length);
+    if (sNo.length) out.push({ t: `${sNo.length} אתרי איסוף בלי הזמנת חח״י מקושרת`, sev: "blue", lines: sNo.map(s => s.name) });
+    const paidNot = d.iecOrders.filter(o => o.stage === "משלים שולם");
+    if (paidNot.length) out.push({ t: `${paidNot.length} הזמנות ששולמו במלואן ועוד לא חוברו — לדרוש מועד חיבור`, sev: "orange", lines: paidNot.map(o => `${o.orderNo} · ${o.name}${o.stageDate ? " · שולם " + fmtD(o.stageDate) : ""}`) });
+  }
+  if (p.k === "sites") {
+    const live = list("sites").filter(s => !["מוקפא", "בוטל", "הושלם"].includes(sitePhase(s, T)));
+    const stale = live.filter(s => daysSince(siteLast(s)) > 30); if (stale.length) out.push({ t: `${stale.length} אתרים בלי התקדמות מעל 30 יום`, sev: "orange", lines: stale.map(s => `${s.name} — ${daysSince(siteLast(s))} יום · הבא: ${siteNow(s, T).next?.t || "—"}`) });
+    const wait = live.filter(s => siteCol(s, T) === "ממתין להזמנה"); if (wait.length) out.push({ t: `${wait.length} אתרים ממתינים להזמנת ביצוע`, sev: "blue", lines: wait.map(s => s.name) });
+    const nw = live.filter(s => !siteLast(s)); if (nw.length) out.push({ t: `${nw.length} אתרים שעוד לא עודכן בהם אף שלב`, sev: "blue", lines: nw.map(s => s.name) });
+  }
+  // שלבי אתרים שממתינים לגורם (למשל "אישור רת״א", "אישור חיל אוויר") — לכל גורם ששמו מופיע בשם השלב
+  if (p.re && !p.k.startsWith("t:") && p.k !== "sites") {
+    const W = list("sites").filter(s => !["מוקפא", "בוטל"].includes(s.status)).flatMap(s => sitePlanSteps(s, T).filter(x => p.re.test(qnNorm(x.t)) && !["הושלם", "לא נדרש"].includes(s.plan?.[x.id]?.st || "טרם")).map(x => ({ s, x, st: s.plan?.[x.id]?.st || "טרם" })));
+    if (W.length) out.push({ t: `${W.length} שלבים באתרי איסוף שממתינים ל${p.l}`, sev: "blue", lines: W.map(w => `${w.s.name} — ${w.x.t} (${w.st})`) });
+  }
+  return out;
+}
+function gapPrevMtg(p) {
+  return mtgList().find(m => isV2(m) && (m.party === p.k || (p.cid && !m.party && m.contractorId === p.cid && m.type === "קבלן")));
+}
+function gapHtml(p) {
+  const { dir, ment } = gapIssues(p), CK = gapChecks(p), pm = gapPrevMtg(p), pmOpen = pm ? mtgTasks(pm.id).filter(i => i.status !== "סגור") : [];
+  const th = t => `<th style="background:#34557a;color:#fff;text-align:right;padding:4px 6px;border:1px solid #34557a;font-size:10pt">${t}</th>`, td = (t, st = "") => `<td style="border:1px solid #cfd6de;padding:4px 6px;vertical-align:top;${st}">${t}</td>`;
+  const h2 = t => `<h2 style="font-size:13pt;color:#34557a;margin:16px 0 6px;border-bottom:2px solid #34557a;padding-bottom:2px;page-break-after:avoid">${t}</h2>`;
+  const cn = i => RAW.contractors?.[i.contractorId]?.name || "כללי";
+  const itab = (L, short) => `<table style="width:100%;border-collapse:collapse;font-size:9.5pt"><tr>${["קוד", "נושא", ...(p.k.startsWith("c:") ? [] : ["קבלן"]), "מי מטפל / אחראי", "חשיבות", "יעד", short ? "" : "מצב אחרון"].filter(x => x !== "").map(th).join("")}</tr>${L.map(i => `<tr>${td(`<b>${esc(i.code || "")}</b>`, "direction:ltr;text-align:right;white-space:nowrap")}${td(`<b>${esc(i.title || "")}</b>${linksOf(i).length ? `<br><span style="color:#777;font-size:8.5pt">${esc(linksOf(i).map(l => l.lab).join(" · "))}</span>` : ""}`)}${p.k.startsWith("c:") ? "" : td(esc(cn(i)))}
+      ${td(esc([i.owner, leadOf(i)].filter(Boolean).filter((v, k, a) => a.indexOf(v) === k).join(" / ") || "—"))}${td(esc(priN(i.priority) || ""), priN(i.priority) === "דחוף" ? "color:#b3261e;font-weight:700" : "")}${td(fmtD(i.due) || "—", wLate(i) ? "color:#b3261e;font-weight:700" : "")}${short ? "" : td(`${esc(i.last || "")}${i.updated ? `<br><span style="color:#777;font-size:8.5pt">${fmtD(i.updated)}</span>` : ""}`)}</tr>`).join("")}</table>`;
+  const SEV = { red: "#b3261e", orange: "#c96a12", blue: "#34557a" };
+  const ck = CK.map(c => `<div style="margin:6px 0 10px;border-inline-start:4px solid ${SEV[c.sev] || "#34557a"};padding-inline-start:8px"><b>${esc(c.t)}</b>${c.sub ? `<div style="color:#555;font-size:9.5pt">${esc(c.sub)}</div>` : ""}<div style="font-size:9.5pt;color:#333">${c.lines.slice(0, 25).map(x => "• " + esc(x)).join("<br>")}${c.lines.length > 25 ? `<br>… ועוד ${c.lines.length - 25}` : ""}</div></div>`).join("");
+  const urg = dir.filter(i => priN(i.priority) === "דחוף").length, late = dir.filter(wLate).length;
+  let n = 0; const H = t => h2(`${++n}. ${t}`);
+  return `<div style="display:flex;justify-content:space-between;align-items:baseline"><h1 style="font-size:17pt;margin:0">פערים מול ${esc(p.l)}</h1><b style="color:#34557a">ב.ד. אטלס</b></div>
+    <div style="color:#5a665f">${fmtD(todayStr())} · ${dir.length} נושאים פתוחים${urg ? ` · <b style="color:#b3261e">${urg} דחופים</b>` : ""}${late ? ` · <b style="color:#b3261e">${late} באיחור</b>` : ""} · ${CK.length} ממצאים מהנתונים${ment.length ? ` · ${ment.length} מוזכר` : ""}</div>
+    ${H(`נושאים פתוחים (${dir.length})`)}${dir.length ? itab(dir) : "<p>אין נושאים פתוחים.</p>"}
+    ${CK.length ? H("ממצאים מהנתונים באתר") + ck : ""}
+    ${pm ? H(`מהדיון הקודם — ${esc(pm.title || "")} ${fmtD(pm.date)}`) + (mtgDecs(pm).length ? `<p style="margin:0 0 4px"><b>החלטות:</b><br>${mtgDecs(pm).map(x => "• " + esc(x.text)).join("<br>")}</p>` : "") + (pmOpen.length ? `<p style="margin:6px 0 4px"><b>משימות שעוד פתוחות (${pmOpen.length}):</b></p>${itab(pmOpen, true)}` : "<p>כל המשימות מהדיון הקודם נסגרו.</p>") : ""}
+    ${ment.length ? H(`רק מוזכר (${ment.length})`) + `<p style="color:#777;font-size:9pt;margin:0 0 4px">נושאים של גורמים אחרים שבהם ${esc(p.l)} מוזכר בטקסט — לידיעה.</p>` + itab(ment, true) : ""}`;
+}
+function gapTxt(p) {
+  const { dir, ment } = gapIssues(p), CK = gapChecks(p);
+  return [`פערים מול ${p.l} — ${fmtD(todayStr())}`, "", `נושאים פתוחים (${dir.length}):`, ...dir.map(i => `• ${i.code || ""} ${i.title}${i.owner ? " — " + i.owner : ""}${i.due ? " — עד " + fmtD(i.due) : ""}${priN(i.priority) === "דחוף" ? " (דחוף)" : ""}`),
+    ...(CK.length ? ["", "ממצאים:", ...CK.map(c => `• ${c.t}`)] : []), ...(ment.length ? ["", `רק מוזכר (${ment.length}):`, ...ment.map(i => `• ${i.code || ""} ${i.title}`)] : [])].join("\n");
+}
+function gapModal(pre = "") {
+  const P = gapParties(), cnt = new Map(P.map(p => { const g = gapIssues(p); return [p.k, g]; }));
+  const vis = P.filter(p => p.g === "קבלנים" || p.g === "תחומים" || p.g === "אחראי צוות" || cnt.get(p.k).dir.length || cnt.get(p.k).ment.length);
+  let cur = vis.find(p => p.k === pre) || null;
+  const G = [...new Set(vis.map(p => p.g))];
+  modal(`<h2 style="margin:0">📋 מצע לדיון / פערים מול…</h2><p class="small muted" style="margin:2px 0 8px">בוחרים מול מי — וכל מה שפתוח מולו נאסף מכל האתר: נושאים, ממצאים מהנתונים, מה נשאר מהדיון הקודם, ומה שרק מוזכר.</p>
+    <div class="gp-parties">${G.map(g => `<div class="gp-g"><span class="muted small">${g}</span>${vis.filter(p => p.g === g).map(p => { const c = cnt.get(p.k); return `<button class="gp-p" data-gp="${esc(p.k)}">${esc(p.l)}<small>${c.dir.length}${c.ment.length ? ` +${c.ment.length}` : ""}</small></button>`; }).join("")}</div>`).join("")}</div>
+    <div class="sk-rep" id="gp_v"><p class="muted">בחרו גורם למעלה.</p></div>
+    <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn" id="gp_p" disabled>⬇ PDF / הדפסה</button><button class="btn ghost" id="gp_w" disabled>⬇ Word</button><button class="btn ghost" id="gp_c" disabled>📋 העתקה (וואטסאפ)</button>${isViewer() ? "" : `<button class="btn ghost" id="gp_d" disabled>▶ פתיחת דיון מולו</button>`}<span class="spacer"></span><button class="btn ghost" id="mNo">סגירה</button></div>`, (m, close) => {
+    const q = s => m.querySelector(s), name = () => `פערים מול ${cur.l} ${fmtD(todayStr()).replace(/\//g, ".")}`;
+    const draw = () => { m.querySelectorAll("[data-gp]").forEach(b => b.classList.toggle("on", b.dataset.gp === cur?.k)); if (!cur) return; q("#gp_v").innerHTML = gapHtml(cur); m.querySelectorAll("#gp_p,#gp_w,#gp_c,#gp_d").forEach(b => b.disabled = false); };
+    m.querySelectorAll("[data-gp]").forEach(b => b.onclick = () => { cur = vis.find(p => p.k === b.dataset.gp); ui.gapLast = cur.k; draw(); });
+    q("#mNo").onclick = close; draw();
+    q("#gp_p").onclick = () => { const w = window.open("", "_blank"); if (!w) return alertMsg("הדפדפן חסם חלון חדש — יש לאפשר חלונות קופצים"); w.document.open();
+      w.document.write(`<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>${esc(name())}</title><style>${MTG_CSS}tr{page-break-inside:avoid}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body><div class="np"><button onclick="print()">הדפסה / שמירה כ־PDF</button></div>${gapHtml(cur)}</body></html>`); w.document.close(); };
+    q("#gp_w").onclick = () => saveFile(name() + ".doc", new Blob(["" + `<html><head><meta charset="utf-8"><style>body{font-family:Arial;direction:rtl;font-size:10pt}</style></head><body dir="rtl">${gapHtml(cur)}</body></html>`], { type: "application/msword" }));
+    q("#gp_c").onclick = async () => { try { await navigator.clipboard.writeText(gapTxt(cur)); toast("הועתק ✓"); } catch (e) { alertMsg("ההעתקה נחסמה בדפדפן"); } };
+    if (q("#gp_d")) q("#gp_d").onclick = async () => { const id = await api.add("mtgs", { v: 2, type: cur.type, contractorId: cur.cid || "", party: cur.k, partyL: cur.l, title: `דיון מול ${cur.l}`, attendees: me?.name || "", date: todayStr(), by: tkWho(), open: true, createdAt: new Date().toISOString(), dec: {} });
+      close(); if (id) { ui.page = "disc:" + id; location.hash = ui.page; render(); scrollTo(0, 0); } };
+  });
+}
 function pageWork(d) {
   const tab = ui.wtab || "all", F = wf(), open = d.issues.filter(i => i.status !== "סגור"), L = wFilter(open), unseen = open.filter(i => i.unseen).length;
   const oldT = Object.values(RAW.tasks || {}).filter(t => !t.migrated).length, openM = mtgList().filter(m => isV2(m) && m.open);
@@ -3737,7 +3843,7 @@ function pageWork(d) {
     body = `<div class="card"><h2 style="margin-top:0">נסגרו לאחרונה <span class="muted small">(${C.length})</span></h2>${C.length ? `<div class="tablewrap"><table class="sheet"><thead><tr><th>קוד</th><th>נושא</th><th>קבלן</th><th>מי טיפל</th><th>נסגר</th><th>עדכון אחרון</th><th></th></tr></thead><tbody>${C.map(i => `<tr><td dir="ltr"><b>${esc(i.code || "")}</b></td><td><a href="#" data-act="wEdit" data-id="${i.id}">${esc(i.title || "")}</a></td><td>${esc(RAW.contractors?.[i.contractorId]?.name || "כללי")}</td><td>${esc(i.owner || "")}</td><td>${fmtD(i.closedAt || i.updated)}</td><td class="small">${esc(i.last || "")}</td><td>${isViewer() ? "" : `<button class="btn ghost sm" data-act="wReopen" data-id="${i.id}">פתיחה מחדש</button>`}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">אין</p>`}</div>`; }
   const tabB = (k, l, n) => `<button class="w-tb ${tab === k ? "on" : ""}" data-act="wTab" data-id="${k}">${l}${n != null ? ` <small>${n}</small>` : ""}</button>`;
   return `<div class="ch-banner" style="--cc:#34557a"><div><h1>נושאים ומשימות</h1><span>כל מה שפתוח מול הקבלנים, הרשויות והצוות — במקום אחד. נושא שקשור לשער / מעביר / הזמנה מופיע גם שם.</span></div>
-    ${isViewer() ? "" : `<div class="row" style="gap:6px"><button class="btn" data-act="wNewDisc">+ דיון חדש</button><button class="btn" data-act="wWeekly">🗓 ישיבה שבועית</button><button class="btn ghost" data-act="wNew">+ נושא</button></div>`}</div>
+    <div class="row" style="gap:6px"><button class="btn gp-btn" data-act="wGap">📋 מצע לדיון / פערים</button>${isViewer() ? "" : `<button class="btn" data-act="wNewDisc">+ דיון חדש</button><button class="btn" data-act="wWeekly">🗓 ישיבה שבועית</button><button class="btn ghost" data-act="wNew">+ נושא</button>`}</div></div>
     ${oldT && isMgr() ? `<div class="banner"><b>${oldT} משימות מהמבנה הקודם עוד לא אוחדו לנושאים</b><span>לחיצה מורידה גיבוי ואז מעבירה כל משימה לנושא שלה (או פותחת נושא) — עם המטפל, היעד, החשיבות וכל העדכונים.</span><button class="btn sm" data-act="wMigrate">איחוד עכשיו</button></div>` : ""}
     ${unseen && isMgr() ? `<div class="banner w-ub"><b><span class="w-dot"></span>${unseen} עדכונים של הצוות שעוד לא ראית</b><span class="spacer"></span><button class="btn ghost sm" data-act="wUnseenOnly">להציג רק אותם</button><button class="btn ghost sm" data-act="wSeenAll">סימון הכל כנקרא</button></div>` : ""}
     ${isViewer() ? "" : qnLine()}
@@ -3745,7 +3851,7 @@ function pageWork(d) {
 }
 /* ---------- דיון ---------- */
 function mtgPrev(m) {   // הדיון הקודם עם אותו גורם: אותו סוג + אותו קבלן (בישיבה שבועית — הישיבה השבועית הקודמת, גם בפורמט הישן)
-  return mtgList().find(x => x.id !== m.id && (x.date || "") <= (m.date || "9") && (x.type || "ישיבה שבועית") === m.type && (m.type === "ישיבה שבועית" || (x.contractorId || "") === (m.contractorId || "")) && (x.date < m.date || String(x.createdAt || "") < String(m.createdAt || "")));
+  return mtgList().find(x => x.id !== m.id && (x.date || "") <= (m.date || "9") && (m.party ? x.party === m.party : (x.type || "ישיבה שבועית") === m.type && (m.type === "ישיבה שבועית" || (x.contractorId || "") === (m.contractorId || ""))) && (x.date < m.date || String(x.createdAt || "") < String(m.createdAt || "")));
 }
 function pageDisc(d, mid) {
   const m = RAW.mtgs?.[mid] ? { id: mid, ...RAW.mtgs[mid] } : null; if (!m) return `<div class="card"><p>הדיון לא נמצא.</p><button class="btn" data-act="nav" data-id="work">לנושאים ומשימות</button></div>`;
@@ -3753,7 +3859,8 @@ function pageDisc(d, mid) {
   const open = d.issues.filter(i => i.status !== "סגור");
   // מה לעבור עליו: בישיבה שבועית — דחוף / להנהלה / באיחור / עדכון חדש / עודכן מאז הקודמת; בדיון עם קבלן — הנושאים הפתוחים שלו
   const since = prev?.date || addDays(m.date || todayStr(), -7);
-  const review = m.type === "ישיבה שבועית" ? open.filter(i => i.src?.id !== mid && (priN(i.priority) === "דחוף" || i.mgmt || wLate(i) || i.unseen || (i.updated || "") >= since))
+  const gp = m.party ? gapParties().find(p => p.k === m.party) : null, gI = gp ? gapIssues(gp) : null, gC = gp ? gapChecks(gp) : [];
+  const review = gp ? gI.dir.filter(i => i.src?.id !== mid) : m.type === "ישיבה שבועית" ? open.filter(i => i.src?.id !== mid && (priN(i.priority) === "דחוף" || i.mgmt || wLate(i) || i.unseen || (i.updated || "") >= since))
     : m.contractorId ? open.filter(i => i.contractorId === m.contractorId && i.src?.id !== mid) : [];
   const prevOpen = prev && isV2(prev) ? mtgTasks(prev.id).filter(i => i.status !== "סגור") : [];
   return `<div class="ch-banner" style="--cc:#34557a"><div><h1>${esc(m.title || "דיון")}</h1><span>${fmtD(m.date)} · ${esc(m.type || "")}${c ? " · " + esc(c.name) : ""}${m.by ? " · פתח: " + esc(m.by) : ""} · ${m.open ? "מתנהל" : "הסתיים"}</span></div>
@@ -3773,7 +3880,9 @@ function pageDisc(d, mid) {
       ${T.length ? wTable(d, T, mid) : ""}
       ${U.length ? `<div class="w-ups"><b class="small">עדכונים לנושאים קיימים</b>${U.map(({ i, h }) => `<div class="w-dec"><span class="w-k upd">עדכון</span><a href="#" data-act="wEdit" data-id="${i.id}" dir="ltr">${esc(i.code || "")}</a> ${esc(i.title || "")} — ${esc(h.text)}</div>`).join("")}</div>` : ""}
       ${!T.length && !DC.length && !U.length ? `<p class="muted small" style="margin:0">עוד לא נרשם כלום. כותבים בשורה למעלה ולוחצים Enter.</p>` : ""}</div>
-    ${review.length ? `<div class="card"><h2 style="margin-top:0">${m.type === "ישיבה שבועית" ? "לעבור עליהם" : "נושאים פתוחים של " + esc(c?.name || "")} <span class="muted small">(${review.length})${m.type === "ישיבה שבועית" ? ` — דחופים, להנהלה, באיחור, עדכונים חדשים ומה שהשתנה מאז ${fmtD(since)}. "✎ עדכון" כאן נרשם בסיכום` : ""}</span></h2>${wTable(d, review, mid)}</div>` : ""}`;
+    ${gC.length ? `<details class="card" open><summary><b>ממצאים מהנתונים מול ${esc(gp.l)}</b> <span class="muted small">(${gC.length})</span></summary>${gC.map(x => `<div class="small" style="margin-top:6px"><b>${esc(x.t)}</b>${x.sub ? ` <span class="muted">${esc(x.sub)}</span>` : ""}<div class="muted">${esc(x.lines.slice(0, 12).join(" · "))}${x.lines.length > 12 ? " …" : ""}</div></div>`).join("")}</details>` : ""}
+    ${review.length ? `<div class="card"><h2 style="margin-top:0">${gp ? "על סדר היום — מול " + esc(gp.l) : m.type === "ישיבה שבועית" ? "לעבור עליהם" : "נושאים פתוחים של " + esc(c?.name || "")} <span class="muted small">(${review.length})${m.type === "ישיבה שבועית" ? ` — דחופים, להנהלה, באיחור, עדכונים חדשים ומה שהשתנה מאז ${fmtD(since)}. "✎ עדכון" כאן נרשם בסיכום` : ""}</span></h2>${wTable(d, review, mid)}</div>` : ""}
+    ${gI?.ment.length ? `<details class="card"><summary><b>רק מוזכר</b> <span class="muted small">(${gI.ment.length}) — נושאים של אחרים שבהם ${esc(gp.l)} מוזכר</span></summary>${wTable(d, gI.ment.filter(i => i.src?.id !== mid), mid)}</details>` : ""}`;
 }
 async function wDiscNew(type = "", cid = "") {
   const d = D();
@@ -3893,6 +4002,7 @@ async function wClick(act, b) {
   else if (act === "wUnseenOnly") { wf().unseen = true; ui.wtab = "all"; render(); }
   else if (act === "wSeenAll") { const ids = list("issues").filter(i => i.unseen).map(i => i.id); if (ids.length) await bulkPatch("issues", ids, { unseen: null }); toast("סומן כנקרא ✓"); }
   else if (act === "wNewDisc") wDiscNew();
+  else if (act === "wGap") gapModal(ui.gapLast);
   else if (act === "wWeekly") { const m = mtgList().find(x => isV2(x) && x.open && x.type === "ישיבה שבועית");
     const mid = m?.id || await api.add("mtgs", { v: 2, type: "ישיבה שבועית", contractorId: "", title: "ישיבה שבועית", attendees: teamNames().join(", "), date: todayStr(), by: tkWho(), open: true, createdAt: new Date().toISOString(), dec: {} });
     if (mid) { ui.page = "disc:" + mid; location.hash = ui.page; render(); scrollTo(0, 0); } }
