@@ -3687,7 +3687,7 @@ function wRow(d, i, mid = "") {
   const late = wLate(i);
   return `<tr class="${i.unseen && isMgr() ? "w-unseen" : ""}"><td class="nowrap"><b dir="ltr">${esc(i.code || "")}</b></td>
     <td><a href="#" class="w-t" data-act="wEdit" data-id="${i.id}">${esc(i.title || "")}</a><div class="small muted">${esc(i.category || "")}${i.src?.id && i.src.id !== mid ? ` · מ<a href="#" data-act="wDisc" data-id="${esc(i.src.id)}">${esc(i.src.t || "דיון")} ${fmtD(i.src.d)}</a>` : ""}${i.mgmt ? " · להנהלה" : ""}${i.status === "HOLD" ? " · HOLD" : ""}</div></td>
-    <td>${wLinkChips(i) || (i.kdFrom ? `<span class="lk lk-kd">📍 ק.ד. ${i.kdTo ? esc(i.kdTo) + "–" : ""}${esc(i.kdFrom)}</span>` : "")}</td>
+    <td>${wLinkChips(i) || wSiteHint(i) || (i.kdFrom ? `<span class="lk lk-kd">📍 ק.ד. ${i.kdTo ? esc(i.kdTo) + "–" : ""}${esc(i.kdFrom)}</span>` : "")}</td>
     <td>${wWho(i.owner)}${(l => l && l !== i.owner ? `<div class="w-lead" title="אחראי צוות${i.lead ? "" : " (אוטומטי)"}">↳ ${esc(l)}</div>` : "")(leadOf(i))}</td><td>${priPill(i.priority)}</td><td class="nowrap ${late ? "w-late" : ""}">${fmtD(i.due) || "—"}</td>
     <td class="small" style="max-width:300px">${i.unseen && isMgr() ? `<span class="w-dot" title="עדכון שעוד לא ראית"></span>` : ""}${esc(i.last || "")}<div class="muted">${fmtD(i.updated)}</div></td>
     <td class="nowrap">${isViewer() ? "" : `<button class="btn ghost sm" data-act="wUpd" data-id="${i.id}" ${mid ? `data-mid="${esc(mid)}"` : ""}>✎ עדכון</button> <button class="btn ghost sm" data-act="wClose" data-id="${i.id}" title="סגירת הנושא">✓</button>`}</td></tr>`;
@@ -3980,6 +3980,9 @@ const siteIec = s => Object.keys(s.iec || {}).map(id => RAW.iecOrders?.[id] ? { 
 const siteBudget = s => { const b = s.budget && RAW.budget?.[s.budget]; return b ? bgN(b.mast) + bgN(b.build) : null; };
 /** נושאים שמזכירים את האתר בטקסט ("אתר 913", "אתר איסוף ק.ד. 913") אבל עוד לא מקושרים */
 const siteRe = s => new RegExp("(?:אתר(?: איסוף)?|איסוף) (?:קד )?" + qnNorm(s.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?=$|[^\\u05D0-\\u05EA0-9])");
+/** נושא בלי קישור שמזכיר אתר — כפתור "📡 אתר X" שמקשר ועובר לאתר */
+const wSiteHint = i => { if (Object.keys(i.links || {}).length) return ""; const t = qnNorm([i.title, i.last].join(" ")), s = list("sites").find(s => qnNorm(s.name) && siteRe(s).test(t));
+  return s ? `<button class="lk" data-act="siteLinkGo" data-id="${s.id}|${i.id}" title="קישור הנושא לאתר ומעבר לכרטיס האתר">📡 אתר ${esc(s.name)} ↗</button>` : ""; };
 const siteSuggest = s => { if (!qnNorm(s.name)) return []; const re = siteRe(s); return list("issues").filter(i => i.status !== "סגור" && !i.links?.["s:" + s.id] && re.test(qnNorm([i.title, i.last].join(" ")))); };
 /** איפה האתר עומד: קבוצת השלב הבא (תכנון) או עמודת ביצוע */
 function siteNow(s, T = siteTpl()) {
@@ -4176,6 +4179,7 @@ async function siteClick(act, b) {
   else if (act === "siteNew") siteNewModal();
   else if (act === "siteTplEd") siteTplModal();
   else if (act === "siteLinkAll") siteLinkAllModal();
+  else if (act === "siteLinkGo" && s) { const i = RAW.issues?.[a1]; if (i && !isViewer()) await api.update("issues", a1, { links: { ...(i.links || {}), ["s:" + sid]: true } }); ui.page = "site:" + sid; location.hash = ui.page; render(); scrollTo(0, 0); }
   else if (act === "siteLinkIss" && s) { const i = RAW.issues?.[a1]; if (i) await api.update("issues", a1, { links: { ...(i.links || {}), ["s:" + sid]: true } }); toast("קושר לאתר ✓"); }
   else if (act === "siteSt" && s) { const x = a1 === "plan" ? s.plan?.[a2] : s.builds?.[a1.slice(2)]?.steps?.[a2]; await siteStepSet(sid, a1, a2, { st: a3, ...(a3 === "הושלם" && !x?.date ? { date: todayStr() } : {}) }); }
   else if (act === "siteSub" && s) { const x = a1 === "plan" ? s.plan?.[a2] : s.builds?.[a1.slice(2)]?.steps?.[a2], cur = x?.subs?.[a3] || "טרם", nx = SITE_ST[(SITE_ST.indexOf(cur) + 1) % SITE_ST.length]; await siteStepSet(sid, a1, a2, { subs: { ...(x?.subs || {}), [a3]: nx } }); }
@@ -6043,7 +6047,7 @@ const TABLE_DEFS = {
     { key: "status", label: "סטטוס", cell: x => `<select class="inp st-${ISSUE_STATUS.indexOf(x.status)}" id="f_issues_${x.id}_status" data-edit="issues|${x.id}|status">${ISSUE_STATUS.map(k => `<option ${k === x.status ? "selected" : ""}>${k}</option>`).join("")}</select>` },
     { key: "last", label: "מצב אחרון", cls: "small w-text", cell: x => cellInput("issues", x, "last", "", 'title="עדכון כאן נשמר כעדכון של היום בהיסטוריה"').replace('|last"', '|last|L"') + (x.notMentioned && x.status !== "סגור" ? ` <span class="pill warn" title="ייתכן שנסגר — לבדיקה">לא הוזכר בסיכום ${fmtD(x.notMentioned)}</span>` : "") },
     { key: "updated", label: "עדכון אחרון", cls: "nowrap c", cell: x => { const n = daysSince(x.updated); return `<span style="${x.status !== "סגור" && n > 30 ? "color:var(--warn);font-weight:700" : ""}">${fmtD(x.updated)}</span>`; } },
-    { key: "links", label: "🔗 קשור ל", cls: "small", cell: x => `${wLinkChips(x)}${isViewer() ? "" : ` <button class="btn ghost sm" data-act="wEdit" data-id="${x.id}" title="עריכה מלאה: קישור לפריט, מי מטפל, יעד">✎</button>`}` },
+    { key: "links", label: "🔗 קשור ל", cls: "small", cell: x => `${wLinkChips(x) || wSiteHint(x)}${isViewer() ? "" : ` <button class="btn ghost sm" data-act="wEdit" data-id="${x.id}" title="עריכה מלאה: קישור לפריט, מי מטפל, יעד">✎</button>`}` },
     { key: "hist", label: "היסטוריה", cls: "c", cell: x => `<button class="btn ghost sm" data-act="issueHist" data-id="${x.id}">${Object.keys(x.history || {}).length} עדכונים</button>` },
     { key: "mgmt", label: "להנהלה", cls: "c", cell: x => `<input type="checkbox" id="f_issues_${x.id}_mgmt" ${x.mgmt ? "checked" : ""} data-edit="issues|${x.id}|mgmt|b" aria-label="לסטטוס הנהלה" title="יוצג בשקף הנושאים הדחופים להנהלה">` },
     { key: "mgmtAsk", label: "נדרש מההנהלה", cls: "w-place", cell: x => cellInput("issues", x, "mgmtAsk") },
