@@ -1,4 +1,4 @@
-index.html — קוד האתר הראשי
+index.html — קוד האתר
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -167,6 +167,18 @@ table.mx { border-collapse: separate; border-spacing: 2px; width: 100%; font-siz
 .pw-tab td { vertical-align: top; } .pw-tab .inp.sm, .pw-tab input.cell { font-size: 12.5px; } .pw-tab td > select + input { display: block; margin-top: 3px; } .pw-nm { min-width: 150px; } .pw-em { margin-inline-end: 4px; }
 .pw-note { min-width: 200px; } .pw-at { display: inline-block; border-radius: 6px; padding: 0 6px; font-weight: 800; font-size: 11.5px; color: #fff; background: var(--c); } input.cell.pw-late { color: #b3261e; font-weight: 700; }
 .pws-tab td { vertical-align: top; } tr.pws-bad > td { background: #fff4ef; } tr.pws-ok > td { background: #f2f9f4; }
+.pw-legend{background:#f4f8fd;border-color:#cfe0f3;font-size:13px;line-height:1.6}
+.pw-money .ch-t>b{font-size:20px}.pw-money .ch-t small{display:block;font-size:12px}.pw-money .ch-t small.pw-incl{font-size:16px;font-weight:700;white-space:nowrap}
+.pw-pay td.num,.pw-pay th{text-align:center}.pw-pay td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pw-pay .pw-inc{background:#eaf2fc}.pw-pay tr.pw-exp td{background:#fdecea}.pw-pay tr.pw-exp td.pw-inc{background:#f8dcd8}
+.pw-pay tr.pw-sum td{background:#f3f1ea;border-top:2px solid #b9b39b}
+.pw-form{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}.pw-form label{display:flex;flex-direction:column;gap:3px;font-size:13px}
+.pw-chk{margin-top:8px;display:flex;flex-direction:column;gap:4px}.pw-c{padding:5px 9px;border-radius:6px;background:#f2f2f2;font-size:13px}
+.pw-c.ok{background:#e3f4ea;color:#1d6b45}.pw-c.bad{background:#fde3df;color:#a3281b;font-weight:600}.pw-c.warn{background:#fff3d6;color:#7a5600}
+@media(max-width:600px){.pw-form{grid-template-columns:1fr}}
+.modal .card:has(.pt-list) { max-width: 980px; width: 96vw; } .pt-list { max-height: 62vh; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.pt-g { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; } .pt-g > summary { cursor: pointer; } .pt-op { border-top: 1px dashed var(--line); padding: 7px 0; } .pt-op.pt-stale { opacity: .55; }
+.pt-t { border-collapse: collapse; margin-top: 4px; font-size: 12.5px; } .pt-t td { padding: 1px 8px 1px 0; vertical-align: top; } .pt-t td:first-child { color: var(--muted); white-space: nowrap; } .pt-b { color: #9a3b2e; text-decoration: line-through; text-decoration-thickness: 1px; } .pt-a { color: #1f6b3a; font-weight: 700; }
 .sk-rep { border: 1px solid var(--line); border-radius: 10px; padding: 14px; max-height: 60vh; overflow: auto; background: #fff; font-size: 12px; }
 .modal .card:has(.sk-rep) { max-width: 1100px; width: 96vw; }
 .modal .card:has(.tp-list), .modal .card:has(.sk-ll) { max-width: 920px; width: 95vw; }
@@ -994,6 +1006,7 @@ function pickBackupFile() {
     const rd = new FileReader();
     rd.onload = () => {
       let j; try { j = JSON.parse(rd.result); } catch { return alertModal("הקובץ אינו JSON תקין."); }
+      if (j?.kind === "border-patch") return patchReview(j);
       if (!isBackup(j)) return alertModal("הקובץ לא נראה כמו גיבוי של האתר הזה (חסר בו שדה data עם קבלנים / הזמנות / קטעים).");
       confirmReplace(j, `קובץ ${f.name}`);
     };
@@ -1002,6 +1015,7 @@ function pickBackupFile() {
   inp.click();
 }
 function confirmReplace(j, label) {
+  if (j?.kind === "border-patch") return patchReview(j);
   const [c, o, of, s] = counts(j.data);
   if (!c) return modal(`<h2>זה קובץ הוספה — לא גיבוי מלא</h2><p>${esc(label)}</p><p>אין בקובץ קבלנים / הזמנות, כלומר הוא מכיל רק חלק מהנתונים. <b>טעינה שלו הייתה מוחקת את כל שאר האתר</b> — לכן היא חסומה.</p>
     <p>מה שצריך כאן הוא <b>הוספה</b>: הרשומות מהקובץ יתווספו לנתונים הקיימים, בלי למחוק או לשנות שום דבר.</p>
@@ -1409,7 +1423,8 @@ const IEC_COLORS = { "טרם הוזמן": "#ffffff", "הוזמן": "#dfe6ee", "�
 const IEC_TINT = { "הוזמן": "#f6f8fa", "שובר מקדמה": "#fdeee5", "שובר משלים": "#fdeee5", "מקדמה שולמה": "#f1f6fc", "משלים שולם": "#eaf1fa", "מתואם חיבור": "#fdf6db", "חובר": "#e6f4e9", "מוקפא": "#f1f1ef", "בוטל": "#f1f1ef" };
 const IEC_PAY = new Set(["שובר מקדמה", "שובר משלים"]);          // ממתין לתשלום מצדנו
 const IEC_DONE = new Set(["חובר", "מוקפא", "בוטל"]);
-const IEC_KINDS = ["ארון שקד", "חדר טרפו", "תט״ז", "אתר איסוף", "העתקת עמוד", "הזמנה מרכזת", "לבירור", "אחר"];
+const IEC_KINDS = ["ארון שקד", "חדר טרפו", "תט״ז", "חיבור חריג", "אתר איסוף", "העתקת עמוד", "הזמנה מרכזת", "לבירור", "אחר"];
+const IEC_EXC = "חיבור חריג";   // הזמנת "חיבור חריג" / "מרחק חריג" — מממנת את התט״ז / חדר הטרפו וקו המתח הגבוה. itemId = התט״ז / חדר הטרפו, parentNo = הזמנות הארונות
 const IEC_DISTRICTS = ["עמקים", "ירושלים", "גליל גולן"];
 const iecVat = () => { const v = Number(RAW.tableConfig?.iec?.vat); return (isNaN(v) || RAW.tableConfig?.iec?.vat === "" || RAW.tableConfig?.iec?.vat == null ? 18 : v) / 100; };
 const mn = v => moneyNum(v) || 0;
@@ -1682,7 +1697,7 @@ function pageIec(d, embedded = false) {
   const sum = (arr, f) => arr.reduce((s, o) => s + (f(o) || 0), 0);
   const tot = sum(base, o => mn(o.amount)), paid = sum(base, iecPaid), toPay = sum(base, iecToPay), exc = sum(base, o => mn(o.excAmount));
   const nPay = base.filter(o => IEC_PAY.has(o.stage)).length, conn = base.filter(o => o.stage === "חובר").length;
-  const units = base.filter(o => o.kind !== "הזמנה מרכזת");
+  const units = base.filter(o => o.kind !== "הזמנה מרכזת" && o.kind !== IEC_EXC);
   const kpi = (l, v, sub = "") => `<div class="kpi"><span>${l}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ""}</div>`;
   const stCount = s => base.filter(o => o.stage === s).length;
   const pipe = IEC_STAGES.filter(s => s !== "בוטל" || F.showOff).map(s => { const n = s === "בוטל" ? all.filter(o => o.stage === s && inDist(o)).length : stCount(s);
@@ -3179,7 +3194,7 @@ function progFlags(d, p) {
    ===================================================================== */
 /* ---------- בדיקות חח״י: הצלבה בין הזמנות חח״י לפריטים באתר (משמש באיכות נתונים ובדוח "פערים מול חח״י") ----------
    כל שורה: { id, t, dist (נפה), kd, go, link? }. נפה של פריט = הנפה של הזמנת חח״י הקרובה אליו בק.ד. */
-const IEC_NOITEM_K = new Set(["הזמנה מרכזת", "אתר איסוף", "העתקת עמוד"]);
+const IEC_NOITEM_K = new Set(["הזמנה מרכזת", "אתר איסוף", "העתקת עמוד", "חיבור חריג"]);
 function iecChecks(d) {
   const O = d.iecOrders.filter(o => o.stage !== "בוטל"), out = [], T = todayStr();
   const withKd = O.filter(o => o.district && kdNum(o.kd) !== null);
@@ -3199,6 +3214,7 @@ function iecChecks(d) {
   add("iecLink", "orange", "הזמנת חח״י ופריט באותו ק.ד. — לא מקושרים", pairs.map(({ o, i }) => ({ ...oL(o), t: `${o.orderNo || "ללא מס׳"}${o.kind && o.kind !== i.kind ? ` (${o.kind}${["לבירור", "אחר"].includes(o.kind) ? "" : " — ⚠ סוג שונה"})` : ""} ↔ ${iNm(i)} · ${RAW.contractors?.[i.contractorId]?.name || ""}`, link: o.id + "|" + i.id })),
     { hint: "״🔗 קישור״ מחבר את ההזמנה לפריט וקובע לה את סוג המתקן", dq: true });
   add("iecNoItem", "orange", "הזמנות חח״י שלא מקושרות לשום פריט באתר", freeO.filter(o => !usedO.has(o.id)).map(o => oL(o, o.kind === "לבירור" ? " · סוג לבירור" : "")), { hint: "אין פריט באתר באותו ק.ד. — להוסיף פריט או לבדוק את הק.ד.", dq: true });
+  add("iecExcNoItem", "orange", "חיבור חריג שלא משויך לתט״ז / חדר טרפו", O.filter(o => o.kind === IEC_EXC && !(o.itemId && RAW.items?.[o.itemId])).map(o => oL(o, o.parentNo ? ` · לארונות ${o.parentNo}` : "")), { hint: "החיבור החריג מממן את התט״ז / חדר הטרפו — לשייך אותו כדי שהתשלום יופיע בשורת המתקן", dq: true });
   add("iecNoOrder", "orange", "מתקנים באתר בלי הזמנת חח״י", freeI.filter(i => !usedI.has(i.id)).map(i => iL(i)), { hint: "לפתוח הזמנה בחח״י, או לסמן את הפריט ״לא נדרש״", dq: true });
   // 2. סתירות בין הפריט להזמנה
   const byItem = new Map(O.filter(o => o.itemId).map(o => [o.itemId, o]));
@@ -3801,7 +3817,7 @@ function gapChecks(p) {
   const ign = k => /^(issdue|issmgmt|unseen)/.test(k || "");
   if (p.k.startsWith("c:")) A.filter(a => !ign(a.key) && (a.go?.page === p.k || (p.l && String(a.title).includes(p.l)))).forEach(a => out.push({ t: a.title, sub: a.sub, lines: a.lines || [], sev: a.sev }));
   if (p.k === "iec") {
-    const ORD = ["iecPay:שובר מקדמה", "iecPay:שובר משלים", "iecValid", "iecDup", "iecStuck", "iecPaidNot", "iecDoneOpen", "iecLink", "iecNoOrder", "iecNoItem", "iecDoneNoDate", "iecNoBudget", "iecExc"];
+    const ORD = ["iecPay:שובר מקדמה", "iecPay:שובר משלים", "iecValid", "iecDup", "iecStuck", "iecPaidNot", "iecDoneOpen", "iecLink", "iecNoOrder", "iecNoItem", "iecExcNoItem", "iecDoneNoDate", "iecNoBudget", "iecExc"];
     iecChecks(d).sort((a, b) => ORD.indexOf(a.key) - ORD.indexOf(b.key)).forEach(c => out.push({ t: c.lines.length + " · " + c.title.replace(/^\d+ /, ""), sub: [c.sub, c.hint].filter(Boolean).join(" · "), lines: c.lines, sev: c.sev, compact: c.compact }));
     const sNo = list("sites").filter(s => !["מוקפא", "בוטל"].includes(s.status) && !Object.keys(s.iec || {}).length);
     if (sNo.length) out.push({ t: `${sNo.length} · אתרי איסוף בלי הזמנת חח״י מקושרת`, sev: "blue", lines: sNo.map(s => s.name) });
@@ -4464,8 +4480,12 @@ function pwRows(d) {
   const O = d.iecOrders.filter(o => o.stage !== "בוטל"), byItem = {};
   O.forEach(o => { if (o.itemId && RAW.items?.[o.itemId]) (byItem[o.itemId] = byItem[o.itemId] || []).push(o); });
   const R = d.items.filter(i => W_ELEC_K.has(i.kind) && i.status !== "מבוטל").map(i => ({ id: "i:" + i.id, i, os: byItem[i.id] || [], kind: i.kind, kd: kdNum(i.kdFrom) }));
-  O.filter(o => !(o.itemId && RAW.items?.[o.itemId]) && o.kind !== "הזמנה מרכזת").forEach(o => R.push({ id: "o:" + o.id, o, os: [o], kind: W_ELEC_K.has(o.kind) || o.kind === "אתר איסוף" || o.kind === "העתקת עמוד" ? o.kind : "אחר / לבירור", kd: kdNum(o.kd) }));
-  R.forEach(r => { const o = r.os[0]; r.o = r.o || o; r.dist = o?.district || iecDistOf(d, r.kd); const src = r.i || (r.kd !== null ? { kdFrom: r.o?.kd } : null); r.gz = src ? mainAt(d, src) : null; r.nx = pwNext(r); });
+  O.filter(o => !(o.itemId && RAW.items?.[o.itemId]) && o.kind !== "הזמנה מרכזת").forEach(o => R.push({ id: "o:" + o.id, o, os: [o], kind: W_ELEC_K.has(o.kind) || [IEC_EXC, "אתר איסוף", "העתקת עמוד"].includes(o.kind) ? o.kind : "אחר / לבירור", kd: kdNum(o.kd) }));
+  // תט״ז / חדר טרפו: ההזמנה שקובעת את התשלום היא החיבור החריג (אם יש)
+  R.forEach(r => { r.os.sort((a, b) => (b.kind === IEC_EXC) - (a.kind === IEC_EXC)); const o = r.os[0]; r.o = r.o || o; r.dist = o?.district || iecDistOf(d, r.kd); const src = r.i || (r.kd !== null ? { kdFrom: r.o?.kd } : null); r.gz = src ? mainAt(d, src) : null; });
+  const byI = new Map(R.filter(r => r.i).map(r => [r.i.id, r]));
+  R.forEach(r => { if (r.i?.feed) r.feedR = byI.get(r.i.feed) || null; });
+  R.forEach(r => { if (!r.feedR) r.nx = pwNext(r); }); R.forEach(r => { if (r.feedR) { r.feedR.nx = r.feedR.nx || pwNext(r.feedR); r.nx = pwNext(r); } });
   return R;
 }
 /** השלב הבא ואצל מי: משטח (קבלן) → הזמנה ותשלום (אנחנו) → הצבה / התקנה (חח״י / קבלן) → חיבור (חח״י) */
@@ -4473,10 +4493,12 @@ function pwNext(r) {
   const i = r.i, o = r.o, st = o?.stage || "", T = todayStr(), pad = PAD_KINDS.includes(r.kind);
   if (st === "מוקפא") return { t: "מוקפא", at: "—" };
   const pay = () => !o ? { t: "לפתוח הזמנה בחח״י (ולשלם)", at: "אנחנו", k: "noord" } : st === "טרם הוזמן" ? { t: "להגיש הזמנה לחח״י", at: "אנחנו", k: "noord" }
-    : IEC_PAY.has(st) ? { t: `לשלם ${st === "שובר מקדמה" ? "מקדמה" : "משלים"}${iecToPay(o) ? " · " + ils(iecToPay(o)) + " ₪" : ""}`, at: "אנחנו", k: "pay" } : null;
+    : IEC_PAY.has(st) ? (o.validUntil && o.validUntil < T ? { t: `השובר פג ${fmtD(o.validUntil)} — לבקש שובר חדש ולשלם${iecToPay(o) ? " · " + ils(iecToPay(o)) + " ₪" : ""}`, at: "אנחנו", k: "pay", late: true }
+      : { t: `לשלם ${st === "שובר מקדמה" ? "מקדמה" : "משלים"}${o.kind === IEC_EXC ? " (חיבור חריג)" : ""}${iecToPay(o) ? " · " + ils(iecToPay(o)) + " ₪" : ""}`, at: "אנחנו", k: "pay" }) : null;
   if (i && pad && i.padStatus !== "הושלם") return { t: "הכנת משטח", at: "קבלן", k: "pad", late: !!i.plannedDate && i.plannedDate < T };
   const p = pay(); if (p) return p;
   if (i && i.status !== "הושלם") { const who = r.kind === "תט״ז" ? "חח״י" : "קבלן"; return { t: r.kind === "תט״ז" ? "הצבת תט״ז" : r.kind === "חדר טרפו" ? "התקנת חדר טרפו" : "ביצוע הארון", at: who, k: "inst", late: !!i.plannedDate && i.plannedDate < T }; }
+  const F = r.feedR; if (F && st !== "חובר" && F.nx && F.nx.k !== "done" && !(F.i && F.i.status === "הושלם" && F.nx.k === "conn")) return { t: `ממתין ל${F.kind} ${F.i?.name || ""} — ${F.nx.t}`, at: F.nx.at, k: "feed", late: F.nx.late };
   if (st !== "חובר") return { t: st === "מתואם חיבור" ? "חיבור (מתואם)" : "חיבור — לדרוש מועד", at: "חח״י", k: "conn" };
   return { t: "חובר", at: "✓", k: "done" };
 }
@@ -4485,7 +4507,8 @@ function pwPay(o) {
   const st = o.stage, P = iecToPay(o);
   if (st === "טרם הוזמן") return `<span class="muted">טרם הוזמן</span>`;
   if (st === "הוזמן") return `<span class="muted">ממתין לשובר</span>`;
-  if (IEC_PAY.has(st)) return `<b style="color:#c0392b">💳 ${st === "שובר מקדמה" ? "מקדמה" : "משלים"} לתשלום${P ? " · " + ils(P) + " ₪" : ""}</b>${o.validUntil ? `<div class="small ${daysTo(o.validUntil) < 0 ? "w-late" : "muted"}">תוקף ${fmtD(o.validUntil)}</div>` : ""}`;
+  if (IEC_PAY.has(st) && o.validUntil && o.validUntil < todayStr()) return `<b style="color:#c0392b">⛔ השובר פג ${fmtD(o.validUntil)}</b><div class="small">${o.kind === IEC_EXC ? "חיבור חריג · " : ""}${P ? ils(P) + " ₪ · " : ""}לבקש שובר חדש</div>`;
+  if (IEC_PAY.has(st)) return `<b style="color:#c0392b">💳 ${o.kind === IEC_EXC ? "חיבור חריג — " : ""}${st === "שובר מקדמה" ? "מקדמה" : "משלים"} לתשלום${P ? " · " + ils(P) + " ₪" : ""}</b>${o.validUntil ? `<div class="small ${daysTo(o.validUntil) < 0 ? "w-late" : "muted"}">תוקף ${fmtD(o.validUntil)}</div>` : ""}`;
   if (st === "מקדמה שולמה") return `מקדמה ✓${o.advanceDate ? ` <span class="muted small">${fmtD(o.advanceDate)}</span>` : ""}`;
   if (PW_PAID.has(st)) return `שולם ✓${o.completionDate ? ` <span class="muted small">${fmtD(o.completionDate)}</span>` : ""}`;
   return esc(st);
@@ -4500,22 +4523,127 @@ function pagePower(d) {
   let body = "";
   if (F.tab === "orders") body = pageIec(d, true);
   else if (F.tab === "sum") body = pwSumPage(d);
+  else if (F.tab === "pay") body = pwPayPage(d);
   else if (F.tab === "iss") body = `${isViewer() ? "" : qnLine("", "למשל: חח״י — לתאם הצבת תט״ז 874 עד 30/10 · דחוף")}<div class="card"><h2 style="margin-top:0">נושאים פתוחים מול חח״י <span class="muted small">(${iI.dir.length})</span></h2>${wTable(d, iI.dir, "", "אין נושאים פתוחים מול חח״י")}</div>
     ${iI.ment.length ? `<details class="card"><summary><b>רק מוזכר</b> <span class="muted small">(${iI.ment.length}) — נושאים של אחרים שבהם חח״י מוזכר</span></summary>${wTable(d, iI.ment)}</details>` : ""}`;
   else body = pwFacTable(d, R);
   return `<div class="ch-banner" style="--cc:#c98a12"><div><h1>⚡ חברת חשמל</h1><span>כל המתקנים מול חח״י במקום אחד — משטח, הזמנה ותשלום, הצבה, חיבור · אחראי: ${esc(leadCfg().iec || "—")}</span></div>
     <div class="row" style="gap:6px"><button class="btn gp-btn" data-act="pwGap">📋 פערים מול חח״י</button>${isViewer() ? "" : `<button class="btn" data-act="pwDisc">▶ דיון עם חח״י</button>`}</div></div>
     <div class="ch-tiles sg-tiles" style="--cc:#c98a12">${tile("מתקנים", R.length, `${cnt(r => r.kind === "תט״ז")} תט״ז · ${cnt(r => r.kind === "חדר טרפו")} טרפו · ${cnt(r => r.kind === "ארון שקד")} ארונות`, "")}
-      ${tile("🔴 אצלנו", atN("אנחנו"), `${cnt(r => r.nx.k === "noord")} בלי הזמנה · ${cnt(r => r.nx.k === "pay")} לתשלום${toPay ? " · " + ils(toPay) + " ₪" : ""}`, "אנחנו", atN("אנחנו") ? "t2" : "")}
+      ${tile("🔴 אצלנו", atN("אנחנו"), `${cnt(r => r.nx.k === "noord")} בלי הזמנה · ${cnt(r => r.nx.k === "pay")} לתשלום${toPay ? ` · ${ils(toPay * (1 + iecVat()))} ₪ כולל מע״מ` : ""}`, "אנחנו", atN("אנחנו") ? "t2" : "")}
       ${tile("🟠 אצל הקבלן", atN("קבלן"), `${cnt(r => r.nx.k === "pad")} משטחים · ${cnt(r => r.nx.at === "קבלן" && r.nx.k === "inst")} ביצוע`, "קבלן")}
       ${tile("🔵 אצל חח״י", atN("חח״י"), `${cnt(r => r.nx.at === "חח״י" && r.nx.k === "inst")} הצבה · ${cnt(r => r.nx.k === "conn")} חיבור`, "חח״י", "t1")}
       ${tile("⏰ באיחור", cnt(r => r.nx.late), "עבר התאריך המתוכנן", "late", cnt(r => r.nx.late) ? "t2" : "")}
       ${tile("✓ חוברו", atN("✓"), "", "✓", "t3")}</div>
-    <div class="w-tabs">${tb("fac", "מתקנים", R.length)}${tb("orders", "הזמנות וכספים", d.iecOrders.filter(o => o.stage !== "בוטל").length)}${tb("sum", "📝 סיכום דיון")}${tb("iss", "נושאים", iI.dir.length)}</div>${body}`;
+    <div class="w-tabs">${tb("fac", "מתקנים", R.length)}${tb("pay", "💰 תשלומים", d.iecOrders.filter(o => IEC_PAY.has(o.stage)).length)}${tb("orders", "הזמנות וכספים", d.iecOrders.filter(o => o.stage !== "בוטל").length)}${tb("sum", "📝 סיכום דיון")}${tb("iss", "נושאים", iI.dir.length)}</div>${body}`;
+}
+/* ---------- 💰 תשלומים לחח״י — כמה לשלם, ממה מורכב, ומה כבר שולם.
+   כלל אחד לכל האתר: כל סכום נרשם ללא מע״מ — בדיוק כמו בשובר ("סה״כ להזמנה" ו"לתשלום"). "כולל מע״מ" = מה שמעבירים בפועל, מחושב (× 1 + מע״מ).
+   amount = סה״כ להזמנה (מהשובר האחרון) · advance = "לתשלום" בשובר המקדמה · completion = "לתשלום" בשובר המשלים (= סה״כ − המקדמה שחח״י זיכו) ---------- */
+const ils2 = v => v === null || v === undefined || v === "" ? "—" : (Math.round(v * 100) / 100).toLocaleString("he-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const vatOf = v => Math.round(v * iecVat() * 100) / 100, withVat = v => Math.round(v * (1 + iecVat()) * 100) / 100;
+const PW_VCH = { "שובר מקדמה": "מקדמה", "שובר משלים": "משלים" };
+/** מה כתוב בשובר הפתוח: { kind, pay, total, issued, valid, expired } */
+function pwVoucher(o) { if (!IEC_PAY.has(o.stage)) return null; const pay = iecToPay(o);
+  return { kind: PW_VCH[o.stage], pay, total: mn(o.amount), issued: o.stageDate || "", valid: o.validUntil || "", expired: !!o.validUntil && o.validUntil < todayStr() }; }
+/** מה המתקן / ההזמנה (לתצוגה) */
+function pwWhat(o) { const i = o.itemId && RAW.items?.[o.itemId]; const base = i ? `${KIND_EMO[i.kind] || ""} ${i.name || i.kind}${i.kdFrom ? ` · ק.ד. ${i.kdFrom}` : ""}` : `${o.kind || ""}${o.name ? " · " + o.name : ""}${o.kd ? ` · ק.ד. ${o.kd}` : ""}`;
+  return o.kind === IEC_EXC ? `חיבור חריג — ${i ? (i.name || i.kind) : o.name || ""}${o.parentNo ? ` <span class="muted">(ארונות ${esc(o.parentNo)})</span>` : ""}` : esc(base); }
+/** בדיקת עקביות הסכומים — סכום שנראה כאילו הוזן כולל מע״מ, שובר בלי סכום, תשלום בלי תאריך */
+function pwMoneyChecks(d) { const V = 1 + iecVat(), out = [], near = (a, b) => Math.abs(a - b) <= Math.max(1, b * 0.0005);
+  d.iecOrders.filter(o => o.stage !== "בוטל").forEach(o => { const A = mn(o.amount), adv = mn(o.advance), c = mn(o.completion), L = t => out.push({ o, t });
+    if (A && adv && near(adv, A * 0.1 * V)) L(`המקדמה ${ils2(adv)} = 10% × ${ils2(A)} כולל מע״מ — נראה שהוזנה כולל מע״מ (ללא מע״מ: ${ils2(A * 0.1)})`);
+    else if (A && adv && adv > A) L(`המקדמה (${ils2(adv)}) גדולה מסה״כ ההזמנה (${ils2(A)})`);
+    if (A && c && near(c, (A - adv) * V)) L(`המשלים ${ils2(c)} = היתרה כולל מע״מ — נראה שהוזן כולל מע״מ (ללא מע״מ: ${ils2(A - adv)})`);
+    if (IEC_PAY.has(o.stage) && !iecToPay(o)) L(`בשלב '${o.stage}' בלי סכום לתשלום — להזין מהשובר (לתשלום ללא מע״מ)`);
+    if (["מקדמה שולמה", "שובר משלים", "משלים שולם", "מתואם חיבור", "חובר"].includes(o.stage) && adv && !o.advanceDate) L("המקדמה שולמה (לפי השלב) — חסר תאריך תשלום, ולכן היא לא נספרת ב'שולם'");
+    if (["משלים שולם", "מתואם חיבור", "חובר"].includes(o.stage) && A && !o.completionDate) L("המשלים שולם (לפי השלב) — חסר תאריך תשלום, ולכן הוא לא נספר ב'שולם'");
+    if ((mn(o.excAmount) || mn(o.excAdvance)) && o.kind !== IEC_EXC) L(`סכום חיבור חריג (${ils2(mn(o.excAmount))}) רשום בתוך הזמנת הארון — צריך הזמנה נפרדת מסוג 'חיבור חריג'`); });
+  return out; }
+function pwPayPage(d) {
+  const ed = !isViewer(), live = d.iecOrders.filter(o => o.stage !== "בוטל"), V = iecVat();   // כולל הזמנות מרכזות — שם שולם הכסף בפועל
+  const open = live.filter(o => IEC_PAY.has(o.stage)).map(o => ({ o, v: pwVoucher(o) })).sort((a, b) => b.v.expired - a.v.expired || (a.v.valid || "9").localeCompare(b.v.valid || "9") || (a.v.issued || "").localeCompare(b.v.issued || ""));
+  const now = open.filter(x => !x.v.expired && x.v.valid), unk = open.filter(x => !x.v.valid), exp = open.filter(x => x.v.expired), S = a => a.reduce((t, x) => t + x.v.pay, 0);
+  const paid = live.reduce((t, o) => t + iecPaid(o), 0), total = live.reduce((t, o) => t + mn(o.amount), 0), later = Math.max(0, total - paid - S(open));
+  const money3 = v => `<small>ללא מע״מ</small><b>${ils2(v)}</b><small>מע״מ ${ils2(vatOf(v))}</small><small>כולל מע״מ — להעברה:</small><small class="pw-incl">${ils2(withVat(v))} ₪</small>`;
+  const tile = (l, v, sub, cls = "") => `<div class="ch-t ${cls}"><span>${l}</span>${money3(v)}${sub ? `<small>${sub}</small>` : ""}</div>`;
+  const row = ({ o, v }) => `<tr class="${v.expired ? "pw-exp" : ""}"><td class="small">${esc(o.district || "")}</td><td>${pwWhat(o)}</td><td dir="ltr" class="nowrap">${esc(o.orderNo || "—")}</td>
+    <td class="nowrap"><b>${v.kind}</b>${o.kind === IEC_EXC ? `<div class="small muted">חיבור חריג</div>` : ""}</td><td class="nowrap small">${v.issued ? fmtD(v.issued) : "—"}</td>
+    <td class="nowrap small">${v.valid ? (v.expired ? `<b class="w-late">⛔ פג ${fmtD(v.valid)}</b>` : `${fmtD(v.valid)}${daysTo(v.valid) <= 14 ? ` <span class="pill warn">${daysTo(v.valid)} ימים</span>` : ""}`) : `<span class="muted">—</span>`}</td>
+    <td class="num">${v.total ? ils2(v.total) : "—"}</td><td class="num"><b>${ils2(v.pay)}</b></td><td class="num muted">${ils2(vatOf(v.pay))}</td><td class="num pw-inc"><b>${ils2(withVat(v.pay))}</b></td>
+    <td class="nowrap">${ed ? `<button class="btn sm" data-act="pwPaid" data-id="${o.id}" ${v.expired ? `title="השובר פג — לרוב צריך שובר חדש לפני תשלום"` : ""}>✓ שולם</button> <button class="btn ghost sm" data-act="pwVch" data-id="${o.id}" title="עדכון לפי שובר">✏</button>` : ""}</td></tr>`;
+  const foot = (a, l) => a.length ? `<tr class="pw-sum"><td colspan="7"><b>${l}</b> <span class="muted small">(${a.length})</span></td><td class="num"><b>${ils2(S(a))}</b></td><td class="num">${ils2(vatOf(S(a)))}</td><td class="num pw-inc"><b>${ils2(withVat(S(a)))}</b></td><td></td></tr>` : "";
+  const TH = `<tr><th>נפה</th><th>מתקן / הזמנה</th><th>מס׳ הזמנה</th><th>שובר</th><th>הונפק</th><th>בתוקף עד</th><th>סה״כ להזמנה<br><small>ללא מע״מ</small></th><th>לתשלום<br><small>ללא מע״מ</small></th><th>מע״מ<br><small>${Math.round(V * 1000) / 10}%</small></th><th>לתשלום<br><small>כולל מע״מ — להעברה</small></th><th></th></tr>`;
+  const dist = IEC_DISTRICTS.map(ds => { const a = live.filter(o => o.district === ds), p = a.reduce((t, o) => t + iecPaid(o), 0), n = a.filter(o => IEC_PAY.has(o.stage) && !pwVoucher(o).expired).reduce((t, o) => t + iecToPay(o), 0), x = a.filter(o => IEC_PAY.has(o.stage) && pwVoucher(o).expired).reduce((t, o) => t + iecToPay(o), 0), tt = a.reduce((t, o) => t + mn(o.amount), 0);
+    const c = v => `<td class="num">${v ? ils2(v) : "—"}<div class="small muted">${v ? ils2(withVat(v)) : ""}</div></td>`; return `<tr><td><b>${ds}</b></td>${c(tt)}${c(p)}${c(n)}${c(x)}${c(Math.max(0, tt - p - n - x))}</tr>`; }).join("");
+  const chk = pwMoneyChecks(d);
+  return `<div class="card pw-legend"><b>איך קוראים את הסכומים:</b> כל סכום באתר נרשם <b>ללא מע״מ</b> — כמו בשובר של חח״י. בשובר יש שלוש שורות: <b>סה״כ להזמנה</b> (עלות ההזמנה כולה), <b>לתשלום</b> (מה שהשובר הזה דורש) ו<b>סה״כ כולל מע״מ</b> (מה שמעבירים בפועל). בשובר משלים: לתשלום = סה״כ להזמנה פחות המקדמה שחח״י זיכו. העמודה הכחולה היא הסכום להעברה. <b>שובר של חח״י תקף 30 יום</b> — אחרי זה מבקשים שובר חדש (והמחיר עשוי להתעדכן).</div>
+    <div class="ch-tiles pw-money" style="--cc:#c98a12">${tile("💳 לשלם עכשיו", S(now), `${now.length} שוברים בתוקף`, now.length ? "t2" : "")}${unk.length ? tile("❔ תוקף לא רשום", S(unk), `${unk.length} שוברים — לבדוק את התאריך בשובר`, "") : ""}${tile("⛔ שוברים שפגו", S(exp), `${exp.length} — לבקש שובר חדש`, exp.length ? "t2" : "")}${tile("✓ שולם עד היום", paid, "מקדמות + משלימים עם תאריך תשלום", "t3")}${tile("⏳ עוד לא הונפק שובר", later, "יתרת ההזמנות שאין עליה שובר פתוח", "t1")}</div>
+    <div class="card"><div class="row" style="margin-bottom:8px"><h2 style="margin:0">שוברים פתוחים — לתשלום</h2><span class="spacer"></span>${ed ? `<button class="btn sm" data-act="pwVch" data-id="">+ הזנת שובר</button>` : ""}<button class="btn ghost sm" data-act="pwPayCopy">📋 העתקה לבקשת תשלום</button></div>
+      ${open.length ? `<div class="tablewrap" style="max-height:none"><table class="sheet pw-pay"><thead>${TH}</thead><tbody>${exp.map(row).join("")}${foot(exp, "⛔ פגו — צריך שובר חדש")}${now.map(row).join("")}${foot(now, "💳 בתוקף — לשלם עכשיו")}${unk.map(row).join("")}${foot(unk, "❔ תוקף לא רשום — לבדוק בשובר")}${[exp, now, unk].filter(a => a.length).length > 1 ? foot(open, "סה״כ שוברים פתוחים") : ""}</tbody></table></div>` : `<p class="muted">אין שוברים פתוחים.</p>`}</div>
+    <div class="card"><h2 style="margin-top:0">מאזן לפי נפה <span class="muted small">— בכל תא: ללא מע״מ, ומתחת כולל מע״מ</span></h2><div class="tablewrap" style="max-height:none"><table class="sheet"><thead><tr><th>נפה</th><th>סה״כ הזמנות</th><th>שולם</th><th>שוברים פתוחים בתוקף / תוקף לא רשום</th><th>שוברים שפגו</th><th>עוד לא הונפק שובר</th></tr></thead><tbody>${dist}</tbody></table></div></div>
+    ${chk.length ? `<div class="card"><h2 style="margin-top:0">⚠ סכומים לבדיקה <span class="muted small">(${chk.length})</span></h2><p class="small muted" style="margin-top:0">סכומים שנראים כאילו הוזנו כולל מע״מ, שובר בלי סכום, או תשלום בלי תאריך (ואז הוא לא נספר).</p>
+      <table class="sheet"><tbody>${chk.map(c => `<tr><td dir="ltr" class="nowrap"><a href="#" data-act="pwOrd" data-id="${esc(c.o.orderNo || c.o.name || "")}">${esc(c.o.orderNo || "ללא מס׳")}</a></td><td class="small">${pwWhat(c.o)}</td><td class="small">${esc(c.t)}</td><td>${ed ? `<button class="btn ghost sm" data-act="pwVch" data-id="${c.o.id}">✏</button>` : ""}</td></tr>`).join("")}</tbody></table></div>` : ""}`;
+}
+/** טקסט לבקשת תשלום — מסודר לפי תוקף */
+function pwPayText(d) { const a = d.iecOrders.filter(o => IEC_PAY.has(o.stage) && iecToPay(o)).map(o => ({ o, v: pwVoucher(o) })).sort((x, y) => (x.v.valid || "9").localeCompare(y.v.valid || "9"));
+  const S = b => b.reduce((t, x) => t + x.v.pay, 0), tot = b => `ללא מע״מ ${ils2(S(b))} · מע״מ ${ils2(vatOf(S(b)))} · כולל מע״מ ${ils2(withVat(S(b)))}`;
+  const L = ({ o, v }, k) => `${k + 1}. הזמנה ${o.orderNo} · ${o.district || ""} · ${o.kind === IEC_EXC ? "חיבור חריג — " : ""}${RAW.items?.[o.itemId]?.name || o.name || o.kind || ""} · שובר ${v.kind}${v.issued ? " מ־" + fmtD(v.issued) : ""}${v.valid ? " · ניתן לשלם עד " + fmtD(v.valid) : ""}\n   ללא מע״מ ${ils2(v.pay)} · מע״מ ${ils2(vatOf(v.pay))} · כולל מע״מ ${ils2(withVat(v.pay))}`;
+  const sec = (t, b) => b.length ? `${t} (${b.length})\n${b.map(L).join("\n")}\nסה״כ: ${tot(b)}\n\n` : "";
+  return `תשלומים לחברת החשמל — ${fmtD(todayStr())}\n(סכומים בש״ח. "כולל מע״מ" = הסכום להעברה. שובר של חח״י תקף 30 יום)\n\n`
+    + sec("בתוקף — לשלם", a.filter(x => x.v.valid && !x.v.expired)) + sec("תוקף לא רשום — לבדוק בשובר", a.filter(x => !x.v.valid)) + sec("פג תוקף — לבקש שובר חדש (הסכום עשוי להתעדכן)", a.filter(x => x.v.expired))
+    + `סה״כ כל השוברים הפתוחים: ${tot(a)}`; }
+/** הזנת שובר: מעתיקים מהשובר שלושה מספרים — סה״כ להזמנה, לתשלום, כולל מע״מ. האתר בודק שהם מתיישבים (כדי שלא יוזן סכום כולל מע״מ בטעות) */
+function pwVoucherModal(o0) {
+  const O = (RAW.iecOrders ? Object.entries(RAW.iecOrders).map(([id, x]) => ({ ...x, id })) : []).filter(o => o.stage !== "בוטל");
+  modal(`<h2 style="margin:0">🧾 הזנת שובר מחח״י</h2><p class="small muted" style="margin:2px 0 10px">מעתיקים את המספרים כפי שהם בשובר. כל הסכומים <b>ללא מע״מ</b>, חוץ מהשדה האחרון.</p>
+    <div class="pw-form"><label>מס׳ הזמנה<input class="inp" id="v_no" dir="ltr" list="v_nos" value="${esc(o0?.orderNo || "")}"><datalist id="v_nos">${O.map(o => `<option value="${esc(o.orderNo || "")}">${esc((o.kind || "") + " " + (o.name || "") + (o.kd ? " ק.ד. " + o.kd : ""))}</option>`).join("")}</datalist></label>
+      <label>סוג השובר<select class="inp" id="v_kind"><option value="שובר מקדמה">מקדמה</option><option value="שובר משלים" ${o0?.stage === "שובר משלים" || o0?.stage === "מקדמה שולמה" ? "selected" : ""}>משלים</option><option value="full">חשבון מלא (תשלום אחד)</option></select></label>
+      <label>תאריך השובר<input type="date" class="inp" id="v_date" value="${esc(o0 && IEC_PAY.has(o0.stage) ? o0.stageDate || "" : todayStr())}"></label>
+      <label>ניתן לשלם עד <span class="muted small">(אם כתוב)</span><input type="date" class="inp" id="v_valid" value="${esc(o0?.validUntil || "")}"></label>
+      <label>סה״כ להזמנה <span class="muted small">ללא מע״מ</span><input class="inp" id="v_tot" inputmode="decimal" dir="ltr" value="${esc(o0?.amount ?? "")}"></label>
+      <label>לתשלום <span class="muted small">ללא מע״מ</span><input class="inp" id="v_pay" inputmode="decimal" dir="ltr" value="${esc(o0 ? (iecToPay(o0) || "") : "")}"></label>
+      <label>סה״כ כולל מע״מ <span class="muted small">(השורה התחתונה בשובר — לבדיקה)</span><input class="inp" id="v_inc" inputmode="decimal" dir="ltr"></label></div>
+    <div id="v_chk" class="pw-chk"></div>
+    <div class="row" style="gap:6px;margin-top:10px"><button class="btn" id="v_go">שמירה</button><span class="spacer"></span><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    const q = s => m.querySelector(s), N = s => moneyNum(q(s).value) || 0, V = 1 + iecVat();
+    const cur = () => { const no = q("#v_no").value.trim(); return O.filter(o => String(o.orderNo || "").trim() === no); };
+    const chk = () => { const a = cur(), o = a[0], tot = N("#v_tot"), pay = N("#v_pay"), inc = N("#v_inc"), k = q("#v_kind").value, L = [];
+      if (!q("#v_no").value.trim()) L.push(["", "להזין מס׳ הזמנה"]); else if (!a.length) L.push(["bad", "אין באתר הזמנה עם המספר הזה — אפשר להוסיף אותה בלשונית 'הזמנות וכספים'"]); else if (a.length > 1) L.push(["bad", `המספר מופיע ב־${a.length} הזמנות באתר — לתקן קודם`]);
+      else L.push(["ok", `${pwWhat(o)} · שלב נוכחי: ${esc(o.stage)}`]);
+      if (pay) L.push(["", `להעברה: <b>${ils2(pay)}</b> + מע״מ ${ils2(vatOf(pay))} = <b>${ils2(withVat(pay))} ₪</b>`]);
+      if (pay && inc) { const d1 = Math.abs(withVat(pay) - inc); L.push(d1 <= 1 ? ["ok", "✓ הסכום כולל המע״מ תואם לשובר"] : Math.abs(pay - inc) <= 1 ? ["bad", "'לתשלום' שווה ל'כולל מע״מ' — כנראה הוזן כולל מע״מ. להזין את השורה 'לתשלום' (ללא מע״מ)"] : Math.abs(withVat(pay * V) - withVat(inc)) <= 2 || Math.abs(pay - inc * V) <= 1 ? ["bad", "נראה שהסכומים הפוכים — 'לתשלום' הוא ללא מע״מ, 'כולל מע״מ' גדול ממנו ב־18%"] : ["bad", `לא תואם: ${ils2(pay)} × ${V} = ${ils2(withVat(pay))}, בשובר ${ils2(inc)}. לבדוק את המספרים`]); }
+      if (o && k === "שובר משלים" && tot && pay && pay <= tot) { const adv = mn(o.advance), ex = tot - adv; if (adv && Math.abs(ex - pay) > 1) L.push(["warn", `סה״כ ${ils2(tot)} − מקדמה רשומה ${ils2(adv)} = ${ils2(ex)}, בשובר לתשלום ${ils2(pay)}. חח״י זיכו מקדמה של ${ils2(tot - pay)} — המקדמה באתר תעודכן לסכום הזה`]); }
+      if (tot && pay && pay > tot) L.push(["bad", "לתשלום גדול מסה״כ ההזמנה"]);
+      q("#v_chk").innerHTML = L.map(([c, t]) => `<div class="pw-c ${c}">${t}</div>`).join(""); q("#v_go").disabled = !(a.length === 1 && pay); };
+    m.querySelectorAll("input,select").forEach(e => e.oninput = e.onchange = chk); chk(); q("#mNo").onclick = close;
+    q("#v_go").onclick = async () => { const o = cur()[0], k = q("#v_kind").value, tot = N("#v_tot"), pay = N("#v_pay"), dt = q("#v_date").value || todayStr(), inc = N("#v_inc");
+      const set = { stage: k === "full" ? "שובר משלים" : k, stageDate: dt, validUntil: q("#v_valid").value || "" };
+      if (tot) set.amount = tot;
+      if (k === "שובר מקדמה") Object.assign(set, { advance: pay, advanceDate: "" });
+      else if (k === "full") Object.assign(set, { advance: 0, advanceDate: "", completion: pay, completionDate: "" });
+      else { set.completion = pay; set.completionDate = ""; if (tot && Math.abs(tot - pay - mn(o.advance)) > 1) set.advance = Math.round((tot - pay) * 100) / 100; }
+      const h = `שובר ${k === "full" ? "חשבון מלא" : PW_VCH[k]} ${fmtD(dt)}: ${tot ? `סה״כ להזמנה ${ils2(tot)}, ` : ""}לתשלום ${ils2(pay)} ללא מע״מ (${ils2(inc || withVat(pay))} כולל)${set.validUntil ? `, בתוקף עד ${fmtD(set.validUntil)}` : ""}`;
+      await api.update("iecOrders", o.id, { ...set, last: h, history: { ...(o.history || {}), [newId()]: { date: todayStr(), text: h, by: tkWho() } } }); close(); toast("השובר נשמר ✓"); render(); };
+  });
+}
+/** סימון תשלום: התאריך, והסכום שהועבר בפועל (כולל מע״מ) — לבדיקה מול השובר */
+function pwPaidModal(o) { const v = pwVoucher(o); if (!v) return;
+  modal(`<h2 style="margin:0">✓ תשלום ${v.kind} — הזמנה <span dir="ltr">${esc(o.orderNo)}</span></h2><p class="small muted" style="margin:2px 0 10px">${pwWhat(o)}</p>
+    <p>לפי השובר: <b>${ils2(v.pay)}</b> ללא מע״מ · <b>${ils2(withVat(v.pay))} ₪</b> כולל מע״מ${v.expired ? `<br><b class="w-late">⛔ השובר פג ב־${fmtD(v.valid)} — לוודא שחח״י קיבלו את התשלום</b>` : ""}</p>
+    <div class="pw-form"><label>תאריך התשלום<input type="date" class="inp" id="p_d" value="${todayStr()}"></label><label>הועבר בפועל <span class="muted small">כולל מע״מ</span><input class="inp" id="p_a" dir="ltr" inputmode="decimal" value="${withVat(v.pay)}"></label></div><div id="p_c" class="pw-chk"></div>
+    <div class="row" style="gap:6px;margin-top:10px"><button class="btn" id="p_go">שמירה</button><span class="spacer"></span><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    const q = s => m.querySelector(s), c = () => { const a = moneyNum(q("#p_a").value) || 0, df = a - withVat(v.pay); q("#p_c").innerHTML = Math.abs(df) <= 1 ? `<div class="pw-c ok">✓ תואם לשובר</div>` : `<div class="pw-c warn">הפרש של ${ils2(df)} ₪ מהשובר — יירשם בהיסטוריה</div>`; };
+    q("#p_a").oninput = c; c(); q("#mNo").onclick = close;
+    q("#p_go").onclick = async () => { const dt = q("#p_d").value || todayStr(), a = moneyNum(q("#p_a").value) || 0, adv = v.kind === "מקדמה";
+      const h = `שולם ${v.kind} ${fmtD(dt)}: ${ils2(a)} כולל מע״מ (לפי השובר ${ils2(withVat(v.pay))})`;
+      await api.update("iecOrders", o.id, { stage: adv ? "מקדמה שולמה" : "משלים שולם", stageDate: dt, [adv ? "advanceDate" : "completionDate"]: dt, last: h, history: { ...(o.history || {}), [newId()]: { date: todayStr(), text: h, by: tkWho() } } });
+      close(); toast("התשלום נרשם ✓"); render(); };
+  });
 }
 function pwFacTable(d, R) {
   const F = pwF(), ed = !isViewer(), T = todayStr();
-  const KINDS = ["תט״ז", "חדר טרפו", "ארון שקד", "אתר איסוף", "העתקת עמוד", "אחר / לבירור"];
+  const KINDS = ["תט״ז", "חדר טרפו", "ארון שקד", "אתר איסוף", "העתקת עמוד", "חיבור חריג", "אחר / לבירור"];
   const fit = r => (!F.kind || r.kind === F.kind) && (!F.dist || r.dist === F.dist) && (!F.gz || r.gz?.id === F.gz) && (!F.at || (F.at === "late" ? r.nx.late : r.nx.at === F.at))
     && (!F.prob || r.nx.late || ["noord", "pay"].includes(r.nx.k)) && (!F.q || qnNorm([r.i?.name, r.i?.kdFrom, r.i?.note, ...r.os.map(o => [o.orderNo, o.name, o.kd, o.note].join(" "))].join(" ")).includes(qnNorm(F.q)));
   const L = R.filter(fit).sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind) || (b.kd ?? -1) - (a.kd ?? -1));
@@ -4524,13 +4652,13 @@ function pwFacTable(d, R) {
   const gzs = [...new Map(R.filter(r => r.gz).map(r => [r.gz.id, r.gz])).values()];
   const kb = (k, l) => `<button class="w-tb ${F.kind === k ? "on" : ""}" data-act="pwF" data-id="kind|${k}">${l} <small>${k ? R.filter(r => r.kind === k).length : R.length}</small></button>`;
   const row = r => { const i = r.i, nx = r.nx, pad = PAD_KINDS.includes(r.kind), em = KIND_EMO[r.kind] || "📍";
-    return `<tr data-rid="${esc(r.id)}"><td class="pw-nm"><span class="pw-em">${em}</span><b>${esc(i ? i.name || r.kind : r.o.name || r.o.kind || "הזמנה")}</b><div class="small muted">${r.kd !== null ? "ק.ד. " + esc(i ? i.kdFrom : r.o.kd) : ""}${i ? "" : " · הזמנה בלי פריט באתר"}</div></td>
+    return `<tr data-rid="${esc(r.id)}"><td class="pw-nm"><span class="pw-em">${em}</span><b>${esc(i ? i.name || r.kind : r.o.name || r.o.kind || "הזמנה")}</b><div class="small muted">${r.kd !== null ? "ק.ד. " + esc(i ? i.kdFrom : r.o.kd) : ""}${i ? "" : r.o?.kind === IEC_EXC ? " · חיבור חריג שלא שויך לתט״ז / חדר טרפו" : " · הזמנה בלי פריט באתר"}</div>${r.feedR ? `<div class="small">⚡ מוזן מ־<b>${esc(r.feedR.i?.name || r.feedR.kind)}</b></div>` : ""}${r.o?.parentNo && r.o.kind === IEC_EXC ? `<div class="small muted">לארונות: ${esc(r.o.parentNo)}</div>` : ""}</td>
       <td class="small">${esc(r.dist || "—")}<div class="muted">${esc(r.gz?.name || "")}</div></td>
       <td>${i && pad ? `${sel(i, "padStatus")}${dt(i, "padDone")}` : `<span class="muted">—</span>`}</td>
       <td>${i ? sel(i, "status") : `<span class="muted">—</span>`}</td>
       <td>${i ? dt(i, "plannedDate", nx.late) : `<span class="muted">—</span>`}</td>
       <td>${i ? dt(i, "doneDate") : `<span class="muted">—</span>`}</td>
-      <td class="small nowrap">${r.os.map(o => `<button class="pill" style="border:0;cursor:pointer;background:${IEC_COLORS[o.stage] || "#eee"}" data-act="pwOrd" data-id="${esc(o.orderNo || o.name || "")}" title="פתיחה בהזמנות וכספים">${esc(o.stage)} · <span dir="ltr">${esc(o.orderNo || "ללא מס׳")}</span></button>`).join("<br>")
+      <td class="small nowrap">${r.os.map(o => `<button class="pill" style="border:0;cursor:pointer;background:${IEC_COLORS[o.stage] || "#eee"}" data-act="pwOrd" data-id="${esc(o.orderNo || o.name || "")}" title="פתיחה בהזמנות וכספים">${o.kind === IEC_EXC && r.i ? "חריג · " : ""}${esc(o.stage)} · <span dir="ltr">${esc(o.orderNo || "ללא מס׳")}</span></button>`).join("<br>")
         || (ed && i ? `<button class="btn ghost sm" data-act="pwNewOrd" data-id="${i.id}">+ הזמנה</button>` : "")}</td>
       <td class="small">${pwPay(r.o)}</td>
       <td class="small"><span class="pw-at" style="--c:${PW_AT_CLR[nx.at] || "#888"}">${esc(nx.at)}</span> ${esc(nx.t)}${nx.late ? ` <b class="w-late" title="עבר התאריך המתוכנן">⏰</b>` : ""}</td>
@@ -4606,6 +4734,9 @@ async function pwClick(act, b) {
   else if (act === "pwGap") gapModal("iec");
   else if (act === "pwDisc") { const p = gapParties().find(x => x.k === "iec"); const id = await api.add("mtgs", { v: 2, type: "רשות", contractorId: "", party: "iec", partyL: p?.l || "חח״י", title: "דיון עם חח״י", attendees: me?.name || "", date: todayStr(), by: tkWho(), open: true, createdAt: new Date().toISOString(), dec: {} });
     if (id) { ui.page = "disc:" + id; location.hash = ui.page; render(); scrollTo(0, 0); } }
+  else if (act === "pwPaid") { const o = D().iecOrders.find(x => x.id === b.dataset.id); if (o) pwPaidModal(o); }
+  else if (act === "pwVch") pwVoucherModal(D().iecOrders.find(x => x.id === b.dataset.id) || null);
+  else if (act === "pwPayCopy") { const t = pwPayText(D()); try { await navigator.clipboard.writeText(t); toast("הועתק ✓"); } catch { modal(`<textarea class="inp" style="width:100%;height:300px">${esc(t)}</textarea><button class="btn" id="mNo">סגירה</button>`, (m, c) => m.querySelector("#mNo").onclick = c); } }
   else if (act === "pwOrd") { F.tab = "orders"; ui.iec = { dist: "", kind: "", stage: "", q: b.dataset.id, showOff: true }; render(); scrollTo(0, 0); }
   else if (act === "pwNewOrd") { const i = RAW.items?.[b.dataset.id]; if (!i) return; const d = D();
     await api.add("iecOrders", { district: iecDistOf(d, kdNum(i.kdFrom)), kind: i.kind, name: i.name || "", orderNo: "", kd: i.kdFrom || "", sec: "", place: "", stage: "טרם הוזמן", stageDate: todayStr(), amount: "", advance: "", advanceDate: "", completion: "", completionDate: "",
@@ -5286,6 +5417,38 @@ function issueModal(id) {
   });
 }
 
+/* ---------- קובץ תיקון (kind: "border-patch") — רשימת שינויים מנומקת: הוספה / עדכון שדות. כל שינוי מוצג עם "לפני → אחרי" והמקור, ונבחר בנפרד.
+   לפני ההחלה יורד גיבוי. שדה שהשתנה באתר מאז שהקובץ הוכן (לא תואם ל"לפני") — מדולג ומדווח, כדי לא לדרוס עבודה של מישהו אחר. ---------- */
+const PATCH_F = { orderNo: "מס׳ הזמנה", kind: "סוג", kd: "ק.ד.", name: "שם / תיאור", itemId: "מתקן מקושר", stage: "שלב", stageDate: "בשלב מאז", amount: "הזמנה ₪", advance: "מקדמה ₪", advanceDate: "תשלום מקדמה", completion: "משלים ₪",
+  completionDate: "תשלום משלים", validUntil: "תוקף שובר", parentNo: "הזמנות ארונות", district: "נפה", excNo: "חיבור חריג — הזמנה", excAmount: "חיבור חריג ₪", excAdvance: "חיבור חריג — מקדמה ₪", excAdvanceDate: "חיבור חריג — תשלום מקדמה", feed: "מוזן מ־", status: "סטטוס", note: "הערה", title: "נושא", owner: "מי מטפל", priority: "חשיבות" };
+const patchVal = (k, v) => { if (v === undefined || v === null || v === "") return `<span class="muted">—</span>`; if ((k === "itemId" || k === "feed") && RAW.items?.[v]) return esc(RAW.items[v].name || v) + (RAW.items[v].kdFrom ? ` <span class="muted">ק.ד. ${esc(RAW.items[v].kdFrom)}</span>` : "");
+  if (/Date$|validUntil/.test(k) && /^\d{4}-\d\d-\d\d$/.test(v)) return fmtD(v); if (typeof v === "number") return num(v, 2); return esc(String(v)); };
+function patchReview(j) {
+  const ops = (j.ops || []).map((o, k) => ({ ...o, k, on: o.on !== false })), G = j.groups || [];
+  const curOf = o => o.col && o.rid ? RAW[o.col]?.[o.rid] : null;
+  const stale = o => { if (o.add) return !!(o.rid && RAW[o.col]?.[o.rid]); const c = curOf(o); if (!c) return true; return Object.entries(o.before || {}).some(([f, v]) => String(c[f] ?? "") !== String(v ?? "")); };
+  const opHtml = o => { const st = stale(o), F = o.add ? Object.keys(o.show || o.add) : Object.keys(o.set || {});
+    return `<div class="pt-op ${st ? "pt-stale" : ""}"><label class="row" style="gap:8px;align-items:flex-start"><input type="checkbox" data-pt="${o.k}" ${o.on && !st ? "checked" : ""} ${st ? "disabled" : ""}><span style="flex:1"><b>${esc(o.t)}</b>${o.why ? `<div class="small muted">${esc(o.why)}</div>` : ""}
+      ${st ? `<div class="small w-late">${o.add ? "כבר קיים באתר — ידולג" : "הנתון באתר השתנה מאז שהקובץ הוכן — ידולג (כדי לא לדרוס עדכון חדש)"}</div>` : ""}
+      <table class="pt-t">${F.map(f => `<tr><td>${esc(PATCH_F[f] || f)}</td>${o.add ? "" : `<td class="pt-b">${patchVal(f, (o.before || {})[f] ?? curOf(o)?.[f])}</td><td>←</td>`}<td class="pt-a">${patchVal(f, o.add ? (o.show || o.add)[f] : o.set[f])}</td></tr>`).join("")}</table></span></label></div>`; };
+  modal(`<h2 style="margin:0">📋 ${esc(j.title || "קובץ תיקון")}</h2><p class="small muted" style="margin:2px 0 6px">${esc(j.note || "")} · הוכן ${esc(j.createdAt || "")}${j.basedOn ? " · לפי גיבוי " + esc(j.basedOn) : ""}</p>
+    <div class="pt-list">${G.map(g => { const a = ops.filter(o => o.g === g.id); return a.length ? `<details class="pt-g" open><summary><b>${esc(g.t)}</b> <span class="muted small">(${a.length})</span>${g.note ? `<div class="small muted">${esc(g.note)}</div>` : ""}</summary>${a.map(opHtml).join("")}</details>` : ""; }).join("")}</div>
+    <div class="row" style="gap:6px"><button class="btn" id="pt_go"></button><button class="btn ghost sm" id="pt_all">סימון הכל</button><button class="btn ghost sm" id="pt_none">ביטול הסימון</button><span class="spacer"></span><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+    const q = s => m.querySelector(s), sel = () => [...m.querySelectorAll("[data-pt]:checked")].map(e => ops[+e.dataset.pt]);
+    const cnt = () => { q("#pt_go").textContent = `החלת ${sel().length} שינויים (יורד גיבוי לפני)`; q("#pt_go").disabled = !sel().length; };
+    m.querySelectorAll("[data-pt]").forEach(e => e.onchange = cnt); cnt(); q("#mNo").onclick = close;
+    q("#pt_all").onclick = () => { m.querySelectorAll("[data-pt]:not(:disabled)").forEach(e => e.checked = true); cnt(); };
+    q("#pt_none").onclick = () => { m.querySelectorAll("[data-pt]").forEach(e => e.checked = false); cnt(); };
+    q("#pt_go").onclick = async () => { const S = sel(); q("#pt_go").disabled = true;
+      try { downloadJson(backupName()); } catch (e) { return alertMsg("הגיבוי לא ירד — התיקון לא בוצע"); }
+      let ok = 0, sk = 0;
+      for (const o of S) { if (stale(o)) { sk++; continue; }
+        if (o.add) { if (o.col === "issues") { const { last, ...rec } = o.add; await wCreate(rec, last || ""); } else await api.put(o.col, o.rid, { ...o.add, updatedAt: new Date().toISOString(), updatedBy: tkWho() }); }
+        else await api.update(o.col, o.rid, o.set);
+        ok++; q("#pt_go").textContent = `${ok}/${S.length}…`; }
+      close(); toast(`בוצעו ${ok} שינויים${sk ? ` · ${sk} דולגו (השתנו באתר בינתיים)` : ""} ✓`); render(); };
+  });
+}
 /** מיזוג: מוסיף רשומות מקובץ בלי לגעת במה שכבר קיים (לפי מזהה) */
 function pickMergeFile() {
   const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,application/json";
@@ -5296,6 +5459,7 @@ function pickMergeFile() {
 }
 /** הוספת רשומות מקובץ — רק רשומות שעוד לא קיימות; שום דבר קיים לא נמחק ולא משתנה */
 function mergeFromJson(j, fname) {
+      if (j?.kind === "border-patch") return patchReview(j);
       if (!isBackup(j)) return alertModal("הקובץ לא נראה כמו קובץ נתונים של האתר.");
       const f = { name: fname }, add = {}, skip = {};
       for (const c of DATA_COLS) for (const [id, v] of Object.entries(j.data[c] || {})) {
@@ -6446,10 +6610,10 @@ const TABLE_DEFS = {
     { key: "main", label: "קבלן באזור", cls: "small nowrap", cell: o => esc(iecMain(d, o)?.name || "—") },
     { key: "stage", label: "שלב", cell: o => sel(o, "stage", IEC_STAGES.map(s => `<option ${s === o.stage ? "selected" : ""}>${s}</option>`).join(""), `style="background:${IEC_COLORS[o.stage] || "#fff"};font-weight:600${o.stage === "בוטל" ? ";text-decoration:line-through;color:#888" : ""}"`) },
     { key: "stageDate", label: "בשלב מאז", cell: o => dt(o, "stageDate") + (o.stageDate && !IEC_DONE.has(o.stage) && daysSince(o.stageDate) > 30 ? `<span class="pill warn" title="ימים באותו שלב">${daysSince(o.stageDate)} ימים</span>` : "") },
-    { key: "amount", label: "הזמנה ₪", ...money("amount") },
-    { key: "advance", label: "מקדמה ₪", ...money("advance") },
+    { key: "amount", label: "סה״כ להזמנה ₪ (ללא מע״מ)", ...money("amount") },
+    { key: "advance", label: "מקדמה ₪ (ללא מע״מ)", ...money("advance") },
     { key: "advanceDate", label: "תשלום מקדמה", cell: o => dt(o, "advanceDate") },
-    { key: "completion", label: "משלים ₪", ...money("completion") },
+    { key: "completion", label: "משלים ₪ (ללא מע״מ)", ...money("completion") },
     { key: "completionDate", label: "תשלום משלים", cell: o => dt(o, "completionDate") },
     { key: "balance", label: "יתרה ₪", cls: "c calc", money: true, sum: rows => rows.reduce((s, r) => s + (iecBalance(r) || 0), 0), cell: o => { const b = iecBalance(o); return b === null ? "—" : ils(b); } },
     { key: "validUntil", label: "תוקף שובר", cell: o => dt(o, "validUntil") + (o.validUntil && !IEC_DONE.has(o.stage) && daysTo(o.validUntil) <= 14 ? `<span class="pill warn">${daysTo(o.validUntil) < 0 ? "פג" : daysTo(o.validUntil) + " ימים"}</span>` : "") },
