@@ -5994,8 +5994,11 @@ function customColDef(col, c) {
 }
 /** העמודות המוצגות בפועל: קבועות שלא הוסתרו + מותאמות */
 /** כל העמודות של טבלה (קבועות + שהוספת) לפי הסדר שנקבע. עמודה בלי מיקום שמור — בסוף, בסדר ברירת המחדל. */
+const ED_CACHE = new Map();
 function orderedCols(table, store = table) {
-  const all = [...TABLE_DEFS[table](), ...customOf(table).filter(c => !(table === "orders" && c.id === "signer")).map(c => customColDef(store, c))];   // "סטטוס" של הזמנה — עמודה קבועה (x_signer)
+  const B0 = TABLE_DEFS[table](), emptyDup = c => { const k = COL_SYN[qnNorm(c.label)]; if (!k || !B0.some(x => x.key === k)) return false; const ck = store + "|" + c.id;
+    if (!ED_CACHE.has(ck)) { ED_CACHE.set(ck, !list(store).some(r => String(r["x_" + c.id] ?? "").trim())); if (ED_CACHE.size === 1) setTimeout(() => ED_CACHE.clear(), 0); } return ED_CACHE.get(ck); };   // עמודה שהוספת בשם של שדה קבוע (למשל "תאריך מתוכנן") וריקה — מוסתרת, הקבועה מוצגת
+  const all = [...B0, ...customOf(table).filter(c => !(table === "orders" && c.id === "signer") && !emptyDup(c)).map(c => customColDef(store, c))];   // "סטטוס" של הזמנה — עמודה קבועה (x_signer)
   const ord = tcfg(table).order || [];
   if (!ord.length) return all;
   // עמודה חדשה שלא בסדר השמור — נכנסת מיד אחרי העמודה שלפניה בהגדרה (ולא בסוף הטבלה)
@@ -6045,7 +6048,7 @@ const cellText = td => {
 };
 const shownText = td => { const sel = td.querySelector("select"); if (sel) return sel.options[sel.selectedIndex]?.text || "";
   const inp = td.querySelector("input:not([type=checkbox]), textarea"); if (inp) { const m = inp.type === "date" && inp.value.match(/^(\d{4})-(\d\d)-(\d\d)$/); return m ? `${m[3]}/${m[2]}/${m[1]}` : inp.value; }
-  return (td.innerText || "").split("\n")[0]; };
+  for (const n of td.childNodes) { const t = (n.textContent || "").trim(); if (t) return t.split("\n")[0]; } return ""; };   // בלי innerText (מאלץ פריסה — איטי בטבלאות גדולות)
 /* ---------- מיון לפי עמודה (לכל טבלה) ----------
    לחיצה על כותרת: עולה → יורד → ברירת מחדל. נשמר במכשיר. ברירת מחדל: טבלאות עם ק.ד. — לפי ק.ד. (גבוה למעלה, כמו בקו) */
 const SORT_DEF = { requests: { k: "date", dir: -1 }, designSegments: { k: "kdFrom", dir: -1 }, orders: { k: "kdFrom", dir: -1 }, items: { k: "kdFrom", dir: -1 } };
@@ -6143,6 +6146,13 @@ function fchipsDraw(tb, t, rows, base, valOf, okChip, FC, shown) {
 const tdOf0 = (tr, k) => tr.querySelector(`td[data-k="${CSS.escape(k)}"]`);
 
 /** חלון ניהול עמודות: סדר (גרירה או חצים), הצגה/הסתרה, הוספה, שינוי שם והסרה */
+/** עמודה בשם שכבר קיים בטבלה (או שם נפוץ של שדה קבוע — "תאריך מתוכנן" = plannedDate) — מחזיר את שם העמודה הקיימת */
+const COL_SYN = { "תאריך מתוכנן": "plannedDate", "מתוכנן": "plannedDate", "תאריך ביצוע": "doneDate", "סטטוס": "status", "הערה": "note", "הערות": "note" };
+function colDupOf(table, label, skip = "") {
+  const n = qnNorm(label); if (!n) return ""; const B = TABLE_DEFS[table](), C = orderedCols(table).filter(c => c.key !== skip);
+  const k = COL_SYN[n]; const hit = (k && B.find(c => c.key === k)) || C.find(c => qnNorm(c.label) === n);
+  return hit ? hit.label : "";
+}
 function colsModal(table) {
   const draw = () => {
     const h = hiddenOf(table), cols = orderedCols(table);
@@ -6153,6 +6163,7 @@ function colsModal(table) {
         <span class="grip" aria-hidden="true">⋮⋮</span>
         <input type="checkbox" data-colkey="${c.key}" ${h[c.key] ? "" : "checked"} aria-label="הצגת ${esc(c.label)}">
         ${c.custom ? `<input class="inp" style="flex:1;min-width:0" value="${esc(c.label)}" data-rename="${c.key.slice(2)}" aria-label="שם עמודה">` : `<span style="flex:1">${esc(c.label)}</span>`}
+        ${c.custom && colDupOf(table, c.label, c.key) ? `<span class="pill warn" title="יש כבר עמודה קבועה עם אותם נתונים: ${esc(colDupOf(table, c.label, c.key))}">כפולה של "${esc(colDupOf(table, c.label, c.key))}"</span>` : ""}
         ${c.custom ? `<button class="btn del" data-remove="${c.key.slice(2)}">הסרה</button>` : `<span class="pill">קבועה</span>`}
         <button class="mv" data-mv="-1" data-key="${c.key}" ${i === 0 ? "disabled" : ""} aria-label="למעלה">▲</button>
         <button class="mv" data-mv="1" data-key="${c.key}" ${i === cols.length - 1 ? "disabled" : ""} aria-label="למטה">▼</button>
@@ -6205,6 +6216,7 @@ function colsModal(table) {
       });
       const add = async () => {
         const l = card.querySelector("#ncLabel"); if (!l.value.trim()) { l.style.borderColor = "var(--warn)"; l.focus(); return; }
+        const same = colDupOf(table, l.value); if (same) { l.style.borderColor = "var(--warn)"; toast(`כבר יש עמודה "${same}" עם אותם נתונים — אפשר להציג אותה בסימון ✓ למעלה`); return; }
         const cid = newId(), cus = { ...(tcfg(table).custom || {}), [cid]: { label: l.value.trim(), type: card.querySelector("#ncType").value, order: Date.now() } };
         await setCfg(table, { custom: cus }); redraw(); card.querySelector("#ncLabel").focus();
       };
@@ -6316,8 +6328,14 @@ const TABLE_DEFS = {
     { key: "padStatus", label: "הכנת משטח (קבלן הגזרה)", cell: i => st(i, "padStatus", i._padRep) },
     { key: "padDone", label: "משטח — תאריך", cell: i => dt(i, "padDone") },
     { key: "status", label: ui.page === "k:trafo" ? "הובלה והתקנה (קבלן ייעודי)" : "הצבת תט״ז (חח״י)", cell: i => st(i, "status", i._rep) },
+    { key: "plannedDate", label: ui.page === "k:trafo" ? "התקנה — מתוכנן" : "הצבה — מתוכנן", cell: i => dt(i, "plannedDate") },
     { key: "doneDate", label: ui.page === "k:trafo" ? "התקנה — תאריך" : "הצבה — תאריך", cell: i => dt(i, "doneDate") },
-    { key: "flag", label: "סנכרון", cls: "small", cell: i => i.padStatus === "הושלם" && !["הושלם", "בביצוע", "מבוטל"].includes(i.status) ? `<span class="pill" style="background:#d6ebf7;color:#14527a">משטח מוכן — ממתין ל${ui.page === "k:trafo" ? "התקנה" : "הצבה"}</span>` : ["הושלם", "בביצוע"].includes(i.status) && i.padStatus !== "הושלם" ? `<span class="pill warn">${ui.page === "k:trafo" ? "התקנה" : "הצבה"} בלי משטח מסומן</span>` : `<span class="muted">—</span>` },
+    { key: "flag", label: "סנכרון", cls: "small", cell: i => { const L = [], ins = ui.page === "k:trafo" ? "התקנה" : "הצבה", done = ["הושלם", "מבוטל"].includes(i.status);
+      if (i.padStatus === "הושלם" && !["הושלם", "בביצוע", "מבוטל"].includes(i.status)) L.push(`<span class="pill" style="background:#d6ebf7;color:#14527a">משטח מוכן — ממתין ל${ins}</span>`);
+      else if (["הושלם", "בביצוע"].includes(i.status) && i.padStatus !== "הושלם") L.push(`<span class="pill warn">${ins} בלי משטח מסומן</span>`);
+      if (!done && i.plannedDate && i.plannedDate < todayStr()) L.push(`<span class="pill warn" title="תאריך ${ins} מתוכנן ${fmtD(i.plannedDate)}">⏰ עבר מועד ה${ins}</span>`);
+      if (!done && i.plannedDate && i.padDone === "" && i.padStatus !== "הושלם" && daysTo(i.plannedDate) <= 21 && daysTo(i.plannedDate) >= 0) L.push(`<span class="pill" style="background:#fdebd6;color:#a4520c">${ins} בעוד ${daysTo(i.plannedDate)} ימים — המשטח לא מוכן</span>`);
+      return L.join(" ") || `<span class="muted">—</span>`; } },
     { key: "iec", label: "חיבור חח״י", cls: "small nowrap", cell: i => { const os = d.iecOrders.filter(o => o.itemId === i.id); return os.length ? os.map(o => `<button class="pill" style="border:0;cursor:pointer;background:${IEC_COLORS[o.stage] || "#eee"}" data-act="iecGo" data-id="${esc(o.orderNo)}">${esc(o.stage)} · <span dir="ltr">${esc(o.orderNo)}</span></button>`).join(" ") : `<span class="muted">—</span>`; } },
     { key: "note", label: "הערה", cls: "w-place", cell: i => cellInput("items", i, "note") },
     { key: "issues", label: "⚠ נושאים", cls: "small", cell: i => wLinkCell("i:" + i.id) },
