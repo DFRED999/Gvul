@@ -1075,10 +1075,11 @@ const NAV_ALL = () => [
   { group: "הנהלה", items: [["work", "📋 נושאים ומשימות", "", "", (() => { try { return isMgr() ? list("issues").filter(i => i.unseen && i.status !== "סגור").length : list("issues").filter(i => i.status !== "סגור" && wMine(i) && wLate(i)).length; } catch { return 0; } })()]] },
   { group: "קבלנים", box: true, items: [["#h1", "קבלנים ראשיים", "", "head"],
     ...(cs => cs.map(c => ["c:" + c.id, c.name, "", "", 0, cColor({ contractors: cs }, c)]))(list("contractors").filter(isMain)),
+    ["sites", "📡 אתרי איסוף", "", "", (() => { try { return list("issues").filter(i => i.status !== "סגור" && Object.keys(i.links || {}).some(k => k.startsWith("s:")) && priN(i.priority) === "דחוף").length; } catch { return 0; } })(), "#1f7a8c"],
     ["#h2", "קבלנים ייעודיים", "", "head"],
     ...list("contractors").filter(c => !isMain(c) && c.id !== IEC_CID).map(c => ["c:" + c.id, c.name, "", "", 0, (KIND_ICON[specsOf(c)[0]] || {}).c || "#8a9a90"]),
     ["newContractor", "+ קבלן חדש", "", "add"]] },
-  { group: "רכיבי הפרויקט", box: true, items: [...comps().map(x => x.k === "@power" ? ["power", "⚡ חברת חשמל", "", "", 0, "#e0a21b"] : x.k === "@sites" ? ["sites", "📡 אתרי איסוף", "", "", (() => { try { return list("issues").filter(i => i.status !== "סגור" && Object.keys(i.links || {}).some(k => k.startsWith("s:")) && priN(i.priority) === "דחוף").length; } catch { return 0; } })(), "#1f7a8c"]
+  { group: "רכיבי הפרויקט", box: true, items: [...comps().filter(x => x.k !== "@sites").map(x => x.k === "@power" ? ["power", "⚡ חברת חשמל", "", "", 0, "#e0a21b"] : x.k === "@sites" ? ["sites", "📡 אתרי איסוף", "", "", (() => { try { return list("issues").filter(i => i.status !== "סגור" && Object.keys(i.links || {}).some(k => k.startsWith("s:")) && priN(i.priority) === "דחוף").length; } catch { return 0; } })(), "#1f7a8c"]
       : ["k:" + x.k, x.name, "", "", 0, (KIND_ICON[x.kind] || {}).c || "#8a9a90"]), ["compAdd", "+ רכיב חדש", "", "add"]] },
   { group: "תכנון", items: [["segments", "קטעי תכנון"], ["deliveries", "מסירות תוכניות"]] },
   { group: "ניהול שוטף", items: [["survey", "סקר שטח"], ["svcmp", "סקר מול דיווחים"], ["dq", "🩺 איכות נתונים", "", "", (() => { try { return dqChecks(D()).filter(c => c.sev === "red" && c.n).length; } catch { return 0; } })()]] },
@@ -1521,8 +1522,9 @@ function gratesBlock(d) {
     ${renderSheet("grates", rows, "אין מעבירים בסינון הזה", { store: "items", del: false })}`;
 }
 /** רכיבי הפרויקט — דף לכל סוג פריט, מכל הגזרות ומכל הקבלנים. רכיבים נוספים נשמרים בהגדרות (tableConfig/settings/components) */
-const COMPS_BASE = [["trafo", "חדרי טרפו", "חדר טרפו"], ["cab", "ארונות שקד", "ארון שקד"], ["culv", "מעבירי מים", "מעבירי מים"], ["air", "מעבירים איריים", "מעביר אירי"], ["grate", "סבכות", "סבכות למעבירי מים"],
-  ["@power", "חיבורי חח״י"], ["@sites", "אתרי איסוף"], ["gate", "שערים ומחסומים", "שערים"], ["ttz", "תט״זים", "תט״ז"], ["mine", "פינוי מוקשים", "פינוי מוקשים"]];
+// סדר התפריט: חברת חשמל ← ארונות שקד ← תט״זים ← חדרי טרפו ← מעבירי מים ← מעבירים איריים ← שערים ומחסומים ← פינוי מוקשים ← סבכות. אתרי איסוף — בקבוצת הקבלנים, מתחת לקבלנים הראשיים
+const COMPS_BASE = [["@power", "חיבורי חח״י"], ["cab", "ארונות שקד", "ארון שקד"], ["ttz", "תט״זים", "תט״ז"], ["trafo", "חדרי טרפו", "חדר טרפו"], ["culv", "מעבירי מים", "מעבירי מים"], ["air", "מעבירים איריים", "מעביר אירי"],
+  ["gate", "שערים ומחסומים", "שערים"], ["mine", "פינוי מוקשים", "פינוי מוקשים"], ["grate", "סבכות", "סבכות למעבירי מים"], ["@sites", "אתרי איסוף"]];
 const comps = () => [...COMPS_BASE.map(([k, name, kind]) => ({ k, name, kind })), ...Object.entries(RAW.tableConfig?.settings?.components || {}).map(([k, x]) => ({ k: "x" + k, name: x.name, kind: x.kind || x.name, custom: true }))];
 const compOf = kind => comps().find(x => x.kind === kind);
 function pageComp(d, key) {
