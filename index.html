@@ -1,4 +1,4 @@
-index.html — קוד האתר
+index.html — 19/10/2026
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -3762,15 +3762,16 @@ function wRow(d, i, mid = "") {
     <td>${wLinkChips(i) || wSiteHint(i) || (i.kdFrom ? `<span class="lk lk-kd">📍 ק.ד. ${i.kdTo ? esc(i.kdTo) + "–" : ""}${esc(i.kdFrom)}</span>` : "")}</td>
     <td>${wWho(i.owner)}${(l => l && l !== i.owner ? `<div class="w-lead" title="אחראי צוות${i.lead ? "" : " (אוטומטי)"}">↳ ${esc(l)}</div>` : "")(leadOf(i))}</td><td>${priPill(i.priority)}</td><td class="nowrap ${late ? "w-late" : ""}">${fmtD(i.due) || "—"}</td>
     <td class="small" style="max-width:300px">${i.unseen && isMgr() ? `<span class="w-dot" title="עדכון שעוד לא ראית"></span>` : ""}${esc(i.last || "")}<div class="muted">${fmtD(i.updated)}</div></td>
+    <td class="c"><button class="btn ghost sm nowrap" data-act="issueHist" data-id="${i.id}" title="כל העדכונים של הנושא לפי תאריך">${Object.keys(i.history || {}).length} עדכונים</button></td>
     <td class="nowrap">${isViewer() ? "" : `<button class="btn ghost sm" data-act="wUpd" data-id="${i.id}" ${mid ? `data-mid="${esc(mid)}"` : ""}>✎ עדכון</button> <button class="btn ${wDisc(i) ? "w-dsc-on" : "ghost"} sm" data-act="wDiscOk" data-id="${i.id}" ${mid ? `data-mid="${esc(mid)}"` : ""} title="${wDisc(i) ? `נדון ${fmtD(i.discussed)}${i.discBy ? " · " + esc(i.discBy) : ""} — לחיצה מבטלת` : "סימון: הנושא נדון בפגישה (לא נסגר — ממשיך בעדכונים)"}">${wDisc(i) ? "✓ נדון" : "✓"}</button>`}</td></tr>`;
 }
-const W_HEAD = `<thead><tr><th>קוד</th><th>נושא</th><th>🔗 קשור ל</th><th>מי מטפל</th><th>חשיבות</th><th>יעד</th><th>מצב אחרון</th><th></th></tr></thead>`;
+const W_HEAD = `<thead><tr><th>קוד</th><th>נושא</th><th>🔗 קשור ל</th><th>מי מטפל</th><th>חשיבות</th><th>יעד</th><th>מצב אחרון</th><th>היסטוריה</th><th></th></tr></thead>`;
 const wSort = (a, b) => priRank(a.priority) - priRank(b.priority) || (wLate(b) - wLate(a)) || String(a.due || "9999").localeCompare(String(b.due || "9999")) || String(a.code || "").localeCompare(String(b.code || ""), "he", { numeric: true });
 function wTable(d, L, mid = "", empty = "אין נושאים") {
   if (!L.length) return `<p class="muted small" style="margin:6px 0">${empty}</p>`;
   const groups = [...new Set(L.map(i => wGroupKey(d, i)))].sort((a, b) => !a ? 1 : !b ? -1 : byNorth(RAW.contractors[a], RAW.contractors[b]));
   return `<div class="tablewrap"><table class="sheet w-tab">${W_HEAD}<tbody>${groups.map(g => { const a = L.filter(i => wGroupKey(d, i) === g).sort(wSort), c = g && d.contractors.find(x => x.id === g);
-    return `<tr class="w-gh" style="--rc:${c ? cColor(d, c) : "#8a9a90"}"><td colspan="8"><b>${esc(c?.name || "כללי")}</b> <span class="muted small">· ${a.length} פתוחים${(n => n ? ` · ${n} דחופים` : "")(a.filter(i => priN(i.priority) === "דחוף").length)}${(n => n ? ` · ${n} באיחור` : "")(a.filter(wLate).length)}</span></td></tr>${a.map(i => wRow(d, i, mid)).join("")}`; }).join("")}</tbody></table></div>`;
+    return `<tr class="w-gh" style="--rc:${c ? cColor(d, c) : "#8a9a90"}"><td colspan="9"><b>${esc(c?.name || "כללי")}</b> <span class="muted small">· ${a.length} פתוחים${(n => n ? ` · ${n} דחופים` : "")(a.filter(i => priN(i.priority) === "דחוף").length)}${(n => n ? ` · ${n} באיחור` : "")(a.filter(wLate).length)}</span></td></tr>${a.map(i => wRow(d, i, mid)).join("")}`; }).join("")}</tbody></table></div>`;
 }
 const wf = () => ui.wf || (ui.wf = { cid: "", owner: "", lead: !isMgr() && me?.name && leadCfg().team.includes(me.name) ? me.name : "", pri: "", q: "", late: false, unseen: false });
 function wFilter(L) { const F = wf(), q = qnNorm(F.q).toLowerCase(), C = leadCfg();
