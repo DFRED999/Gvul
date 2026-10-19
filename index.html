@@ -164,40 +164,59 @@ table.mx { border-collapse: separate; border-spacing: 2px; width: 100%; font-siz
 .gp-parties { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; } .gp-g { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; } .gp-g > span { min-width: 78px; }
 .gp-p { font: inherit; font-size: 13px; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 3px 11px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; } .gp-p small { color: var(--muted); } .gp-p.on { background: #34557a; color: #fff; border-color: #34557a; } .gp-p.on small { color: #dbe6f2; }
 .btn.gp-btn { background: #f0c94b; border-color: #f0c94b; color: #1b2127; }
-.pw-tab td { vertical-align: top; } .pw-tab .inp.sm, .pw-tab input.cell { font-size: 12.5px; } .pw-tab td > select + input { display: block; margin-top: 3px; } .pw-nm { min-width: 150px; } .pw-em { margin-inline-end: 4px; }
-.pw-note { min-width: 200px; } .pw-at { display: inline-block; border-radius: 6px; padding: 0 6px; font-weight: 800; font-size: 11.5px; color: #fff; background: var(--c); } input.cell.pw-late { color: #b3261e; font-weight: 700; }
+ .pw-nm { min-width: 150px; } .pw-em { margin-inline-end: 4px; }
+ .pw-at { display: inline-block; border-radius: 6px; padding: 0 6px; font-weight: 800; font-size: 11.5px; color: #fff; background: var(--c); }
 .pws-tab td { vertical-align: top; } tr.pws-bad > td { background: #fff4ef; } tr.pws-ok > td { background: #f2f9f4; }
-.pw-tabs .pw-more{align-self:center;margin-inline:14px 4px;color:#888;font-size:13px}.pw-tabs .w-tb:nth-of-type(n+3){font-size:13px;opacity:.85}
-.pwk{margin-bottom:12px}.pwk-h{margin-bottom:4px}.pwk-s{display:flex;align-items:stretch;gap:4px;flex-wrap:wrap}.pwk-ar{align-self:center;color:#bbb}
-.pwk-st{position:relative;flex:1;min-width:110px;display:flex;flex-direction:column;gap:1px;text-align:start;border:1px solid #e3ded0;background:#fff;border-radius:9px;padding:6px 9px 9px;cursor:pointer;font:inherit;color:inherit;overflow:hidden}
-.pwk-st span{font-size:12px;color:#666}.pwk-st b{font-size:17px}.pwk-st b small{font-size:11px;color:#888;font-weight:400}.pwk-st i{position:absolute;inset-inline-start:0;bottom:0;height:4px;width:var(--p);background:#2f8a6b}
-.pwk-m{font-size:11px;color:#b5321f}.pwk-m.ok{color:#2f8a6b}.pwk-st.ok{background:#f2faf5;border-color:#bfe0cc}.pwk-st:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.pwd-ch tr.c-req td{background:#eef2f7}.pwd-ch td.num{text-align:center;white-space:nowrap}
+.pw-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:4px}.pw-head h1{margin:0}.pw-head>div:first-child{flex:1}
+
+
+.pw-back{display:flex;align-items:center;gap:12px;margin:8px 0 10px}
+.pw-board{display:grid;grid-template-columns:1fr 230px;gap:10px;margin:8px 0 10px}.pwb-st{background:var(--card,#fff);border:1px solid #e6e1d3;border-radius:12px;padding:8px 10px}.pwb-st table{border-collapse:separate;border-spacing:4px;width:100%}.pwb-st p{margin:2px 4px 0}
+.pwb-k{border:0;background:none;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap;padding:4px 6px;border-radius:7px;color:inherit}.pwb-k small{color:#888;font-weight:400}.pwb-k.on{background:#1f2a24;color:#fff}
+.pwb-s{position:relative;width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:6px;border:1px solid #e3ded0;background:#fff;border-radius:8px;padding:5px 8px 7px;cursor:pointer;font:inherit;color:inherit;overflow:hidden}
+.pwb-s span{font-size:12px;color:#555;text-align:start}.pwb-s b{font-size:15px;white-space:nowrap}.pwb-s b small{font-size:11px;color:#999;font-weight:400}.pwb-s i{position:absolute;inset-inline-start:0;bottom:0;height:3px;width:var(--p);background:#2f8a6b}
+.pwb-s.ok{background:#f2faf5;border-color:#bfe0cc}.pwb-s.on{outline:2px solid #c98a12;background:#fff7e3}
+.pwb-mo{display:flex;flex-direction:column;gap:5px}.pwb-m{display:flex;flex-direction:column;text-align:start;border:1px solid #e6e1d3;background:#fff;border-radius:10px;padding:6px 10px;cursor:pointer;font:inherit;color:inherit}
+.pwb-m span{font-size:12px;color:#555}.pwb-m b{font-size:17px}.pwb-m small{font-size:11px;color:#777}.pwb-m.ok b{color:#2f8a6b}.pwb-m.red{background:#fdf1ef;border-color:#e7a99f}.pwb-m.red b{color:#b5321f}.pwb-m.on{outline:2px solid #c98a12}
+.pw-main tbody tr[data-act]{cursor:pointer}.pw-main tbody tr[data-act]:hover td{background:#fff8e1}.pw-main tr.pw-selr td{background:#fff0bf!important}.pwfs{display:flex;gap:4px;align-items:baseline;white-space:nowrap}.pwfs span{font-size:11px;color:#777;min-width:34px}.pwfs b.ok{color:#2f8a6b}.pwfs b.late{color:#b5321f}.pwfs small{font-size:11px}.pw-nxc{max-width:170px}
+.pw-drawer{position:fixed;top:0;bottom:0;left:0;width:min(560px,96vw);z-index:70;background:var(--card,#fff);box-shadow:4px 0 30px rgba(0,0,0,.25);overflow:auto;padding:14px 18px 40px}
+.pwd-h{display:flex;align-items:flex-start;gap:10px;position:sticky;top:-14px;background:inherit;padding:6px 0;z-index:2}.pwd-h>div{flex:1}.pwd-h h2{margin:2px 0}.pw-drawer h3{margin:16px 0 6px;font-size:15px;border-bottom:1px solid #eee;padding-bottom:3px}
+.pwd-nx{background:#f6f3ea;border-radius:8px;padding:7px 10px;font-size:13px}.pwd-g{display:flex;flex-wrap:wrap;gap:8px 12px}.pwd-f{display:flex;flex-direction:column;gap:2px;font-size:12px;color:#666}.pwd-f .pw-in{font-size:14px;color:#111}
+.pw-in{border:1px solid #c9c4b5!important;background:#fff!important;border-radius:6px;padding:5px 8px;min-width:80px}.pwd-2{display:flex;gap:6px;flex-wrap:wrap}.pwd-2 select{min-width:200px}
+.pwd-o{border:1px solid #e3ded0;border-radius:10px;padding:8px 10px;margin-bottom:8px}.pwd-o.x{background:#fdf9f0;border-color:#e3c98f}.pwd-pay{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px}.pwd-pay>div{display:flex;flex-direction:column;gap:2px}.pwd-pay span{font-size:11px;color:#777}
+.pwd-tot{background:#f3f1ea;border-radius:8px;padding:6px 10px;margin:4px 0 8px}.pwd-note{width:100%;min-height:60px}
+@media(max-width:900px){.pw-board{grid-template-columns:1fr}}
+
+
+
+
+
+
 .pw-det{font-size:12.5px}.pw-det td{vertical-align:top;padding:4px 5px}.pw-det tr.pw-fd td{background:#fbf6e9;border-top:2px solid #d8b56a}.pw-det tr.pw-ch td{background:#fffdf8}.pw-tree{color:#c9a85c;margin-inline-end:4px}
-.pw-det .pw-name{font-weight:700;width:11ch}.pw-det select.inp.sm{font-size:12px;padding:2px 4px;max-width:110px}.pw-det .pw-note textarea{max-width:120px}.pw-det td.small{max-width:150px}.pw444{margin-bottom:3px}.pw-nx{font-size:11.5px;margin-top:3px;max-width:190px;line-height:1.3}.pw-dots{padding:0 6px;margin-inline-start:4px}.pw-det .pw-nm{min-width:160px;max-width:200px}.pw-nl{display:flex;align-items:center;gap:3px;white-space:nowrap}.pw-det .pw-note textarea{max-width:95px}.pwf{display:flex;align-items:center;gap:4px;margin-bottom:2px}.pwf span,.pwp span{font-size:11px;color:#777;min-width:34px}.pwp{display:flex;align-items:center;gap:4px;margin-bottom:2px}.pwo{white-space:nowrap;margin-bottom:2px}
+.pw-det select.inp.sm{font-size:12px;padding:2px 4px;max-width:110px}.pw-det td.small{max-width:150px}.pw-det .pw-nm{min-width:160px;max-width:200px}.pwf{display:flex;align-items:center;gap:4px;margin-bottom:2px}.pwf span,.pwp span{font-size:11px;color:#777;min-width:34px}.pwp{display:flex;align-items:center;gap:4px;margin-bottom:2px}
 .pw-det .pw-xs{background:#fdf9f0}.pw-det td.num{text-align:center;white-space:nowrap}.pw-detw{max-height:80vh}
 .pws-box{position:relative;margin:10px 0 4px}.pws-box>input{width:100%;font-size:16px;padding:11px 14px;border-radius:10px;border:2px solid #e3c27a;box-sizing:border-box}
 .pws-res{position:absolute;z-index:40;inset-inline:0;top:100%;margin-top:4px;background:var(--card,#fff);border:1px solid #ddd;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);max-height:60vh;overflow:auto}
 .pws-r{display:flex;gap:10px;align-items:center;width:100%;text-align:start;background:none;border:0;border-bottom:1px solid #eee;padding:9px 12px;cursor:pointer;font:inherit;color:inherit}.pws-r:hover{background:#fbf5e6}
 .pws-m{flex:1;display:flex;flex-direction:column}.pws-m small,.pws-s small{color:#777}.pws-s{display:flex;flex-direction:column;align-items:flex-end;gap:2px;max-width:40%}.pws-none{padding:12px;color:#777}
-.pwd-money{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.pwd-m{display:flex;flex-direction:column;gap:2px;text-align:start;border:1px solid #e6e1d3;background:var(--card,#fff);border-radius:12px;padding:10px 12px;cursor:pointer;font:inherit;color:inherit}
-.pwd-m span{font-size:13px;color:#555}.pwd-m b{font-size:22px;font-variant-numeric:tabular-nums}.pwd-m small{font-size:12px;color:#666}.pwd-m.ok b{color:#2f8a6b}.pwd-m.red{border-color:#e7a99f;background:#fdf1ef}.pwd-m.red b{color:#b5321f}.pwd-m:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.pwd-grid{display:grid;grid-template-columns:3fr 2fr;gap:10px}.pwd-mx th,.pwd-mx td{text-align:center}.pwd-mx tbody th{text-align:start;white-space:nowrap}
-.pwd-c{border:0;background:none;cursor:pointer;font:inherit;color:inherit;display:inline-flex;flex-direction:column;align-items:center;min-width:54px}.pwd-c small{color:#888}.pwd-c.ok{color:#2f8a6b;font-weight:700}
-.pwd-bar{display:block;width:48px;height:5px;border-radius:3px;background:#eee;margin-top:2px}.pwd-bar i{display:block;height:100%;border-radius:3px;background:#2f8a6b}
-.pwd-a{display:flex;flex-direction:column;align-items:flex-start;position:relative;width:100%;text-align:start;border:0;border-inline-start:4px solid #ccc;background:#f7f7f5;border-radius:8px;padding:9px 12px 9px 30px;margin-bottom:6px;cursor:pointer;font:inherit;color:inherit}
-.pwd-a small{color:#666}.pwd-a span{position:absolute;inset-inline-end:10px;top:50%;transform:translateY(-50%);color:#999}.pwd-a.red{border-color:#c0392b;background:#fdf1ef}.pwd-a.orange{border-color:#d9822b;background:#fdf6ec}.pwd-a.blue{border-color:#2d6cb8;background:#eef4fb}
+
+
+
+
+
+
+
 .pc{display:inline-flex;align-items:baseline;gap:4px;padding:1px 6px;border-radius:6px;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:12.5px;line-height:1.35}.pc small{font-size:10.5px;opacity:.85}
-.pc-paid,.pc-paidq{background:#e3f4ea;color:#1d6b45}.pc-paidq{border:1px dashed #6fb48d}.pc-due{background:#fde3df;color:#a3281b;font-weight:600}.pc-exp{background:#c0392b;color:#fff;font-weight:600}.pc-none{background:#f1f1ee;color:#777}
-.pw-ctlw{max-height:75vh}.pw-ctl{font-size:12.5px}.pw-ctl th{white-space:normal;line-height:1.2}.pw-ctl .pc{padding:1px 4px}.pw-ctl td,.pw-ctl th{vertical-align:middle;padding:4px 6px}.pw-ctl td:nth-child(2){min-width:110px;max-width:170px}.pw-ctl .pill{font-size:11px;padding:1px 6px;white-space:nowrap}.pw-ctl td.num{text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums}.pw-ctl thead th{text-align:center}
-.pw-gh1{background:#e6eef8!important}.pw-gh2{background:#f6ead2!important}.pw-ctl .pw-xs{border-inline-start:3px solid #d8b56a}.pw-ctl .pw-xs,.pw-ctl .pw-xb{background:#fdf9f0}.pw-ctl .pw-lf{color:#a3281b}.pw-ctl .pw-pd{color:#1d6b45}.pw-ctl .pw-tl{background:#f3f1ea}
-.pw-ctl tr.pw-dsum td{background:#eeebe1;border-top:2px solid #b9b39b}.pw-ctl tr.pw-gsum td{background:#e2dccb;font-weight:700;border-top:3px solid #8f876b}.pw-ctl tr.pw-hl td{background:#fff3b0!important;outline:0}
+.pc-paid,.pc-paidq{background:#e3f4ea;color:#1d6b45}.pc-paidq{border:1px dashed #6fb48d}.pc-due{background:#fde3df;color:#a3281b;font-weight:600}.pc-exp{background:#c0392b;color:#fff!important;font-weight:700}.pc-exp small{opacity:1}.pc-none{background:#f1f1ee;color:#777}
+
+
+
 a.pwn{font-weight:700;color:#1f5fa8;text-decoration:none;font-variant-numeric:tabular-nums}a.pwn:hover,a.ordlink:hover{text-decoration:underline}a.ordlink{color:#1f5fa8;font-weight:600;text-decoration:none;border-bottom:1px dotted #1f5fa8}
-.modal .card:has(.pwc){width:min(900px,94vw);max-width:94vw}.pwc{width:100%}.pwc h3{margin:14px 0 6px;font-size:15px}.pwc-f{display:flex;flex-wrap:wrap;gap:6px 18px}.pwc-f>div{display:flex;flex-direction:column}.pwc-f span{font-size:12px;color:#777}.pwc-i{margin:0;padding-inline-start:18px}
-.pwc-t td.num{text-align:center;white-space:nowrap}
-@media(max-width:900px){.pwd-money{grid-template-columns:repeat(2,1fr)}.pwd-grid{grid-template-columns:1fr}}
-.pw-legend{background:#f4f8fd;border-color:#cfe0f3;font-size:13px;line-height:1.6}
-.pw-money .ch-t>b{font-size:20px}.pw-money .ch-t small{display:block;font-size:12px}.pw-money .ch-t small.pw-incl{font-size:16px;font-weight:700;white-space:nowrap}
+.modal .card:has(.pwc){width:min(900px,94vw);max-width:94vw}.pwc{width:100%}.pwc h3{margin:14px 0 6px;font-size:15px}.pwc-i{margin:0;padding-inline-start:18px}
+
+
+
+
 .pw-pay td.num,.pw-pay th{text-align:center}.pw-pay td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .pw-pay .pw-inc{background:#eaf2fc}.pw-pay tr.pw-exp td{background:#fdecea}.pw-pay tr.pw-exp td.pw-inc{background:#f8dcd8}
 .pw-pay tr.pw-sum td{background:#f3f1ea;border-top:2px solid #b9b39b}
@@ -779,6 +798,8 @@ a.btn { text-decoration: none; }
 .od-card.od-part { padding: 6px 8px; border-radius: 8px; } .od-card.od-part .od-amt { font-size: 14px; }
 .od-card.od-part .od-g > div.w, .od-card.od-part .od-g > div:nth-child(n+4) { display: none; }
 .od-sum { gap: 8px; margin-bottom: 8px; } .od-sum > div { padding: 5px 10px; border-radius: 10px; } .od-sum b { font-size: 15px; } .od-sum span { font-size: 11px; }
+.pwa-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px}.pwa{border:1px solid #ddd;border-inline-start:4px solid #ccc;background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;font:inherit;font-size:13px;color:inherit}
+.pwa b{font-size:15px}.pwa.red{border-inline-start-color:#c0392b;background:#fdf1ef}.pwa.orange{border-inline-start-color:#d9822b;background:#fdf6ec}.pwa.blue{border-inline-start-color:#2d6cb8;background:#eef4fb}.pwa.on{outline:2px solid #c98a12}
 </style>
 </head>
 <body>
@@ -1720,40 +1741,21 @@ function pageIec(d, embedded = false) {
   const inDist = o => !F.dist || o.district === F.dist;
   const fits = o => inDist(o) && (!F.kind || o.kind === F.kind) && (!F.stage || (F.stage === "pay" ? IEC_PAY.has(o.stage) : o.stage === F.stage))
     && (F.showOff || F.stage === "בוטל" || o.stage !== "בוטל")
-    && (!F.q || [o.orderNo, o.name, o.kd, o.sec, o.place, o.excNo, o.parentNo, o.note, o.last].join(" ").includes(F.q.trim()));
+    && (!F.q || [o.orderNo, o.name, o.kd, o.sec, o.place, o.excNo, o.parentNo, o.budgetNo, o.note, o.last].join(" ").includes(F.q.trim()));
   const rows = all.filter(fits).sort((a, b) => IEC_DISTRICTS.indexOf(a.district) - IEC_DISTRICTS.indexOf(b.district) || (a.order ?? 0) - (b.order ?? 0));
   const base = live.filter(inDist), vat = iecVat();
   const sum = (arr, f) => arr.reduce((s, o) => s + (f(o) || 0), 0);
-  const tot = sum(base, o => mn(o.amount)), paid = sum(base, iecPaid), toPay = sum(base, iecToPay), exc = sum(base, o => mn(o.excAmount));
-  const nPay = base.filter(o => IEC_PAY.has(o.stage)).length, conn = base.filter(o => o.stage === "חובר").length;
-  const units = base.filter(o => o.kind !== "הזמנה מרכזת" && o.kind !== IEC_EXC);
-  const kpi = (l, v, sub = "") => `<div class="kpi"><span>${l}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ""}</div>`;
   const stCount = s => base.filter(o => o.stage === s).length;
   const pipe = IEC_STAGES.filter(s => s !== "בוטל" || F.showOff).map(s => { const n = s === "בוטל" ? all.filter(o => o.stage === s && inDist(o)).length : stCount(s);
     return `<button class="pstep ${F.stage === s ? "on" : ""}" data-act="iecStage" data-id="${esc(s)}" style="background:${IEC_COLORS[s]}" ${n ? "" : "disabled"}><b>${n}</b><span>${s}</span></button>`; }).join(`<span class="parr">‹</span>`);
-  const distRows = IEC_DISTRICTS.map(ds => { const a = live.filter(o => o.district === ds);
-    return `<tr><td><b>${ds}</b></td><td class="c">${a.filter(o => o.kind !== "הזמנה מרכזת").length}</td>${["הוזמן", "שובר מקדמה", "מקדמה שולמה", "שובר משלים", "משלים שולם", "מתואם חיבור", "חובר"].map(s => { const n = a.filter(o => o.stage === s).length; return n ? `<td class="c"><a href="#" data-act="iecDS" data-id="${esc(ds)}|${esc(s)}" title="הצגת ההזמנות">${n}</a></td>` : `<td class="c"></td>`; }).join("")}
-      <td class="c">${ils(sum(a, o => mn(o.amount)))}</td><td class="c">${ils(sum(a, iecPaid))}</td><td class="c">${ils(sum(a, iecBalance))}</td><td class="c">${ils(sum(a, iecToPay)) === "0" ? "" : ils(sum(a, iecToPay))}</td></tr>`; }).join("");
-  const bud = RAW.tableConfig?.iec?.budgetReqs || [];
   const kindOpts = ["", ...IEC_KINDS].map(k => `<option value="${esc(k)}" ${k === F.kind ? "selected" : ""}>${k || "כל הסוגים"}${k ? ` (${all.filter(o => o.kind === k && inDist(o)).length})` : ""}</option>`).join("");
   const shN = shPlan(d).length;
   return `${embedded ? "" : `<h1>חיבורי חח״י</h1><p class="sub">כל ההזמנות מול חברת החשמל במקום אחד — לפי נפה, שלב ותשלום. סכומים ללא מע״מ.</p>`}${shN && !isViewer() ? `<div class="banner"><b>ארונות שקד לפי ק.ד.</b><span>${shN} שמות עדיין לפי המספר הישן</span><button class="btn sm" data-act="shRename">החלפה לשם לפי ק.ד.</button></div>` : ""}
   <div class="card">
     <div class="row" style="margin-bottom:10px"><div class="viewtabs" style="margin:0">${["", ...IEC_DISTRICTS].map(ds => `<button class="btn ghost sm ${F.dist === ds ? "on" : ""}" data-act="iecDist" data-id="${ds}">${ds ? "נפת " + ds : "כל הנפות"}</button>`).join("")}</div>
       <span class="spacer"></span><label class="small row" style="gap:6px">מע״מ %<input class="inp" style="width:56px" id="iecVat" data-act="iecVat" value="${esc(Math.round(vat * 1000) / 10)}" inputmode="decimal"></label></div>
-    <div class="kpis">
-      ${kpi("הזמנות פעילות", units.length, `${conn} חוברו · ${base.filter(o => o.stage === "מתואם חיבור").length} מתואמים`)}
-      ${kpi("ממתינות לתשלום שלנו", nPay, toPay ? `${ils(toPay)} ₪ · כולל מע״מ ${ils(toPay * (1 + vat))} ₪` : "")}
-      ${kpi("סה״כ הזמנות", ils(tot) + " ₪", `כולל מע״מ ${ils(tot * (1 + vat))} ₪`)}
-      ${kpi("שולם", ils(paid) + " ₪", `כולל מע״מ ${ils(paid * (1 + vat))} ₪`)}
-      ${kpi("יתרה", ils(sum(base, iecBalance)) + " ₪", `כולל מע״מ ${ils(sum(base, iecBalance) * (1 + vat))} ₪`)}
-      ${exc ? kpi("חיבורים חריגים", ils(exc) + " ₪", `${base.filter(o => mn(o.excAmount)).length} הזמנות`) : ""}
-    </div>
     <div class="pipe">${pipe}</div>
     <p class="small muted" style="margin:6px 0 0">לחיצה על שלב מסננת את הטבלה. כתום = ממתין לתשלום שלנו.</p>
-    <details style="margin-top:8px"><summary class="small"><b>פילוח לפי נפה</b></summary>
-      <div class="tablewrap" style="max-height:none;margin-top:8px"><table class="sheet"><thead><tr><th>נפה</th><th>מתקנים</th>${["הוזמן", "שובר מקדמה", "מקדמה שולמה", "שובר משלים", "משלים שולם", "מתואם חיבור", "חובר"].map(s => `<th style="background:${IEC_COLORS[s]}">${s}</th>`).join("")}<th>הזמנות ₪</th><th>שולם ₪</th><th>יתרה ₪</th><th>לתשלום עכשיו ₪</th></tr></thead><tbody>${distRows}</tbody></table></div>
-      ${bud.length ? `<p class="small" style="margin:8px 0 0">דרישות תקציב: ${bud.map(b => `<b dir="ltr">${esc(b.no)}</b> (${esc(b.amount)})`).join(" · ")}</p>` : ""}</details>
   </div>
   <div class="row" style="margin-bottom:10px">
     <select class="inp" id="iecKind" data-act="iecKind" aria-label="סוג">${kindOpts}</select>
@@ -4496,12 +4498,137 @@ $app.addEventListener("change", async e => { const t = e.target;
 $app.addEventListener("input", e => { const t = e.target; if (t.dataset?.sf !== "q") return; ui.sf.q = t.value; clearTimeout(t._tm); t._tm = setTimeout(() => { const pos = t.selectionStart; render(); const n = document.querySelector('[data-sf="q"]'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 300); });
 
 /* =====================================================================
-   §29 ⚡ חברת חשמל — חוצץ אחד לכל מה שמול חח״י
-   מתקנים: שורה לכל מתקן (תט״ז / חדר טרפו / ארון שקד / אתר איסוף / העתקת עמוד) — הפריט באתר + הזמנת חח״י שלו:
-     משטח (קבלן הגזרה) → הזמנה ותשלום לחח״י → הצבה / התקנה (מתוכנן / בפועל) → חיבור. "השלב הבא · אצל מי" מחושב מכל השרשרת.
-   הזמנות וכספים: טבלת ההזמנות (pageIec). סיכום דיון: מדביקים את הסיכום שהתקבל — כל שורה מושווית לטבלאות, עם "עדכון באתר" / "+ נושא".
-   נושאים: כל מה שפתוח מול חח״י (אותו מנגנון של "מצע לדיון / פערים").
+   §29 ⚡ חברת חשמל — מודול אחד, שתי לשוניות
+   📊 שליטה: לוח מצב (לכל סוג מתקן — השלבים שלו; לחיצה = סינון) · כסף · דורש פעולה · טבלת מתקנים (יחידות חיבור) · שוברים פתוחים.
+     לחיצה על מתקן → חלונית צד עם כל הפרטים והעריכה (פרטים, הזנה, בשטח, הזמנות, תשלומים, נושאים).
+   ✏ עריכה: טבלת כל הזמנות חח״י (pageIec — הוספה / מחיקה / עריכה) + הזמנות משהב״ט 444 ↔ דרישות 880.
+   המסגרת: ארון שקד (קבלן גזרה מקים, חח״י מחבר) · תט״ז (קבלן — משטח, חח״י — הצבה; משלמים כבילה) · חדר טרפו (משטח, קבלן חשמל מציב, חח״י מחשמל) · אתר איסוף.
+     יחידת חיבור = תט״ז / חדר טרפו + עד 2 ארונות (items.feed). כסף: דרישה 880 → הזמנת משהב״ט 444 (iecOrders.budgetNo) → הזמנת חח״י 301 → מרחק חריג (kind "חיבור חריג", parentNo = הזמנת הארון).
+   כל הסכומים נשמרים ללא מע״מ, כמו בשובר; "כולל מע״מ" מחושב. tableConfig.iec: vat, b444 { <444>: { req, amount, note } }, budgetReqs [{ no, amount }]
    ===================================================================== */
+const pwF = () => ui.pw || (ui.pw = { tab: "ctl", sel: "", dkind: "", ddist: "", dgz: "", dst: "", dmx: "", dq: "", dview: "unit" });
+const PW_STAGES = {
+  "ארון שקד": [["done", "בוצע (קבלן)", r => r.i?.status === "הושלם"], ["ord", "הוזמן מחח״י", r => pwHasOrd(r)], ["paid", "שולם", r => pwFull(r)], ["conn", "חובר", r => pwConn(r)]],
+  "תט״ז": [["pad", "משטח (קבלן)", r => r.i?.padStatus === "הושלם"], ["paid", "כבילה שולמה", r => pwFull(r)], ["done", "הוצב (חח״י)", r => r.i?.status === "הושלם"], ["conn", "חובר", r => pwConn(r)]],
+  "חדר טרפו": [["pad", "משטח (קבלן)", r => r.i?.padStatus === "הושלם"], ["done", "מבנה הוצב (קבלן חשמל)", r => r.i?.status === "הושלם"], ["paid", "שולם", r => pwFull(r)], ["conn", "חושמל", r => pwConn(r)]],
+  "אתר איסוף": [["ord", "הוזמן מחח״י", r => pwHasOrd(r)], ["paid", "שולם", r => pwFull(r)], ["conn", "חובר", r => pwConn(r)]] };
+const pwHasOrd = r => r.os.some(o => o.orderNo && o.stage !== "טרם הוזמן"), pwFull = r => r.os.length > 0 && r.os.every(o => iecParts(o).full), pwConn = r => r.os.some(o => o.stage === "חובר");
+function pagePower(d) {
+  const F = pwF(), R = pwRows(d), ed = !isViewer(), tb = (k, l) => `<button class="w-tb ${F.tab === k ? "on" : ""}" data-act="pwTab" data-id="${k}">${l}</button>`;
+  const head = `<div class="pw-head"><div><h1>⚡ חברת חשמל</h1><span class="muted small">ארונות שקד · תט״זים · חדרי טרפו · אתרי איסוף — משטח, הזמנה ותשלום, הצבה, חיבור</span></div>
+      <div class="row" style="gap:6px">${ed ? `<button class="btn ghost sm" data-act="pwVch" data-id="">🧾 הזנת שובר</button><button class="btn ghost sm" data-act="pwTab" data-id="sum">📝 סיכום דיון</button>` : ""}<button class="btn ghost sm" data-act="pwGap">📋 פערים מול חח״י</button></div></div>
+    <div class="pws-box"><input class="inp" id="pw_gq" value="${esc(ui.pwQ || "")}" placeholder="🔎 חיפוש: ק.ד., T5, חתך, מס׳ הזמנה (גם חלק), 444, יישוב…" autocomplete="off"><div id="pw_res" class="pws-res" ${ui.pwQ && qnNorm(ui.pwQ).length > 1 ? "" : "hidden"}>${pwSearchHtml(d, R, ui.pwQ || "")}</div></div>
+    <div class="w-tabs">${tb("ctl", "📊 שליטה")}${tb("edit", "✏ עריכה — הזמנות, 444 ודרישות")}</div>`;
+  if (F.tab === "sum") return `${head}<div class="pw-back"><button class="btn" data-act="pwTab" data-id="ctl">→ חזרה</button><b>📝 סיכום דיון עם חח״י</b></div>${pwSumPage(d)}`;
+  if (F.tab === "edit") return `${head}${pw444Table(d)}<h2 style="margin:16px 0 6px">הזמנות חח״י — כל השדות</h2>${pageIec(d, true)}`;
+  return `${head}${pwBoard(d, R)}${pwMain(d, R)}${pwDueTable(d)}${F.sel ? pwDrawer(d, R, F.sel) : ""}`;
+}
+/** לוח מצב + כסף + דורש פעולה */
+function pwBoard(d, R) {
+  const F = pwF(), live = d.iecOrders.filter(o => o.stage !== "בוטל"), P = live.map(iecParts), S = f => P.reduce((t, p) => t + f(p), 0), part = s => S(p => [p.a, p.c].filter(q => q.s === s).reduce((t, q) => t + q.v, 0));
+  const tot = S(p => p.A), paid = S(p => p.paid), due = part("due"), exp = part("exp");
+  const rows = Object.keys(PW_STAGES).map(k => { const a = R.filter(r => r.kind === k); if (!a.length) return "";
+    return `<tr><th><button class="pwb-k ${F.dkind === k && !F.dmx ? "on" : ""}" data-act="pwGo" data-id="kind|${esc(k)}">${KIND_EMO[k] || "📍"} ${esc(k)} <small>${a.length}</small></button></th>${PW_STAGES[k].map(([key, l, f]) => { const ok = a.filter(f).length;
+      return `<td><button class="pwb-s ${ok === a.length ? "ok" : ""} ${F.dmx === `${k}:${key}` ? "on" : ""}" data-act="pwGo" data-id="mx|${esc(k)}:${key}" title="לחיצה: ${a.length - ok} שעוד לא"><span>${l}</span><b>${ok}<small>/${a.length}</small></b><i style="--p:${Math.round(ok / a.length * 100)}%"></i></button></td>`; }).join("")}</tr>`; }).join("");
+  const mm = (l, v, st, cls = "") => `<button class="pwb-m ${cls} ${st && F.dst === st ? "on" : ""}" ${st ? `data-act="pwGo" data-id="st|${st}"` : `data-act="pwTab" data-id="edit"`}><span>${l}</span><b>${ils(v)}</b><small>${ils(withVat(v))} כולל מע״מ</small></button>`;
+  const STP = pwStP(d).stP, n = k => R.filter(STP[k]).length, chk = pwMoneyChecks(d).length, iP = gapParties().find(p => p.k === "iec"), nIss = iP ? gapIssues(iP).dir.length : 0;
+  const act = [["exp", "⛔ שוברים שפגו — לבקש חדשים", "red"], ["due", "💳 שוברים לתשלום", "red"], ["noord", "🔴 בלי הזמנת חח״י", "red"], ["feed", "⚡ ארונות שממתינים לתט״ז / טרפו", "orange"], ["late", "⏰ באיחור", "orange"], ["no444", "📎 בלי מספר 444", "blue"], ["nofeed", "🔌 ארונות בלי מזין", "blue"]]
+    .map(([k, l, c]) => [k, l, c, n(k)]).filter(x => x[3]).map(([k, l, c, m]) => `<button class="pwa ${c} ${F.dst === k ? "on" : ""}" data-act="pwGo" data-id="st|${k}"><b>${m}</b> ${l}</button>`).join("")
+    + (chk ? `<button class="pwa orange" data-act="pwChk"><b>${chk}</b> ⚠ סכומים לבדיקה</button>` : "") + (nIss ? `<button class="pwa blue" data-act="pwGap"><b>${nIss}</b> 📋 נושאים פתוחים</button>` : "");
+  return `<div class="pw-board"><div class="pwb-st"><table>${rows}</table><p class="small muted">לחיצה על שלב — הטבלה מציגה את מי שעוד לא עבר אותו. לחיצה נוספת — ביטול.</p></div>
+    <div class="pwb-mo">${mm("💼 הוזמן", tot, "")}${mm("✓ שולם", paid, "", "ok")}${mm("💳 שובר לתשלום", due, "due", due ? "red" : "")}${mm("⛔ שוברים שפגו", exp, "exp", exp ? "red" : "")}<small class="muted">ללא מע״מ, מתחת כולל</small></div></div>
+    ${act ? `<div class="pwa-row"><span class="muted small">דורש פעולה:</span>${act}</div>` : ""}`;
+}
+/** תנאים משותפים ללוח ולטבלה: הזמנות רגילות / מרחק חריג של מתקן, ומצבים לסינון */
+function pwStP(d) { const M = iecExcMap(d), byI = new Map(d.items.map(i => [i.id, i]));
+  const regOf = r => r.os.filter(o => o.kind !== IEC_EXC), xsOf = r => { const onF = x => !!(x.itemId && PAD_KINDS.includes(byI.get(x.itemId)?.kind)); return [...r.os.filter(o => o.kind === IEC_EXC), ...regOf(r).flatMap(o => (M.host.get(o.id) || []).filter(x => !onF(x)))]; };
+  const parts = r => [...regOf(r), ...xsOf(r)].map(iecParts);
+  const stP = { act: r => r.nx?.late || ["noord", "pay", "feed"].includes(r.nx?.k), due: r => parts(r).some(p => p.a.s === "due" || p.c.s === "due"), exp: r => parts(r).some(p => p.a.s === "exp" || p.c.s === "exp"), noord: r => r.nx?.k === "noord",
+    no444: r => regOf(r).some(o => o.orderNo && !String(o.budgetNo || "").trim()), feed: r => r.nx?.k === "feed", late: r => !!r.nx?.late, nofeed: r => r.kind === "ארון שקד" && !!r.i && !r.i.feed };
+  return { M, byI, regOf, xsOf, parts, stP }; }
+/** שוברים פתוחים — מה לשלם עכשיו ומה פג */
+function pwDueTable(d) { const ed = !isViewer(), a = d.iecOrders.filter(o => IEC_PAY.has(o.stage) && iecToPay(o)).map(o => ({ o, v: pwVoucher(o) })).sort((x, y) => y.v.expired - x.v.expired || (x.v.valid || "9").localeCompare(y.v.valid || "9"));
+  if (!a.length) return ""; const S = b => b.reduce((t, x) => t + x.v.pay, 0), exp = a.filter(x => x.v.expired);
+  return `<details class="card" ${pwF().dst === "due" || pwF().dst === "exp" ? "open" : ""}><summary><b>🧾 שוברים פתוחים (${a.length})</b> <span class="muted small">· לתשלום ${ils2(S(a))} ללא מע״מ · <b>${ils2(withVat(S(a)))} כולל מע״מ</b>${exp.length ? ` · מהם ${exp.length} פגו` : ""}</span></summary>
+    <div class="tablewrap" style="max-height:none;margin-top:8px"><table class="sheet pw-pay"><thead><tr><th>נפה</th><th>מתקן / הזמנה</th><th>מס׳ הזמנה</th><th>שובר</th><th>בתוקף עד</th><th>לתשלום<br><small>ללא מע״מ</small></th><th>לתשלום<br><small>כולל מע״מ</small></th><th></th></tr></thead><tbody>
+    ${a.map(({ o, v }) => `<tr class="${v.expired ? "pw-exp" : ""}"><td class="small">${esc(o.district || "")}</td><td>${pwWhat(o)}</td><td dir="ltr"><a href="#" class="pwn" data-act="pwCard" data-id="o:${o.id}">${esc(o.orderNo || "—")}</a></td><td>${v.kind}${o.kind === IEC_EXC ? ` <small class="muted">חריג</small>` : ""}</td>
+      <td class="nowrap">${v.valid ? (v.expired ? `<b class="w-late">⛔ פג ${fmtD(v.valid)}</b>` : fmtD(v.valid)) : `<span class="muted">לא רשום</span>`}</td><td class="num">${ils2(v.pay)}</td><td class="num pw-inc"><b>${ils2(withVat(v.pay))}</b></td>
+      <td class="nowrap">${ed ? `<button class="btn sm" data-act="pwPaid" data-id="${o.id}">✓ שולם</button> <button class="btn ghost sm" data-act="pwVch" data-id="${o.id}">🧾</button>` : ""}</td></tr>`).join("")}
+    <tr class="pw-sum"><td colspan="5"><b>סה״כ</b></td><td class="num"><b>${ils2(S(a))}</b></td><td class="num pw-inc"><b>${ils2(withVat(S(a)))}</b></td><td></td></tr></tbody></table></div>
+    <p class="small muted" style="margin:6px 0 0">שובר של חח״י תקף 30 יום — אחרי זה מבקשים שובר חדש. סכומים כמו בשובר: "לתשלום" ללא מע״מ, והעמודה הכחולה — מה שמעבירים.</p></details>`; }
+/** הזמנות משהב״ט (444) ↔ דרישות (880) — עריכה ישירה, הוספה ומחיקה. 444 בלי דרישה מותר (מסומן) */
+function pw444Table(d) { const ed = !isViewer(), dis = ed ? "" : "disabled", C = b444Cfg(), reqs = RAW.tableConfig?.iec?.budgetReqs || [];
+  const live = d.iecOrders.filter(o => o.stage !== "בוטל"), by = n => live.filter(o => String(o.budgetNo || "").trim() === n);
+  const nos = [...new Set([...live.map(o => String(o.budgetNo || "").trim()).filter(Boolean), ...Object.keys(C)])].sort();
+  const sums = a => { const P = a.map(iecParts); return [P.reduce((t, p) => t + p.A, 0), P.reduce((t, p) => t + p.paid, 0), P.reduce((t, p) => t + p.left, 0)]; };
+  const cell = v => `<td class="num">${v ? ils(v) : "—"}${v ? `<div class="small muted">${ils(withVat(v))}</div>` : ""}</td>`;
+  const inp = (n, k, w, ph = "") => `<input class="inp pw-in" data-p444="${esc(n)}|${k}" value="${esc(C[n]?.[k] || "")}" style="width:${w}" placeholder="${ph}" ${dis}>`;
+  const row = n => { const a = by(n), [t, p, l] = sums(a), rq = C[n]?.req;
+    return `<tr><td dir="ltr"><b>${esc(n)}</b></td><td>${inp(n, "req", "120px", "880…")}${rq ? "" : ` <small class="w-late">⚠ חסר מס׳ דרישה</small>`}</td><td>${inp(n, "amount", "110px")}</td><td>${inp(n, "note", "180px")}</td>
+      <td class="c">${a.length ? `<a href="#" data-act="pwGo" data-id="b444|${esc(n)}">${a.length}</a>` : "0"}</td>${cell(t)}${cell(p)}${cell(l)}<td>${ed && !a.length ? `<button class="btn ghost sm" data-act="pwDel444" data-id="${esc(n)}" title="מחיקה">🗑</button>` : ""}</td></tr>`; };
+  const none = live.filter(o => o.kind !== IEC_EXC && o.orderNo && !String(o.budgetNo || "").trim()), [nt, np, nl] = sums(none);
+  const rq = r => { const mine = nos.filter(n => C[n]?.req === r.no), [t, p] = sums(mine.flatMap(by));
+    return `<tr><td dir="ltr"><b>${esc(r.no)}</b></td><td><input class="inp pw-in" data-p880="${esc(r.no)}|amount" value="${esc(r.amount || "")}" style="width:120px" ${dis}></td><td class="small">${mine.map(esc).join(", ") || "—"}</td>${cell(t)}${cell(p)}<td>${ed && !mine.length ? `<button class="btn ghost sm" data-act="pwDel880" data-id="${esc(r.no)}">🗑</button>` : ""}</td></tr>`; };
+  return `<div class="card"><h2 style="margin-top:0">הזמנות משהב״ט (444) ודרישות (880)</h2><p class="small muted" style="margin-top:0">דרישה 880 ← הזמנת משהב״ט 444 ← הזמנות חח״י 301. מספר ה־444 של כל הזמנת חח״י נרשם בטבלת ההזמנות למטה (עמודה "הזמנת תקציב (444)") או בחלונית המתקן. אפשר לרשום 444 לפני שיש מספר דרישה.</p>
+    <div class="tablewrap" style="max-height:none"><table class="sheet"><thead><tr><th>הזמנת משהב״ט 444</th><th>דרישה 880</th><th>סכום</th><th>הערה</th><th>הזמנות חח״י</th><th>הוזמן</th><th>שולם</th><th>נשאר</th><th></th></tr></thead><tbody>${nos.map(row).join("")}
+      ${none.length ? `<tr class="pw-sum"><td colspan="4"><b class="w-late">⚠ הזמנות חח״י בלי 444</b></td><td class="c"><a href="#" data-act="pwGo" data-id="b444|—">${none.length}</a></td>${cell(nt)}${cell(np)}${cell(nl)}<td></td></tr>` : ""}
+      ${ed ? `<tr><td><input class="inp pw-in" id="n444_no" dir="ltr" placeholder="444…" style="width:120px"></td><td><input class="inp pw-in" id="n444_req" dir="ltr" placeholder="880… (לא חובה)" style="width:120px"></td><td><input class="inp pw-in" id="n444_amount" style="width:110px"></td><td><input class="inp pw-in" id="n444_note" style="width:180px"></td><td colspan="5"><button class="btn sm" data-act="pwAdd444">+ הוספת הזמנת משהב״ט</button></td></tr>` : ""}</tbody></table></div>
+    <h3>דרישות (880)</h3><div class="tablewrap" style="max-height:none"><table class="sheet"><thead><tr><th>מס׳ דרישה</th><th>סכום</th><th>הזמנות משהב״ט תחתיה</th><th>הוזמן מחח״י</th><th>שולם</th><th></th></tr></thead><tbody>${reqs.map(rq).join("")}
+      ${ed ? `<tr><td><input class="inp pw-in" id="n880_no" dir="ltr" placeholder="880…" style="width:120px"></td><td><input class="inp pw-in" id="n880_amount" style="width:120px"></td><td colspan="4"><button class="btn sm" data-act="pwAdd880">+ הוספת דרישה</button></td></tr>` : ""}</tbody></table></div></div>`; }
+const pwCfgSave = async patch => { RAW.tableConfig?.iec ? await api.update("tableConfig", "iec", patch) : await api.put("tableConfig", "iec", patch); };
+/** פתיחת מתקן (מחיפוש, מכל מספר הזמנה באתר) */
+function pwCard(key) { const d = D(), R = pwRows(d), F = pwFacts(d, R, key); if (!F) return toast("לא נמצא"); const P = pwF();
+  Object.assign(P, { tab: "ctl", sel: F.r.id }); ui.pwQ = ""; if (ui.page !== "power") { ui.page = "power"; location.hash = "power"; } render();
+  setTimeout(() => document.querySelector(`tr[data-rid="${CSS.escape(F.r.id)}"]`)?.scrollIntoView({ block: "center" }), 50); }
+/** סיכום דיון: שמירה כדיון, עדכון האתר לפי שורה, פתיחת נושא משורה */
+async function pwSumClick(act, b) {
+  if (act === "pwSumSave") { const S = ui.pwSum; S.text = document.getElementById("pws_t")?.value || S.text; S.date = document.getElementById("pws_d")?.value || S.date;
+    S.mid = await api.add("mtgs", { v: 2, type: "רשות", contractorId: "", party: "iec", partyL: "חח״י — חיבורי חשמל", title: `דיון עם חח״י ${fmtD(S.date)}`, attendees: "", date: S.date, by: tkWho(), open: false, closedAt: todayStr(), createdAt: new Date().toISOString(), dec: {}, notes: S.text }) || ""; render(); toast("הסיכום נשמר כדיון ✓"); }
+  else if (act === "pwFix") { const x = JSON.parse(b.dataset.id); if (!x.id) return; await api.update(x.col, x.id, { [x.k]: x.v, ...(x.col === "items" && x.k === "status" && x.v === "הושלם" && !RAW.items[x.id]?.doneDate ? { doneDate: ui.pwSum.date || todayStr() } : {}), ...(x.col === "iecOrders" && x.k === "stage" ? { stageDate: ui.pwSum.date || todayStr() } : {}) });
+    ui.pwSum.done[b.dataset.k] = 1; toast("עודכן באתר ✓"); }
+  else if (act === "pwSumIss") { const S = ui.pwSum, d = D(), R = pwRows(d), lines = S.text.split(/\n+/).map(x => x.replace(/^[\s•\-–*\d.)]+(?=\D)/, "").trim()).filter(x => x.length > 3), p = pwParseLine(lines[+b.dataset.id] || "", d, R);
+    const links = {}; p.F.forEach(f => { links[f.r.id] = true; }); const m = S.mid && RAW.mtgs?.[S.mid];
+    const iid = await wCreate({ title: p.t.slice(0, 160), owner: "חח״י", priority: "בינוני", status: "פתוח", category: "חשמל ותקשורת", contractorId: p.F.find(f => f.r.gz)?.r.gz.id || "", links, ...(m ? { src: { id: S.mid, t: m.title, d: m.date } } : {}) }, "מסיכום דיון עם חח״י" + (S.date ? " " + fmtD(S.date) : ""));
+    if (iid) { S.done["i" + b.dataset.id] = 1; toast("נפתח נושא מול חח״י ✓"); } }
+}
+async function pwClick(act, b) {
+  const F = pwF(), id = b.dataset.id || "";
+  if (act === "pwTab") { F.tab = id; F.sel = ""; render(); return scrollTo(0, 0); }
+  if (act === "pwSel") { F.sel = F.sel === id || !id ? "" : id; return render(); }
+  if (act === "pwCard") return pwCard(id);
+  if (act === "pwGap") return gapModal("iec");
+  if (act === "pwGo") { const [k, v] = id.split("|");
+    if (k === "mx") Object.assign(F, { dmx: F.dmx === v ? "" : v, dkind: "", dst: "", sel: "" }); else if (k === "kind") Object.assign(F, { dkind: F.dkind === v && !F.dmx ? "" : v, dmx: "" });
+    else if (k === "st") Object.assign(F, { dst: F.dst === v ? "" : v, dmx: "" }); else if (k === "clr") Object.assign(F, { dq: "", dkind: "", ddist: "", dgz: "", dst: "", dmx: "" }); else if (k === "dview") F.dview = v; else if (k === "dmx") F.dmx = "";
+    else if (k === "b444") Object.assign(F, { tab: "ctl", dmx: ":b444=" + v, dq: "", dkind: "", dst: "", sel: "" });
+    render(); if (k === "b444") scrollTo(0, document.querySelector(".pw-maincard")?.offsetTop - 10 || 0); return; }
+  if (act === "pwDetX") return exportTables([document.querySelector("table.pw-main")], "חח״י — מתקנים");
+  if (act === "pwChk") { const L = pwMoneyChecks(D()); return modal(`<h2 style="margin-top:0">⚠ סכומים לבדיקה (${L.length})</h2><p class="small muted">סכום שנראה כאילו הוזן כולל מע״מ, שובר בלי סכום, תשלום בלי תאריך (ואז הוא לא נספר).</p><table class="sheet"><tbody>${L.map(c => `<tr><td dir="ltr" class="nowrap">${esc(c.o.orderNo || "ללא מס׳")}</td><td class="small">${pwWhat(c.o)}</td><td class="small">${esc(c.t)}</td></tr>`).join("")}</tbody></table><div class="row" style="margin-top:10px"><button class="btn" id="mNo">סגירה</button></div>`, (m, c) => m.querySelector("#mNo").onclick = c); }
+  if (act === "pwIss") { const t = document.getElementById("pw_iss")?.value.trim(); if (!t) return toast("לכתוב קודם את הנושא"); const d = D(), Fx = pwFacts(d, pwRows(d), id); if (!Fx) return;
+    const links = {}; if (Fx.r.i) links["i:" + Fx.r.i.id] = true; Fx.os.forEach(o => { links["o:" + o.id] = true; });
+    await wCreate({ title: t.slice(0, 160), owner: "חח״י", priority: "בינוני", status: "פתוח", category: "חשמל ותקשורת", contractorId: Fx.r.gz?.id || "", links }, "נפתח ממסך חברת חשמל"); toast("נפתח נושא ✓"); return render(); }
+  if (act === "pwAdd444") { const g = k => document.getElementById("n444_" + k)?.value.trim() || "", n = g("no"); if (!n) return toast("להזין מספר הזמנת משהב״ט"); await pwCfgSave({ b444: { ...b444Cfg(), [n]: { req: g("req"), amount: g("amount"), note: g("note") } } }); return toast("נוסף ✓"); }
+  if (act === "pwDel444") { const C = { ...b444Cfg() }; delete C[id]; await pwCfgSave({ b444: C }); return toast("נמחק"); }
+  if (act === "pwAdd880") { const n = document.getElementById("n880_no")?.value.trim(); if (!n) return toast("להזין מספר דרישה"); await pwCfgSave({ budgetReqs: [...(RAW.tableConfig?.iec?.budgetReqs || []), { no: n, amount: document.getElementById("n880_amount")?.value.trim() || "" }] }); return toast("נוסף ✓"); }
+  if (act === "pwDel880") { await pwCfgSave({ budgetReqs: (RAW.tableConfig?.iec?.budgetReqs || []).filter(r => String(r.no) !== id) }); return toast("נמחק"); }
+  if (act === "pwPaid") { const o = D().iecOrders.find(x => x.id === id); if (o) pwPaidModal(o); return; }
+  if (act === "pwVch") return pwVoucherModal(D().iecOrders.find(x => x.id === id) || null);
+  if (act === "pwOrd") { F.tab = "edit"; ui.iec = { dist: "", kind: "", stage: "", q: id, showOff: true }; render(); return scrollTo(0, 0); }
+  if (act === "pwNewOrd") { const i = RAW.items?.[id]; if (!i) return; const d = D();
+    await api.add("iecOrders", { district: iecDistOf(d, kdNum(i.kdFrom)), kind: i.kind, name: i.name || "", orderNo: "", kd: i.kdFrom || "", sec: i.x_sec || "", place: "", stage: "טרם הוזמן", stageDate: todayStr(), amount: "", advance: "", advanceDate: "", completion: "", completionDate: "",
+      validUntil: "", size: "", excNo: "", excAmount: "", excAdvance: "", excAdvanceDate: "", excApproved: false, parentNo: "", budgetNo: "", itemId: i.id, coord: "", last: "", note: "", history: {}, order: Date.now() });
+    return toast("נפתחה הזמנה — ממלאים מספר הזמנה בחלונית ✓"); }
+  if (act === "pwSumGo") { const S = ui.pwSum; S.text = document.getElementById("pws_t")?.value || ""; S.date = document.getElementById("pws_d")?.value || S.date; S.done = {}; return render(); }
+  if (act === "pwSumClear") { ui.pwSum = { text: "", date: todayStr(), mid: "", done: {} }; return render(); }
+  if (act === "pwSumSave" || act === "pwFix" || act === "pwSumIss") return pwSumClick(act, b);
+}
+$app.addEventListener("change", async e => { const t = e.target;
+  if (t.dataset?.pwfeed) { const [fid, n] = t.dataset.pwfeed.split("|"), cur = list("items").filter(x => x.feed === fid).sort((a, b) => (kdNum(a.kdFrom) ?? 0) - (kdNum(b.kdFrom) ?? 0)), prev = cur[+n], nv = t.value;
+    if (prev && prev.id !== nv) await api.update("items", prev.id, { feed: "" }); if (nv) await api.update("items", nv, { feed: fid }); return toast(nv ? "ההזנה עודכנה ✓" : "הארון הוסר מההזנה"); }
+  if (t.dataset?.p444) { const [n, k] = t.dataset.p444.split("|"), C = b444Cfg(); return pwCfgSave({ b444: { ...C, [n]: { ...(C[n] || {}), [k]: t.value.trim() } } }); }
+  if (t.dataset?.p880) { const [n, k] = t.dataset.p880.split("|"); return pwCfgSave({ budgetReqs: (RAW.tableConfig?.iec?.budgetReqs || []).map(r => String(r.no) === n ? { ...r, [k]: t.value.trim() } : r) }); }
+  if (t.dataset?.pwf) { pwF()[t.dataset.pwf] = t.type === "checkbox" ? t.checked : t.value; render(); } });
+$app.addEventListener("input", e => { const t = e.target; if (t.dataset?.pwf !== "dq") return; pwF().dq = t.value; clearTimeout(t._tm); t._tm = setTimeout(() => { const pos = t.selectionStart; render(); const n = document.querySelector('[data-pwf="dq"]'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 300); });
 const PW_PAID = new Set(["מקדמה שולמה", "שובר משלים", "משלים שולם", "מתואם חיבור", "חובר"]);   // שולמה לפחות מקדמה
 const PW_AT_CLR = { "אנחנו": "#c0392b", "קבלן": "#c96a12", "חח״י": "#2d6cb8", "✓": "#2f8a6b", "—": "#8a9a90" };
 function iecDistOf(d, k) { if (k === null || k === undefined) return ""; let b = null, bd = 1e9; for (const o of d.iecOrders) { const x = kdNum(o.kd); if (!o.district || x === null) continue; const dd = Math.abs(x - k); if (dd < bd) { bd = dd; b = o; } } return b?.district || ""; }
@@ -4517,7 +4644,6 @@ function pwRows(d) {
   R.forEach(r => { if (!r.feedR) r.nx = pwNext(r); }); R.forEach(r => { if (r.feedR) { r.feedR.nx = r.feedR.nx || pwNext(r.feedR); r.nx = pwNext(r); } });
   return R;
 }
-/** השלב הבא ואצל מי: משטח (קבלן) → הזמנה ותשלום (אנחנו) → הצבה / התקנה (חח״י / קבלן) → חיבור (חח״י) */
 function pwNext(r) {
   const i = r.i, o = r.o, st = o?.stage || "", T = todayStr(), pad = PAD_KINDS.includes(r.kind);
   if (st === "מוקפא") return { t: "מוקפא", at: "—" };
@@ -4531,58 +4657,13 @@ function pwNext(r) {
   if (st !== "חובר") return { t: st === "מתואם חיבור" ? "חיבור (מתואם)" : "חיבור — לדרוש מועד", at: "חח״י", k: "conn" };
   return { t: "חובר", at: "✓", k: "done" };
 }
-function pwPay(o) {
-  if (!o) return `<span class="pill warn">אין הזמנה — לא שולם</span>`;
-  const st = o.stage, P = iecToPay(o);
-  if (st === "טרם הוזמן") return `<span class="muted">טרם הוזמן</span>`;
-  if (st === "הוזמן") return `<span class="muted">ממתין לשובר</span>`;
-  if (IEC_PAY.has(st) && o.validUntil && o.validUntil < todayStr()) return `<b style="color:#c0392b">⛔ השובר פג ${fmtD(o.validUntil)}</b><div class="small">${o.kind === IEC_EXC ? "חיבור חריג · " : ""}${P ? ils(P) + " ₪ · " : ""}לבקש שובר חדש</div>`;
-  if (IEC_PAY.has(st)) return `<b style="color:#c0392b">💳 ${o.kind === IEC_EXC ? "חיבור חריג — " : ""}${st === "שובר מקדמה" ? "מקדמה" : "משלים"} לתשלום${P ? " · " + ils(P) + " ₪" : ""}</b>${o.validUntil ? `<div class="small ${daysTo(o.validUntil) < 0 ? "w-late" : "muted"}">תוקף ${fmtD(o.validUntil)}</div>` : ""}`;
-  if (st === "מקדמה שולמה") return `מקדמה ✓${o.advanceDate ? ` <span class="muted small">${fmtD(o.advanceDate)}</span>` : ""}`;
-  if (PW_PAID.has(st)) return `שולם ✓${o.completionDate ? ` <span class="muted small">${fmtD(o.completionDate)}</span>` : ""}`;
-  return esc(st);
-}
-const pwF = () => ui.pw || (ui.pw = { dq: "", ddist: "", dgz: "", dprob: false, dmx: "", tab: "dash", kind: "", dist: "", gz: "", at: "", q: "", prob: false, mx: "", cDist: "", cQ: "", cDue: false, cExc: false, hl: "" });
-function pagePower(d) {
-  const F = pwF(), R = pwRows(d), T = todayStr();
-  const cnt = f => R.filter(f).length, atN = a => cnt(r => r.nx.at === a), toPay = R.filter(r => r.nx.k === "pay").reduce((t, r) => t + iecToPay(r.o), 0);
-  const tile = (l, n, sub, k, cls = "") => `<div class="ch-t ${cls} ${F.at === k && k ? "on" : ""}" ${k ? `data-act="pwF" data-id="at|${k}" role="button"` : ""}><span>${l}</span><b>${n}</b><small>${sub}</small></div>`;
-  const tb = (k, l, n) => `<button class="w-tb ${F.tab === k ? "on" : ""}" data-act="pwF" data-id="tab|${k}">${l}${n != null ? ` <small>${n}</small>` : ""}</button>`;
-  const iP = gapParties().find(p => p.k === "iec"), iI = iP ? gapIssues(iP) : { dir: [], ment: [] };
-  const tiles = `<div class="ch-tiles sg-tiles" style="--cc:#c98a12">${tile("מתקנים", R.length, `${cnt(r => r.kind === "תט״ז")} תט״ז · ${cnt(r => r.kind === "חדר טרפו")} טרפו · ${cnt(r => r.kind === "ארון שקד")} ארונות`, "")}
-      ${tile("🔴 אצלנו", atN("אנחנו"), `${cnt(r => r.nx.k === "noord")} בלי הזמנה · ${cnt(r => r.nx.k === "pay")} לתשלום${toPay ? ` · ${ils(toPay * (1 + iecVat()))} ₪ כולל מע״מ` : ""}`, "אנחנו", atN("אנחנו") ? "t2" : "")}
-      ${tile("🟠 אצל הקבלן", atN("קבלן"), `${cnt(r => r.nx.k === "pad")} משטחים · ${cnt(r => r.nx.at === "קבלן" && r.nx.k === "inst")} ביצוע`, "קבלן")}
-      ${tile("🔵 אצל חח״י", atN("חח״י"), `${cnt(r => r.nx.at === "חח״י" && r.nx.k === "inst")} הצבה · ${cnt(r => r.nx.k === "conn")} חיבור`, "חח״י", "t1")}
-      ${tile("⏰ באיחור", cnt(r => r.nx.late), "עבר התאריך המתוכנן", "late", cnt(r => r.nx.late) ? "t2" : "")}
-      ${tile("✓ חוברו", atN("✓"), "", "✓", "t3")}</div>`;
-  let body = "";
-  if (F.tab === "orders") body = pageIec(d, true);
-  else if (F.tab === "sum") body = pwSumPage(d);
-  else if (F.tab === "pay") body = pwPayPage(d);
-  else if (F.tab === "iss") body = `${isViewer() ? "" : qnLine("", "למשל: חח״י — לתאם הצבת תט״ז 874 עד 30/10 · דחוף")}<div class="card"><h2 style="margin-top:0">נושאים פתוחים מול חח״י <span class="muted small">(${iI.dir.length})</span></h2>${wTable(d, iI.dir, "", "אין נושאים פתוחים מול חח״י")}</div>
-    ${iI.ment.length ? `<details class="card"><summary><b>רק מוזכר</b> <span class="muted small">(${iI.ment.length}) — נושאים של אחרים שבהם חח״י מוזכר</span></summary>${wTable(d, iI.ment)}</details>` : ""}`;
-  else if (F.tab === "dash") body = pwDash2(d, R);
-  else if (F.tab === "det") body = pwDetPage(d, R);
-  else if (F.tab === "ctl") body = pwCtlPage(d);
-  else body = tiles + pwFacTable(d, R);
-  return `<div class="ch-banner" style="--cc:#c98a12"><div><h1>⚡ חברת חשמל</h1><span>כל המתקנים מול חח״י במקום אחד — משטח, הזמנה ותשלום, הצבה, חיבור · אחראי: ${esc(leadCfg().iec || "—")}</span></div>
-    <div class="row" style="gap:6px"><button class="btn gp-btn" data-act="pwGap">📋 פערים מול חח״י</button>${isViewer() ? "" : `<button class="btn" data-act="pwDisc">▶ דיון עם חח״י</button>`}</div></div>
-    <div class="pws-box"><input class="inp" id="pw_gq" value="${esc(ui.pwQ || "")}" placeholder="🔎 חיפוש: מס׳ הזמנה (גם חלק ממנו), ק.ד., T5, שם מתקן, יישוב…" autocomplete="off"><div id="pw_res" class="pws-res" ${ui.pwQ && qnNorm(ui.pwQ).length > 1 ? "" : "hidden"}>${pwSearchHtml(d, R, ui.pwQ || "")}</div></div>
-    <div class="w-tabs pw-tabs">${tb("dash", "📊 דשבורד")}${tb("det", "📋 פירוט", R.length)}<span class="pw-more">עוד:</span>${tb("pay", "💰 שוברים ותשלומים", d.iecOrders.filter(o => IEC_PAY.has(o.stage)).length)}${tb("ctl", "טבלת הזמנות (כמו באקסל)")}${tb("orders", "✏ עריכת הזמנות", d.iecOrders.filter(o => o.stage !== "בוטל").length)}${tb("fac", "מתקנים (ישן)")}${tb("sum", "📝 סיכום דיון")}${tb("iss", "נושאים", iI.dir.length)}</div>${body}`;
-}
-/* ---------- 💰 תשלומים לחח״י — כמה לשלם, ממה מורכב, ומה כבר שולם.
-   כלל אחד לכל האתר: כל סכום נרשם ללא מע״מ — בדיוק כמו בשובר ("סה״כ להזמנה" ו"לתשלום"). "כולל מע״מ" = מה שמעבירים בפועל, מחושב (× 1 + מע״מ).
-   amount = סה״כ להזמנה (מהשובר האחרון) · advance = "לתשלום" בשובר המקדמה · completion = "לתשלום" בשובר המשלים (= סה״כ − המקדמה שחח״י זיכו) ---------- */
 const ils2 = v => v === null || v === undefined || v === "" ? "—" : (Math.round(v * 100) / 100).toLocaleString("he-IL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const vatOf = v => Math.round(v * iecVat() * 100) / 100, withVat = v => Math.round(v * (1 + iecVat()) * 100) / 100;
 const PW_VCH = { "שובר מקדמה": "מקדמה", "שובר משלים": "משלים" };
-/** מה כתוב בשובר הפתוח: { kind, pay, total, issued, valid, expired } */
 function pwVoucher(o) { if (!IEC_PAY.has(o.stage)) return null; const pay = iecToPay(o);
   return { kind: PW_VCH[o.stage], pay, total: mn(o.amount), issued: o.stageDate || "", valid: o.validUntil || "", expired: !!o.validUntil && o.validUntil < todayStr() }; }
-/** מה המתקן / ההזמנה (לתצוגה) */
 function pwWhat(o) { const i = o.itemId && RAW.items?.[o.itemId]; const base = i ? `${KIND_EMO[i.kind] || ""} ${i.name || i.kind}${i.kdFrom ? ` · ק.ד. ${i.kdFrom}` : ""}` : `${o.kind || ""}${o.name ? " · " + o.name : ""}${o.kd ? ` · ק.ד. ${o.kd}` : ""}`;
   return o.kind === IEC_EXC ? `חיבור חריג — ${i ? (i.name || i.kind) : o.name || ""}${o.parentNo ? ` <span class="muted">(ארונות ${esc(o.parentNo)})</span>` : ""}` : esc(base); }
-/** בדיקת עקביות הסכומים — סכום שנראה כאילו הוזן כולל מע״מ, שובר בלי סכום, תשלום בלי תאריך */
 function pwMoneyChecks(d) { const V = 1 + iecVat(), out = [], near = (a, b) => Math.abs(a - b) <= Math.max(1, b * 0.0005);
   d.iecOrders.filter(o => o.stage !== "בוטל").forEach(o => { const A = mn(o.amount), adv = mn(o.advance), c = mn(o.completion), L = t => out.push({ o, t });
     if (A && adv && near(adv, A * 0.1 * V)) L(`המקדמה ${ils2(adv)} = 10% × ${ils2(A)} כולל מע״מ — נראה שהוזנה כולל מע״מ (ללא מע״מ: ${ils2(A * 0.1)})`);
@@ -4593,40 +4674,6 @@ function pwMoneyChecks(d) { const V = 1 + iecVat(), out = [], near = (a, b) => M
     if (["משלים שולם", "מתואם חיבור", "חובר"].includes(o.stage) && A && !o.completionDate) L("המשלים שולם (לפי השלב) — חסר תאריך תשלום, ולכן הוא לא נספר ב'שולם'");
     if ((mn(o.excAmount) || mn(o.excAdvance)) && o.kind !== IEC_EXC) L(`סכום חיבור חריג (${ils2(mn(o.excAmount))}) רשום בתוך הזמנת הארון — צריך הזמנה נפרדת מסוג 'חיבור חריג'`); });
   return out; }
-function pwPayPage(d) {
-  const ed = !isViewer(), live = d.iecOrders.filter(o => o.stage !== "בוטל"), V = iecVat();   // כולל הזמנות מרכזות — שם שולם הכסף בפועל
-  const open = live.filter(o => IEC_PAY.has(o.stage)).map(o => ({ o, v: pwVoucher(o) })).sort((a, b) => b.v.expired - a.v.expired || (a.v.valid || "9").localeCompare(b.v.valid || "9") || (a.v.issued || "").localeCompare(b.v.issued || ""));
-  const now = open.filter(x => !x.v.expired && x.v.valid), unk = open.filter(x => !x.v.valid), exp = open.filter(x => x.v.expired), S = a => a.reduce((t, x) => t + x.v.pay, 0);
-  const paid = live.reduce((t, o) => t + iecPaid(o), 0), total = live.reduce((t, o) => t + mn(o.amount), 0), later = Math.max(0, total - paid - S(open));
-  const money3 = v => `<small>ללא מע״מ</small><b>${ils2(v)}</b><small>מע״מ ${ils2(vatOf(v))}</small><small>כולל מע״מ — להעברה:</small><small class="pw-incl">${ils2(withVat(v))} ₪</small>`;
-  const tile = (l, v, sub, cls = "") => `<div class="ch-t ${cls}"><span>${l}</span>${money3(v)}${sub ? `<small>${sub}</small>` : ""}</div>`;
-  const row = ({ o, v }) => `<tr class="${v.expired ? "pw-exp" : ""}"><td class="small">${esc(o.district || "")}</td><td>${pwWhat(o)}</td><td dir="ltr" class="nowrap">${esc(o.orderNo || "—")}</td>
-    <td class="nowrap"><b>${v.kind}</b>${o.kind === IEC_EXC ? `<div class="small muted">חיבור חריג</div>` : ""}</td><td class="nowrap small">${v.issued ? fmtD(v.issued) : "—"}</td>
-    <td class="nowrap small">${v.valid ? (v.expired ? `<b class="w-late">⛔ פג ${fmtD(v.valid)}</b>` : `${fmtD(v.valid)}${daysTo(v.valid) <= 14 ? ` <span class="pill warn">${daysTo(v.valid)} ימים</span>` : ""}`) : `<span class="muted">—</span>`}</td>
-    <td class="num">${v.total ? ils2(v.total) : "—"}</td><td class="num"><b>${ils2(v.pay)}</b></td><td class="num muted">${ils2(vatOf(v.pay))}</td><td class="num pw-inc"><b>${ils2(withVat(v.pay))}</b></td>
-    <td class="nowrap">${ed ? `<button class="btn sm" data-act="pwPaid" data-id="${o.id}" ${v.expired ? `title="השובר פג — לרוב צריך שובר חדש לפני תשלום"` : ""}>✓ שולם</button> <button class="btn ghost sm" data-act="pwVch" data-id="${o.id}" title="עדכון לפי שובר">✏</button>` : ""}</td></tr>`;
-  const foot = (a, l) => a.length ? `<tr class="pw-sum"><td colspan="7"><b>${l}</b> <span class="muted small">(${a.length})</span></td><td class="num"><b>${ils2(S(a))}</b></td><td class="num">${ils2(vatOf(S(a)))}</td><td class="num pw-inc"><b>${ils2(withVat(S(a)))}</b></td><td></td></tr>` : "";
-  const TH = `<tr><th>נפה</th><th>מתקן / הזמנה</th><th>מס׳ הזמנה</th><th>שובר</th><th>הונפק</th><th>בתוקף עד</th><th>סה״כ להזמנה<br><small>ללא מע״מ</small></th><th>לתשלום<br><small>ללא מע״מ</small></th><th>מע״מ<br><small>${Math.round(V * 1000) / 10}%</small></th><th>לתשלום<br><small>כולל מע״מ — להעברה</small></th><th></th></tr>`;
-  const dist = IEC_DISTRICTS.map(ds => { const a = live.filter(o => o.district === ds), p = a.reduce((t, o) => t + iecPaid(o), 0), n = a.filter(o => IEC_PAY.has(o.stage) && !pwVoucher(o).expired).reduce((t, o) => t + iecToPay(o), 0), x = a.filter(o => IEC_PAY.has(o.stage) && pwVoucher(o).expired).reduce((t, o) => t + iecToPay(o), 0), tt = a.reduce((t, o) => t + mn(o.amount), 0);
-    const c = v => `<td class="num">${v ? ils2(v) : "—"}<div class="small muted">${v ? ils2(withVat(v)) : ""}</div></td>`; return `<tr><td><b>${ds}</b></td>${c(tt)}${c(p)}${c(n)}${c(x)}${c(Math.max(0, tt - p - n - x))}</tr>`; }).join("");
-  const chk = pwMoneyChecks(d);
-  return `<div class="card pw-legend"><b>איך קוראים את הסכומים:</b> כל סכום באתר נרשם <b>ללא מע״מ</b> — כמו בשובר של חח״י. בשובר יש שלוש שורות: <b>סה״כ להזמנה</b> (עלות ההזמנה כולה), <b>לתשלום</b> (מה שהשובר הזה דורש) ו<b>סה״כ כולל מע״מ</b> (מה שמעבירים בפועל). בשובר משלים: לתשלום = סה״כ להזמנה פחות המקדמה שחח״י זיכו. העמודה הכחולה היא הסכום להעברה. <b>שובר של חח״י תקף 30 יום</b> — אחרי זה מבקשים שובר חדש (והמחיר עשוי להתעדכן).</div>
-    <div class="ch-tiles pw-money" style="--cc:#c98a12">${tile("💳 לשלם עכשיו", S(now), `${now.length} שוברים בתוקף`, now.length ? "t2" : "")}${unk.length ? tile("❔ תוקף לא רשום", S(unk), `${unk.length} שוברים — לבדוק את התאריך בשובר`, "") : ""}${tile("⛔ שוברים שפגו", S(exp), `${exp.length} — לבקש שובר חדש`, exp.length ? "t2" : "")}${tile("✓ שולם עד היום", paid, "מקדמות + משלימים עם תאריך תשלום", "t3")}${tile("⏳ עוד לא הונפק שובר", later, "יתרת ההזמנות שאין עליה שובר פתוח", "t1")}</div>
-    <div class="card"><div class="row" style="margin-bottom:8px"><h2 style="margin:0">שוברים פתוחים — לתשלום</h2><span class="spacer"></span>${ed ? `<button class="btn sm" data-act="pwVch" data-id="">+ הזנת שובר</button>` : ""}<button class="btn ghost sm" data-act="pwPayCopy">📋 העתקה לבקשת תשלום</button></div>
-      ${open.length ? `<div class="tablewrap" style="max-height:none"><table class="sheet pw-pay"><thead>${TH}</thead><tbody>${exp.map(row).join("")}${foot(exp, "⛔ פגו — צריך שובר חדש")}${now.map(row).join("")}${foot(now, "💳 בתוקף — לשלם עכשיו")}${unk.map(row).join("")}${foot(unk, "❔ תוקף לא רשום — לבדוק בשובר")}${[exp, now, unk].filter(a => a.length).length > 1 ? foot(open, "סה״כ שוברים פתוחים") : ""}</tbody></table></div>` : `<p class="muted">אין שוברים פתוחים.</p>`}</div>
-    <div class="card"><h2 style="margin-top:0">מאזן לפי נפה <span class="muted small">— בכל תא: ללא מע״מ, ומתחת כולל מע״מ</span></h2><div class="tablewrap" style="max-height:none"><table class="sheet"><thead><tr><th>נפה</th><th>סה״כ הזמנות</th><th>שולם</th><th>שוברים פתוחים בתוקף / תוקף לא רשום</th><th>שוברים שפגו</th><th>עוד לא הונפק שובר</th></tr></thead><tbody>${dist}</tbody></table></div></div>
-    ${chk.length ? `<div class="card"><h2 style="margin-top:0">⚠ סכומים לבדיקה <span class="muted small">(${chk.length})</span></h2><p class="small muted" style="margin-top:0">סכומים שנראים כאילו הוזנו כולל מע״מ, שובר בלי סכום, או תשלום בלי תאריך (ואז הוא לא נספר).</p>
-      <table class="sheet"><tbody>${chk.map(c => `<tr><td dir="ltr" class="nowrap"><a href="#" data-act="pwOrd" data-id="${esc(c.o.orderNo || c.o.name || "")}">${esc(c.o.orderNo || "ללא מס׳")}</a></td><td class="small">${pwWhat(c.o)}</td><td class="small">${esc(c.t)}</td><td>${ed ? `<button class="btn ghost sm" data-act="pwVch" data-id="${c.o.id}">✏</button>` : ""}</td></tr>`).join("")}</tbody></table></div>` : ""}`;
-}
-/** טקסט לבקשת תשלום — מסודר לפי תוקף */
-function pwPayText(d) { const a = d.iecOrders.filter(o => IEC_PAY.has(o.stage) && iecToPay(o)).map(o => ({ o, v: pwVoucher(o) })).sort((x, y) => (x.v.valid || "9").localeCompare(y.v.valid || "9"));
-  const S = b => b.reduce((t, x) => t + x.v.pay, 0), tot = b => `ללא מע״מ ${ils2(S(b))} · מע״מ ${ils2(vatOf(S(b)))} · כולל מע״מ ${ils2(withVat(S(b)))}`;
-  const L = ({ o, v }, k) => `${k + 1}. הזמנה ${o.orderNo} · ${o.district || ""} · ${o.kind === IEC_EXC ? "חיבור חריג — " : ""}${RAW.items?.[o.itemId]?.name || o.name || o.kind || ""} · שובר ${v.kind}${v.issued ? " מ־" + fmtD(v.issued) : ""}${v.valid ? " · ניתן לשלם עד " + fmtD(v.valid) : ""}\n   ללא מע״מ ${ils2(v.pay)} · מע״מ ${ils2(vatOf(v.pay))} · כולל מע״מ ${ils2(withVat(v.pay))}`;
-  const sec = (t, b) => b.length ? `${t} (${b.length})\n${b.map(L).join("\n")}\nסה״כ: ${tot(b)}\n\n` : "";
-  return `תשלומים לחברת החשמל — ${fmtD(todayStr())}\n(סכומים בש״ח. "כולל מע״מ" = הסכום להעברה. שובר של חח״י תקף 30 יום)\n\n`
-    + sec("בתוקף — לשלם", a.filter(x => x.v.valid && !x.v.expired)) + sec("תוקף לא רשום — לבדוק בשובר", a.filter(x => !x.v.valid)) + sec("פג תוקף — לבקש שובר חדש (הסכום עשוי להתעדכן)", a.filter(x => x.v.expired))
-    + `סה״כ כל השוברים הפתוחים: ${tot(a)}`; }
-/** הזנת שובר: מעתיקים מהשובר שלושה מספרים — סה״כ להזמנה, לתשלום, כולל מע״מ. האתר בודק שהם מתיישבים (כדי שלא יוזן סכום כולל מע״מ בטעות) */
 function pwVoucherModal(o0) {
   const O = (RAW.iecOrders ? Object.entries(RAW.iecOrders).map(([id, x]) => ({ ...x, id })) : []).filter(o => o.stage !== "בוטל");
   modal(`<h2 style="margin:0">🧾 הזנת שובר מחח״י</h2><p class="small muted" style="margin:2px 0 10px">מעתיקים את המספרים כפי שהם בשובר. כל הסכומים <b>ללא מע״מ</b>, חוץ מהשדה האחרון.</p>
@@ -4660,7 +4707,6 @@ function pwVoucherModal(o0) {
       await api.update("iecOrders", o.id, { ...set, last: h, history: { ...(o.history || {}), [newId()]: { date: todayStr(), text: h, by: tkWho() } } }); close(); toast("השובר נשמר ✓"); render(); };
   });
 }
-/** סימון תשלום: התאריך, והסכום שהועבר בפועל (כולל מע״מ) — לבדיקה מול השובר */
 function pwPaidModal(o) { const v = pwVoucher(o); if (!v) return;
   modal(`<h2 style="margin:0">✓ תשלום ${v.kind} — הזמנה <span dir="ltr">${esc(o.orderNo)}</span></h2><p class="small muted" style="margin:2px 0 10px">${pwWhat(o)}</p>
     <p>לפי השובר: <b>${ils2(v.pay)}</b> ללא מע״מ · <b>${ils2(withVat(v.pay))} ₪</b> כולל מע״מ${v.expired ? `<br><b class="w-late">⛔ השובר פג ב־${fmtD(v.valid)} — לוודא שחח״י קיבלו את התשלום</b>` : ""}</p>
@@ -4688,12 +4734,10 @@ const PART_TXT = { paid: "שולם", "paid?": "שולם (בלי תאריך)", du
 function partChip(p) { if (!p || p.s === "na") return `<span class="muted">—</span>`;
   const ic = { paid: "✓", "paid?": "✓", due: "✗", exp: "⛔", none: "·" }[p.s];
   return `<span class="pc pc-${p.s.replace("?", "q")}" title="${PART_TXT[p.s]}${p.d ? " · " + fmtD(p.d) : ""}">${ic} ${ils2(p.v)}${p.d ? `<small>${p.s === "exp" ? "פג " : p.s === "due" ? "עד " : ""}${fmtD(p.d).slice(0, 5)}</small>` : p.s === "paid?" ? `<small>?</small>` : ""}</span>`; }
-/** חיבור חריג ↔ הזמנות הארונות (לפי parentNo). מוצג פעם אחת — בשורה של הארון הראשון ברשימה; בשאר: "ראה …" */
 function iecExcMap(d) { const byNo = new Map(d.iecOrders.filter(o => o.orderNo).map(o => [String(o.orderNo), o])), host = new Map(), see = new Map(), orphan = [];
   d.iecOrders.filter(o => o.kind === IEC_EXC && o.stage !== "בוטל").forEach(x => { const nos = String(x.parentNo || "").split(/[,\s;/+]+/).filter(n => byNo.has(n));
     if (!nos.length) return orphan.push(x); const h = byNo.get(nos[0]); (host.get(h.id) || host.set(h.id, []).get(h.id)).push(x); nos.slice(1).forEach(n => see.set(byNo.get(n).id, { x, h })); });
   return { host, see, orphan }; }
-/** הכל על מתקן אחד: הפריט, ההזמנות שלו, החיבור החריג, מי מזין אותו / את מי הוא מזין, השלב הבא, נושאים */
 function pwFacts(d, R, key) { const [t, id] = key.split(":"); let r = null;
   if (t === "i") r = R.find(x => x.i?.id === id);
   else { const o = d.iecOrders.find(x => x.id === id); if (!o) return null; r = R.find(x => x.os.some(y => y.id === id)) || null;
@@ -4705,31 +4749,6 @@ function pwFacts(d, R, key) { const [t, id] = key.split(":"); let r = null;
   const fedBy = r.i?.feed ? RAW.items?.[r.i.feed] : null, feeds = r.i ? d.items.filter(i => i.feed === r.i.id) : [];
   const keys = new Set([r.i ? "i:" + r.i.id : "", ...os.map(o => "o:" + o.id)]), iss = d.issues.filter(x => x.status !== "סגור" && Object.keys(x.links || {}).some(k => keys.has(k)));
   return { r, os, fedBy, feeds, iss }; }
-function pwCard(key) { const d = D(), R = pwRows(d), F = pwFacts(d, R, key); if (!F) return toast("לא נמצא");
-  const { r, os, fedBy, feeds, iss } = F, i = r.i, nx = r.nx || {}, em = KIND_EMO[r.kind] || (r.kind === IEC_EXC ? "⚡" : "📍");
-  const fld = (l, v) => v ? `<div><span>${l}</span><b>${v}</b></div>` : "";
-  const oRow = o => { const P = iecParts(o); return `<tr><td dir="ltr" class="nowrap"><b>${esc(o.orderNo || "ללא מס׳")}</b></td><td>${o.kind === IEC_EXC ? "<b>מרחק / חיבור חריג</b>" : esc(o.kind || "")}${o.kd ? ` <span class="muted small">ק.ד. ${esc(o.kd)}</span>` : ""}</td>
-    <td><span class="pill" style="background:${IEC_COLORS[o.stage] || "#eee"}">${esc(o.stage || "")}</span></td><td class="num">${P.A ? ils2(P.A) : "—"}</td><td>${partChip(P.a)}</td><td>${partChip(P.c)}</td><td class="num"><b>${P.left ? ils2(P.left) : "—"}</b></td></tr>`; };
-  const L = os.map(iecParts), left = L.reduce((t, p) => t + p.left, 0), paid = L.reduce((t, p) => t + p.paid, 0);
-  modal(`<div class="pwc no-ol"><div class="row" style="align-items:flex-start"><h2 style="margin:0">${em} ${esc(i ? i.name || r.kind : r.o?.name || r.kind)}</h2><span class="spacer"></span><button class="btn ghost sm" id="c_x">✕</button></div>
-    <div class="pwc-f">${fld("סוג", esc(r.kind))}${fld("ק.ד.", esc(i?.kdFrom || r.o?.kd || ""))}${fld("נפה", esc(r.dist || ""))}${fld("גזרה", esc(r.gz?.name || ""))}${fld("יישוב", esc(os.find(o => o.place)?.place || ""))}</div>
-    ${i ? `<h3>בשטח</h3><div class="pwc-f">${PAD_KINDS.includes(r.kind) ? fld("משטח (קבלן)", esc(i.padStatus || "טרם") + (i.padDone ? " · " + fmtD(i.padDone) : "")) : ""}${fld(r.kind === "תט״ז" ? "הצבה" : "ביצוע", esc(i.status || "טרם"))}${fld("מתוכנן", i.plannedDate ? fmtD(i.plannedDate) : "—")}${fld("בפועל", i.doneDate ? fmtD(i.doneDate) : "—")}</div>
-      ${fedBy ? `<p class="small">⚡ מוזן מ־<b>${esc(fedBy.name || fedBy.kind)}</b> — לא יחובר לפני שהוא ישולם ויוצב</p>` : ""}${feeds.length ? `<p class="small">⚡ מזין את: <b>${feeds.map(x => esc(x.name || x.kdFrom)).join(", ")}</b></p>` : ""}` : ""}
-    <h3>הזמנות חח״י <span class="muted small">(סכומים ללא מע״מ)</span></h3>
-    ${os.length ? `<div class="tablewrap" style="max-height:none"><table class="sheet pwc-t"><thead><tr><th>מס׳ הזמנה</th><th>מה</th><th>שלב</th><th>סה״כ</th><th>מקדמה</th><th>משלים</th><th>נשאר לשלם</th></tr></thead><tbody>${os.map(oRow).join("")}</tbody>
-      <tfoot><tr><td colspan="3"><b>סה״כ</b></td><td class="num">${ils2(L.reduce((t, p) => t + p.A, 0))}</td><td colspan="2" class="small">שולם ${ils2(paid)} · כולל מע״מ ${ils2(withVat(paid))}</td><td class="num"><b>${ils2(left)}</b><div class="small">כולל מע״מ ${ils2(withVat(left))}</div></td></tr></tfoot></table></div>` : `<p class="w-late"><b>אין הזמנת חח״י</b> — לפתוח הזמנה</p>`}
-    <h3>השלב הבא</h3><p><span class="pw-at" style="--c:${PW_AT_CLR[nx.at] || "#888"}">${esc(nx.at || "")}</span> ${esc(nx.t || "")}${nx.late ? ` <b class="w-late">⏰ באיחור</b>` : ""}</p>
-    ${iss.length ? `<h3>נושאים פתוחים (${iss.length})</h3><ul class="pwc-i">${iss.map(x => `<li><b>${esc(x.code || "")}</b> ${esc(x.title || "")} <span class="muted small">· ${esc(x.owner || "")}${x.status ? " · " + esc(x.status) : ""}</span></li>`).join("")}</ul>` : ""}
-    <div class="row" style="gap:6px;margin-top:12px;flex-wrap:wrap">${os.length ? `<button class="btn" id="c_ctl">📊 בטבלת השליטה</button><button class="btn ghost" id="c_ed">✏ עריכת ההזמנה</button>` : ""}${i ? `<button class="btn ghost" id="c_it">📍 לפריט בטבלת ${esc(r.kind)}</button>` : ""}<button class="btn ghost" id="c_fac">⚡ בטבלת המתקנים</button></div></div>`, (m, close) => {
-    const q = s => m.querySelector(s), first = os.find(o => o.kind !== IEC_EXC) || os[0], P = pwF();
-    q("#c_x").onclick = close;
-    if (q("#c_ctl")) q("#c_ctl").onclick = () => { close(); Object.assign(P, { tab: "ctl", cDist: "", cQ: "", cDue: false, cExc: false, hl: first.id }); ui.page = "power"; render(); pwHl(); };
-    if (q("#c_ed")) q("#c_ed").onclick = () => { close(); P.tab = "orders"; ui.page = "power"; ui.iec = { dist: "", kind: "", stage: "", q: first.orderNo || first.name || "", showOff: true }; render(); scrollTo(0, 0); };
-    if (q("#c_it")) q("#c_it").onclick = () => { close(); wClick("wGoLink", { dataset: { id: "i:" + i.id } }); };
-    q("#c_fac").onclick = () => { close(); Object.assign(P, { tab: "fac", kind: "", dist: "", gz: "", at: "", mx: "", prob: false, q: i ? i.name || i.kdFrom || "" : first?.orderNo || "" }); ui.page = "power"; render(); scrollTo(0, 0); };
-  }); }
-const pwHl = () => setTimeout(() => { const t = document.querySelector("tr.pw-hl"); if (t) t.scrollIntoView({ block: "center" }); }, 60);
-/** חיפוש אחד: מס׳ הזמנה (גם חלקי), ק.ד., T5, שם, יישוב, נפה */
 function pwSearch(d, R, q) { const n = qnNorm(q).toLowerCase(); if (n.length < 2) return [];
   const tok = n.split(" "), M = iecExcMap(d), out = [];
   const hay = r => qnNorm([r.i?.name, r.i?.kdFrom, r.kind, r.dist, r.gz?.name, r.i?.note, ...r.os.flatMap(o => [o.orderNo, o.name, o.kd, o.place, o.note, ...(M.host.get(o.id) || []).map(x => x.orderNo)]),
@@ -4743,52 +4762,6 @@ function pwSearchHtml(d, R, q) { const a = pwSearch(d, R, q); if (qnNorm(q).leng
     return `<button class="pws-r" data-act="pwCard" data-id="${esc(i ? "i:" + i.id : "o:" + r.o.id)}"><span class="pw-em">${KIND_EMO[r.kind] || "📍"}</span><span class="pws-m"><b>${esc(i ? i.name || r.kind : r.o.name || r.kind)}</b>
       <small>${esc(r.kind)}${r.kd != null ? " · ק.ד. " + esc(i ? i.kdFrom : r.o.kd) : ""}${r.dist ? " · " + esc(r.dist) : ""} · ${r.os.length ? r.os.map(o => `<span dir="ltr">${esc(o.orderNo || "ללא מס׳")}</span> ${esc(o.stage)}`).join(" · ") : "אין הזמנה"}</small></span>
       <span class="pws-s"><span class="pw-at" style="--c:${PW_AT_CLR[r.nx?.at] || "#888"}">${esc(r.nx?.at || "")}</span><small>${esc(r.nx?.t || "")}</small>${left ? `<small class="w-late">נשאר ${ils(left)} ₪</small>` : ""}</span></button>`; }).join(""); }
-/** מסננים של מטריצת המתקנים (לחיצה מציגה את מי שעוד לא עבר את השלב) */
-const PW_MX = {
-  pad: { t: "משטח", ok: r => r.i?.padStatus === "הושלם", rel: r => PAD_KINDS.includes(r.kind) && !!r.i },
-  ord: { t: "יש הזמנה", ok: r => r.os.some(o => o.orderNo && !["טרם הוזמן"].includes(o.stage)), rel: () => true },
-  adv: { t: "מקדמה שולמה", ok: r => r.os.length > 0 && r.os.every(o => IEC_ADV_ST.has(o.stage) || !!o.advanceDate), rel: () => true },
-  full: { t: "שולם במלואו", ok: r => r.os.length > 0 && r.os.every(o => iecParts(o).full), rel: () => true },
-  inst: { t: "הוצב / בוצע", ok: r => r.i?.status === "הושלם", rel: r => !!r.i },
-  conn: { t: "חובר", ok: r => r.os.some(o => o.stage === "חובר"), rel: () => true } };
-/** טבלת שליטה — במבנה האקסל: שורה לכל הזמנה, והחיבור החריג שלה באותה שורה */
-function pwCtlPage(d) {
-  const F = pwF(), M = iecExcMap(d), live = d.iecOrders.filter(o => o.stage !== "בוטל");
-  const base = live.filter(o => o.kind !== IEC_EXC).map(o => ({ o, x: M.host.get(o.id) || [], see: M.see.get(o.id) })).concat(M.orphan.map(x => ({ o: null, x: [x] })));
-  const itm = o => o?.itemId && RAW.items?.[o.itemId], txt = ({ o, x }) => qnNorm([o?.orderNo, o?.name, o?.kd, o?.place, o?.kind, o?.district, itm(o)?.name, ...x.flatMap(y => [y.orderNo, y.name, itm(y)?.name])].join(" ")).toLowerCase();
-  const leftOf = ({ o, x }) => (o ? iecParts(o).left : 0) + x.reduce((t, y) => t + iecParts(y).left, 0);
-  const tok = qnNorm(F.cQ || "").toLowerCase().split(" ").filter(Boolean);
-  const rows = base.filter(r => (!F.cDist || (r.o || r.x[0]).district === F.cDist) && (!F.cExc || r.x.length || r.see) && (!F.cDue || leftOf(r) > 0) && (!tok.length || tok.every(t => txt(r).includes(t))))
-    .sort((a, b) => IEC_DISTRICTS.indexOf((a.o || a.x[0]).district) - IEC_DISTRICTS.indexOf((b.o || b.x[0]).district) || ((a.o || a.x[0]).kind === "הזמנה מרכזת" ? -1 : 0) - ((b.o || b.x[0]).kind === "הזמנה מרכזת" ? -1 : 0) || (kdNum((a.o || a.x[0]).kd) ?? 1e9) - (kdNum((b.o || b.x[0]).kd) ?? 1e9) || String((a.o || a.x[0]).orderNo).localeCompare(String((b.o || b.x[0]).orderNo)));
-  const no = o => `<a href="#" class="pwn" data-act="pwCard" data-id="o:${o.id}" dir="ltr">${esc(o.orderNo || "ללא מס׳")}</a>`;
-  const what = o => { const i = itm(o), nm = i ? i.name || i.kind : o.name || o.kind || "", kd = i?.kdFrom || o.kd || "";
-    return `${i ? KIND_EMO[i.kind] || "" : ""} <b>${esc(nm)}</b>${kd && !String(nm).includes(kd) ? ` <span class="muted">ק.ד. ${esc(kd)}</span>` : ""}${o.place ? `<div class="small muted">${esc(o.place)}</div>` : ""}`; };
-  const st = o => `<span class="pill" style="background:${IEC_COLORS[o.stage] || "#eee"}">${esc(o.stage)}</span>`;
-  const S = { A: 0, paid: 0, left: 0, xA: 0, xPaid: 0, xLeft: 0 }, add = (T, r) => { if (r.o) { const p = iecParts(r.o); T.A += p.A; T.paid += p.paid; T.left += p.left; } r.x.forEach(y => { const p = iecParts(y); T.xA += p.A; T.xPaid += p.paid; T.xLeft += p.left; }); };
-  const two = v => `${v ? ils2(v) : "—"}${v ? `<div class="small muted">${ils2(withVat(v))}</div>` : ""}`;
-  const foot = (T, l, cls) => `<tr class="${cls}"><td><b>${l}</b><div class="small">שולם: ${ils2(T.paid + T.xPaid)} · כולל מע״מ ${ils2(withVat(T.paid + T.xPaid))}</div></td><td class="num">סה״כ הזמנות<br>${two(T.A)}</td><td></td><td></td><td class="num pw-lf">${two(T.left)}</td><td class="num pw-xs">${two(T.xA)}</td><td class="pw-xb"></td><td class="num pw-xb pw-lf">נשאר בחריג<br>${two(T.xLeft)}</td><td class="num pw-tl"><b>${two(T.left + T.xLeft)}</b></td></tr>`;
-  let body = "", cur = null, T = null;
-  const flush = () => { if (T) body += foot(T, "סה״כ נפת " + cur, "pw-dsum"); };
-  rows.forEach(r => { const ds = (r.o || r.x[0]).district || "—"; if (ds !== cur) { flush(); cur = ds; T = { A: 0, paid: 0, left: 0, xA: 0, xPaid: 0, xLeft: 0 }; body += `<tr class="w-gh"><td colspan="9"><b>נפת ${esc(ds)}</b></td></tr>`; }
-    add(T, r); add(S, r);
-    const o = r.o, p = o && iecParts(o), xs = r.x, hl = F.hl && (o?.id === F.hl || xs.some(y => y.id === F.hl));
-    const xCells = xs.length ? (() => { const y = xs[0], q = iecParts(y); return `<td class="pw-xs">${no(y)}${xs.length > 1 ? ` <small>+${xs.length - 1}</small>` : ""}<div class="small muted">${esc(itm(y)?.name || "")}</div><div class="small">סה״כ ${q.A ? ils2(q.A) : "—"}</div></td><td class="pw-xb">${partChip(q.a)}</td><td class="pw-xb">${partChip(q.c)}</td>`; })()
-      : r.see ? `<td class="pw-xs" colspan="3"><span class="muted small">← החיבור החריג ${no(r.see.x)} רשום בשורה של <a href="#" class="pwn" data-act="pwCard" data-id="o:${r.see.h.id}" dir="ltr">${esc(r.see.h.orderNo)}</a></span></td>` : `<td class="pw-xs"></td><td class="pw-xb"></td><td class="pw-xb"></td>`;
-    const lt = (p ? p.left : 0) + xs.reduce((t, y) => t + iecParts(y).left, 0);
-    body += `<tr class="${hl ? "pw-hl" : ""}">${o ? `<td>${no(o)}<div>${st(o)}</div></td><td>${what(o)}<div class="small">סה״כ ${p.A ? ils2(p.A) : "—"}</div></td><td>${partChip(p.a)}</td><td>${partChip(p.c)}</td><td class="num pw-lf">${p.left ? `<b>${ils2(p.left)}</b>` : p.A ? "✓" : "—"}</td>`
-      : `<td colspan="5" class="muted small">חיבור חריג שלא נמצאה לו הזמנת ארון (הזמנות: ${esc(xs[0].parentNo || "—")})</td>`}${xCells}<td class="num pw-tl">${lt ? `<b>${ils2(lt)}</b>` : "✓"}</td></tr>`; });
-  flush();
-  const db = (k, l) => `<button class="btn ghost sm ${F.cDist === k ? "on" : ""}" data-act="pwGo" data-id="cDist|${k}">${l}</button>`;
-  return `<div class="card"><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><div class="viewtabs" style="margin:0">${db("", "כל הנפות")}${IEC_DISTRICTS.map(x => db(x, "נפת " + x)).join("")}</div>
-      <input class="inp" data-pwf="cQ" value="${esc(F.cQ || "")}" placeholder="🔎 חיפוש בטבלה: מס׳ הזמנה, ק.ד., T5, יישוב…" style="min-width:240px">
-      <label class="row small"><input type="checkbox" data-pwf="cDue" ${F.cDue ? "checked" : ""}> רק עם יתרה לתשלום</label><label class="row small"><input type="checkbox" data-pwf="cExc" ${F.cExc ? "checked" : ""}> רק עם חיבור חריג</label>
-      <span class="spacer"></span><span class="small muted">${rows.length} שורות</span><button class="btn ghost sm" data-act="pwCtlX">⬇ אקסל</button></div>
-    <p class="small muted" style="margin:0 0 8px">שורה לכל הזמנה. בצד שמאל — החיבור החריג (מרחק חריג) שמקושר אליה. סכומים ללא מע״מ, ומתחת בסיכומים — כולל מע״מ. <span class="pc pc-paid">✓ שולם</span> <span class="pc pc-due">✗ לתשלום</span> <span class="pc pc-exp">⛔ שובר פג</span> <span class="pc pc-none">· טרם שובר</span> · לחיצה על מס׳ הזמנה — כרטיס מלא.</p>
-    <div class="tablewrap pw-ctlw"><table class="sheet pw-ctl"><thead><tr><th colspan="5" class="pw-gh1">ההזמנה</th><th colspan="3" class="pw-gh2">חיבור חריג (מרחק חריג)</th><th rowspan="2" class="pw-tl">נשאר לשלם — סה״כ<br><small>הזמנה + חריג</small></th></tr>
-      <tr><th>מס׳ הזמנה · שלב</th><th>מתקן · סה״כ להזמנה</th><th>מקדמה</th><th>משלים</th><th>נשאר לשלם</th><th class="pw-xs">מס׳ הזמנה · סה״כ</th><th class="pw-xb">מקדמה</th><th class="pw-xb">משלים</th></tr></thead>
-      <tbody>${body || `<tr><td colspan="9" class="muted">אין הזמנות שמתאימות לסינון</td></tr>`}</tbody><tfoot>${rows.length ? foot(S, "סה״כ" + (F.cDist ? " נפת " + F.cDist : " כל הפרויקט"), "pw-gsum") : ""}</tfoot></table></div></div>`;
-}
-/** מספרי הזמנה לחיצים בכל האתר: כל מספר בן 9 ספרות שקיים כהזמנת חח״י → פותח את כרטיס המתקן */
 function linkOrders(root) { try { const byNo = new Map(Object.entries(RAW.iecOrders || {}).filter(([, o]) => o.orderNo && o.stage !== "בוטל").map(([id, o]) => [String(o.orderNo), id])); if (!byNo.size || !root) return;
   const W = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => /\d{9}/.test(n.nodeValue) && !n.parentElement.closest("a,button,input,textarea,select,option,script,style,.no-ol,[contenteditable]") ? 1 : 2 }), L = [];
   while (W.nextNode()) L.push(W.currentNode);
@@ -4797,153 +4770,7 @@ function linkOrders(root) { try { const byNo = new Map(Object.entries(RAW.iecOrd
     f.append(s.slice(k)); n.replaceWith(f); }); } catch (e) {} }
 document.addEventListener("click", e => { const a = e.target.closest("a.ordlink"); if (!a) return; e.preventDefault(); e.stopPropagation(); document.querySelectorAll(".modal").forEach(m => m.querySelector(".pwc") && m.remove()); pwCard("o:" + a.dataset.o); }, true);
 document.addEventListener("input", e => { const t = e.target; if (t.id !== "pw_gq") return; ui.pwQ = t.value; const d = D(), box = document.getElementById("pw_res"); if (box) { box.innerHTML = pwSearchHtml(d, pwRows(d), t.value); box.hidden = !box.innerHTML; } });
-/* ---------- ⚡ חברת חשמל — המסגרת: 4 סוגי מתקנים, יחידת חיבור (תט״ז / חדר טרפו + 1–2 ארונות שהוא מזין), ושרשרת הכסף 880 → 444 → 301 → מרחק חריג.
-   דשבורד (pwDash) + פירוט (pwDetPage). שדות: items.x_sec = חתך, items.kdFrom = ק.ד., items.feed = מוזן מ־, iecOrders.budgetNo = הזמנת משהב״ט 444,
-   tableConfig.iec.b444 = { <444>: { req: <880>, amount, note } } — הקשר בין הזמנת משהב״ט לדרישה ---------- */
-const PW_STAGES = {
-  "ארון שקד": [["done", "בוצע (קבלן)", r => r.i?.status === "הושלם"], ["ord", "הוזמן מחח״י", r => PW_MX.ord.ok(r)], ["paid", "שולם", r => PW_MX.full.ok(r)], ["conn", "חובר", r => PW_MX.conn.ok(r)]],
-  "תט״ז": [["pad", "משטח (קבלן)", r => r.i?.padStatus === "הושלם"], ["paid", "כבילה שולמה", r => PW_MX.full.ok(r)], ["done", "הוצב (חח״י)", r => r.i?.status === "הושלם"], ["conn", "חובר", r => PW_MX.conn.ok(r)]],
-  "חדר טרפו": [["pad", "משטח (קבלן)", r => r.i?.padStatus === "הושלם"], ["done", "מבנה הוצב (קבלן חשמל)", r => r.i?.status === "הושלם"], ["paid", "שולם", r => PW_MX.full.ok(r)], ["conn", "חושמל", r => PW_MX.conn.ok(r)]],
-  "אתר איסוף": [["ord", "הוזמן מחח״י", r => PW_MX.ord.ok(r)], ["paid", "שולם", r => PW_MX.full.ok(r)], ["conn", "חובר", r => PW_MX.conn.ok(r)]] };
 const b444Cfg = () => RAW.tableConfig?.iec?.b444 || {};
-const reqOf444 = n => b444Cfg()[n]?.req || "";
-function pwDash2(d, R) {
-  const live = d.iecOrders.filter(o => o.stage !== "בוטל"), P = live.map(o => ({ o, p: iecParts(o) }));
-  const sum = (a, f) => a.reduce((t, x) => t + f(x), 0), part = (a, s) => sum(a, ({ p }) => [p.a, p.c].filter(q => q.s === s).reduce((t, q) => t + q.v, 0));
-  const tot = sum(P, x => x.p.A), paid = sum(P, x => x.p.paid), due = part(P, "due"), exp = part(P, "exp"), later = Math.max(0, tot - paid - due - exp);
-  const m = (l, v, sub, id, cls = "") => `<button class="pwd-m ${cls}" data-act="pwGo" data-id="${id}"><span>${l}</span><b>${ils(v)}</b><small>כולל מע״מ ${ils(withVat(v))} ₪</small>${sub ? `<small>${sub}</small>` : ""}</button>`;
-  // 1. מתקנים לפי סוג — השלבים של כל סוג
-  const kinds = Object.keys(PW_STAGES).map(k => { const a = R.filter(r => r.kind === k); if (!a.length) return "";
-    return `<div class="pwk"><div class="pwk-h">${KIND_EMO[k] || "📍"} <b>${esc(k)}</b> <span class="muted">${a.length}</span></div><div class="pwk-s">${PW_STAGES[k].map(([key, l, f], n) => { const ok = a.filter(f).length, miss = a.length - ok;
-      return `${n ? `<span class="pwk-ar">‹</span>` : ""}<button class="pwk-st ${miss ? "" : "ok"}" data-act="pwGo" data-id="det|${esc(k)}|${key}" title="לחיצה: ${miss} שעוד לא"><span>${l}</span><b>${ok}<small> מתוך ${a.length}</small></b><i style="--p:${Math.round(ok / a.length * 100)}%"></i>${miss ? `<small class="pwk-m">חסר ${miss}</small>` : `<small class="pwk-m ok">✓ הכל</small>`}</button>`; }).join("")}</div></div>`; }).join("");
-  // 2. שרשרת הכסף: 880 → 444 → הזמנות חח״י
-  const by = new Map(); P.forEach(x => { const b = String(x.o.budgetNo || "").trim(), k = b || "—"; (by.get(k) || by.set(k, []).get(k)).push(x); });
-  Object.keys(b444Cfg()).forEach(n => { if (!by.has(n)) by.set(n, []); });
-  const reqs = new Map(); [...by].forEach(([b, a]) => { const r = b === "—" ? "—" : reqOf444(b) || "?"; (reqs.get(r) || reqs.set(r, []).get(r)).push([b, a]); });
-  const reqAmt = n => (RAW.tableConfig?.iec?.budgetReqs || []).find(x => String(x.no) === String(n))?.amount || "";
-  const cell = v => `<td class="num">${v ? ils(v) : "—"}${v ? `<div class="small muted">${ils(withVat(v))}</div>` : ""}</td>`;
-  const chainRow = (b, a, lvl) => { const t = sum(a, x => x.p.A), pd = sum(a, x => x.p.paid), ex = part(a, "exp"), du = part(a, "due"), n = a.filter(x => x.o.kind !== "הזמנה מרכזת").length;
-    return `<tr class="${lvl}"><td>${lvl === "c-444" ? (b === "—" ? `<b class="w-late">⚠ בלי הזמנת משהב״ט</b>` : `<span dir="ltr">444 · <b>${esc(b)}</b></span>${b444Cfg()[b]?.note ? ` <span class="muted small">${esc(b444Cfg()[b].note)}</span>` : ""}`) : ""}</td>
-      <td class="c">${n ? `<a href="#" data-act="pwGo" data-id="b444|${esc(b)}">${n}</a>` : "0"}</td>${cell(t)}${cell(pd)}${cell(Math.max(0, t - pd))}<td class="num">${du ? `<b class="w-late">${ils(withVat(du))}</b>` : "—"}</td><td class="num">${ex ? `<b class="w-late">⛔ ${ils(withVat(ex))}</b>` : "—"}</td></tr>`; };
-  const chain = [...reqs].sort((x, y) => (x[0] === "—") - (y[0] === "—") || (x[0] === "?") - (y[0] === "?")).map(([r, list]) => { const all = list.flatMap(([, a]) => a);
-    return `<tr class="c-req"><td colspan="7"><b>${r === "—" ? "בלי דרישה ובלי הזמנת משהב״ט" : r === "?" ? "הזמנות משהב״ט שלא שויכו לדרישה" : `דרישה ${esc(r)}`}</b>${reqAmt(r) ? ` <span class="muted">· ${esc(reqAmt(r))}</span>` : ""} <span class="muted small">· הוזמן ${ils(sum(all, x => x.p.A))} · שולם ${ils(sum(all, x => x.p.paid))}</span></td></tr>` + list.map(([b, a]) => chainRow(b, a, "c-444")).join(""); }).join("");
-  // 3. דורש פעולה
-  const nxK = k => R.filter(r => r.nx?.k === k), late = R.filter(r => r.nx?.late), iP = gapParties().find(p => p.k === "iec"), nIss = iP ? gapIssues(iP).dir.length : 0;
-  const expN = P.filter(({ p }) => p.a.s === "exp" || p.c.s === "exp").length, dueN = P.filter(({ p }) => p.a.s === "due" || p.c.s === "due").length, no444 = live.filter(o => o.kind !== IEC_EXC && o.orderNo && !String(o.budgetNo || "").trim()).length;
-  const act = [expN && [`⛔ ${expN} שוברים פגו — לבקש שוברים חדשים`, `${ils(withVat(exp))} ₪ כולל מע״מ`, "tab|pay", "red"], dueN && [`💳 ${dueN} שוברים פתוחים לתשלום`, `${ils(withVat(due))} ₪ כולל מע״מ`, "tab|pay", "red"],
-    nxK("noord").length && [`🔴 ${nxK("noord").length} מתקנים בלי הזמנת חח״י`, "", "det||noord", "red"], nxK("feed").length && [`⚡ ${nxK("feed").length} ארונות ממתינים לתט״ז / חדר הטרפו שמזין אותם`, "", "det||feed", "orange"],
-    late.length && [`⏰ ${late.length} מתקנים באיחור מול התאריך המתוכנן`, "", "det||late", "orange"], no444 && [`📎 ${no444} הזמנות חח״י בלי מספר הזמנת משהב״ט (444)`, "להשלים בלשונית פירוט", "det||no444", "blue"],
-    nIss && [`📋 ${nIss} נושאים פתוחים מול חח״י`, "", "tab|iss", "blue"]].filter(Boolean);
-  return `<div class="pwd"><div class="pwd-money">${m("💼 הוזמן מחח״י", tot, `${live.filter(o => o.kind !== "הזמנה מרכזת").length} הזמנות`, "tab|det")}${m("✓ שולם", paid, tot ? Math.round(paid / tot * 100) + "% מההזמנות" : "", "tab|det", "ok")}${m("💳 לתשלום — שובר פתוח", due, `${dueN} שוברים`, "tab|pay", due ? "red" : "")}${m("⛔ שוברים שפגו", exp, `${expN} — לבקש חדשים`, "tab|pay", exp ? "red" : "")}${m("⏳ עוד לא הונפק שובר", later, "יתרת ההזמנות", "tab|det")}</div>
-    <p class="small muted" style="margin:4px 2px 10px">המספר הגדול — ללא מע״מ (כמו בשובר), מתחת — כולל מע״מ. כל ריבוע לחיץ.</p>
-    <div class="pwd-grid"><div class="card" style="margin:0"><h2 style="margin-top:0">מתקנים — איפה כל אחד עומד</h2>${kinds}<p class="small muted" style="margin:6px 0 0">לחיצה על שלב — רשימת המתקנים שעוד לא עברו אותו.</p></div>
-      <div class="card" style="margin:0"><h2 style="margin-top:0">דורש פעולה</h2>${act.length ? act.map(([t, s, id, c]) => `<button class="pwd-a ${c}" data-act="pwGo" data-id="${esc(id)}"><b>${t}</b>${s ? `<small>${esc(s)}</small>` : ""}<span>←</span></button>`).join("") : `<p class="muted">אין פעולות פתוחות ✓</p>`}</div></div>
-    <div class="card"><div class="row"><h2 style="margin:0">שרשרת הכסף — דרישה 880 ← הזמנת משהב״ט 444 ← הזמנות חח״י</h2><span class="spacer"></span>${isViewer() ? "" : `<button class="btn ghost sm" data-act="pw444">✏ הזמנות משהב״ט ודרישות</button>`}</div>
-      <div class="tablewrap" style="max-height:none;margin-top:8px"><table class="sheet pwd-ch"><thead><tr><th>הזמנת משהב״ט</th><th>הזמנות חח״י</th><th>הוזמן</th><th>שולם</th><th>נשאר</th><th>שובר פתוח<br><small>כולל מע״מ</small></th><th>שוברים שפגו<br><small>כולל מע״מ</small></th></tr></thead><tbody>${chain}</tbody></table></div>
-      <p class="small muted" style="margin:6px 0 0">בכל תא: ללא מע״מ, ומתחת כולל מע״מ. מספר הזמנת משהב״ט נערך בלשונית "פירוט" (עמודה 444); השיוך לדרישה — בכפתור ✏.</p></div></div>`;
-}
-/** עריכת הזמנות משהב״ט (444) ושיוכן לדרישות (880) */
-function pw444Modal() { const d = D(), nos = [...new Set([...d.iecOrders.map(o => String(o.budgetNo || "").trim()).filter(Boolean), ...Object.keys(b444Cfg())])].sort(), C = b444Cfg(), reqs = RAW.tableConfig?.iec?.budgetReqs || [];
-  const line = n => `<tr><td><input class="inp" data-b="no" dir="ltr" value="${esc(n)}" style="width:130px"></td><td><input class="inp" data-b="req" dir="ltr" list="pw_reqs" value="${esc(C[n]?.req || "")}" style="width:120px" placeholder="880…"></td><td><input class="inp" data-b="amount" value="${esc(C[n]?.amount || "")}" style="width:110px"></td><td><input class="inp" data-b="note" value="${esc(C[n]?.note || "")}" style="width:200px"></td><td class="small muted">${d.iecOrders.filter(o => String(o.budgetNo || "").trim() === n).length || ""}</td></tr>`;
-  const rline = r => `<tr><td><input class="inp" data-r="no" dir="ltr" value="${esc(r.no || "")}" style="width:130px"></td><td><input class="inp" data-r="amount" value="${esc(r.amount || "")}" style="width:120px"></td></tr>`;
-  modal(`<h2 style="margin:0">הזמנות משהב״ט ודרישות</h2><p class="small muted">דרישה (880…) ← הזמנת משהב״ט (444…) ← הזמנות חח״י (301…). המספר 444 של כל הזמנת חח״י נערך בלשונית "פירוט".</p>
-    <h3>דרישות</h3><table class="sheet" id="b_r"><thead><tr><th>מס׳ דרישה</th><th>סכום</th></tr></thead><tbody>${reqs.map(rline).join("")}${rline({})}</tbody></table><datalist id="pw_reqs">${reqs.map(r => `<option value="${esc(r.no)}">`).join("")}</datalist>
-    <h3>הזמנות משהב״ט</h3><table class="sheet" id="b_t"><thead><tr><th>מס׳ הזמנה 444</th><th>שייכת לדרישה</th><th>סכום</th><th>הערה</th><th>הזמנות חח״י</th></tr></thead><tbody>${nos.map(line).join("")}${line("")}</tbody></table>
-    <div class="row" style="gap:6px;margin-top:10px"><button class="btn" id="b_go">שמירה</button><span class="spacer"></span><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
-    m.querySelector("#mNo").onclick = close;
-    m.querySelector("#b_go").onclick = async () => { const b = {}; m.querySelectorAll("#b_t tbody tr").forEach(tr => { const g = k => tr.querySelector(`[data-b="${k}"]`).value.trim(), n = g("no"); if (n) b[n] = { req: g("req"), amount: g("amount"), note: g("note") }; });
-      const r = [...m.querySelectorAll("#b_r tbody tr")].map(tr => ({ no: tr.querySelector('[data-r="no"]').value.trim(), amount: tr.querySelector('[data-r="amount"]').value.trim() })).filter(x => x.no);
-      RAW.tableConfig?.iec ? await api.update("tableConfig", "iec", { b444: b, budgetReqs: r }) : await api.put("tableConfig", "iec", { b444: b, budgetReqs: r }); close(); toast("נשמר ✓"); render(); };
-  }); }
-/** פירוט — יחידות חיבור: תט״ז / חדר טרפו ומתחתיו הארונות שהוא מזין; אחר כך ארונות בלי מזין, אתרי איסוף, ושאר ההזמנות */
-function pwDetPage(d, R) {
-  const F = pwF(), ed = !isViewer(), M = iecExcMap(d), T = todayStr();
-  const tok = qnNorm(F.dq || "").toLowerCase().split(" ").filter(Boolean);
-  const hay = r => qnNorm([r.i?.name, r.i?.kdFrom, r.i?.x_sec, r.kind, r.dist, r.gz?.name, r.i?.note, ...r.os.flatMap(o => [o.orderNo, o.name, o.kd, o.sec, o.place, o.budgetNo, o.note, ...(M.host.get(o.id) || []).map(x => x.orderNo)])].join(" ")).toLowerCase();
-  const stF = F.dmx && F.dmx.split(":"), stOk = r => { if (!F.dmx) return true; const [k, key] = stF; if (key === "noord") return r.nx?.k === "noord"; if (key === "feed") return r.nx?.k === "feed"; if (key === "late") return !!r.nx?.late;
-    if (key === "no444") return r.os.some(o => o.kind !== IEC_EXC && o.orderNo && !String(o.budgetNo || "").trim()); if (key.startsWith("b444=")) return r.os.some(o => (String(o.budgetNo || "").trim() || "—") === key.slice(5));
-    const S = (PW_STAGES[k] || []).find(x => x[0] === key); return !S || (r.kind === k && !S[2](r)); };
-  const fit = r => (!F.ddist || r.dist === F.ddist) && (!F.dgz || r.gz?.id === F.dgz) && (!tok.length || tok.every(t => hay(r).includes(t))) && stOk(r) && (!F.dprob || r.nx?.late || ["noord", "pay", "feed"].includes(r.nx?.k));
-  const L = R.filter(fit), flat = !!(F.dmx || tok.length), byKd = (a, b) => IEC_DISTRICTS.indexOf(a.dist) - IEC_DISTRICTS.indexOf(b.dist) || (a.kd ?? 1e9) - (b.kd ?? 1e9);
-  const feeders = R.filter(r => r.i && PAD_KINDS.includes(r.kind)).sort(byKd), feedOpts = feeders.map(r => [r.i.id, `${r.i.name && r.i.name.length < 10 ? r.i.name : r.kind === "חדר טרפו" ? "טרפו" : "תט״ז"}${r.i.kdFrom && !String(r.i.name || "").includes(r.i.kdFrom) ? " " + r.i.kdFrom : ""}`]);
-  const selI = (i, k, opts, w = "") => `<select class="inp sm" id="f_items_${i.id}_${k}" data-edit="items|${i.id}|${k}" ${ed ? "" : "disabled"} ${w}>${opts}</select>`;
-  const stSel = (i, k) => selI(i, k, ITEM_STATUS.map(x => `<option ${x === (i[k] || "טרם") ? "selected" : ""}>${x}</option>`).join(""), `style="background:${ITEM_COLORS[i[k] || "טרם"] || "#fff"}"`);
-  const dt = (i, k, late) => `<input type="date" class="cell ${late ? "pw-late" : ""}" id="f_items_${i.id}_${k}" value="${esc(i[k] || "")}" data-edit="items|${i.id}|${k}" ${ed ? "" : "disabled"}>`;
-  const txt = (col, rec, k, w = 8, ph = "") => `<input class="cell kdin" id="f_${col}_${rec.id}_${k}" value="${esc(rec[k] || "")}" data-edit="${col}|${rec.id}|${k}" ${ed ? "" : "disabled"} style="width:${w}ch" ${ph ? `placeholder="${ph}"` : ""}>`;
-  const no = o => `<a href="#" class="pwn" data-act="pwCard" data-id="o:${o.id}" dir="ltr">${esc(o.orderNo || "ללא מס׳")}</a>`;
-  const hosted = new Map(); M.host.forEach((a, hid) => a.forEach(x => hosted.set(x.id, d.iecOrders.find(o => o.id === hid))));
-  const row = (r, cls = "") => { const i = r.i, nx = r.nx || {}, reg = r.os.filter(o => o.kind !== IEC_EXC), own = r.os.filter(o => o.kind === IEC_EXC);
-    // מרחק חריג מוצג במלואו פעם אחת — בשורת הארון שההזמנה שלו "מארחת" אותו; בשורת התט״ז ובארון השני — הפניה
-    const onFeeder = x => !!(x.itemId && RAW.items?.[x.itemId] && PAD_KINDS.includes(RAW.items[x.itemId].kind));
-    const xs = [...own, ...reg.flatMap(o => (M.host.get(o.id) || []).filter(x => !onFeeder(x)))], refs = reg.flatMap(o => [...(M.host.get(o.id) || []).filter(onFeeder), ...(M.see.get(o.id) ? [M.see.get(o.id).x] : [])]).map(x => [x, RAW.items?.[x.itemId]]);
-    const L2 = [...reg, ...xs].map(iecParts), left = L2.reduce((t, p) => t + p.left, 0), pad = PAD_KINDS.includes(r.kind), em = KIND_EMO[r.kind] || "📍";
-    const field = i ? `${pad ? `<div class="pwf"><span>משטח</span>${stSel(i, "padStatus")}</div>` : ""}<div class="pwf"><span>${r.kind === "תט״ז" ? "הצבה" : r.kind === "חדר טרפו" ? "מבנה" : "ביצוע"}</span>${stSel(i, "status")}</div><div class="pwf"><span>מתוכנן</span>${dt(i, "plannedDate", nx.late)}</div>` : `<span class="muted small">—</span>`;
-    const feedC = i && r.kind === "ארון שקד" ? selI(i, "feed", `<option value="">— (שנאי סמוך / לא ידוע)</option>${feedOpts.map(([v, l]) => `<option value="${esc(v)}" ${v === i.feed ? "selected" : ""}>${esc(l)}</option>`).join("")}`) : i && pad ? `<span class="small muted">מזין ${d.items.filter(x => x.feed === i.id).length || "—"}</span>` : "";
-    const b444 = o => `<div class="pw444">${txt("iecOrders", o, "budgetNo", 11, "444…")}</div>`;
-    const ordC = reg.length ? reg.map(o => `${b444(o)}<div class="pwo">${no(o)} <span class="pill" style="background:${IEC_COLORS[o.stage] || "#eee"}">${esc(o.stage)}</span></div>`).join("") : own.length ? `${b444(own[0])}<span class="small muted">הזמנת כבילה / מרחק חריג ←</span>` : i && ed ? `<button class="btn ghost sm" data-act="pwNewOrd" data-id="${i.id}">+ הזמנה</button>` : `<span class="w-late small">אין הזמנה</span>`;
-    const payC = reg.map(o => { const p = iecParts(o); return `<div class="pwp"><span>מקדמה</span>${partChip(p.a)}</div><div class="pwp"><span>משלים</span>${partChip(p.c)}</div>`; }).join("");
-    const excC = xs.map(x => { const p = iecParts(x); return `<div class="pwo">${no(x)}</div><div class="pwp"><span>מקדמה</span>${partChip(p.a)}</div><div class="pwp"><span>משלים</span>${partChip(p.c)}</div>`; }).join("")
-      + refs.map(([x, it]) => `<div class="small muted">${no(x)}<br>${it ? `בשורת ${esc(it.name || it.kind)}` : "בשורת הארון השני"}</div>`).join("");
-    return `<tr class="${cls}" data-rid="${esc(r.id)}"><td class="pw-nm">${cls === "pw-ch" ? `<span class="pw-tree">└</span>` : ""}<span class="pw-nl"><span class="pw-em">${em}</span>${i ? `<input class="cell pw-name" id="f_items_${i.id}_name" value="${esc(i.name || "")}" data-edit="items|${i.id}|name" ${ed ? "" : "disabled"} placeholder="${esc(r.kind)}">` : `<b>${esc(r.o?.name || r.kind)}</b>`}<button class="btn ghost sm pw-dots" data-act="pwCard" data-id="${esc(i ? "i:" + i.id : "o:" + r.o.id)}" title="כרטיס מלא">⋯</button></span><div class="small muted">${esc(r.dist || "")}${r.gz ? " · " + esc(r.gz.name) : ""}</div><div class="pw-nx"><span class="pw-at" style="--c:${PW_AT_CLR[nx.at] || "#888"}">${esc(nx.at || "")}</span> ${esc(nx.t || "")}${nx.late ? " ⏰" : ""}</div></td>
-      <td><div class="pwf"><span>ק.ד.</span>${i ? txt("items", i, "kdFrom", 6) : reg[0] ? txt("iecOrders", reg[0], "kd", 6) : ""}</div><div class="pwf"><span>חתך</span>${i ? txt("items", i, "x_sec", 6) : reg[0] ? txt("iecOrders", reg[0], "sec", 6) : ""}</div>${feedC ? `<div class="pwf"><span>${r.kind === "ארון שקד" ? "מוזן מ־" : ""}</span>${feedC}</div>` : ""}</td><td class="pw-fld">${field}</td>
-      <td class="nowrap">${ordC}</td><td>${payC}</td><td class="pw-xs">${excC || `<span class="muted small">—</span>`}</td>
-      <td class="num">${left ? `<b class="w-late">${ils2(left)}</b>` : L2.length ? "✓" : "—"}</td><td class="pw-note">${i ? cellInput("items", i, "note") : r.o ? cellInput("iecOrders", r.o, "note") : ""}</td></tr>`; };
-  const gh = (t, n, sub = "") => `<tr class="w-gh"><td colspan="8"><b>${t}</b> <span class="muted small">· ${n}${sub}</span></td></tr>`;
-  let body = "";
-  if (flat) body = L.sort(byKd).map(r => row(r)).join("");
-  else { const inL = new Set(L.map(r => r.id)), used = new Set();
-    for (const ds of [...IEC_DISTRICTS, ""]) { const fd = feeders.filter(r => (r.dist || "") === ds && inL.has(r.id)); let chunk = "";
-      fd.forEach(f => { used.add(f.id); const ch = L.filter(r => r.i?.feed === f.i.id).sort(byKd); ch.forEach(c => used.add(c.id)); chunk += row(f, "pw-fd") + ch.map(c => row(c, "pw-ch")).join(""); });
-      if (chunk) body += gh(`⚡ יחידות חיבור${ds ? " — נפת " + ds : ""}`, `${fd.length} תט״ז / חדרי טרפו`, " · מתחת לכל אחד — הארונות שהוא מזין") + chunk; }
-    const rest = (k, t) => { const a = L.filter(r => !used.has(r.id) && k(r)).sort(byKd); a.forEach(r => used.add(r.id)); return a.length ? gh(t, a.length) + a.map(r => row(r)).join("") : ""; };
-    body += rest(r => r.kind === "ארון שקד", "🔌 ארונות שקד בלי מזין (שנאי סמוך / עוד לא הוגדר)") + rest(r => r.kind === "אתר איסוף", "📡 אתרי איסוף") + rest(() => true, "📍 שאר ההזמנות (העתקת עמוד, חיבור חריג שלא שויך, לבירור)"); }
-  const gzs = [...new Map(R.filter(r => r.gz).map(r => [r.gz.id, r.gz])).values()], stTxt = F.dmx ? (() => { const [k, key] = stF; const S = (PW_STAGES[k] || []).find(x => x[0] === key);
-    return S ? `${k} — עוד לא: ${S[1]}` : key.startsWith("b444=") ? `הזמנת משהב״ט ${key.slice(5) === "—" ? "חסרה" : key.slice(5)}` : { noord: "בלי הזמנת חח״י", feed: "ממתינים למזין", late: "באיחור", no444: "בלי מספר 444" }[key] || key; })() : "";
-  return `<div class="card"><div class="w-filt" style="margin-top:0"><input class="inp" data-pwf="dq" value="${esc(F.dq || "")}" placeholder="🔎 חיפוש: ק.ד., חתך, T5, מס׳ הזמנה, 444…" style="min-width:230px">
-      <select class="inp sm" data-pwf="ddist"><option value="">כל הנפות</option>${IEC_DISTRICTS.map(x => `<option ${x === F.ddist ? "selected" : ""}>${x}</option>`).join("")}</select>
-      <select class="inp sm" data-pwf="dgz"><option value="">כל הגזרות</option>${gzs.map(c => `<option value="${c.id}" ${c.id === F.dgz ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
-      <label class="row small"><input type="checkbox" data-pwf="dprob" ${F.dprob ? "checked" : ""}> רק מה שדורש פעולה</label>
-      ${stTxt ? `<span class="pill warn">${esc(stTxt)} <button class="btn ghost sm" style="padding:0 6px;border:0" data-act="pwGo" data-id="dmx|">✕</button></span>` : ""}<span class="spacer"></span><span class="muted small">${L.length} מתקנים</span><button class="btn ghost sm" data-act="pwDetX">⬇ אקסל</button></div>
-    <p class="small muted" style="margin:0 0 8px">כל השדות הלבנים ניתנים לעריכה (שם, חתך, ק.ד., מוזן מ־, מצב בשטח, 444, הערה). סכומים ללא מע״מ. <span class="pc pc-paid">✓ שולם</span> <span class="pc pc-due">✗ לתשלום</span> <span class="pc pc-exp">⛔ שובר פג</span> <span class="pc pc-none">· טרם שובר</span> · ⋯ = כרטיס מלא.</p>
-    <div class="tablewrap pw-detw"><table class="sheet pw-det"><thead><tr><th>מתקן · השלב הבא</th><th>ק.ד. · חתך · מוזן מ־</th><th>בשטח</th><th>הזמנת משהב״ט 444<br>הזמנת חח״י 301</th><th>תשלום</th><th class="pw-xs">מרחק חריג</th><th>נשאר לשלם</th><th>הערה</th></tr></thead>
-      <tbody>${body || `<tr><td colspan="8" class="muted">אין מתקנים שמתאימים לסינון</td></tr>`}</tbody></table></div></div>`;
-}
-function pwFacTable(d, R) {
-  const F = pwF(), ed = !isViewer(), T = todayStr();
-  const KINDS = ["תט״ז", "חדר טרפו", "ארון שקד", "אתר איסוף", "העתקת עמוד", "חיבור חריג", "אחר / לבירור"];
-  const mxF = r => !F.mx || (F.mx === "noord" ? r.nx.k === "noord" : F.mx === "feed" ? r.nx.k === "feed" : F.mx === "late" ? !!r.nx.late : PW_MX[F.mx] ? PW_MX[F.mx].rel(r) && !PW_MX[F.mx].ok(r) : true);
-  const fit = r => mxF(r) && (!F.kind || r.kind === F.kind) && (!F.dist || r.dist === F.dist) && (!F.gz || r.gz?.id === F.gz) && (!F.at || (F.at === "late" ? r.nx.late : r.nx.at === F.at))
-    && (!F.prob || r.nx.late || ["noord", "pay"].includes(r.nx.k)) && (!F.q || qnNorm([r.i?.name, r.i?.kdFrom, r.i?.note, ...r.os.map(o => [o.orderNo, o.name, o.kd, o.note].join(" "))].join(" ")).includes(qnNorm(F.q)));
-  const L = R.filter(fit).sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind) || (b.kd ?? -1) - (a.kd ?? -1));
-  const sel = (i, k) => `<select class="inp sm" id="f_items_${i.id}_${k}" data-edit="items|${i.id}|${k}" style="background:${ITEM_COLORS[i[k] || "טרם"] || "#fff"}" ${ed ? "" : "disabled"}>${ITEM_STATUS.map(x => `<option ${x === (i[k] || "טרם") ? "selected" : ""}>${x}</option>`).join("")}</select>`;
-  const dt = (i, k, late) => `<input type="date" class="cell ${late ? "pw-late" : ""}" id="f_items_${i.id}_${k}" value="${esc(i[k] || "")}" data-edit="items|${i.id}|${k}" ${ed ? "" : "disabled"}>`;
-  const gzs = [...new Map(R.filter(r => r.gz).map(r => [r.gz.id, r.gz])).values()];
-  const kb = (k, l) => `<button class="w-tb ${F.kind === k ? "on" : ""}" data-act="pwF" data-id="kind|${k}">${l} <small>${k ? R.filter(r => r.kind === k).length : R.length}</small></button>`;
-  const row = r => { const i = r.i, nx = r.nx, pad = PAD_KINDS.includes(r.kind), em = KIND_EMO[r.kind] || "📍";
-    return `<tr data-rid="${esc(r.id)}"><td class="pw-nm"><span class="pw-em">${em}</span><b>${esc(i ? i.name || r.kind : r.o.name || r.o.kind || "הזמנה")}</b><div class="small muted">${r.kd !== null ? "ק.ד. " + esc(i ? i.kdFrom : r.o.kd) : ""}${i ? "" : r.o?.kind === IEC_EXC ? " · חיבור חריג שלא שויך לתט״ז / חדר טרפו" : " · הזמנה בלי פריט באתר"}</div>${r.feedR ? `<div class="small">⚡ מוזן מ־<b>${esc(r.feedR.i?.name || r.feedR.kind)}</b></div>` : ""}${r.o?.parentNo && r.o.kind === IEC_EXC ? `<div class="small muted">לארונות: ${esc(r.o.parentNo)}</div>` : ""}</td>
-      <td class="small">${esc(r.dist || "—")}<div class="muted">${esc(r.gz?.name || "")}</div></td>
-      <td>${i && pad ? `${sel(i, "padStatus")}${dt(i, "padDone")}` : `<span class="muted">—</span>`}</td>
-      <td>${i ? sel(i, "status") : `<span class="muted">—</span>`}</td>
-      <td>${i ? dt(i, "plannedDate", nx.late) : `<span class="muted">—</span>`}</td>
-      <td>${i ? dt(i, "doneDate") : `<span class="muted">—</span>`}</td>
-      <td class="small nowrap">${r.os.map(o => `<button class="pill" style="border:0;cursor:pointer;background:${IEC_COLORS[o.stage] || "#eee"}" data-act="pwOrd" data-id="${esc(o.orderNo || o.name || "")}" title="פתיחה בהזמנות וכספים">${o.kind === IEC_EXC && r.i ? "חריג · " : ""}${esc(o.stage)} · <span dir="ltr">${esc(o.orderNo || "ללא מס׳")}</span></button>`).join("<br>")
-        || (ed && i ? `<button class="btn ghost sm" data-act="pwNewOrd" data-id="${i.id}">+ הזמנה</button>` : "")}</td>
-      <td class="small">${pwPay(r.o)}</td>
-      <td class="small"><span class="pw-at" style="--c:${PW_AT_CLR[nx.at] || "#888"}">${esc(nx.at)}</span> ${esc(nx.t)}${nx.late ? ` <b class="w-late" title="עבר התאריך המתוכנן">⏰</b>` : ""}</td>
-      <td class="pw-note">${i ? cellInput("items", i, "note") : cellInput("iecOrders", r.o, "note")}</td>
-      <td>${wLinkCell(i ? "i:" + i.id : "o:" + r.o.id)}</td></tr>`; };
-  const groups = F.kind ? [[F.kind, L]] : KINDS.map(k => [k, L.filter(r => r.kind === k)]).filter(([, a]) => a.length);
-  return `<div class="card"><div class="w-tabs" style="margin-top:0">${kb("", "הכל")}${KINDS.filter(k => R.some(r => r.kind === k)).map(k => kb(k, k)).join("")}</div>
-    <div class="w-filt"><select class="inp sm" data-pwf="dist"><option value="">כל הנפות</option>${IEC_DISTRICTS.map(x => `<option ${x === F.dist ? "selected" : ""}>${x}</option>`).join("")}</select>
-      <select class="inp sm" data-pwf="gz"><option value="">כל הגזרות</option>${gzs.map(c => `<option value="${c.id}" ${c.id === F.gz ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
-      <select class="inp sm" data-pwf="at"><option value="">אצל כולם</option>${[["אנחנו", "אצלנו"], ["קבלן", "אצל הקבלן"], ["חח״י", "אצל חח״י"], ["late", "באיחור"], ["✓", "חוברו"]].map(([v, l]) => `<option value="${v}" ${v === F.at ? "selected" : ""}>${l}</option>`).join("")}</select>
-      <label class="row small"><input type="checkbox" data-pwf="prob" ${F.prob ? "checked" : ""}> רק מה שדורש פעולה שלנו / באיחור</label>
-      <input class="inp sm" data-pwf="q" value="${esc(F.q)}" placeholder="חיפוש: ק.ד., שם, מס׳ הזמנה, הערה" style="min-width:200px">${F.mx ? `<span class="pill warn">${esc(PW_MX[F.mx] ? "עוד לא: " + PW_MX[F.mx].t : { noord: "בלי הזמנת חח״י", feed: "ממתינים למזין", late: "באיחור" }[F.mx] || F.mx)} <button class="btn ghost sm" style="padding:0 6px;border:0" data-act="pwGo" data-id="mx|">✕</button></span>` : ""}<span class="spacer"></span><span class="muted small">${L.length} מתוך ${R.length}</span></div>
-    <div class="tablewrap" style="max-height:none"><table class="sheet pw-tab"><thead><tr><th>מתקן</th><th>נפה · גזרה</th><th>משטח (קבלן)</th><th>ביצוע / הצבה</th><th>מתוכנן</th><th>בפועל</th><th>הזמנת חח״י</th><th>תשלום</th><th>השלב הבא · אצל מי</th><th>הערה</th><th>⚠ נושאים</th></tr></thead>
-      <tbody>${groups.map(([k, a]) => `${F.kind ? "" : `<tr class="w-gh"><td colspan="11"><b>${KIND_EMO[k] || "📍"} ${esc(k)}</b> <span class="muted small">· ${a.length}${(n => n ? ` · <b style="color:#c0392b">${n} אצלנו</b>` : "")(a.filter(r => r.nx.at === "אנחנו").length)}${(n => n ? ` · ${n} באיחור` : "")(a.filter(r => r.nx.late).length)}</span></td></tr>`}${a.map(row).join("")}`).join("") || `<tr><td colspan="8" class="muted">אין מתקנים בסינון הזה</td></tr>`}</tbody></table></div>
-    <p class="small muted" style="margin:8px 0 0">"השלב הבא" מחושב מהשרשרת: משטח (קבלן הגזרה) ← הזמנה ותשלום לחח״י (אנחנו) ← הצבה / התקנה ← חיבור (חח״י). כל שינוי כאן נשמר באותו פריט — ומופיע גם בתט״זים, בארונות ובחוצץ הקבלן.</p></div>`;
-}
-/* ---------- סיכום דיון: מדביקים — כל שורה מושווית לנתונים ---------- */
 const PW_KIND_RE = [["תט״ז", /תט["״']?ז|תטז/], ["חדר טרפו", /טרפו/], ["ארון שקד", /ארון|ארונות|שקד/], ["אתר איסוף", /איסוף/]];
 function pwParseLine(line, d, R) {
   const t = String(line), n = qnNorm(t), F = new Map(), add = (r, why) => { if (r && !F.has(r.id)) F.set(r.id, { r, why }); };
@@ -4964,7 +4791,6 @@ function pwParseLine(line, d, R) {
   const dm = t.match(/\b(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?\b/); if (dm && /מתוכנן|יוצב|יותקן|צפוי|עד |בתאריך|ב-|ל-|יחובר|מועד/.test(t)) { const y = dm[3] ? (dm[3].length === 2 ? "20" + dm[3] : dm[3]) : todayStr().slice(0, 4); C.push({ k: /חיבור|יחובר|לחבר/.test(t) ? "cdate" : "date", v: `${y}-${dm[2].padStart(2, "0")}-${dm[1].padStart(2, "0")}` }); }
   return { t: t.trim(), F: [...F.values()], C };
 }
-/** השוואה: מה הסיכום אומר מול מה שבאתר → [{ ok, txt, fix? }] */
 function pwCompare(c, r) {
   const i = r.i, o = r.o, st = o?.stage || "", I = (k, v) => ({ col: "items", id: i?.id, k, v });
   if (c.k === "cdate") return { ok: true, info: true, txt: `מועד חיבור לפי הסיכום: ${fmtD(c.v)} (באתר אין שדה למועד חיבור — כדאי לרשום בהערה)` };
@@ -4996,40 +4822,93 @@ function pwSumPage(d) {
           ${j ? "" : `<td rowspan="${rows.length}" class="nowrap">${ed ? (S.done["i" + k] ? `<span class="pill ok">נפתח נושא ✓</span>` : `<button class="btn ghost sm" data-act="pwSumIss" data-id="${k}">+ נושא</button>`) : ""}</td>`}</tr>`; }).join(""); }).join("")}</tbody></table>
       <p class="small muted" style="margin:6px 0 0">"+ נושא" פותח נושא מול חח״י עם קישור למתקנים שזוהו${mtg ? " ובמקור — הדיון שנשמר" : ""}. כך הכל מופיע ב"פערים מול חח״י" ובלשונית נושאים.</p></div>` : ""}`;
 }
-async function pwClick(act, b) {
+/* ---------- ⚡ חברת חשמל — מסך אחד: לוח מצב (לחיצה = סינון) · טבלה אחת · לחיצה על שורה = חלונית צד עם כל הפרטים והעריכה.
+   כלים נוספים (עריכת כל ההזמנות, שוברים, סיכום דיון, נושאים, הזמנות משהב״ט) — בכפתור "⚙ כלים", כל אחד עם "חזרה". ---------- */
+const PW_ST = { act: "דורש פעולה", due: "שובר לתשלום", exp: "שובר שפג", noord: "בלי הזמנת חח״י", no444: "בלי מספר 444", feed: "ממתין לתט״ז / טרפו", late: "באיחור", nofeed: "ארון בלי מזין" };
+function pwMain(d, R) {
   const F = pwF();
-  if (act === "pwF") { const [k, v] = b.dataset.id.split("|"); if (k === "tab") F.tab = v; else F[k] = F[k] === v && k !== "kind" ? "" : v; if (k === "at" && F.tab !== "fac") F.tab = "fac"; render(); }
-  else if (act === "pwGap") gapModal("iec");
-  else if (act === "pwDisc") { const p = gapParties().find(x => x.k === "iec"); const id = await api.add("mtgs", { v: 2, type: "רשות", contractorId: "", party: "iec", partyL: p?.l || "חח״י", title: "דיון עם חח״י", attendees: me?.name || "", date: todayStr(), by: tkWho(), open: true, createdAt: new Date().toISOString(), dec: {} });
-    if (id) { ui.page = "disc:" + id; location.hash = ui.page; render(); scrollTo(0, 0); } }
-  else if (act === "pwCard") pwCard(b.dataset.id);
-  else if (act === "pwGo") { const [k, v, w] = b.dataset.id.split("|"); F.hl = "";
-    if (k === "tab") F.tab = v; else if (k === "det") Object.assign(F, { tab: "det", dmx: w ? `${v}:${w}` : "", dq: "" }); else if (k === "dmx") F.dmx = ""; else if (k === "b444") Object.assign(F, { tab: "det", dmx: ":b444=" + v, dq: "" }); else if (k === "fac") Object.assign(F, { tab: "fac", kind: v || "", mx: w || "", at: "", dist: "", gz: "", prob: false, q: "" }); else if (k === "mx") F.mx = v; else if (k === "cDist") F.cDist = v; else if (k === "ctlDue") Object.assign(F, { tab: "ctl", cDue: true });
-    render(); if (k !== "cDist" && k !== "mx" && k !== "dmx") scrollTo(0, document.querySelector(".w-tabs")?.offsetTop - 10 || 0); }
-  else if (act === "pw444") pw444Modal();
-  else if (act === "pwDetX") exportTables([document.querySelector("table.pw-det")], "חח״י — פירוט");
-  else if (act === "pwCtlX") exportTables([document.querySelector("table.pw-ctl")], "חח״י — טבלת שליטה");
-  else if (act === "pwPaid") { const o = D().iecOrders.find(x => x.id === b.dataset.id); if (o) pwPaidModal(o); }
-  else if (act === "pwVch") pwVoucherModal(D().iecOrders.find(x => x.id === b.dataset.id) || null);
-  else if (act === "pwPayCopy") { const t = pwPayText(D()); try { await navigator.clipboard.writeText(t); toast("הועתק ✓"); } catch { modal(`<textarea class="inp" style="width:100%;height:300px">${esc(t)}</textarea><button class="btn" id="mNo">סגירה</button>`, (m, c) => m.querySelector("#mNo").onclick = c); } }
-  else if (act === "pwOrd") { F.tab = "orders"; ui.iec = { dist: "", kind: "", stage: "", q: b.dataset.id, showOff: true }; render(); scrollTo(0, 0); }
-  else if (act === "pwNewOrd") { const i = RAW.items?.[b.dataset.id]; if (!i) return; const d = D();
-    await api.add("iecOrders", { district: iecDistOf(d, kdNum(i.kdFrom)), kind: i.kind, name: i.name || "", orderNo: "", kd: i.kdFrom || "", sec: "", place: "", stage: "טרם הוזמן", stageDate: todayStr(), amount: "", advance: "", advanceDate: "", completion: "", completionDate: "",
-      validUntil: "", size: "", excNo: "", excAmount: "", excAdvance: "", excAdvanceDate: "", excApproved: false, parentNo: "", budgetNo: "", itemId: i.id, coord: "", last: "", note: "", history: {}, order: Date.now() });
-    toast("נפתחה הזמנה בשלב ׳טרם הוזמן׳ — ממלאים מספר וסכומים בהזמנות וכספים ✓"); }
-  else if (act === "pwSumGo") { const S = ui.pwSum; S.text = document.getElementById("pws_t")?.value || ""; S.date = document.getElementById("pws_d")?.value || S.date; S.done = {}; render(); }
-  else if (act === "pwSumClear") { ui.pwSum = { text: "", date: todayStr(), mid: "", done: {} }; render(); }
-  else if (act === "pwSumSave") { const S = ui.pwSum; S.text = document.getElementById("pws_t")?.value || S.text; S.date = document.getElementById("pws_d")?.value || S.date;
-    S.mid = await api.add("mtgs", { v: 2, type: "רשות", contractorId: "", party: "iec", partyL: "חח״י — חיבורי חשמל", title: `דיון עם חח״י ${fmtD(S.date)}`, attendees: "", date: S.date, by: tkWho(), open: false, closedAt: todayStr(), createdAt: new Date().toISOString(), dec: {}, notes: S.text }) || ""; render(); toast("הסיכום נשמר כדיון ✓"); }
-  else if (act === "pwFix") { const x = JSON.parse(b.dataset.id); if (!x.id) return; await api.update(x.col, x.id, { [x.k]: x.v, ...(x.col === "items" && x.k === "status" && x.v === "הושלם" && !RAW.items[x.id]?.doneDate ? { doneDate: ui.pwSum.date || todayStr() } : {}), ...(x.col === "iecOrders" && x.k === "stage" ? { stageDate: ui.pwSum.date || todayStr() } : {}) });
-    ui.pwSum.done[b.dataset.k] = 1; toast("עודכן באתר ✓"); }
-  else if (act === "pwSumIss") { const S = ui.pwSum, d = D(), R = pwRows(d), lines = S.text.split(/\n+/).map(x => x.replace(/^[\s•\-–*\d.)]+(?=\D)/, "").trim()).filter(x => x.length > 3), p = pwParseLine(lines[+b.dataset.id] || "", d, R);
-    const links = {}; p.F.forEach(f => { links[f.r.id] = true; }); const m = S.mid && RAW.mtgs?.[S.mid];
-    const iid = await wCreate({ title: p.t.slice(0, 160), owner: "חח״י", priority: "בינוני", status: "פתוח", category: "חשמל ותקשורת", contractorId: p.F.find(f => f.r.gz)?.r.gz.id || "", links, ...(m ? { src: { id: S.mid, t: m.title, d: m.date } } : {}) }, "מסיכום דיון עם חח״י" + (S.date ? " " + fmtD(S.date) : ""));
-    if (iid) { S.done["i" + b.dataset.id] = 1; toast("נפתח נושא מול חח״י ✓"); } }
+  const tok = qnNorm(F.dq || "").toLowerCase().split(" ").filter(Boolean);
+  const { M, byI, regOf, xsOf, parts, stP } = pwStP(d);
+  const hay = r => qnNorm([r.i?.name, r.i?.kdFrom, r.i?.x_sec, r.kind, r.dist, r.gz?.name, r.i?.note, ...r.os.flatMap(o => [o.orderNo, o.name, o.kd, o.sec, o.place, o.budgetNo, o.note, ...(M.host.get(o.id) || []).map(x => x.orderNo)])].join(" ")).toLowerCase();
+  const mx = F.dmx && F.dmx.split(":"), mxOk = r => { if (!mx) return true; if (mx[1].startsWith("b444=")) return regOf(r).some(o => (String(o.budgetNo || "").trim() || "—") === mx[1].slice(5)); const S = (PW_STAGES[mx[0]] || []).find(x => x[0] === mx[1]); return !S || (r.kind === mx[0] && !S[2](r)); };
+  const fit = r => (!F.dkind || r.kind === F.dkind) && (!F.ddist || r.dist === F.ddist) && (!F.dgz || r.gz?.id === F.dgz) && (!F.dst || stP[F.dst]?.(r)) && mxOk(r) && (!tok.length || tok.every(t => hay(r).includes(t)));
+  const L = R.filter(fit), byKd = (a, b) => IEC_DISTRICTS.indexOf(a.dist) - IEC_DISTRICTS.indexOf(b.dist) || (a.kd ?? 1e9) - (b.kd ?? 1e9);
+  const no = o => `<span class="pwn" dir="ltr">${esc(o.orderNo || "ללא מס׳")}</span>`, stp = o => `<span class="pill" style="background:${IEC_COLORS[o.stage] || "#eee"}">${esc(o.stage)}</span>`;
+  const pill = (l, v, dt, late) => `<div class="pwfs"><span>${l}</span><b class="${v === "הושלם" ? "ok" : late ? "late" : ""}">${v === "הושלם" ? "✓" : esc(v || "טרם")}</b>${dt ? `<small class="${late ? "w-late" : ""}">${fmtD(dt)}</small>` : ""}</div>`;
+  const row = (r, cls = "") => { const i = r.i, nx = r.nx || {}, reg = regOf(r), xs = xsOf(r), P2 = [...reg, ...xs].map(iecParts), left = P2.reduce((t, p) => t + p.left, 0), pad = PAD_KINDS.includes(r.kind);
+    const feedTxt = !i ? "" : r.kind === "ארון שקד" ? (i.feed && byI.get(i.feed) ? `⚡ ${esc(byI.get(i.feed).name || byI.get(i.feed).kind)}` : `<span class="muted">— לא הוגדר</span>`)
+      : pad ? (ch => ch.length ? ch.map(c => `🔌 ${esc(c.name || c.kdFrom)}`).join("<br>") : `<span class="muted">— לא הוגדר</span>`)(d.items.filter(c => c.feed === i.id)) : "";
+    const field = i ? `${pad ? pill("משטח", i.padStatus, i.padDone) : ""}${pill(r.kind === "תט״ז" ? "הצבה" : r.kind === "חדר טרפו" ? "מבנה" : "ביצוע", i.status, i.status === "הושלם" ? i.doneDate : i.plannedDate, nx.late)}` : "";
+    const ordC = reg.length ? reg.map(o => `<div>${String(o.budgetNo || "").trim() ? `<small class="muted" dir="ltr">444 · ${esc(o.budgetNo)}</small>` : `<small class="w-late">חסר 444</small>`}</div><div class="nowrap">${no(o)} ${stp(o)}</div>`).join("") : xs.length && pad ? `<small class="muted">כבילה — ראה מרחק חריג</small>` : `<span class="w-late small">אין הזמנה</span>`;
+    const pc = (o, k) => partChip(iecParts(o)[k]);
+    return `<tr class="${cls} ${F.sel === r.id ? "pw-selr" : ""}" data-act="pwSel" data-id="${esc(r.id)}" data-rid="${esc(r.id)}"><td class="pw-nm">${cls === "pw-ch" ? `<span class="pw-tree">└</span>` : ""}${KIND_EMO[r.kind] || "📍"} <b>${esc(i ? i.name || r.kind : r.o?.name || r.kind)}</b>
+        <div class="small muted">${i?.kdFrom || r.o?.kd ? "ק.ד. " + esc(i?.kdFrom || r.o?.kd) : ""}${i?.x_sec ? " · חתך " + esc(i.x_sec) : ""}${r.dist ? " · " + esc(r.dist) : ""}${r.gz ? " · " + esc(r.gz.name) : ""}</div></td>
+      <td class="small">${feedTxt}</td><td>${field}</td><td>${ordC}</td><td>${reg.map(o => pc(o, "a")).join("<br>")}</td><td>${reg.map(o => pc(o, "c")).join("<br>")}</td>
+      <td class="pw-xs">${xs.map(x => `<div class="nowrap">${no(x)}</div><div class="pwp"><span>מק׳</span>${pc(x, "a")}</div><div class="pwp"><span>מש׳</span>${pc(x, "c")}</div>`).join("") || `<span class="muted small">—</span>`}</td>
+      <td class="num">${left ? `<b class="w-late">${ils2(left)}</b>` : P2.length ? "✓" : "—"}</td><td class="small pw-nxc"><span class="pw-at" style="--c:${PW_AT_CLR[nx.at] || "#888"}">${esc(nx.at || "")}</span> ${esc(nx.t || "")}${nx.late ? " ⏰" : ""}</td></tr>`; };
+  const gh = (t, n) => `<tr class="w-gh"><td colspan="9"><b>${t}</b> <span class="muted small">· ${n}</span></td></tr>`;
+  let body = "";
+  if (F.dview === "list" || F.dmx || F.dst || tok.length || F.dkind) body = L.sort(byKd).map(r => row(r)).join("");
+  else { const inL = new Set(L.map(r => r.id)), used = new Set(), feeders = R.filter(r => r.i && PAD_KINDS.includes(r.kind)).sort(byKd);
+    for (const ds of [...IEC_DISTRICTS, ""]) { const fd = feeders.filter(r => (r.dist || "") === ds && inL.has(r.id)); let chunk = "";
+      fd.forEach(f => { used.add(f.id); const ch = L.filter(r => r.i?.feed === f.i.id).sort(byKd); ch.forEach(c => used.add(c.id)); chunk += row(f, "pw-fd") + ch.map(c => row(c, "pw-ch")).join(""); });
+      if (chunk) body += gh(`⚡ יחידות חיבור${ds ? " — נפת " + ds : ""}`, `${fd.length} תט״ז / חדרי טרפו, ומתחת לכל אחד הארונות שהוא מזין`) + chunk; }
+    const rest = (k, t) => { const a = L.filter(r => !used.has(r.id) && k(r)).sort(byKd); a.forEach(r => used.add(r.id)); return a.length ? gh(t, a.length) + a.map(r => row(r)).join("") : ""; };
+    body += rest(r => r.kind === "ארון שקד", "🔌 ארונות שקד שעוד לא הוגדר להם מזין (או שנאי סמוך)") + rest(r => r.kind === "אתר איסוף", "📡 אתרי איסוף") + rest(() => true, "📍 שאר ההזמנות"); }
+  const gzs = [...new Map(R.filter(r => r.gz).map(r => [r.gz.id, r.gz])).values()], o = (v, l, cur) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(l)}</option>`;
+  const mxTxt = mx ? (mx[1].startsWith("b444=") ? `הזמנת משהב״ט ${mx[1].slice(5) === "—" ? "— חסרה" : mx[1].slice(5)}` : `${mx[0]} — עוד לא: ${(PW_STAGES[mx[0]] || []).find(x => x[0] === mx[1])?.[1] || ""}`) : "";
+  const any = F.dq || F.dkind || F.ddist || F.dgz || F.dst || F.dmx;
+  return `<div class="card pw-maincard"><div class="w-filt" style="margin-top:0"><input class="inp" data-pwf="dq" value="${esc(F.dq || "")}" placeholder="סינון הטבלה: ק.ד., חתך, T5, מס׳ הזמנה…" style="min-width:200px">
+      <select class="inp sm" data-pwf="dkind">${o("", "כל הסוגים", F.dkind)}${Object.keys(PW_STAGES).map(k => o(k, k, F.dkind)).join("")}</select>
+      <select class="inp sm" data-pwf="ddist">${o("", "כל הנפות", F.ddist)}${IEC_DISTRICTS.map(x => o(x, x, F.ddist)).join("")}</select>
+      <select class="inp sm" data-pwf="dgz">${o("", "כל הגזרות", F.dgz)}${gzs.map(c => o(c.id, c.name, F.dgz)).join("")}</select>
+      <select class="inp sm" data-pwf="dst">${o("", "מצב: הכל", F.dst)}${Object.entries(PW_ST).map(([k, l]) => o(k, l, F.dst)).join("")}</select>
+      ${mxTxt ? `<span class="pill warn">${esc(mxTxt)} <button class="btn ghost sm" style="padding:0 6px;border:0" data-act="pwGo" data-id="dmx|">✕</button></span>` : ""}${any ? `<button class="btn ghost sm" data-act="pwGo" data-id="clr|">ניקוי סינון</button>` : ""}
+      <span class="spacer"></span><span class="viewtabs" style="margin:0"><button class="btn ghost sm ${F.dview !== "list" ? "on" : ""}" data-act="pwGo" data-id="dview|unit">לפי יחידות חיבור</button><button class="btn ghost sm ${F.dview === "list" ? "on" : ""}" data-act="pwGo" data-id="dview|list">רשימה</button></span><span class="muted small">${L.length} מתקנים</span></div>
+    <div class="tablewrap pw-detw"><table class="sheet pw-det pw-main"><thead><tr><th>מתקן</th><th>הזנה</th><th>בשטח</th><th>444 · הזמנת חח״י</th><th>מקדמה</th><th>משלים</th><th class="pw-xs">מרחק חריג / כבילה</th><th>נשאר לשלם</th><th>השלב הבא · אצל מי</th></tr></thead>
+      <tbody>${body || `<tr><td colspan="9" class="muted">אין מתקנים שמתאימים לסינון</td></tr>`}</tbody></table></div>
+    <p class="small muted" style="margin:6px 0 0">לחיצה על שורה — חלונית עם כל הפרטים, ושם עורכים (שם, ק.ד., חתך, הזנה, מצב בשטח, 444, הזמנות, תשלומים, נושאים). סכומים ללא מע״מ. <span class="pc pc-paid">✓ שולם</span> <span class="pc pc-due">✗ לתשלום</span> <span class="pc pc-exp">⛔ פג</span> <span class="pc pc-none">· טרם שובר</span></p></div>`;
 }
-$app.addEventListener("change", e => { const t = e.target; if (!t.dataset?.pwf) return; const F = pwF(); F[t.dataset.pwf] = t.type === "checkbox" ? t.checked : t.value; render(); });
-$app.addEventListener("input", e => { const t = e.target, k = t.dataset?.pwf; if (k !== "q" && k !== "cQ" && k !== "dq") return; pwF()[k] = t.value; clearTimeout(t._tm); t._tm = setTimeout(() => { const pos = t.selectionStart; render(); const n = document.querySelector(`[data-pwf="${k}"]`); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 300); });
+function pwDrawer(d, R, key) {
+  const Fx = pwFacts(d, R, key); if (!Fx) return "";
+  const { r, os, fedBy, feeds, iss } = Fx, i = r.i, nx = r.nx || {}, ed = !isViewer(), pad = PAD_KINDS.includes(r.kind), dis = ed ? "" : "disabled";
+  const inp = (col, rec, k, ph = "", w = "") => `<input class="inp pw-in" id="f_${col}_${rec.id}_${k}" value="${esc(rec[k] ?? "")}" data-edit="${col}|${rec.id}|${k}" placeholder="${esc(ph)}" ${dis} ${w ? `style="width:${w}"` : ""}>`;
+  const sel = (col, rec, k, opts, cur) => `<select class="inp pw-in" id="f_${col}_${rec.id}_${k}" data-edit="${col}|${rec.id}|${k}" ${dis}>${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === (cur ?? "") ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+  const dt = (rec, k) => `<input type="date" class="inp pw-in" id="f_items_${rec.id}_${k}" value="${esc(rec[k] || "")}" data-edit="items|${rec.id}|${k}" ${dis}>`;
+  const lab = (l, h) => `<label class="pwd-f"><span>${l}</span>${h}</label>`;
+  const stOpts = ITEM_STATUS.map(x => [x, x]);
+  // הזנה: ארון ← מזין אחד; תט״ז / טרפו → עד 2 ארונות
+  const feeders = d.items.filter(x => PAD_KINDS.includes(x.kind)).sort((a, b) => (kdNum(a.kdFrom) ?? 1e9) - (kdNum(b.kdFrom) ?? 1e9)), cnt = id => d.items.filter(x => x.feed === id).length;
+  const cabs = d.items.filter(x => x.kind === "ארון שקד").sort((a, b) => (kdNum(a.kdFrom) ?? 1e9) - (kdNum(b.kdFrom) ?? 1e9));
+  const near = x => i && kdNum(x.kdFrom) !== null && kdNum(i.kdFrom) !== null ? Math.abs(kdNum(x.kdFrom) - kdNum(i.kdFrom)) : 1e9;
+  let feedH = "";
+  if (i && r.kind === "ארון שקד") feedH = lab("מוזן מ־ (תט״ז / חדר טרפו)", `<select class="inp pw-in" id="f_items_${i.id}_feed" data-edit="items|${i.id}|feed" ${dis}><option value="">— לא הוגדר / שנאי סמוך</option>${[...feeders].sort((a, b) => near(a) - near(b)).map(f => { const n = cnt(f.id), mine = f.id === i.feed, full = n >= 2 && !mine;
+    return `<option value="${esc(f.id)}" ${mine ? "selected" : ""} ${full ? "disabled" : ""}>${esc(f.name || f.kind)}${f.kdFrom ? " · ק.ד. " + esc(f.kdFrom) : ""}${full ? " — מלא (2 ארונות)" : n ? ` — מזין ${n}` : ""}</option>`; }).join("")}</select>`);
+  else if (i && pad) { const cur = d.items.filter(x => x.feed === i.id).sort((a, b) => (kdNum(a.kdFrom) ?? 0) - (kdNum(b.kdFrom) ?? 0));
+    const slot = n => `<select class="inp pw-in" data-pwfeed="${esc(i.id)}|${n}" ${dis}><option value="">— אין</option>${[...cabs].sort((a, b) => near(a) - near(b)).map(c => { const other = c.feed && c.feed !== i.id ? d.items.find(x => x.id === c.feed) : null, isMe = cur[n]?.id === c.id, taken = cur.some((x, k) => k !== n && x.id === c.id);
+      return taken ? "" : `<option value="${esc(c.id)}" ${isMe ? "selected" : ""}>${esc(c.name || "ארון")}${c.kdFrom && !String(c.name || "").includes(c.kdFrom) ? " · ק.ד. " + esc(c.kdFrom) : ""}${other ? ` (כעת מוזן מ־${esc(other.name || other.kind)})` : ""}</option>`; }).join("")}</select>`;
+    feedH = lab("מזין את (עד 2 ארונות שקד)", `<div class="pwd-2">${slot(0)}${slot(1)}</div>`); }
+  // הזמנות: הרגילות, החריג (כבילה / מרחק חריג), והארונות של החריג
+  const oBox = o => { const p = iecParts(o), v = pwVoucher(o), canPay = ed && v && v.pay;
+    return `<div class="pwd-o ${o.kind === IEC_EXC ? "x" : ""}"><div class="row" style="gap:6px;align-items:center"><b>${o.kind === IEC_EXC ? (pad ? "כבילה / מרחק חריג" : "מרחק חריג") : esc(o.kind === "ארון שקד" || o.kind === r.kind ? "הזמנת חיבור" : o.kind || "הזמנה")}</b>${o.kind === IEC_EXC && o.parentNo ? `<small class="muted">· תחת הזמנות ${esc(o.parentNo)}</small>` : ""}<span class="spacer"></span>
+        ${canPay ? `<button class="btn sm" data-act="pwPaid" data-id="${o.id}">✓ שולם</button>` : ""}${ed ? `<button class="btn ghost sm" data-act="pwVch" data-id="${o.id}">🧾 שובר</button>` : ""}</div>
+      <div class="pwd-g">${lab("מס׳ הזמנת חח״י", inp("iecOrders", o, "orderNo", "301…"))}${o.kind !== IEC_EXC ? lab("הזמנת משהב״ט", inp("iecOrders", o, "budgetNo", "444…")) : ""}${lab("שלב", sel("iecOrders", o, "stage", IEC_STAGES.map(s => [s, s]), o.stage))}</div>
+      <div class="pwd-pay"><div><span>סה״כ להזמנה</span><b>${p.A ? ils2(p.A) : "—"}</b></div><div><span>מקדמה</span>${partChip(p.a)}</div><div><span>משלים</span>${partChip(p.c)}</div><div><span>נשאר לשלם</span><b class="${p.left ? "w-late" : ""}">${p.left ? ils2(p.left) : "✓"}</b>${p.left ? `<small>${ils2(withVat(p.left))} כולל מע״מ</small>` : ""}</div></div></div>`; };
+  const reg = os.filter(o => o.kind !== IEC_EXC && (!r.i || o.itemId === r.i.id || r.os.includes(o))), others = os.filter(o => !reg.includes(o));
+  const L = os.map(iecParts), left = L.reduce((t, p) => t + p.left, 0);
+  return `<aside class="pw-drawer" aria-label="פרטי מתקן"><div class="pwd-h"><div><div class="muted small">${esc(r.kind)}${r.dist ? " · נפת " + esc(r.dist) : ""}${r.gz ? " · " + esc(r.gz.name) : ""}</div><h2>${KIND_EMO[r.kind] || "📍"} ${esc(i ? i.name || r.kind : r.o?.name || r.kind)}</h2></div><button class="btn ghost" data-act="pwSel" data-id="">✕</button></div>
+    <div class="pwd-nx"><span class="pw-at" style="--c:${PW_AT_CLR[nx.at] || "#888"}">${esc(nx.at || "")}</span> <b>השלב הבא:</b> ${esc(nx.t || "")}${nx.late ? ` <b class="w-late">⏰ באיחור</b>` : ""}</div>
+    ${i ? `<h3>פרטים</h3><div class="pwd-g">${lab("שם", inp("items", i, "name", r.kind))}${lab("ק.ד.", inp("items", i, "kdFrom", "", "90px"))}${lab("חתך", inp("items", i, "x_sec", "", "90px"))}</div>${feedH}
+      <h3>בשטח</h3><div class="pwd-g">${pad ? lab("משטח (קבלן גזרה)", sel("items", i, "padStatus", stOpts, i.padStatus || "טרם")) + lab("משטח — בוצע", dt(i, "padDone")) : ""}
+        ${lab(r.kind === "תט״ז" ? "הצבה (חח״י)" : r.kind === "חדר טרפו" ? "מבנה (קבלן חשמל)" : "ביצוע (קבלן גזרה)", sel("items", i, "status", stOpts, i.status || "טרם"))}${lab("מתוכנן", dt(i, "plannedDate"))}${lab("בפועל", dt(i, "doneDate"))}</div>` : ""}
+    <h3>הזמנות ותשלומים <span class="muted small">(ללא מע״מ)</span></h3>
+    ${reg.map(oBox).join("")}${others.map(oBox).join("")}${!os.length ? `<p class="w-late">אין הזמנת חח״י.</p>` : ""}${ed && i && !os.some(o => o.itemId === i.id) ? `<button class="btn ghost sm" data-act="pwNewOrd" data-id="${i.id}">+ פתיחת הזמנת חח״י</button>` : ""}
+    ${os.length > 1 ? `<div class="pwd-tot">סה״כ נשאר לשלם למתקן: <b>${ils2(left)}</b> · כולל מע״מ <b>${ils2(withVat(left))}</b></div>` : ""}
+    ${fedBy || feeds.length ? `<p class="small">${fedBy ? `⚡ מוזן מ־<b>${esc(fedBy.name || fedBy.kind)}</b> — הארון לא יחובר לפני שהוא ישולם ויוצב. ` : ""}${feeds.length ? `מזין את: <b>${feeds.map(x => esc(x.name || x.kdFrom)).join(", ")}</b>` : ""}</p>` : ""}
+    <h3>נושאים פתוחים <span class="muted small">(${iss.length})</span></h3>${iss.length ? `<ul class="pwc-i">${iss.map(x => `<li><b>${esc(x.code || "")}</b> ${esc(x.title || "")} <span class="muted small">· ${esc(x.owner || "")}</span></li>`).join("")}</ul>` : `<p class="muted small">אין</p>`}
+    ${ed ? `<div class="row" style="gap:6px"><input class="inp" id="pw_iss" placeholder="נושא חדש — למשל: לתאם הצבה עד 30/10" style="flex:1"><button class="btn sm" data-act="pwIss" data-id="${esc(key)}">+ נושא</button></div>` : ""}
+    ${i ? `<h3>הערה</h3>${cellInput("items", i, "note", "pwd-note")}` : r.o ? `<h3>הערה</h3>${cellInput("iecOrders", r.o, "note", "pwd-note")}` : ""}</aside>`;
+}
 
 /* =====================================================================
    §20 תקציב ואומדן — ריכוז העלויות ובקרת אומדן מול הזמנות
@@ -6576,7 +6455,7 @@ function pageContractor(d, id) {
    ===================================================================== */
 const COL_TYPES = [["text", "טקסט"], ["number", "מספר"], ["money", "סכום ₪ (עם סה״כ)"], ["date", "תאריך"], ["link", "קישור"], ["check", "סימון ✓"]];
 const DEFAULT_HIDDEN = { orders: {}, deliveries: {}, designSegments: { fromPlace: true, toPlace: true, kdFromUrl: true, kdToUrl: true }, contractorDesign: { place: true, map: true },
-  iecOrders: { place: true, size: true, excAdvance: true, excAdvanceDate: true, excApproved: true, parentNo: true, budgetNo: true, note: true } };
+  iecOrders: { place: true, size: true, excNo: true, excAmount: true, excAdvance: true, excAdvanceDate: true, excApproved: true, note: true } };   // "הזמנה מרכזת" (parentNo — לאיזו הזמנה שייך מרחק חריג) ו־444 מוצגות
 /** הגדרות עמודות לכל קבלן בנפרד: בדף קבלן נשמרות תחת "<טבלה>__<קבלן>"; קבלן שעוד לא הגדיר — מקבל את ברירת המחדל המשותפת */
 const PER_CONTRACTOR_TABLES = new Set(["orders", "items", "issues", "progress", "deliveries", "activities", "contractorDesign"]);
 const cfgKey = table => ui.page?.startsWith("c:") && PER_CONTRACTOR_TABLES.has(table) ? `${table}__${ui.page.slice(2)}` : table;
@@ -7432,7 +7311,7 @@ $app.addEventListener("click", async e => {
   else if (act === "alAck") { const A = { ...alAcks() }; if (A[b.dataset.id]) delete A[b.dataset.id]; else A[b.dataset.id] = { at: todayStr() };
     RAW.tableConfig?.alertsAck ? await api.update("tableConfig", "alertsAck", { acks: A }) : await api.put("tableConfig", "alertsAck", { acks: A }); }
   else if (act === "alGo") { const a = allAlerts(D()).find(x => x.key === b.dataset.id), g = a?.go; if (!g) return;
-    if (g.page === "power") ui.iec = { dist: "", kind: g.kind || "", stage: g.stage || "", q: g.q || "", showOff: false };
+    if (g.page === "power") { ui.iec = { dist: "", kind: g.kind || "", stage: g.stage || "", q: g.q || "", showOff: false }; Object.assign(pwF(), { tab: "edit", sel: "" }); }
     if (g.ctab) ui.ctab = g.ctab; else if (g.page.startsWith("c:")) ui.ctab = isMain(RAW.contractors?.[g.page.slice(2)] || {}) ? "progress" : "items";
     ui.page = g.page; location.hash = g.page; render(); window.scrollTo(0, 0);
     if (g.ids?.length) setTimeout(() => { const trs = g.ids.map(id => document.querySelector(`tr[data-rid="${CSS.escape(id)}"]`)).filter(Boolean); trs.forEach(tr => { tr.hidden = false; tr.classList.add("al-hl"); });
@@ -7550,7 +7429,7 @@ $app.addEventListener("click", async e => {
   else if (act === "dqConf") { await api.update("items", b.dataset.id, { conflict: null }); toast("סומן כנבדק ✓"); }
   else if (act === "dqDel") { const [col, rid] = b.dataset.id.split("|"); if (b.dataset.sure) { await api.remove(col, rid); toast("נמחק"); } else { b.dataset.sure = 1; b.textContent = "ללחוץ שוב למחיקה"; } }
   else if (act === "dqLine") { const c = dqChecks(D()).find(x => x.key === b.dataset.id), l = c?.lines.find(x => x.k === b.dataset.k), g = l?.go; if (!g) return;
-    if (g.page === "power") ui.iec = { dist: "", kind: "", stage: "", q: g.q || "", showOff: true };
+    if (g.page === "power") { ui.iec = { dist: "", kind: "", stage: "", q: g.q || "", showOff: true }; Object.assign(pwF(), { tab: "edit", sel: "" }); }
     if (g.rid) wGoHl(g.page, g.ctab, g.rid); else { if (g.ctab) ui.ctab = g.ctab; ui.page = g.page; location.hash = g.page; render(); scrollTo(0, 0); } }
   else if (act === "dqGo") { const c = dqChecks(D()).find(x => x.key === b.dataset.id); if (c?.go) { Object.assign(ui, c.go.setTab ? { setTab: c.go.setTab } : {}, c.go.ctab ? { ctab: c.go.ctab } : {}); ui.page = c.go.page; location.hash = c.go.page; render(); scrollTo(0, 0); } }
   else if (act === "darkTog") { ui.dark = !ui.dark; try { localStorage.setItem("dark", ui.dark ? "1" : "0"); } catch (e) {} render(); }
