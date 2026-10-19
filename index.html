@@ -433,6 +433,10 @@ body.present .shell { grid-template-columns: minmax(0, 1fr); } body.present .mai
 .ch-tiles.gr-tiles { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 tr.w-dsc > td { background: #eef7f0 !important; } tr.w-dsc .w-t { color: #4b6b55; } .btn.w-dsc-on { background: #2e7d4f; color: #fff; border-color: #2e7d4f; }
 .tp-gh { position: sticky; top: 0; z-index: 1; background: #e8f3f5; color: #155e6c; font-weight: 800; font-size: 13px; padding: 4px 10px; border-radius: 8px; margin: 8px 0 4px; } .tp-gh small { font-weight: 400; color: #5f6670; } .tp-row.tp-mv { background: #fff6d6; border-radius: 8px; }
+.sm-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: #fffbe8; border: 1px solid #f0d98a; border-radius: 12px; padding: 7px 14px; margin: -2px 0 12px; font-size: 14px; }
+.sb-chip.mk { outline: 2px solid #1f7a8c; outline-offset: 1px; background: #e9f6f8; } .sb-chip.mk-ok { outline-color: #2e7d4f; background: #e8f5ec; } .sb-chip.mk-bad { outline-color: #c0392b; background: #fdecea; }
+.sb-chip.mk-dim, tr.mk-dim { opacity: .28; } .sb-chip .mk-t { font-style: normal; font-weight: 700; color: #155e6c; } .sb-chip.mk-bad .mk-t { color: #b3261e; } .sb-chip.mk-ok .mk-t { color: #2e7d4f; }
+tr.mk > td:first-child { box-shadow: inset -4px 0 0 #1f7a8c; } tr.mk-bad > td:first-child { box-shadow: inset -4px 0 0 #c0392b; } tr.mk-ok > td:first-child { box-shadow: inset -4px 0 0 #2e7d4f; }
 .ch-tiles.st-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); } .ch-t.t-red b { color: #b3261e; } .ch-t.t-red { border-top: 4px solid #c0392b; }
 .ch-t.ord-hot { background: linear-gradient(160deg, #e9f6f8, #cfeaf0); border: 2px solid #1f7a8c !important; cursor: pointer; box-shadow: 0 3px 12px rgba(31,122,140,.22); } .ch-t.ord-hot > span { color: #155e6c; font-weight: 800; } .ch-t.ord-hot b { color: #155e6c; }
 .ch-t.ord-hot em { font-style: normal; font-size: 11px; font-weight: 700; background: #1f7a8c; color: #fff; border-radius: 999px; padding: 1px 7px; margin-inline-start: 4px; } .ch-t.ord-hot.on { background: #1f7a8c; } .ch-t.ord-hot.on > span, .ch-t.ord-hot.on b, .ch-t.ord-hot.on small { color: #fff; }
@@ -4200,8 +4204,9 @@ function pageSites(d) {
   const L = S.filter(s => siteInTab(s, F.tab) && (!F.reg || s.region === F.reg) && (!F.ph || ph(s) === F.ph) && (!F.q || qnNorm([s.name, s.line, s.note].join(" ")).includes(qnNorm(F.q)))).sort(siteOrd);
   const vb = (k, l) => `<button class="btn ${F.view === k ? "" : "ghost"} sm" data-act="siteF" data-id="view|${k}">${l}</button>`;
   const tb = k => `<button class="w-tb ${F.tab === k ? "on" : ""}" data-act="siteF" data-id="tab|${k}">${SITE_TABS[k][0]} <small>${S.filter(SITE_TABS[k][1]).length}</small></button>`;
-  const chip = s => { const P = stepProg(sitePlanSteps(s, T), s.plan), b = blk(s).length;
-    return `<button class="sb-chip ${dead(s) ? "fz" : ""}" style="--c:${sClr(s)}" data-act="siteOpen" data-id="${s.id}" title="${esc(sTypeL(s))} · ${esc(s.region || "")} · תכנון ${P.done}/${P.total}"><i class="sb-dot"></i>${esc(s.name)}${sSub(s) ? `<span class="sb-w" title="קו מים">💧</span>` : ""}${b ? ` <span class="w-late">⚠</span>` : ""}<small>${P.done ? `${P.done}/${P.total}` : ""}</small></button>`; };
+  const MK = siteMark(d, S, T), mk = s => !MK ? "" : MK.ids.has(s.id) ? (MK.k === "permit" ? (/✓/.test(MK.tag(s)) ? "mk mk-ok" : "mk mk-bad") : MK.k === "bud" ? "mk mk-bad" : "mk") : "mk-dim";
+  const chip = s => { const P = stepProg(sitePlanSteps(s, T), s.plan), b = blk(s).length, on = MK?.ids.has(s.id);
+    return `<button class="sb-chip ${dead(s) ? "fz" : ""} ${mk(s)}" style="--c:${sClr(s)}" data-act="siteOpen" data-id="${s.id}" title="${esc(sTypeL(s))} · ${esc(s.region || "")} · תכנון ${P.done}/${P.total}"><i class="sb-dot"></i>${esc(s.name)}${sSub(s) ? `<span class="sb-w" title="קו מים">💧</span>` : ""}${b ? ` <span class="w-late">⚠</span>` : ""}<small>${on && MK.k === "ord" && MK.tag(s) ? `<em class="mk-t">${esc(MK.tag(s))}</em>` : P.done ? `${P.done}/${P.total}` : ""}</small></button>`; };
   const leg = `<div class="sb-leg">${SITE_TYPES.map(t => `<span><i class="sb-dot" style="background:${SITE_TYPE_CLR[t]}"></i>${t}</span>`).join("")}<span>💧 קו מים</span><span><b class="w-late">⚠</b> נושא / חסם פתוח</span></div>`;
   let body = "";
   if (F.view === "board") {
@@ -4219,13 +4224,13 @@ function pageSites(d) {
     body = `<div class="card"><div class="tablewrap"><table class="mx"><thead><tr><th rowspan="2">אתר</th><th colspan="${SITE_PG.length}" class="mx-p1">שלב 1 — תכנון וסטטוטוריקה</th><th colspan="${SITE_EG.length}" class="mx-p2">שלב 2 — ביצוע (קבוע)</th><th rowspan="2">השלב הבא</th><th rowspan="2">הזמנה / דרישה</th></tr>
       <tr>${SITE_PG.map(g => `<th class="mx-g">${esc(g)}</th>`).join("")}${SITE_EG.map(g => `<th class="mx-g mx-e">${esc(g)}</th>`).join("")}</tr></thead><tbody>
       ${grp.map(([t, a]) => `<tr class="mx-gh"><td colspan="${SITE_PG.length + SITE_EG.length + 3}" style="--c:${SITE_TYPE_CLR[t]}">${t} · ${a.length}</td></tr>${a.map(s => { const perm = siteBuilds(s).find(b => b.kind !== "זמני") || { steps: {} }, N = siteNow(s, T), os = siteOrders(s), tmp = siteBuilds(s).find(b => b.kind === "זמני");
-        return `<tr class="${dead(s) ? "mx-fz" : ""}"><td class="mx-nm" data-act="siteOpen" data-id="${s.id}" role="button"><i style="background:${sClr(s)}"></i><b>${esc(s.name)}</b>${sSub(s) ? " 💧" : ""}${blk(s).length ? ` <span class="w-late">⚠</span>` : ""}<small>${esc(s.region || "")}${tmp ? " · +זמני" : ""}</small></td>
+        return `<tr class="${dead(s) ? "mx-fz" : ""} ${mk(s)}"><td class="mx-nm" data-act="siteOpen" data-id="${s.id}" role="button"><i style="background:${sClr(s)}"></i><b>${esc(s.name)}</b>${sSub(s) ? " 💧" : ""}${blk(s).length ? ` <span class="w-late">⚠</span>` : ""}<small>${esc(s.region || "")}${tmp ? " · +זמני" : ""}</small></td>
           ${SITE_PG.map(g => cell(sitePlanSteps(s, T), s.plan, g, s.id)).join("")}${SITE_EG.map(g => cell(siteExecSteps(s, perm, T), perm.steps, g, s.id, !buildOrdered(perm))).join("")}
           <td class="mx-nx">${dead(s) ? ph(s) : N.next ? esc(N.next.t) : "✓ הושלם"}</td><td class="mx-nx small">${os.map(o => `${esc(o.x_reqNo || "—")} / ${esc(o.x_ordNo || "—")}`).join("<br>") || `<span class="muted">—</span>`}</td></tr>`; }).join("")}`).join("")}</tbody></table></div>
       <div class="sb-leg"><span><i style="background:#3f9a63"></i>הושלם</span><span><i style="background:#f1c75b"></i>בתהליך / חלקי</span><span><i style="background:#eceee9"></i>טרם</span><span><i class="mx-na-i"></i>לא רלוונטי לסוג</span><span>לחיצה על תא — פתיחת האתר</span></div></div>`;
   } else {
     const row = s => { const P = stepProg(sitePlanSteps(s, T), s.plan), B = siteBuilds(s), iec = siteIec(s), est = siteBudget(s), p = ph(s);
-      return `<tr class="st-row" data-act="siteOpen" data-id="${s.id}" role="button"><td><b class="st-name">${esc(s.name)}</b><div class="small"><span class="st-type ${sType(s) === "גדול" ? "dk" : ""}" style="--tc:${sClr(s)}">${esc(sTypeL(s))}</span> <span class="muted">${esc(s.region || "")}${s.line ? " · שורה " + esc(s.line) : ""}</span></div></td>
+      return `<tr class="st-row ${mk(s)}" data-act="siteOpen" data-id="${s.id}" role="button"><td><b class="st-name">${esc(s.name)}</b><div class="small"><span class="st-type ${sType(s) === "גדול" ? "dk" : ""}" style="--tc:${sClr(s)}">${esc(sTypeL(s))}</span> <span class="muted">${esc(s.region || "")}${s.line ? " · שורה " + esc(s.line) : ""}</span></div></td>
         <td><span class="pill" style="background:${PHASE_CLR[p]};color:#fff">${p}</span></td>
         <td style="min-width:190px">${siteBar(P, "#4a6d93")}<div class="small"><b>${P.done}/${P.total}</b> ${P.next ? `· הבא: ${esc(P.next.t)}` : "· ✓"}</div></td>
         <td style="min-width:200px">${B.filter(b => buildOrdered(b) || b.kind === "זמני").map(b => { const E = stepProg(siteExecSteps(s, b, T), b.steps), o = buildOrder(b); return `<div class="st-b"><span class="small"><b>${b.kind}</b> · ${esc(RAW.contractors?.[buildCid(b)]?.name || b.contractor || "—")}${o?.x_ordNo ? " · " + esc(o.x_ordNo) : ""}</span>${siteBar(E, b.kind === "זמני" ? "#c96a12" : "#2f6b4f")}</div>`; }).join("") || `<span class="muted small">טרם הוזמן</span>`}</td>
@@ -4243,7 +4248,7 @@ function pageSites(d) {
     ${siteSummary(d, S, T)}
     <div class="w-tabs">${Object.keys(SITE_TABS).map(tb).join("")}<span class="spacer"></span>
       <input class="inp sm" data-sf="q" value="${esc(F.q || "")}" placeholder="חיפוש אתר…" style="max-width:150px"><select class="inp sm" data-sf="reg"><option value="">כל האזורים</option>${SITE_REG.map(r => `<option ${r === F.reg ? "selected" : ""}>${r}</option>`).join("")}</select><select class="inp sm" data-sf="ph"><option value="">כל השלבים</option>${Object.keys(PHASE_CLR).map(r => `<option ${r === F.ph ? "selected" : ""}>${r}</option>`).join("")}</select></div>
-    ${body}${F.box === "ord" ? "" : siteOrdersBlock(d)}`;
+    ${body}${siteOrdersBlock(d)}`;
 }
 /** הזמנות של אתרי איסוף — הזמנות רגילות (אוסף orders) עם siteId. נספרות ב"דרישות ויתרות" לפי מס׳ דרישה; הקבלן — מהרשימה או חיצוני (x_cname) */
 const siteOrders = s => list("orders").filter(o => o.siteId === s.id);
@@ -4252,30 +4257,38 @@ const SITE_OFOR = ["ביצוע קבוע", "אתר זמני", "תכנון", "אח
 /** תמונת מצב: בתכנון · נושאים פתוחים · הזמנות · היתרי בנייה · בביצוע · חוסר תקציב לתרנים. לחיצה על תא — פירוט */
 /** נושאים של אתרי איסוף: נושא שקושר לאתר (s:…) או שנפתח מדף אתרי האיסוף (scope=sites) */
 const isSiteIss = i => i.scope === "sites" || Object.keys(i.links || {}).some(k => k.startsWith("s:"));
-function siteSummary(d, S, T) {
-  const F = ui.sf, ph = s => sitePhase(s, T), live = s => !["מוקפא", "בוטל"].includes(ph(s));
+/** הגדרות הקוביות: [כותרת, אתרים, תווית קצרה לאתר] — משמשות גם לסימון האתרים בלוח / מטריצה / טבלה */
+function siteBoxDefs(d, S, T) {
+  const ph = s => sitePhase(s, T), live = s => !["מוקפא", "בוטל"].includes(ph(s));
   const permit = s => sitePlanSteps(s, T).filter(x => /היתר/.test(x.t)), hasPermit = s => { const a = permit(s); return a.length > 0 && a.every(x => ["הושלם", "לא נדרש"].includes(s.plan?.[x.id]?.st)); };
-  const needMast = s => live(s) && sType(s) === "גדול", mastAmt = s => { const b = s.budget && RAW.budget?.[s.budget]; return b ? bgN(b.mast) : 0; };
-  const iss = list("issues").filter(i => i.status !== "סגור" && isSiteIss(i)), ords = d.orders.filter(o => o.siteId && RAW.sites?.[o.siteId]);
-  const B = {
+  const mastAmt = s => { const b = s.budget && RAW.budget?.[s.budget]; return b ? bgN(b.mast) : 0; };
+  const ords = d.orders.filter(o => o.siteId && RAW.sites?.[o.siteId]);
+  return { hasPermit, ords,
     plan: ["📐 בתכנון", S.filter(s => ph(s) === "בתכנון"), s => { const N = siteNow(s, T); return N.next ? N.next.g : ""; }],
-    permit: ["📜 היתרי בנייה", S.filter(s => live(s) && permit(s).length), s => hasPermit(s) ? "✓ יש היתר" : "אין עדיין"],
+    ord: ["🧾 הזמנות", S.filter(s => ords.some(o => o.siteId === s.id)), s => ords.filter(o => o.siteId === s.id).map(o => o.x_ordNo || (o.x_reqNo ? "דרישה " + o.x_reqNo : "טרם")).join(" · ")],
+    permit: ["📜 היתרי בנייה", S.filter(s => live(s) && permit(s).length), s => hasPermit(s) ? "✓ יש היתר" : "אין היתר"],
     exec: ["🏗 בביצוע", S.filter(s => ph(s) === "בביצוע"), s => { const N = siteNow(s, T); return N.next ? N.next.g : ""; }],
-    bud: ["💰 חוסר תקציב לתרנים", S.filter(s => needMast(s) && !mastAmt(s)), () => "אין שורת אומדן לתורן"] };
+    bud: ["💰 חוסר תקציב לתרנים", S.filter(s => live(s) && sType(s) === "גדול" && !mastAmt(s)), () => "אין תקציב לתורן"] };
+}
+/** סימון בלוח לפי הקובייה שנבחרה: { ids, tag } או null */
+function siteMark(d, S, T) {
+  const k = ui.sf?.box; if (!k || k === "iss") return null; const B = siteBoxDefs(d, S, T)[k]; if (!B) return null;
+  return { k, title: B[0], ids: new Set(B[1].map(s => s.id)), tag: B[2], n: B[1].length };
+}
+function siteSummary(d, S, T) {
+  const F = ui.sf, B = siteBoxDefs(d, S, T), ords = B.ords;
+  const iss = list("issues").filter(i => i.status !== "סגור" && isSiteIss(i));
   const tile = (k, cls, label, big, sub) => `<div class="ch-t ${cls} ${F.box === k ? "on" : ""}" data-act="siteF" data-id="box|${k}" role="button"><span>${label}</span><b>${big}</b><small>${sub}</small></div>`;
-  const nP = B.permit[1].filter(hasPermit).length, urg = iss.filter(i => priN(i.priority) === "דחוף").length, hold = iss.filter(i => i.status === "HOLD").length, issued = ords.filter(o => o.x_ordNo).length;
+  const nP = B.permit[1].filter(B.hasPermit).length, urg = iss.filter(i => priN(i.priority) === "דחוף").length, hold = iss.filter(i => i.status === "HOLD").length, issued = ords.filter(o => o.x_ordNo).length;
   const tiles = tile("plan", "t1", B.plan[0], B.plan[1].length, `מתוך ${S.length} אתרים`)
     + tile("iss", `iss-hot ${urg ? "urg" : ""}`, "⚠ נושאים פתוחים <em>לחיצה ←</em>", iss.length, `${urg ? `🔴 ${urg} דחופים · ` : ""}${hold ? `HOLD: ${hold}` : "אין HOLD"}`)
     + tile("ord", "ord-hot", "🧾 הזמנות <em>לחיצה ←</em>", ords.length, `${issued} עם מס׳ הזמנה · ${ords.length - issued} רק דרישה / טרם`)
     + tile("permit", "", B.permit[0], `${nP}/${B.permit[1].length}`, "אתרים עם היתר בנייה")
     + tile("exec", "t3", B.exec[0], B.exec[1].length, "יש הזמנת ביצוע")
     + tile("bud", B.bud[1].length ? "t-red" : "", B.bud[0], B.bud[1].length, "אתרים גדולים בלי תקציב לתורן");
-  let det = "";
-  if (F.box === "iss") det = siteIssuesBlock(d);
-  else if (F.box === "ord") return `<div class="ch-tiles st-tiles" style="--cc:#1f7a8c">${tiles}</div>${siteOrdersBlock(d)}`;
-  else if (F.box && B[F.box]) { const [, a, f] = B[F.box]; det = `<h2 style="margin-top:0">${B[F.box][0]} <span class="muted small">(${a.length})</span></h2>` + (a.length ? `<div class="sm-list">${a.sort(siteOrd).map(s => `<button class="sb-chip" style="--c:${sClr(s)}" data-act="siteOpen" data-id="${s.id}"><i class="sb-dot"></i>${esc(s.name)}<small>${esc(f ? f(s) : "")}</small></button>`).join("")}</div>
-    ${F.box === "bud" ? `<p class="small muted" style="margin:6px 0 0">אתר גדול פעיל שאין לו שורת אומדן עם סכום לתורן (בכרטיס האתר ← "שורת אומדן", או ב־💰 תקציב ואומדן).</p>` : ""}` : `<p class="muted">אין</p>`); }
-  return `<div class="ch-tiles st-tiles" style="--cc:#1f7a8c">${tiles}</div>${det ? `<div class="card sm-det2">${det}</div>` : ""}`;
+  const M = siteMark(d, S, T);
+  const bar = M ? `<div class="sm-bar"><b>${M.title}:</b> ${M.n} אתרים מסומנים בלוח למטה${M.k === "permit" ? " (ירוק = יש היתר, אדום = אין)" : ""}${M.k === "ord" ? ` · <a href="#" data-act="siteGoOrd">טבלת ההזמנות בתחתית העמוד ↓</a>` : ""}${M.k === "bud" ? ` · מוסיפים תקציב בכרטיס האתר ← "שורת אומדן", או ב־💰 תקציב ואומדן` : ""}<span class="spacer"></span><button class="btn ghost sm" data-act="siteF" data-id="box|${M.k}">✕ ביטול הסימון</button></div>` : "";
+  return `<div class="ch-tiles st-tiles" style="--cc:#1f7a8c">${tiles}</div>${bar}${F.box === "iss" ? `<div class="card sm-det2">${siteIssuesBlock(d)}</div>` : ""}`;
 }
 /** נושאים פתוחים של אתרי איסוף — בדיוק כמו "נושאים פתוחים" של קבלן גזרה. נושא חדש נפתח מכאן */
 function siteIssuesBlock(d) {
@@ -4534,6 +4547,7 @@ async function siteClick(act, b) {
   if (act === "siteOpen") { if (b.dataset.g) ui.siteDet = b.dataset.id; ui.page = "site:" + b.dataset.id; location.hash = ui.page; render(); scrollTo(0, 0); }
   else if (act === "siteF") { const [k, v] = b.dataset.id.split("|"), F = ui.sf; F[k] = (k === "ph" || k === "box") && F[k] === v ? "" : v; render(); }
   else if (act === "siteTypeFix") siteTypeFixModal();
+  else if (act === "siteGoOrd") document.getElementById("site-orders")?.scrollIntoView({ behavior: "smooth", block: "start" });
   else if (act === "siteIssFull") issueEdit(null, { scope: "sites" });
   else if (act === "siteIssAdd") await addFresh("issues", { scope: "sites", contractorId: "", title: "נושא חדש", category: "חסם", kdFrom: "", kdTo: "", owner: "", status: "פתוח", priority: "בינוני", opened: todayStr(), updated: todayStr(), last: "", links: {}, history: {} });
   else if (act === "siteOrdAdd") { const g = id => document.getElementById(id)?.value.trim() || "", sid2 = g("so_site"), st = RAW.sites?.[sid2]; if (!st) return toast("לבחור אתר");
