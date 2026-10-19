@@ -1076,6 +1076,7 @@ const NAV_ALL = () => [
   { group: "קבלנים", box: true, items: [["#h1", "קבלנים ראשיים", "", "head"],
     ...(cs => cs.map(c => ["c:" + c.id, c.name, "", "", 0, cColor({ contractors: cs }, c)]))(list("contractors").filter(isMain)),
     ["sites", "📡 אתרי איסוף", "", "", (() => { try { return list("issues").filter(i => i.status !== "סגור" && Object.keys(i.links || {}).some(k => k.startsWith("s:")) && priN(i.priority) === "דחוף").length; } catch { return 0; } })(), "#1f7a8c"],
+    ["power", "⚡ חברת חשמל", "", "", 0, "#e0a21b"],
     ["#h2", "קבלנים ייעודיים", "", "head"],
     ...list("contractors").filter(c => !isMain(c) && c.id !== IEC_CID).map(c => ["c:" + c.id, c.name, "", "", 0, (KIND_ICON[specsOf(c)[0]] || {}).c || "#8a9a90"]),
     ["newContractor", "+ קבלן חדש", "", "add"]] },
