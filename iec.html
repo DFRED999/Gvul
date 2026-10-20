@@ -130,6 +130,18 @@ table.t tr.gh td { background: #f4f7fb; font-weight: 700; color: var(--navy); }
 .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 10px 18px; border-radius: 12px; z-index: 99; }
 .empty { padding: 26px; text-align: center; color: var(--mut); }
 .note { background: var(--org2); border: 1px solid #f2d19c; border-radius: 12px; padding: 9px 14px; font-size: 14px; margin-bottom: 12px; }
+details.ms { position: relative; } details.ms > summary { list-style: none; cursor: pointer; border: 1px solid #ccd5e1; border-radius: 10px; padding: 5px 28px 5px 10px; background: #fff; font-size: 14px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+details.ms > summary::-webkit-details-marker { display: none; } details.ms > summary::after { content: "▾"; position: absolute; left: 10px; top: 6px; color: var(--mut); } details.ms.on > summary { background: var(--sky); border-color: var(--blue); color: var(--navy); font-weight: 700; }
+.ms-pop { position: absolute; top: 36px; right: 0; z-index: 25; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 14px 34px -12px rgba(0,0,0,.4); padding: 8px; min-width: 200px; max-height: 320px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+.ms-pop label { display: flex; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap; } .ms-pop label:hover { background: var(--sky); }
+.totbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; } .totbar > div { background: linear-gradient(160deg, #fff, #f2f7fd); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; display: flex; flex-direction: column; }
+.totbar small { color: var(--mut); font-size: 12.5px; } .totbar b { font-size: 22px; color: var(--navy); } .totbar span { font-size: 12px; color: var(--mut); }
+tr.fg-t td { background: color-mix(in srgb, var(--fg) 14%, #fff) !important; border-top: 2px solid var(--fg); } tr.fg-t td:first-child, tr.fg-c td:first-child { box-shadow: inset -5px 0 0 var(--fg); } tr.fg-c td { background: color-mix(in srgb, var(--fg) 5%, #fff); }
+.fg-ar { color: var(--fg); font-weight: 800; } .fg-lbl { background: var(--fg); color: #fff; border-radius: 999px; padding: 0 8px; font-size: 12px; font-weight: 700; }
+.fgrp { border: 2px solid var(--fg); border-radius: 18px; padding: 8px 10px 10px; margin-bottom: 12px; background: color-mix(in srgb, var(--fg) 5%, #fff); } .fgrp-h { font-size: 13.5px; color: var(--ink); margin: 0 4px 8px; } .fgrp-h b { color: var(--fg); }
+.fgrp-b { display: grid; grid-template-columns: minmax(300px, 1fr) 30px repeat(2, minmax(300px, 1fr)); gap: 10px; align-items: center; } .fgrp-ar { font-size: 26px; color: var(--fg); text-align: center; font-weight: 800; }
+@media (max-width: 1100px) { .fgrp-b { grid-template-columns: 1fr; } .fgrp-ar { transform: rotate(-90deg); } }
+.fcards + .fgrp, .fgrp + .fcards { margin-top: 12px; }
 .vsw.lv button { padding: 8px 16px; font-size: 14.5px; font-weight: 700; }
 .lvcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
 .lvc { all: unset; box-sizing: border-box; cursor: pointer; background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--blue); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; } .lvc:hover { box-shadow: 0 12px 26px -16px rgba(11,58,110,.7); }
@@ -280,11 +292,19 @@ const fedBy = f => list("facilities").filter(t => t.type === "תט״ז" && t.fee
 const allF = () => list("facilities").sort((a, b) => (kdN(b.kd) ?? -1) - (kdN(a.kd) ?? -1) || String(a.name).localeCompare(String(b.name), "he", { numeric: true }));
 
 /* ---------- סינון ---------- */
+const arr = v => Array.isArray(v) ? v : v ? [v] : [];
+const inF = (v, x) => { const a = arr(v); return !a.length || a.includes(x); };
+/** בחירה מרובה בסינון: רשימה נפתחת עם תיבות סימון. scope = f (מתקנים) / of (הזמנות) */
+function msel(scope, key, label, opts) {
+  const cur = arr(ui[scope][key]), O = opts.map(o => Array.isArray(o) ? o : [o, o]), sel = O.filter(([v]) => cur.includes(v));
+  return `<details class="ms ${sel.length ? "on" : ""}" data-msk="${scope}|${key}" ${ui.msOpen === scope + "|" + key ? "open" : ""}><summary>${sel.length ? (sel.length <= 2 ? sel.map(x => esc(x[1])).join(", ") : `${sel.length} נבחרו`) : esc(label)}</summary>
+    <div class="ms-pop">${O.map(([v, l]) => `<label><input type="checkbox" data-ms="${scope}|${key}|${esc(v)}" ${cur.includes(v) ? "checked" : ""}> ${esc(l)}</label>`).join("")}${sel.length ? `<button class="btn gh sm" data-a="msClr" data-id="${scope}|${key}">ניקוי</button>` : ""}</div></details>`;
+}
 function facFiltered() {
   const F = ui.f, q = ui.q.trim().toLowerCase();
   return allF().filter(f => { const st = state(f);
-    if (F.type && f.type !== F.type) return false; if (F.dist && f.district !== F.dist) return false; if (F.cid && f.contractorId !== F.cid) return false;
-    if (F.stage) { if (F.stage === "_none") { if (st.cur) return false; } else if (st.cur?.id !== F.stage || !live(f)) return false; }
+    if (!inF(F.type, f.type) || !inF(F.dist, f.district) || !inF(F.cid, f.contractorId)) return false;
+    const sa = arr(F.stage); if (sa.length && !((sa.includes("_none") && !st.cur) || (st.cur && live(f) && sa.includes(st.cur.id)))) return false;
     if (F.only === "stuck" && !st.stuck) return false; if (F.only === "gaps" && !gaps(f).length) return false;
     if (F.only === "inactive" ? live(f) : F.only !== "all" && !live(f)) return false;
     return true; });
@@ -365,21 +385,31 @@ function strip(F) {
 /* ---------- מתקנים ---------- */
 function pageFacs() {
   const F = ui.f, A = list("facilities"), L = facFiltered(), ST = stages();
-  const sel = (k, label, opts) => `<select class="inp sm" data-f="${k}"><option value="">${label}</option>${opts.map(o => { const [v, l] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}" ${F[k] === v ? "selected" : ""}>${esc(l)}</option>`; }).join("")}</select>`;
   const only = [["", "פעילים"], ["stuck", "⏱ תקועים"], ["gaps", "⚠ חוסרים"], ["inactive", "מוקפאים / בוטלו"], ["all", "הכל"]];
   return `<div class="card"><div class="flt"><div class="chips">${only.map(([k, l]) => `<button class="chip ${F.only === k ? "on" : ""}" data-a="only" data-id="${k}">${l}</button>`).join("")}</div><span class="spacer"></span>
-      ${sel("type", "כל הסוגים", TYPES.map(t => t[0]))}${sel("dist", "כל הנפות", DISTRICTS)}${sel("cid", "כל הקבלנים", contractors().map(c => [c.id, c.name]))}${sel("stage", "כל השלבים", [["_none", "טרם התחיל"], ...ST.map(s => [s.id, s.name])])}
+      ${msel("f", "type", "כל הסוגים", TYPES.map(t => t[0]))}${msel("f", "dist", "כל הנפות", DISTRICTS)}${msel("f", "cid", "כל הקבלנים", contractors().map(c => [c.id, c.name]))}${msel("f", "stage", "כל השלבים", [["_none", "טרם התחיל"], ...ST.map(s => [s.id, s.name])])}
+      <label class="row small" title="תט״ז ואחריו הארונות שהוא מזין, במסגרת אחת"><input type="checkbox" data-a2="feedGrp" ${ui.feedGrp !== false ? "checked" : ""}> ⚡ לפי הזנה</label>
       <span class="vsw">${[["cards", "קוביות"], ["table", "טבלה"], ["matrix", "מטריצה"]].map(([k, l]) => `<button class="${(ui.fv || "cards") === k ? "on" : ""}" data-a="fv" data-id="${k}">${l}</button>`).join("")}</span>
       ${canEdit() ? `<button class="btn o" data-a="newFac">+ מתקן</button>` : ""}</div>
     <div class="muted small" style="margin-bottom:8px">${L.length} מתוך ${A.length} מתקנים · לחיצה על מתקן פותחת אותו לעריכה</div>
-    ${!L.length ? `<div class="empty">אין מתקנים בסינון הזה</div>` : ui.fv === "table" ? facTable(L) : ui.fv === "matrix" ? facMatrix(L) : `<div class="fcards">${L.map(fCard).join("")}</div>`}</div>`;
+    ${!L.length ? `<div class="empty">אין מתקנים בסינון הזה</div>` : ui.fv === "table" ? facTable(L) : ui.fv === "matrix" ? facMatrix(L) : facCards(L)}</div>`;
+}
+/** קיבוץ לפי הזנה: תט״ז ואחריו הארונות שהוא מזין (מתוך מה שמוצג). מחזיר [{ f, role: ttz|fed|solo, gi }] */
+const FG_CLR = ["#f39200", "#8e5bc2", "#0a6ec9", "#1f8a4c", "#c0392b", "#16808f", "#b07d00"];
+function feedOrder(L) {
+  if (ui.feedGrp === false) return L.map(f => ({ f, role: "solo" }));
+  const inL = new Set(L.map(f => f.id)), T = L.filter(f => f.type === "תט״ז" && Object.keys(f.feeds || {}).some(id => inL.has(id))), fedIds = new Set(T.flatMap(t => Object.keys(t.feeds || {}).filter(id => inL.has(id)))), out = [];
+  L.forEach(f => { if (fedIds.has(f.id)) return; const gi = T.indexOf(f);
+    if (gi >= 0) { out.push({ f, role: "ttz", gi }); Object.keys(f.feeds).filter(id => inL.has(id)).map(id => L.find(x => x.id === id)).forEach(c => out.push({ f: c, role: "fed", gi, by: f })); }
+    else out.push({ f, role: "solo" }); });
+  return out;
 }
 /** תצוגת טבלה: שורה לכל מתקן */
 function facTable(L) {
   const V = 1 + VAT(), nums = (f, k) => mainOrders(f).map(o => ef(o, k)).filter(v => v && v !== true).map(v => `<div class="ltr nowrap">${esc(v)}</div>`).join("") || `<span class="muted">—</span>`;
   return `<div class="tw"><table class="t"><thead><tr><th>מתקן</th><th>סוג</th><th>ק.ד.</th><th>נפה</th><th>קבלן</th><th>שלב נוכחי</th><th>הבא / יעד</th><th>דרישה</th><th>הזמנת משהב״ט</th><th>הזמנת חח״י</th><th class="num">סכום (כולל מע״מ)</th><th>תקוע / חוסרים</th><th>עדכון אחרון</th></tr></thead><tbody>
-    ${L.map(f => { const s = state(f), g = gaps(f), ll = lastLog(f), t = s.next && f.stages?.[s.next.id]?.target, amt = facOrders(f).reduce((x, o) => x + orderTotal(o), 0);
-      return `<tr data-a="fac" data-id="${f.id}" style="cursor:pointer"><td class="nowrap"><b>${TICON[f.type] || ""} ${esc(f.name)}</b></td><td class="nowrap">${esc(f.type)}</td><td class="nowrap">${esc(f.kd || "")}</td><td class="nowrap">${esc(f.district || "")}</td><td class="nowrap">${esc(cName(f.contractorId))}</td>
+    ${feedOrder(L).map(({ f, role, gi, by }) => { const s = state(f), g = gaps(f), ll = lastLog(f), t = s.next && f.stages?.[s.next.id]?.target, amt = facOrders(f).reduce((x, o) => x + orderTotal(o), 0), c = FG_CLR[(gi || 0) % FG_CLR.length];
+      return `<tr data-a="fac" data-id="${f.id}" class="${role === "ttz" ? "fg-t" : role === "fed" ? "fg-c" : ""}" style="cursor:pointer;--fg:${c}"><td class="nowrap">${role === "fed" ? `<span class="fg-ar" title="מוזן מ־${esc(by.name)}">└⚡</span> ` : ""}<b>${TICON[f.type] || ""} ${esc(f.name)}</b>${role === "ttz" ? ` <span class="fg-lbl">מזין ${Object.keys(f.feeds).length}</span>` : role === "fed" ? ` <span class="muted small">מ־${esc(by.name)}</span>` : ""}</td><td class="nowrap">${esc(f.type)}</td><td class="nowrap">${esc(f.kd || "")}</td><td class="nowrap">${esc(f.district || "")}</td><td class="nowrap">${esc(cName(f.contractorId))}</td>
         <td><span class="tag" style="--tc:${s.cur?.color || "#e3e9f1"};--tt:${s.cur ? "#fff" : "#5c6678"}">${live(f) ? (s.cur ? esc(s.cur.name) : "טרם התחיל") : esc(f.status)}</span></td>
         <td class="small">${s.next && live(f) ? esc(s.next.name) + (t ? `<div class="${t < todayStr() ? "tag r" : "muted"}">יעד ${fmtD(t)}</div>` : "") : ""}</td>
         <td class="small">${nums(f, "req880")}</td><td class="small">${nums(f, "ord444")}</td><td class="small">${nums(f, "iec301")}</td><td class="num nowrap">${amt ? money(amt * V) : ""}</td>
@@ -388,15 +418,26 @@ function facTable(L) {
 }
 /** תצוגת מטריצה: מתקן × שלב — ירוק/צבע = בוצע (תאריך), כתום = הבא, אדום = הבא ותקוע */
 function facMatrix(L) {
-  const ST = stages(), byT = TYPES.map(t => [t[0], L.filter(f => f.type === t[0])]).filter(([, a]) => a.length);
+  const ST = stages(), R = feedOrder(L), grouped = R.some(r => r.role !== "solo");
+  const byT = grouped ? [...R.filter(r => r.role === "ttz").map(r => [`⚡ ${r.f.name} ומה שהוא מזין`, R.filter(x => x.gi === r.gi && x.role !== "solo").map(x => x.f), FG_CLR[r.gi % FG_CLR.length]]),
+    ...TYPES.map(t => [t[0], R.filter(r => r.role === "solo" && r.f.type === t[0]).map(r => r.f)])].filter(([, a]) => a.length) : TYPES.map(t => [t[0], L.filter(f => f.type === t[0])]).filter(([, a]) => a.length);
   const cell = (f, s, x) => { const ap = x.ST.some(y => y.id === s.id); if (!ap) return `<td class="na"></td>`; const d = x.done[s.id], m = f.stages?.[s.id] || {};
     if (d) return `<td class="d" style="--sc:${s.color}" data-a="fac" data-id="${f.id}" title="${esc(s.name)}: ${d.date ? fmtD(d.date) : "בוצע"}">${d.date ? fmtD(d.date).slice(0, 5) : "✓"}</td>`;
     if (x.next?.id === s.id && live(f)) return `<td class="${x.stuck ? "x" : "nx"}" data-a="fac" data-id="${f.id}" title="${esc(x.flags.map(y => y.t).join("\n") || "השלב הבא")}">${m.target ? "יעד " + fmtD(m.target).slice(0, 5) : x.stuck ? "תקוע" : "הבא"}</td>`;
     return `<td data-a="fac" data-id="${f.id}">${m.target ? `<span class="muted">${fmtD(m.target).slice(0, 5)}</span>` : ""}</td>`; };
   return `<div class="tw"><table class="mx"><thead><tr><th class="nm">מתקן</th>${ST.map(s => `<th style="border-bottom:3px solid ${s.color}">${esc(s.name)}<div class="small muted" style="font-weight:400">אצל ${esc(s.who || "—")}</div></th>`).join("")}</tr></thead><tbody>
-    ${byT.map(([t, a]) => `<tr class="gh"><td colspan="${ST.length + 1}">${TICON[t] || ""} ${t} · ${a.length}</td></tr>${a.map(f => { const x = state(f);
-      return `<tr><td class="nm" data-a="fac" data-id="${f.id}" style="cursor:pointer"><b>${esc(f.name)}</b><small>ק.ד. ${esc(f.kd || "—")}${f.district ? " · " + esc(f.district) : ""}${live(f) ? "" : " · " + esc(f.status)}</small></td>${ST.map(s => cell(f, s, x)).join("")}</tr>`; }).join("")}`).join("")}</tbody></table></div>
+    ${byT.map(([t, a, gc]) => `<tr class="gh"><td colspan="${ST.length + 1}" ${gc ? `style="border-inline-start:5px solid ${gc}"` : ""}>${TICON[t] || ""} ${esc(t)} · ${a.length}</td></tr>${a.map(f => { const x = state(f);
+      return `<tr><td class="nm" data-a="fac" data-id="${f.id}" style="cursor:pointer;${gc ? `border-inline-start:5px solid ${gc}` : ""}"><b>${gc && f.type !== "תט״ז" ? "└⚡ " : ""}${esc(f.name)}</b><small>ק.ד. ${esc(f.kd || "—")}${f.district ? " · " + esc(f.district) : ""}${live(f) ? "" : " · " + esc(f.status)}</small></td>${ST.map(s => cell(f, s, x)).join("")}</tr>`; }).join("")}`).join("")}</tbody></table></div>
     <div class="leg"><span><i style="--dc:#1d8f8a"></i>בוצע (תאריך)</span><span><i style="--dc:#f2c48a"></i>השלב הבא / יעד</span><span><i style="--dc:#e7a097"></i>הבא ותקוע</span><span>תא ריק = עוד לא · אפור בהיר = לא רלוונטי לסוג</span></div>`;
+}
+/** קוביות: תט״ז והארונות שהוא מזין — במסגרת אחת עם חיצים */
+function facCards(L) {
+  const R = feedOrder(L), out = []; let i = 0;
+  while (i < R.length) { const r = R[i];
+    if (r.role === "ttz") { const grp = [r]; i++; while (i < R.length && R[i].role === "fed" && R[i].gi === r.gi) grp.push(R[i++]); const c = FG_CLR[r.gi % FG_CLR.length];
+      out.push(`<div class="fgrp" style="--fg:${c}"><div class="fgrp-h">⚡ <b>${esc(r.f.name)}</b> מזין ${grp.length - 1} ארונות: ${grp.slice(1).map(x => esc(x.f.name)).join(" · ")}</div><div class="fgrp-b">${fCard(r.f)}<span class="fgrp-ar">⟵</span>${grp.slice(1).map(x => fCard(x.f)).join("")}</div></div>`); }
+    else { const solo = []; while (i < R.length && R[i].role === "solo") solo.push(R[i++].f); out.push(`<div class="fcards">${solo.map(fCard).join("")}</div>`); } }
+  return out.join("");
 }
 function fCard(f) {
   const s = state(f), g = gaps(f), M = mainOrders(f), X = facOrders(f).filter(o => o.kind === "מרחק חריג"), ll = lastLog(f), tt = fedBy(f);
@@ -414,7 +455,7 @@ function fCard(f) {
 
 /* ---------- חלון מתקן ---------- */
 function facModal(id) {
-  CACHE = {};
+  CACHE = {}; DCUR = { t: "fac", id };
   const f = RAW.facilities[id] ? { id, ...RAW.facilities[id] } : null; if (!f) return;
   const ed = canEdit(), dis = ed ? "" : "disabled", s = state(f), O = facOrders(f), ST = s.ST;
   const fld = (k, l, t = "text", opts) => `<label>${l}${opts ? `<select class="inp" data-fe="${k}" ${dis}><option value=""></option>${opts.map(o => { const [v, lb] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}" ${String(f[k] ?? "") === v ? "selected" : ""}>${esc(lb)}</option>`; }).join("")}</select>` : `<input class="inp" type="${t}" data-fe="${k}" value="${esc(f[k] ?? "")}" ${dis}>`}</label>`;
@@ -431,7 +472,7 @@ function facModal(id) {
     <td>${okT(o, "vFinDate")}<input type="date" class="ce" data-oe="${o.id}|vFinDate" value="${esc(o.vFinDate || "")}" ${dis}></td><td>${okT(o, "completionDate")}<input type="date" class="ce" data-oe="${o.id}|completionDate" value="${esc(o.completionDate || "")}" ${dis}></td><td><input type="date" class="ce" data-oe="${o.id}|validUntil" value="${esc(o.validUntil || "")}" ${dis}></td>
     <td class="nowrap"><button class="btn gh sm" data-a="ordc" data-id="${o.id}" title="כל פרטי ההזמנה">פרטים</button>${ed && isAdmin() ? `<button class="btn del sm" data-a="delOrd" data-id="${o.id}">✕</button>` : ""}</td></tr>`;
   const L = Object.entries(f.log || {}).sort((a, b) => String(b[1].date).localeCompare(String(a[1].date)) || String(b[1].at || "").localeCompare(String(a[1].at || "")));
-  const html = `<div class="row" data-fid-keep><h2>${TICON[f.type] || ""} ${esc(f.name)}</h2><span class="tag" style="--tc:${s.cur?.color || "#b6c2d3"};--tt:#fff">${live(f) ? (s.cur ? esc(s.cur.name) : "טרם התחיל") : esc(f.status)}</span><span class="spacer"></span><button class="btn gh" data-a="close">סגירה</button></div>
+  const html = `<div class="row" data-fid-keep><h2>${TICON[f.type] || ""} ${esc(f.name)}</h2><span class="tag" style="--tc:${s.cur?.color || "#b6c2d3"};--tt:#fff">${live(f) ? (s.cur ? esc(s.cur.name) : "טרם התחיל") : esc(f.status)}</span><span class="spacer"></span>${backBtn()}<button class="btn gh" data-a="close">סגירה</button></div>
     ${s.flags.length || gaps(f).length ? `<div class="chips" style="margin-top:6px">${s.flags.map(x => `<span class="tag r">${esc(x.t)}</span>`).join("")}${gaps(f).map(x => `<span class="tag a">${esc(x.t)}</span>`).join("")}</div>` : ""}
     <div class="form">${fld("name", "שם")}${fld("type", "סוג", "", TYPES.map(t => t[0]))}${fld("kd", "ק.ד.")}${fld("sec", "חתך")}${fld("district", "נפה", "", DISTRICTS)}${fld("contractorId", "קבלן הגזרה", "", contractors().map(c => [c.id, c.name]))}${fld("place", "מקום / ישוב")}${fld("size", "גודל חיבור")}${fld("status", "מצב", "", ["פעיל", "מוקפא", "בוטל"])}${fld("contact", "איש קשר בחח״י", "", list("contacts").map(c => [c.id, c.name + (c.org ? " · " + c.org : "")]))}</div>
     ${f.type === "תט״ז" ? `<div class="sec-h">⚡ ארונות שהתט״ז מזין <span class="muted small">(עד 2)</span></div><div class="row">${Object.keys(f.feeds || {}).map(cid => `<span class="tag">${esc(RAW.facilities[cid]?.name || "?")} ${ed ? `<a href="#" data-a="unfeed" data-id="${cid}">✕</a>` : ""}</span>`).join("")}
@@ -458,9 +499,16 @@ const okT = (o, k) => !o[k] && o["ok_" + k] ? `<span class="tag g" title="הוש
 function openModal(html, wire, sm) {
   const old = document.querySelector(".ov"), keepY = old && /data-(fid|oid)-keep/.test(html) ? old.scrollTop : 0;
   closeModal(); const ov = document.createElement("div"); ov.className = "ov"; ov.innerHTML = `<div class="mdl ${sm ? "sm" : ""}">${html}</div>`;
-  ov.addEventListener("mousedown", e => { if (e.target === ov) closeModal(); }); document.body.appendChild(ov); wire && wire(ov.firstChild); if (keepY) ov.scrollTop = keepY;
+  ov.addEventListener("mousedown", e => { if (e.target === ov) { closeModal(); endNav(); } }); document.body.appendChild(ov); wire && wire(ov.firstChild); if (keepY) ov.scrollTop = keepY;
 }
 const closeModal = () => document.querySelectorAll(".ov").forEach(e => e.remove());
+/** ניווט בין חלונות פירוט (מתקן / הזמנה / הזמנת משהב״ט): פתיחה מתוך חלון שומרת את הקודם, "חזרה" מחזירה אליו */
+let DSTK = [], DCUR = null;
+const DLBL = d => !d ? "" : d.t === "fac" ? (RAW.facilities[d.id]?.name || "מתקן") : d.t === "ord" ? `הזמנה ${RAW.orders[d.id]?.iec301 || ""}` : `משהב״ט ${d.id}`;
+function openDet(t, id) { if (DCUR && document.querySelector(".ov") && !(DCUR.t === t && DCUR.id === id)) DSTK.push(DCUR); else if (!document.querySelector(".ov")) DSTK = [];
+  ({ fac: facModal, ord: orderModal, mod: modModal })[t](id); }
+const backBtn = () => DSTK.length ? `<button class="btn gh" data-a="back" title="חזרה לחלון הקודם">→ חזרה: ${esc(DLBL(DSTK[DSTK.length - 1]))}</button>` : "";
+const endNav = () => { DSTK = []; DCUR = null; };
 const reopen = () => { const m = document.querySelector(".mdl[data-fid]"); if (m) facModal(m.dataset.fid); };
 const alertBox = t => openModal(`<p>${esc(t)}</p><div class="row"><span class="spacer"></span><button class="btn" data-a="close">סגירה</button></div>`, null, true);
 const confirmBox = t => window.confirm(t);
@@ -503,43 +551,48 @@ function pageOrders() {
   if (lv === "mod") {
     const M = modList().filter(m => !q || [m.num, m.req880, m.note, m.district].join(" ").toLowerCase().includes(q)); cnt = M.length;
     add = ed ? `<button class="btn o sm" data-a="modNew">+ הזמנת משהב״ט חדשה</button>` : "";
-    if (ui.olist) body = `<div class="tw"><table class="t"><thead><tr><th>הזמנת משהב״ט</th><th>דרישה</th><th>נפות</th><th>הזמנות אב</th><th>הזמנות חח״י</th><th>מתקנים</th><th>תקועים</th><th class="num">סכום ההזמנה</th><th class="num">הוזמן</th><th class="num">שולם</th><th class="num">נשאר</th><th class="num">יתרה פנויה</th></tr></thead><tbody>
+    { const AO = M.flatMap(m => modOrders(m.num)), mt = sum(M, m => N(m.amount)), t2 = sum(AO, orderTotal), p2 = sum(AO, orderPaid), noAmt = M.filter(m => !N(m.amount)).length;
+      body = `<div class="totbar"><div><small>${M.length} הזמנות משהב״ט · סכום ההזמנות</small><b>${mt ? money(mt * V) : "—"}</b><span>${noAmt ? `${noAmt} בלי סכום` : "כולל מע״מ"}</span></div><div><small>הוזמן מחח״י</small><b>${money(t2 * V)}</b><span>${AO.length} הזמנות</span></div>
+        <div><small>שולם</small><b style="color:var(--ok)">${money(p2 * V)}</b><span>${t2 ? Math.round(p2 / t2 * 100) : 0}% מההזמנות</span></div><div><small>נשאר לשלם</small><b style="color:var(--org)">${money((t2 - p2) * V)}</b><span>&nbsp;</span></div>${(Z => Z.length ? `<div style="border-color:#f2c48a;background:#fff8ec"><small>הזמנות חח״י בלי הזמנת משהב״ט</small><b style="color:#b07d00">${money(sum(Z, orderTotal) * V)}</b><span>${Z.length} הזמנות — לא נספרות כאן · <a href="#" data-a="ov" data-id="iec">להשלמה</a></span></div>` : "")(listO().filter(o => !ef(o, "ord444") || ef(o, "ord444") === true))}${mt ? `<div><small>יתרה פנויה בהזמנות</small><b style="color:${mt - t2 < 0 ? "var(--warn)" : "var(--ok)"}">${money((mt - t2) * V)}</b><span>&nbsp;</span></div>` : ""}</div>`; }
+    if (ui.olist) body += `<div class="tw"><table class="t"><thead><tr><th>הזמנת משהב״ט</th><th>דרישה</th><th>נפות</th><th>הזמנות אב</th><th>הזמנות חח״י</th><th>מתקנים</th><th>תקועים</th><th class="num">סכום ההזמנה</th><th class="num">הוזמן</th><th class="num">שולם</th><th class="num">נשאר</th><th class="num">יתרה פנויה</th></tr></thead><tbody>
       ${M.map(m => { const O = modOrders(m.num), tot = sum(O, orderTotal), paid = sum(O, orderPaid), st = stuckN(O); return `<tr data-a="mod" data-id="${esc(m.num)}" style="cursor:pointer"><td><b class="onum">${esc(m.num)}</b>${m.virt ? ` <span class="tag gr">להשלים</span>` : ""}</td><td class="ltr">${esc(m.req880 || "")}${m.req880 ? "" : `<span class="tag a">אין</span>`}</td><td>${esc([...new Set([m.district, ...O.map(distOf)].filter(Boolean))].join(", "))}</td>
         <td>${O.filter(o => o.kind === "הזמנה מרכזת").length}</td><td>${O.filter(o => o.kind !== "הזמנה מרכזת").length}</td><td>${new Set(O.map(o => o.facilityId).filter(Boolean)).size}</td><td>${st ? `<span class="tag r">${st}</span>` : ""}</td>
         <td class="num">${N(m.amount) ? money(N(m.amount) * V) : "—"}</td><td class="num">${money(tot * V)}</td><td class="num">${money(paid * V)}</td><td class="num">${money((tot - paid) * V)}</td><td class="num">${N(m.amount) ? money((N(m.amount) - tot) * V) : "—"}</td></tr>`; }).join("") || `<tr><td colspan="12" class="empty">אין</td></tr>`}</tbody></table></div>`;
-    else body = `<div class="lvcards">${M.map(m => { const O = modOrders(m.num), P = O.filter(o => o.kind === "הזמנה מרכזת"), R = O.filter(o => o.kind !== "הזמנה מרכזת"), tot = sum(O, orderTotal), paid = sum(O, orderPaid), st = stuckN(O), ds = [...new Set([m.district, ...O.map(distOf)].filter(Boolean))];
+    else body += `<div class="lvcards">${M.map(m => { const O = modOrders(m.num), P = O.filter(o => o.kind === "הזמנה מרכזת"), R = O.filter(o => o.kind !== "הזמנה מרכזת"), tot = sum(O, orderTotal), paid = sum(O, orderPaid), st = stuckN(O), ds = [...new Set([m.district, ...O.map(distOf)].filter(Boolean))];
       return `<button class="lvc" data-a="mod" data-id="${esc(m.num)}"><div class="h"><span class="ic">🏛</span><div><small>הזמנת משהב״ט</small><b class="ltr">${esc(m.num)}</b></div><span class="spacer"></span>${m.virt ? `<span class="tag gr" title="נוצרה מתוך הזמנות חח״י — אפשר להשלים פרטים">להשלים פרטים</span>` : ""}</div>
         <div class="row small muted">${m.req880 ? `דרישה <b class="ltr">${esc(m.req880)}</b> · ` : `<span class="tag a">אין דרישה</span>`}${esc(ds.join(", ") || "—")}</div>
         <div class="cnts"><span><b>${P.length}</b> הזמנות אב</span><span><b>${R.length}</b> הזמנות חח״י</span><span><b>${new Set(O.map(o => o.facilityId).filter(Boolean)).size}</b> מתקנים</span>${st ? `<span class="tag r">${st} תקועים</span>` : ""}</div>
         ${N(m.amount) ? `<div class="small">סכום ההזמנה: <b>${money(N(m.amount) * V)}</b> · יתרה פנויה: <b style="color:${N(m.amount) - tot < 0 ? "var(--warn)" : "var(--ok)"}">${money((N(m.amount) - tot) * V)}</b></div>` : ""}${money3(tot, paid)}</button>`; }).join("") || `<div class="empty">אין הזמנות משהב״ט</div>`}</div>`;
   } else if (lv === "par") {
-    const P = parOrders().filter(o => (!F.dist || distOf(o) === F.dist) && (!q || [o.iec301, o.note, ef(o, "ord444")].join(" ").toLowerCase().includes(q))); cnt = P.length;
+    const P = parOrders().filter(o => inF(F.dist, distOf(o)) && (!q || [o.iec301, o.note, ef(o, "ord444")].join(" ").toLowerCase().includes(q))); cnt = P.length;
     add = ed ? `<button class="btn o sm" data-a="parNew">+ הזמנת אב חדשה</button>` : "";
-    if (ui.olist) body = `<div class="tw"><table class="t"><thead><tr><th>הזמנת אב</th><th>נפה</th><th>משהב״ט</th><th>הזמנות</th><th>מרחק חריג</th><th>מתקנים</th><th>תקועים</th><th class="num">הוזמן</th><th class="num">שולם</th><th class="num">נשאר</th><th>שלב תשלום</th></tr></thead><tbody>
+    { const T = P.map(o => { const K = allKids(o); return [orderTotal(o) || sum(K, orderTotal), orderPaid(o) || sum(K, orderPaid), K.length]; }), t2 = sum(T, x => x[0]), p2 = sum(T, x => x[1]);
+      body = `<div class="totbar"><div><small>${P.length} הזמנות אב</small><b>${sum(T, x => x[2])}</b><span>הזמנות תחתיהן</span></div><div><small>הוזמן</small><b>${money(t2 * V)}</b><span>כולל מע״מ</span></div><div><small>שולם</small><b style="color:var(--ok)">${money(p2 * V)}</b><span>${t2 ? Math.round(p2 / t2 * 100) : 0}%</span></div><div><small>נשאר לשלם</small><b style="color:var(--org)">${money((t2 - p2) * V)}</b><span>&nbsp;</span></div></div>`; }
+    if (ui.olist) body += `<div class="tw"><table class="t"><thead><tr><th>הזמנת אב</th><th>נפה</th><th>משהב״ט</th><th>הזמנות</th><th>מרחק חריג</th><th>מתקנים</th><th>תקועים</th><th class="num">הוזמן</th><th class="num">שולם</th><th class="num">נשאר</th><th>שלב תשלום</th></tr></thead><tbody>
       ${P.map(o => { const K = allKids(o), tot = orderTotal(o) || sum(K, orderTotal), paid = orderPaid(o) || sum(K, orderPaid), st = stuckN(K); return `<tr data-a="ordc" data-id="${o.id}" style="cursor:pointer"><td><b class="onum">${esc(o.iec301 || "—")}</b></td><td>${esc(distOf(o))}</td><td class="ltr">${esc(ef(o, "ord444") || "")}</td>
         <td>${kidsOf(o).filter(k => k.kind !== "מרחק חריג").length}</td><td>${K.filter(k => k.kind === "מרחק חריג").length}</td><td>${new Set(K.map(k => k.facilityId).filter(Boolean)).size}</td><td>${st ? `<span class="tag r">${st}</span>` : ""}</td>
         <td class="num">${money(tot * V)}</td><td class="num">${money(paid * V)}</td><td class="num">${money((tot - paid) * V)}</td><td>${payTag(o)}</td></tr>`; }).join("") || `<tr><td colspan="11" class="empty">אין</td></tr>`}</tbody></table></div>`;
-    else body = `<div class="lvcards">${P.map(o => { const K = allKids(o), kAmt = sum(K, orderTotal), tot = orderTotal(o) || kAmt, paid = orderPaid(o) || sum(K, orderPaid), st = stuckN(K);
+    else body += `<div class="lvcards">${P.map(o => { const K = allKids(o), kAmt = sum(K, orderTotal), tot = orderTotal(o) || kAmt, paid = orderPaid(o) || sum(K, orderPaid), st = stuckN(K);
       return `<button class="lvc" data-a="ordc" data-id="${o.id}"><div class="h"><span class="ic">🗂</span><div><small>הזמנת אב · חח״י</small><b class="ltr">${esc(o.iec301 || "—")}</b></div><span class="spacer"></span>${payTag(o)}</div>
         <div class="row small muted">${esc(distOf(o) || "—")} · משהב״ט <b class="ltr">${esc(ef(o, "ord444") || "—")}</b></div>
         <div class="cnts"><span><b>${kidsOf(o).filter(k => k.kind !== "מרחק חריג").length}</b> הזמנות</span><span><b>${K.filter(k => k.kind === "מרחק חריג").length}</b> מרחק חריג</span><span><b>${new Set(K.map(k => k.facilityId).filter(Boolean)).size}</b> מתקנים</span>${st ? `<span class="tag r">${st} תקועים</span>` : ""}</div>${money3(tot, paid)}</button>`; }).join("") || `<div class="empty">אין הזמנות אב. הזמנת אב היא הזמנה של חח״י שתחתיה נפתחות הזמנות לכל מתקן (למשל 301687744 בגליל גולן).</div>`}</div>`;
   } else {
-    const L = listO().filter(o => o.kind !== "הזמנה מרכזת" && (!F.dist || distOf(o) === F.dist) && (!F.pay || payOf(o) === F.pay) && (!F.kind || (o.kind || "הזמנה") === F.kind) && (!q || [o.iec301, o.parent301, o.note, ef(o, "ord444"), RAW.facilities[o.facilityId]?.name, RAW.facilities[o.facilityId]?.kd].join(" ").toLowerCase().includes(q)))
+    const L = listO().filter(o => o.kind !== "הזמנה מרכזת" && inF(F.dist, distOf(o)) && inF(F.pay, payOf(o)) && inF(F.kind, o.kind || "הזמנה") && (!q || [o.iec301, o.parent301, o.note, ef(o, "ord444"), RAW.facilities[o.facilityId]?.name, RAW.facilities[o.facilityId]?.kd].join(" ").toLowerCase().includes(q)))
       .sort((a, b) => (kdN(RAW.facilities[b.facilityId]?.kd) ?? -1) - (kdN(RAW.facilities[a.facilityId]?.kd) ?? -1)); cnt = L.length;
     add = ed ? `<button class="btn o sm" data-a="newOrd">+ הזמנת חח״י</button>` : "";
     body = `<div class="tw"><table class="t"><thead><tr><th>הזמנת חח״י</th><th>מתקן</th><th>נפה</th><th>תחת הזמנת אב</th><th>משהב״ט</th><th class="num">סכום</th><th>שלב תשלום</th><th>תוקף שובר</th></tr></thead><tbody>
       ${L.map(o => { const f = RAW.facilities[o.facilityId], u = upOf(o); return `<tr data-a="ordc" data-id="${o.id}" style="cursor:pointer"><td class="nowrap"><b class="onum">${esc(o.iec301 || "—")}</b>${o.kind === "מרחק חריג" ? ` <span class="tag a">מרחק חריג</span>` : ""}</td><td>${f ? `${TICON[f.type] || ""} ${esc(f.name)}` : `<span class="muted">—</span>`}</td><td class="nowrap">${esc(distOf(o))}</td>
         <td class="ltr nowrap">${u ? esc(u.iec301) : ""}</td><td class="ltr nowrap">${esc(String(ef(o, "ord444") || "") === "true" ? "" : ef(o, "ord444") || "")}</td><td class="num">${orderTotal(o) ? money(orderTotal(o) * V) : u ? `<span class="muted small">בהזמנת האב</span>` : ""}</td><td>${payTag(o)}</td>
-        <td class="nowrap ${o.validUntil && !has(o, "completionDate") && o.validUntil < todayStr() ? "w-bad" : ""}">${fmtD(o.validUntil)}</td></tr>`; }).join("") || `<tr><td colspan="8" class="empty">אין הזמנות בסינון הזה</td></tr>`}</tbody></table></div>`;
+        <td class="nowrap ${o.validUntil && !has(o, "completionDate") && o.validUntil < todayStr() ? "w-bad" : ""}">${fmtD(o.validUntil)}</td></tr>`; }).join("") || `<tr><td colspan="8" class="empty">אין הזמנות בסינון הזה</td></tr>`}</tbody>
+      <tfoot><tr><td colspan="5">סה״כ ${L.length} הזמנות · שולם ${money(sum(L, orderPaid) * V)} · נשאר ${money((sum(L, orderTotal) - sum(L, orderPaid)) * V)}</td><td class="num">${money(sum(L, orderTotal) * V)}</td><td colspan="2"></td></tr></tfoot></table></div>`;
   }
-  const sel = (k, l, opts) => `<select class="inp sm" data-of="${k}"><option value="">${l}</option>${opts.map(o => `<option ${F[k] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
   return `<div class="card"><div class="flt">${ordViewSw()}</div>
-    <div class="flt"><input class="inp sm" id="oq" data-of="q" value="${esc(F.q)}" placeholder="חיפוש מספר / מתקן…" style="width:200px">${lv !== "mod" ? sel("dist", "כל הנפות", DISTRICTS) : ""}${lv === "iec" ? sel("pay", "כל שלבי התשלום", ["לפני שובר", "שובר מקדמה", "מקדמה שולמה", "שובר משלים", "משלים שולם"]) + sel("kind", "כל הסוגים", ["הזמנה", "מרחק חריג", "אחר"]) : ""}
+    <div class="flt"><input class="inp sm" id="oq" data-of="q" value="${esc(F.q)}" placeholder="חיפוש מספר / מתקן…" style="width:200px">${lv !== "mod" ? msel("of", "dist", "כל הנפות", DISTRICTS) : ""}${lv === "iec" ? msel("of", "pay", "כל שלבי התשלום", ["לפני שובר", "שובר מקדמה", "מקדמה שולמה", "שובר משלים", "משלים שולם"]) + msel("of", "kind", "כל הסוגים", ["הזמנה", "מרחק חריג", "אחר"]) : ""}
       <span class="muted small">${cnt} ${lv === "mod" ? "הזמנות משהב״ט" : lv === "par" ? "הזמנות אב" : "הזמנות"} · לחיצה = כל הפירוט · סכומים כולל מע״מ</span><span class="spacer"></span>${lv !== "iec" ? `<span class="vsw"><button class="${ui.olist ? "" : "on"}" data-a="olist" data-id="">▦ קוביות</button><button class="${ui.olist ? "on" : ""}" data-a="olist" data-id="1">☰ רשימה</button></span>` : ""}<button class="btn gh sm" data-a="ordCsv">⬇ אקסל</button>${add}</div>${body}</div>`;
 }
 /** כרטיס הזמנה — כל הנתונים, השרשרת, תשלומים, הזמנות שתחתיה, עדכונים; הכל נערך */
 function orderModal(oid) {
-  CACHE = {}; const o = RAW.orders[oid] ? { id: oid, ...RAW.orders[oid] } : null; if (!o) return;
+  CACHE = {}; DCUR = { t: "ord", id: oid }; const o = RAW.orders[oid] ? { id: oid, ...RAW.orders[oid] } : null; if (!o) return;
   const ed = canEdit(), dis = ed ? "" : "disabled", V = 1 + VAT(), f = RAW.facilities[o.facilityId] ? { id: o.facilityId, ...RAW.facilities[o.facilityId] } : null, up = upOf(o), K = kidsOf(o), upChain = []; for (let u = up; u && upChain.length < 5; u = upOf(u)) upChain.unshift(u);
   const inp = (k, l, t = "text", cls = "") => `<label>${l}${okT(o, k)}<input class="inp ${cls}" type="${t}" data-oc="${k}${t === "num" ? "|n" : ""}" value="${esc(o[k] ?? "")}" ${t === "num" ? 'inputmode="decimal"' : ""} ${dis}></label>`.replace('type="num"', 'type="text"');
   const inh = k => !o[k] && ef(o, k) && ef(o, k) !== true ? `<div class="small muted">מההזמנה המרכזת: <b class="ltr">${esc(ef(o, k))}</b></div>` : "";
@@ -549,7 +602,7 @@ function orderModal(oid) {
     return `<tr><td>${ordLink(k)}</td><td>${esc(k.kind || "הזמנה")}</td><td>${kf ? esc(kf.name) : "—"}</td><td class="num">${money(orderTotal(k) * V)}</td><td class="num">${money(orderPaid(k) * V)}</td><td>${payTag(k)}</td></tr>`; }).join("")}</tbody>
     <tfoot><tr><td colspan="3">סה״כ ${K.length} הזמנות${allKids(o).length > K.length ? ` (+${allKids(o).length - K.length} מרחק חריג / משנה)` : ""}</td><td class="num">${money(allKids(o).reduce((t, k) => t + orderTotal(k), 0) * V)}</td><td class="num">${money(allKids(o).reduce((t, k) => t + orderPaid(k), 0) * V)}</td><td></td></tr></tfoot></table></div>` : "";
   const L = Object.entries(o.log || {}).sort((a, b) => String(b[1].date).localeCompare(String(a[1].date)));
-  openModal(`<div class="row" data-oid-keep><h2>🧾 ${esc(o.kind || "הזמנה")} <span class="ltr">${esc(ordNum(o))}</span></h2>${payTag(o)}<span class="spacer"></span><button class="btn gh" data-a="close">סגירה</button></div>
+  openModal(`<div class="row" data-oid-keep><h2>🧾 ${esc(o.kind || "הזמנה")} <span class="ltr">${esc(ordNum(o))}</span></h2>${payTag(o)}<span class="spacer"></span>${backBtn()}<button class="btn gh" data-a="close">סגירה</button></div>
     <div class="chainbar">${[["דרישה", ef(o, "req880")], ["הזמנת משהב״ט", ef(o, "ord444")]].map(([l, v]) => `<span class="cb ${v && v !== true ? "" : "miss"}"><small>${l}</small>${v && v !== true ? (l === "הזמנת משהב״ט" ? `<a href="#" data-a="mod" data-id="${esc(v)}" class="ltr">${esc(v)}</a>` : `<b class="ltr">${esc(v)}</b>`) : "חסר"}</span>`).join("<i>←</i>")}
       ${upChain.map(u => `<i>←</i><span class="cb"><small>${esc(u.kind === "הזמנה מרכזת" ? "הזמנת אב" : u.kind || "הזמנה")}</small>${ordLink(u)}</span>`).join("")}<i>←</i><span class="cb on"><small>${esc(o.kind || "הזמנה")}</small><b class="ltr">${esc(o.iec301 || "—")}</b></span>
       ${K.length ? `<i>←</i><span class="cb"><small>תחתיה</small><b>${K.length} הזמנות</b></span>` : ""}</div>
@@ -577,12 +630,12 @@ function orderModal(oid) {
 }
 /** כרטיס הזמנת משהב״ט: פרטי ההזמנה (נערכים), כסף ויתרה, הזמנות האב וההזמנות שתחתיה, יצירת הזמנות חדשות תחתיה, עדכונים */
 function modModal(num) {
-  CACHE = {}; const V = 1 + VAT(), ed = canEdit(), dis = ed ? "" : "disabled", m = modList().find(x => String(x.num) === String(num)) || { num, virt: true }, O = modOrders(num), tot = O.reduce((t, o) => t + orderTotal(o), 0), paid = O.reduce((t, o) => t + orderPaid(o), 0);
+  CACHE = {}; DCUR = { t: "mod", id: num }; const V = 1 + VAT(), ed = canEdit(), dis = ed ? "" : "disabled", m = modList().find(x => String(x.num) === String(num)) || { num, virt: true }, O = modOrders(num), tot = O.reduce((t, o) => t + orderTotal(o), 0), paid = O.reduce((t, o) => t + orderPaid(o), 0);
   const P = O.filter(o => o.kind === "הזמנה מרכזת"), D = O.filter(o => o.kind !== "הזמנה מרכזת" && !(upOf(o) && String(ef(upOf(o), "ord444")) === String(num)));
   const ordRow = o => { const f = RAW.facilities[o.facilityId]; return `<tr data-a="ordc" data-id="${o.id}" style="cursor:pointer"><td><b class="onum">${esc(o.iec301 || "—")}</b></td><td>${esc(o.kind || "הזמנה")}</td><td>${f ? esc(f.name) : "—"}</td><td class="num">${money(orderTotal(o) * V)}</td><td class="num">${money(orderPaid(o) * V)}</td><td>${payTag(o)}</td></tr>`; };
   const L = Object.entries(m.log || {}).sort((a, b) => String(b[1].date).localeCompare(String(a[1].date)));
   const fld = (k, l, t = "text", cls = "") => `<label>${l}<input class="inp ${cls}" type="${t}" data-mc="${k}" value="${esc(m[k] ?? "")}" ${dis}></label>`;
-  openModal(`<div class="row" data-oid-keep><h2>🏛 הזמנת משהב״ט <span class="ltr">${esc(num)}</span></h2><span class="spacer"></span><button class="btn gh" data-a="close">סגירה</button></div>
+  openModal(`<div class="row" data-oid-keep><h2>🏛 הזמנת משהב״ט <span class="ltr">${esc(num)}</span></h2><span class="spacer"></span>${backBtn()}<button class="btn gh" data-a="close">סגירה</button></div>
     <div class="form">${fld("num", "מספר הזמנת משהב״ט", "text", "ltr")}${fld("req880", "דרישה", "text", "ltr")}${fld("amount", "סכום ההזמנה (לפני מע״מ)", "text", "ltr")}${fld("date", "תאריך ההזמנה", "date")}<label>נפה<select class="inp" data-mc="district" ${dis}><option value=""></option>${DISTRICTS.map(d => `<option ${m.district === d ? "selected" : ""}>${d}</option>`).join("")}<option ${m.district === "כמה נפות" ? "selected" : ""}>כמה נפות</option></select></label></div>
     <label class="f">הערה<textarea class="inp" data-mc="note" rows="2" ${dis}>${esc(m.note || "")}</textarea></label>
     <div class="money-box" style="margin-top:10px"><div><small>סכום הזמנת משהב״ט</small><b>${N(m.amount) ? money(N(m.amount) * V) : "—"}</b><span>${N(m.amount) ? money(N(m.amount)) + " לפני מע״מ" : "לא הוזן"}</span></div><div><small>הוזמן מחח״י</small><b>${money(tot * V)}</b><span>${O.length} הזמנות</span></div><div><small>${N(m.amount) ? "יתרה פנויה בהזמנה" : "שולם / נשאר"}</small><b style="color:${N(m.amount) && N(m.amount) - tot < 0 ? "var(--warn)" : "var(--ok)"}">${N(m.amount) ? money((N(m.amount) - tot) * V) : money(paid * V)}</b><span>${N(m.amount) ? `שולם ${money(paid * V)} · נשאר ${money((tot - paid) * V)}` : `נשאר ${money((tot - paid) * V)}`}</span></div></div>
@@ -607,7 +660,7 @@ function modNewModal() {
     <label>נפה<select class="inp" id="mn_s"><option></option>${DISTRICTS.map(d => `<option>${d}</option>`).join("")}<option>כמה נפות</option></select></label></div>
     <div class="row"><button class="btn" id="mn_ok">שמירה</button><button class="btn gh" data-a="close">ביטול</button></div>`, m => {
     m.querySelector("#mn_ok").onclick = async () => { const g = k => m.querySelector(k).value.trim(), n = g("#mn_n"); if (!n) return toast("חסר מספר"); if (modList().some(x => String(x.num) === n)) return toast("ההזמנה כבר קיימת");
-      await api.add("mods", { num: n, req880: g("#mn_r"), amount: g("#mn_a") ? N(g("#mn_a")) : "", date: g("#mn_d"), district: g("#mn_s") }); modModal(n); };
+      await api.add("mods", { num: n, req880: g("#mn_r"), amount: g("#mn_a") ? N(g("#mn_a")) : "", date: g("#mn_d"), district: g("#mn_s") }); endNav(); openDet("mod", n); };
   }, true);
 }
 /** הזמנת חח״י חדשה תחת הזמנה קיימת — עם מספר בלבד; השאר בכרטיס שנפתח */
@@ -616,7 +669,7 @@ function childOrdModal(preset, title) {
     <label>נפה<select class="inp" id="co_d"><option></option>${DISTRICTS.map(d => `<option ${preset.district === d ? "selected" : ""}>${d}</option>`).join("")}</select></label><label>סכום (לפני מע״מ)<input class="inp ltr" id="co_a"></label></div>
     <div class="row"><button class="btn" id="co_ok">יצירה ופתיחת הכרטיס</button><button class="btn gh" data-a="close">ביטול</button></div>`, m => {
     m.querySelector("#co_ok").onclick = async () => { const g = k => m.querySelector(k)?.value.trim() || "", fid = g("#co_f");
-      const id = await api.add("orders", { ...preset, iec301: g("#co_n"), facilityId: fid, district: g("#co_d") || RAW.facilities[fid]?.district || "", amount: g("#co_a") ? N(g("#co_a")) : "" }); orderModal(id); };
+      const id = await api.add("orders", { ...preset, iec301: g("#co_n"), facilityId: fid, district: g("#co_d") || RAW.facilities[fid]?.district || "", amount: g("#co_a") ? N(g("#co_a")) : "" }); openDet("ord", id); };
   }, true);
 }
 function assignModal(pid) {
@@ -634,15 +687,14 @@ function pageOrdersTable() {
   const F = ui.of, q = F.q.trim().toLowerCase(), V = 1 + VAT(), ed = canEdit(), dis = ed ? "" : "disabled";
   const fac = o => RAW.facilities[o.facilityId], payOf = o => has(o, "completionDate") ? "משלים שולם" : has(o, "vFinDate") ? "שובר משלים" : has(o, "advanceDate") ? "מקדמה שולמה" : has(o, "vAdvDate") ? "שובר מקדמה" : "לפני שובר";
   const L = list("orders").filter(o => { const f = fac(o); const dist = f?.district || o.district || "";
-    if (F.dist && dist !== F.dist) return false; if (F.kind && (o.kind || "הזמנה") !== F.kind) return false; if (F.pay && payOf(o) !== F.pay) return false;
+    if (!inF(F.dist, dist) || !inF(F.kind, o.kind || "הזמנה") || !inF(F.pay, payOf(o))) return false;
     if (q && ![o.req880, o.ord444, o.iec301, o.parent301, o.note, f?.name, f?.kd].join(" ").toLowerCase().includes(q)) return false; return true; })
     .sort((a, b) => (kdN(fac(b)?.kd) ?? -1) - (kdN(fac(a)?.kd) ?? -1) || String(a.iec301).localeCompare(String(b.iec301)));
-  const sel = (k, l, opts) => `<select class="inp sm" data-of="${k}"><option value="">${l}</option>${opts.map(o => `<option ${F[k] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
   const facOpts = allF().map(f => [f.id, `${f.name}`]);
   const inp = (o, k, cls = "", t = "text") => `${t === "date" ? okT(o, k) : ""}<input class="ce ${cls}" type="${t}" data-oe="${o.id}|${k}${cls.includes("num") ? "|n" : ""}" value="${esc(o[k] ?? "")}" ${dis}>`;
   const sum = k => L.reduce((t, o) => t + N(o[k]), 0), tot = sum("amount"), paid = L.reduce((t, o) => t + orderPaid(o), 0);
   return `<div class="card"><h2>🧾 הזמנות ותשלומים <small>${L.length} הזמנות · כל תא נערך ישירות · סכומים לפני מע״מ (${S().vat ?? 18}%)</small></h2>
-    <div class="flt">${ordViewSw()}<input class="inp sm" id="oq" data-of="q" value="${esc(F.q)}" placeholder="חיפוש מספר / מתקן…" style="width:200px">${sel("dist", "כל הנפות", DISTRICTS)}${sel("kind", "כל הסוגים", ORDER_KINDS)}${sel("pay", "כל שלבי התשלום", ["לפני שובר", "שובר מקדמה", "מקדמה שולמה", "שובר משלים", "משלים שולם"])}
+    <div class="flt">${ordViewSw()}<input class="inp sm" id="oq" data-of="q" value="${esc(F.q)}" placeholder="חיפוש מספר / מתקן…" style="width:200px">${msel("of", "dist", "כל הנפות", DISTRICTS)}${msel("of", "kind", "כל הסוגים", ORDER_KINDS)}${msel("of", "pay", "כל שלבי התשלום", ["לפני שובר", "שובר מקדמה", "מקדמה שולמה", "שובר משלים", "משלים שולם"])}
       <span class="spacer"></span><button class="btn gh sm" data-a="ordCsv">⬇ אקסל (CSV)</button>${ed ? `<button class="btn o sm" data-a="newOrd">+ הזמנה (גם רק מספר)</button>` : ""}</div>
     <div class="tw"><table class="t"><thead><tr><th>מתקן</th><th>סוג</th><th>דרישה</th><th>הזמנת משהב״ט</th><th>הזמנת חח״י</th><th>הזמנת אב</th><th class="num">סכום</th><th class="num">מקדמה</th><th>שובר מקדמה</th><th>שולמה</th><th class="num">משלים</th><th>שובר משלים</th><th>שולם</th><th>תוקף שובר</th><th>שלב</th><th>הערה</th>${ed && isAdmin() ? "<th></th>" : ""}</tr></thead><tbody>
     ${L.map(o => { const f = fac(o), exp = o.validUntil && !has(o, "completionDate") && o.validUntil <= addDays(todayStr(), N(alertCfg().voucher.days));
@@ -865,17 +917,21 @@ async function importModal() {
 
 /* ---------- אירועים ---------- */
 document.addEventListener("click", async e => {
+  if (!e.target.closest(".ms")) { if (ui.msOpen) ui.msOpen = ""; document.querySelectorAll("details.ms[open]").forEach(d => d.open = false); }
+  else document.querySelectorAll("details.ms[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; });
   const b = e.target.closest("[data-a]"); if (!b) { if (!e.target.closest(".srch") && ui.gq) { ui.gq = ""; render(); } return; }
   const a = b.dataset.a, id = b.dataset.id ?? ""; if (b.tagName === "A") e.preventDefault();
   const fid = document.querySelector(".mdl[data-fid]")?.dataset.fid;
   if (a === "tab") { ui.tab = id; ui.gq = ""; closeModal(); render(); scrollTo(0, 0); }
-  else if (a === "close") closeModal();
-  else if (a === "fac") { ui.gq = ""; render(); facModal(id); }
+  else if (a === "close") { closeModal(); endNav(); }
+  else if (a === "back") { const p = DSTK.pop(); if (p) ({ fac: facModal, ord: orderModal, mod: modModal })[p.t](p.id); }
+  else if (a === "fac") { ui.gq = ""; render(); openDet("fac", id); }
   else if (a === "ord") { ui.gq = ""; ui.tab = "orders"; ui.of.q = RAW.orders[id]?.iec301 || ""; render(); }
   else if (a === "ctc") { ui.gq = ""; render(); ctcModal(id); }
   else if (a === "go") { ui.tab = id === "money" ? "orders" : "facs"; ui.f = { type: "", dist: "", stage: "", cid: "", only: { stuck: "stuck", gaps: "gaps", all: "" }[id] ?? "" }; if (id === "power") ui.f.stage = "power"; render(); scrollTo(0, 0); }
   else if (a === "stg") { ui.tab = "facs"; ui.f = { type: "", dist: "", stage: id, cid: "", only: "" }; render(); scrollTo(0, 0); }
   else if (a === "only") { ui.f.only = id; render(); }
+  else if (a === "msClr") { const [sc, k] = id.split("|"); ui[sc][k] = []; ui.msOpen = ""; render(); }
   else if (a === "who") { ui.who = id; render(); }
   else if (a === "ov") { ui.ov = id; try { localStorage.setItem("iec-ov", id); } catch {} render(); }
   else if (a === "modNew") modNewModal();
@@ -885,8 +941,8 @@ document.addEventListener("click", async e => {
   else if (a === "parAddOrd") { const pid = document.querySelector(".mdl[data-oid]")?.dataset.oid, P = RAW.orders[pid]; childOrdModal({ kind: "הזמנה", parent301: P.iec301, district: P.district || "" }, `הזמנה תחת הזמנת האב ${P.iec301}`); }
   else if (a === "modLog") { const n = document.querySelector(".mdl[data-mod]")?.dataset.mod, t = document.getElementById("mlT").value.trim(); if (!t) return; const m = modList().find(x => String(x.num) === String(n));
     await modSave(m, { log: { ...(m.log || {}), [newId()]: { date: document.getElementById("mlD").value || todayStr(), text: t, by: who(), at: new Date().toISOString() } } }); modModal(n); }
-  else if (a === "ordc") { ui.gq = ""; render(); orderModal(id); }
-  else if (a === "mod") { modModal(id); }
+  else if (a === "ordc") { ui.gq = ""; render(); openDet("ord", id); }
+  else if (a === "mod") { openDet("mod", id); }
   else if (a === "oAssign") assignModal(document.querySelector(".mdl[data-oid]")?.dataset.oid);
   else if (a === "oLog") { const oid = document.querySelector(".mdl[data-oid]")?.dataset.oid, t = document.getElementById("olT").value.trim(); if (!t || !oid) return;
     await api.update("orders", oid, { log: { ...(RAW.orders[oid].log || {}), [newId()]: { date: document.getElementById("olD").value || todayStr(), text: t, by: who(), at: new Date().toISOString() } } }); orderModal(oid); }
@@ -928,8 +984,8 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("change", async e => {
   const t = e.target;
-  if (t.dataset.f) { ui.f[t.dataset.f] = t.value; render(); }
-  else if (t.dataset.of && t.dataset.of !== "q") { ui.of[t.dataset.of] = t.value; render(); }
+  if (t.dataset.ms) { const [sc, k, v] = t.dataset.ms.split("|"), a = arr(ui[sc][k]).filter(x => x !== v); if (t.checked) a.push(v); ui[sc][k] = a; ui.msOpen = sc + "|" + k; render(); }
+  else if (t.dataset.a2 === "feedGrp") { ui.feedGrp = t.checked; render(); }
   else if (t.dataset.oe && !t.closest(".mdl")) { const [oid, k, ty] = t.dataset.oe.split("|"); await api.update("orders", oid, { [k]: ty === "n" ? (t.value === "" ? "" : N(t.value)) : t.value.trim() }); }
   else if (t.dataset.sty) { const [i, ty] = t.dataset.sty.split("|"), ST = stages().map(s => ({ ...s })), cur = new Set(ST[+i].types?.length ? ST[+i].types : TYPES.map(x => x[0])); t.checked ? cur.add(ty) : cur.delete(ty);
     ST[+i].types = cur.size === TYPES.length ? [] : [...cur]; await api.setSettings({ stages: ST }); }
@@ -940,7 +996,7 @@ document.addEventListener("change", async e => {
   else if (t.dataset.rpc) { ui.rep[t.dataset.rpc] = t.checked; render(); }
   else if (t.dataset.up) { await fb.database().ref(`${BORDER}_access/${t.dataset.up}/iec`).set(t.value || null).catch(fail); toast("ההרשאה עודכנה ✓"); }
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); if (ui.gq) { ui.gq = ""; render(); } } });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); endNav(); if (ui.gq) { ui.gq = ""; render(); } } });
 /** לוגו: מוקטן ל-120 פיקסלים גובה ונשמר כתמונה בנתונים */
 function pickImg(cb) { const i = document.createElement("input"); i.type = "file"; i.accept = "image/*"; i.onchange = () => { const f = i.files[0]; if (!f) return; const r = new FileReader();
   r.onload = () => { if (/svg/.test(f.type)) return cb(r.result); const im = new Image(); im.onload = () => { const h = Math.min(120, im.height), w = Math.round(im.width * h / im.height), c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(im, 0, 0, w, h); cb(c.toDataURL("image/png")); }; im.src = r.result; }; r.readAsDataURL(f); }; i.click(); }
