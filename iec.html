@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>חיבורי חשמל — פרויקט המכשול</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   אתר חיבורי חשמל (חח״י) — פרויקט המכשול
+   אותו Firebase כמו האתר הראשי, ענף נפרד: iec/
+   facilities = מתקנים (ארון שקד / תט״ז / חדר טרפו / אתר איסוף / העתקת עמוד / אחר)
+   orders     = הזמנות (880 → 444 → 301, מרחק חריג, הזמנה מרכזת) + תשלומים
+   contacts   = אנשי קשר · settings = שלבים, התראות, מע״מ, לוגואים, קבלנים
+   ===================================================================== */
+:root { --navy: #0b3a6e; --blue: #0a6ec9; --sky: #e8f2fc; --org: #f39200; --org2: #fff3df; --ink: #14223a; --mut: #63708a; --line: #dfe5ee; --bg: #f3f6fa; --card: #fff; --ok: #1f8a4c; --warn: #c0392b; --amber: #e0a100; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Heebo, Arial, sans-serif; background: var(--bg); color: var(--ink); font-size: 15px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--blue); }
+.muted { color: var(--mut); } .small { font-size: 13px; } .nowrap { white-space: nowrap; } .ltr { direction: ltr; unicode-bidi: embed; }
+.spacer { flex: 1; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+/* ---- כותרת ---- */
+.top { background: linear-gradient(120deg, var(--navy), #0d4f94 60%, var(--blue)); color: #fff; padding: 12px 22px 0; position: sticky; top: 0; z-index: 20; box-shadow: 0 4px 16px -8px rgba(0,0,0,.5); }
+.top-in { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.logo { height: 46px; background: #fff; border-radius: 10px; padding: 4px 8px; display: flex; align-items: center; } .logo img { max-height: 38px; max-width: 120px; display: block; }
+.brand h1 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: .2px; } .brand span { font-size: 13px; opacity: .85; }
+.brand-bar { width: 6px; height: 40px; border-radius: 3px; background: var(--org); }
+.srch { position: relative; flex: 1; max-width: 460px; min-width: 200px; }
+.srch input { width: 100%; border: 0; border-radius: 999px; padding: 9px 40px 9px 16px; background: rgba(255,255,255,.96); color: var(--ink); }
+.srch::before { content: "⌕"; position: absolute; right: 14px; top: 6px; font-size: 19px; color: var(--mut); z-index: 1; }
+.srch-res { position: absolute; top: 44px; right: 0; left: 0; background: #fff; color: var(--ink); border-radius: 14px; box-shadow: 0 14px 40px -10px rgba(0,0,0,.45); max-height: 60vh; overflow: auto; z-index: 30; }
+.srch-res button { all: unset; box-sizing: border-box; display: flex; gap: 8px; align-items: center; width: 100%; padding: 8px 14px; cursor: pointer; border-bottom: 1px solid var(--line); }
+.srch-res button:hover { background: var(--sky); } .srch-res i { font-style: normal; font-size: 12px; color: var(--mut); margin-inline-start: auto; }
+.who { font-size: 13px; opacity: .9; } .who b { display: block; }
+.tbtn { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); color: #fff; border-radius: 10px; padding: 6px 12px; cursor: pointer; }
+.tabs { display: flex; gap: 2px; margin-top: 10px; overflow-x: auto; }
+.tab { background: transparent; border: 0; color: #d7e6f7; padding: 10px 16px 11px; border-radius: 12px 12px 0 0; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.tab.on { background: var(--bg); color: var(--navy); } .tab:hover:not(.on) { background: rgba(255,255,255,.1); }
+.tab .bd { background: var(--org); color: #fff; border-radius: 999px; padding: 0 7px; font-size: 12px; margin-inline-start: 5px; }
+main { padding: 18px 22px 60px; max-width: 1600px; margin: 0 auto; }
+/* ---- כרטיסים ---- */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; margin-bottom: 16px; box-shadow: 0 6px 18px -16px rgba(11,58,110,.6); }
+.card h2 { margin: 0 0 12px; font-size: 18px; color: var(--navy); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .card h2 small { font-weight: 400; font-size: 13px; color: var(--mut); }
+.grid { display: grid; gap: 16px; } .g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: 1.3fr 1fr; }
+@media (max-width: 1100px) { .g2, .g3 { grid-template-columns: 1fr; } }
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+@media (max-width: 1300px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } } @media (max-width: 640px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { all: unset; box-sizing: border-box; cursor: pointer; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; position: relative; overflow: hidden; }
+.kpi::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--kc, var(--blue)); }
+.kpi span { font-size: 13px; color: var(--mut); font-weight: 500; } .kpi b { font-size: 28px; font-weight: 800; color: var(--kc, var(--navy)); line-height: 1.15; } .kpi small { font-size: 12.5px; color: var(--mut); }
+.kpi:hover { box-shadow: 0 8px 20px -12px rgba(11,58,110,.6); } .kpi.hot { background: linear-gradient(160deg, #fff, #fff3e6); border-color: #f2c48a; }
+/* ---- צינור שלבים ---- */
+.pipe { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.pst { all: unset; box-sizing: border-box; cursor: pointer; flex: 1; min-width: 92px; background: var(--sky); border-radius: 12px; padding: 8px 10px; text-align: center; position: relative; }
+.pst b { display: block; font-size: 24px; color: var(--sc, var(--navy)); } .pst span { font-size: 12px; color: var(--ink); font-weight: 500; } .pst small { display: block; font-size: 11.5px; color: var(--warn); font-weight: 700; min-height: 15px; }
+.pst.on { outline: 3px solid var(--sc, var(--blue)); background: #fff; } .pst::after { content: "‹"; position: absolute; left: -7px; top: 50%; transform: translateY(-50%); color: #9db4cf; font-size: 18px; } .pst:last-child::after { content: ""; }
+/* ---- פס ק.ד. ---- */
+.strip { position: relative; height: 150px; margin: 6px 6px 0; }
+.strip .ln { position: absolute; top: 70px; left: 0; right: 0; height: 6px; border-radius: 3px; background: #dbe5f1; }
+.strip .sec { position: absolute; top: 96px; height: 40px; border-top: 3px solid var(--cc); font-size: 12px; color: var(--mut); text-align: center; padding-top: 3px; overflow: hidden; white-space: nowrap; }
+.strip .sec b { color: var(--ink); display: block; font-size: 12.5px; }
+.dot { position: absolute; width: 14px; height: 14px; margin: -7px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); cursor: pointer; background: var(--dc); }
+.dot.sq { border-radius: 3px; } .dot.tri { border-radius: 2px; transform: rotate(45deg); } .dot.st { box-shadow: 0 0 0 3px var(--warn); } .dot:hover { z-index: 3; transform: scale(1.5); } .dot.tri:hover { transform: rotate(45deg) scale(1.5); }
+.strip svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.strip .kdl { position: absolute; top: 0; font-size: 11px; color: var(--mut); transform: translateX(50%); }
+.leg { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--mut); margin-top: 8px; } .leg i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-inline-end: 4px; vertical-align: -1px; background: var(--dc); }
+/* ---- רשימות ---- */
+.lst { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow: auto; }
+.li { all: unset; box-sizing: border-box; cursor: pointer; display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+.li:hover { border-color: var(--blue); background: #fafcff; } .li .ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--sky); font-size: 16px; }
+.li b { font-size: 14.5px; } .li .sub { font-size: 12.5px; color: var(--mut); } .li .end { margin-inline-start: auto; text-align: left; font-size: 12.5px; }
+.tag { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 700; background: var(--tc, var(--sky)); color: var(--tt, var(--navy)); white-space: nowrap; }
+.tag.r { --tc: #fde7e4; --tt: #a3271b; } .tag.a { --tc: #fff1d1; --tt: #8a5a00; } .tag.g { --tc: #e2f4e9; --tt: #17683a; } .tag.gr { --tc: #eef0f3; --tt: #5c6678; }
+/* ---- מתקנים ---- */
+.flt { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.inp { border: 1px solid #ccd5e1; border-radius: 10px; padding: 7px 10px; background: #fff; min-width: 0; } .inp:focus { outline: 2px solid #9cc5ee; border-color: var(--blue); }
+.inp.sm { padding: 5px 8px; font-size: 14px; }
+.btn { border: 0; background: var(--blue); color: #fff; border-radius: 10px; padding: 8px 14px; cursor: pointer; font-weight: 700; } .btn:hover { filter: brightness(1.07); }
+.btn.o { background: var(--org); } .btn.gh { background: #fff; color: var(--navy); border: 1px solid #c8d4e3; font-weight: 500; } .btn.sm { padding: 5px 10px; font-size: 13.5px; } .btn.del { background: #fff; color: var(--warn); border: 1px solid #f0c4be; font-weight: 500; }
+.btn[disabled] { opacity: .45; cursor: default; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { all: unset; cursor: pointer; border: 1px solid #c8d4e3; background: #fff; border-radius: 999px; padding: 4px 12px; font-size: 13.5px; } .chip.on { background: var(--navy); color: #fff; border-color: var(--navy); } .chip small { opacity: .7; margin-inline-start: 4px; }
+.fcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px; }
+.fc { all: unset; box-sizing: border-box; cursor: pointer; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; border-inline-start: 5px solid var(--fc, var(--blue)); }
+.fc:hover { box-shadow: 0 10px 24px -16px rgba(11,58,110,.7); }
+.fc .h { display: flex; align-items: baseline; gap: 8px; } .fc .h b { font-size: 16px; } .fc .h .k { margin-inline-start: auto; font-size: 12.5px; color: var(--mut); }
+.chain { display: flex; gap: 3px; } .chain i { flex: 1; height: 8px; border-radius: 4px; background: #e3e9f1; } .chain i.d { background: var(--sc); } .chain i.c { background: repeating-linear-gradient(45deg, var(--sc), var(--sc) 4px, #fff 4px, #fff 7px); } .chain i.x { background: #f3c1bb; }
+.fc .nums { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12.5px; } .fc .nums span { background: #f2f5f9; border-radius: 6px; padding: 1px 7px; direction: ltr; } .fc .nums span.miss { background: #fdecea; color: #a3271b; }
+.fc .last { font-size: 13px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ---- טבלאות ---- */
+.tw { overflow: auto; border: 1px solid var(--line); border-radius: 12px; max-height: 70vh; }
+table.t { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 14px; }
+table.t th { position: sticky; top: 0; background: #eaf1f9; color: var(--navy); text-align: right; padding: 8px; font-weight: 700; border-bottom: 1px solid var(--line); white-space: nowrap; z-index: 1; }
+table.t td { padding: 5px 8px; border-bottom: 1px solid #edf1f6; vertical-align: middle; } table.t tr:hover td { background: #f8fbff; }
+table.t td input.ce, table.t td select.ce { border: 1px solid transparent; background: transparent; border-radius: 6px; padding: 4px 6px; width: 100%; min-width: 70px; } table.t td input.ce:hover, table.t td select.ce:hover { border-color: #ccd5e1; } table.t td input.ce:focus { border-color: var(--blue); background: #fff; outline: none; }
+table.t td.num, table.t th.num { text-align: left; direction: ltr; } table.t tfoot td { position: sticky; bottom: 0; background: #fff8ec; font-weight: 800; border-top: 2px solid #f2c48a; }
+table.t tr.gh td { background: #f4f7fb; font-weight: 700; color: var(--navy); }
+/* ---- חלון ---- */
+.ov { position: fixed; inset: 0; background: rgba(9,25,48,.45); z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding: 30px 12px; overflow: auto; }
+.mdl { background: #fff; border-radius: 18px; width: min(1000px, 100%); padding: 20px 22px; box-shadow: 0 30px 80px -20px rgba(0,0,0,.5); }
+.mdl.sm { width: min(560px, 100%); } .mdl h2 { margin: 0 0 4px; color: var(--navy); }
+.form { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin: 10px 0; }
+.form label, label.f { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--mut); font-weight: 500; }
+.sec-h { font-weight: 800; color: var(--navy); margin: 16px 0 8px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.stg { display: grid; grid-template-columns: 26px 1.5fr 130px 130px 1.4fr; gap: 6px; align-items: center; padding: 5px 0; border-bottom: 1px dashed #e5eaf1; font-size: 14px; }
+.stg .n { width: 24px; height: 24px; border-radius: 50%; background: #e3e9f1; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; } .stg.d .n { background: var(--sc); color: #fff; } .stg.nx { background: #fff8ec; border-radius: 8px; }
+.stg .au { font-size: 11.5px; color: var(--ok); } @media (max-width: 700px) { .stg { grid-template-columns: 26px 1fr 1fr; } .stg > :nth-child(5) { grid-column: 2 / 4; } }
+.log { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow: auto; } .log div { background: #f6f8fb; border-radius: 10px; padding: 6px 10px; font-size: 13.5px; } .log b { color: var(--navy); margin-inline-end: 6px; }
+/* ---- אנשי קשר ---- */
+.ct { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.cc { display: flex; gap: 12px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.av { flex: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 17px; background: var(--ac); }
+.cc .inf { min-width: 0; flex: 1; } .cc .inf b { display: block; } .cc .inf span { font-size: 13px; color: var(--mut); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc .acts { display: flex; gap: 4px; } .cc .acts a, .cc .acts button { all: unset; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--sky); font-size: 15px; } .cc .acts a:hover, .cc .acts button:hover { background: #d5e7fa; }
+/* ---- כניסה ---- */
+.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(140deg, var(--navy), var(--blue)); padding: 20px; }
+.login .card { width: min(400px, 100%); } .login h1 { margin: 0 0 6px; color: var(--navy); font-size: 22px; }
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 10px 18px; border-radius: 12px; z-index: 99; }
+.empty { padding: 26px; text-align: center; color: var(--mut); }
+.note { background: var(--org2); border: 1px solid #f2d19c; border-radius: 12px; padding: 9px 14px; font-size: 14px; margin-bottom: 12px; }
+.set-st { display: grid; grid-template-columns: 24px 1fr 62px 46px 96px 92px auto; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.set-st details { font-size: 12.5px; } .set-st details summary { cursor: pointer; color: var(--blue); } .set-st details label { display: flex; gap: 4px; align-items: center; }
+@media print { .top, .noprint, .ov > .mdl > .row { display: none !important; } body { background: #fff; } .ov { position: static; padding: 0; background: #fff; } .mdl { box-shadow: none; width: 100%; padding: 0; } main { display: none; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+/* ---------- חיבור ל-Firebase — אותו פרויקט כמו האתר הראשי ---------- */
+const FIREBASE_CONFIG = { apiKey: "AIzaSyDDRcdT0My1ZIhtE04GGL5silY3QYyWPDw", authDomain: "gvul-950ce.firebaseapp.com", databaseURL: "https://gvul-950ce-default-rtdb.europe-west1.firebasedatabase.app", projectId: "gvul-950ce" };
+const LOCAL = !FIREBASE_CONFIG.apiKey;   // בלי apiKey — מצב הדגמה: נתונים בדפדפן בלבד
+const ROOT = "iec", BORDER = "border", COLS = ["facilities", "orders", "contacts", "settings"];
+let fb = null, user = null, me = null, PERM = "";   // PERM: admin / edit / view
+const RAW = { facilities: {}, orders: {}, contacts: {}, settings: {} }, BRD = {};   // BRD — נתוני האתר הראשי (רק לייבוא ולשמות קבלנים)
+const ui = { tab: "dash", q: "", f: { type: "", dist: "", stage: "", cid: "", only: "" }, of: { dist: "", kind: "", q: "", pay: "" }, cq: "", corg: "" };
+const $app = document.getElementById("app");
+
+/* ---------- כלים ---------- */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const todayStr = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const fmtD = s => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "";
+const days = (a, b = todayStr()) => a ? Math.round((new Date(b + "T12:00") - new Date(a + "T12:00")) / 864e5) : null;
+const addDays = (s, n) => { const t = new Date(s + "T12:00:00"); t.setDate(t.getDate() + n); return t.toISOString().slice(0, 10); };
+const N = v => { const n = Number(String(v ?? "").replace(/[^\d.\-]/g, "")); return isNaN(n) ? 0 : n; };
+const money = v => "₪" + Math.round(v).toLocaleString("he-IL");
+const kdN = v => { const m = String(v ?? "").match(/\d+(\.\d+)?/); return m ? +m[0] : null; };
+const list = c => Object.entries(RAW[c] || {}).map(([id, v]) => ({ id, ...v }));
+const toast = t => { const e = document.createElement("div"); e.className = "toast"; e.textContent = t; document.body.appendChild(e); setTimeout(() => e.remove(), 2300); };
+const canEdit = () => PERM === "admin" || PERM === "edit";
+const who = () => me?.name || user?.email || "מקומי";
+
+/* ---------- הגדרות: שלבים, התראות, מע״מ ---------- */
+const TYPES = [["ארון שקד", "🔌", "dot"], ["תט״ז", "⚡", "tri"], ["חדר טרפו", "🏠", "sq"], ["אתר איסוף", "📡", "dot"], ["העתקת עמוד", "🪧", "sq"], ["אחר", "•", "dot"]];
+const TICON = Object.fromEntries(TYPES.map(t => [t[0], t[1]])), TSHAPE = Object.fromEntries(TYPES.map(t => [t[0], t[2]]));
+const DISTRICTS = ["גליל גולן", "עמקים", "ירושלים"];
+const ORDER_KINDS = ["הזמנה", "מרחק חריג", "הזמנה מרכזת", "אחר"];
+/** auto: השלב מסומן אוטומטית מתוך ההזמנה (מספר / תאריך). pay: שלבי תשלום — שלב מאוחר משלים את הקודמים */
+const WHO = ["אצלנו", "משהב״ט", "חח״י", "קבלן"];
+const NO_TTZ = TYPES.map(t => t[0]).filter(t => t !== "תט״ז");   // שלבי הזמנה ותשלום — לא לתט״ז (חח״י מספקת; משלמים על הכבילה בהזמנת הארון)
+const DEF_STAGES = [
+  { id: "s880", name: "דרישה (880)", color: "#7b8ba3", days: 14, auto: "req880", who: "אצלנו", types: NO_TTZ },
+  { id: "s444", name: "הזמנת משהב״ט (444)", color: "#5b6fb3", days: 21, auto: "ord444", who: "משהב״ט", types: NO_TTZ },
+  { id: "s301", name: "הזמנת חח״י (301)", color: "#0a6ec9", days: 30, auto: "iec301", who: "חח״י", types: NO_TTZ },
+  { id: "vAdv", name: "שובר מקדמה", color: "#2e9bb8", days: 30, auto: "vAdvDate", pay: 1, who: "חח״י", types: NO_TTZ },
+  { id: "pAdv", name: "מקדמה שולמה", color: "#1d8f8a", days: 14, auto: "advanceDate", pay: 2, who: "אצלנו", types: NO_TTZ },
+  { id: "vFin", name: "שובר משלים", color: "#e0a100", days: 60, auto: "vFinDate", pay: 3, who: "חח״י", types: NO_TTZ },
+  { id: "pFin", name: "משלים שולם", color: "#f39200", days: 14, auto: "completionDate", pay: 4, who: "אצלנו", types: NO_TTZ },
+  { id: "exec", name: "ביצוע", color: "#8e5bc2", days: 60, who: "חח״י" },
+  { id: "power", name: "חישמול", color: "#2b9a4d", days: 30, who: "חח״י" },
+  { id: "hand", name: "מסירה", color: "#1b6b3a", days: 30, who: "חח״י" }];
+const DEF_ALERTS = { stuck: { on: true, name: "תקוע בשלב — לפי מספר הימים שהוגדר לכל שלב" }, target: { on: true, name: "עבר תאריך יעד שתואם מול חח״י" },
+  voucher: { on: true, days: 10, name: "שובר שתוקפו פג בעוד (ימים)" }, noUpd: { on: true, days: 30, name: "מתקן פעיל בלי עדכון (ימים)" },
+  g444: { on: true, name: "יש הזמנת חח״י (301) בלי הזמנת משהב״ט (444)" }, g880: { on: true, name: "יש 444 בלי דרישה (880)" },
+  noOrd: { on: true, days: 0, name: "מתקן בלי אף הזמנה (ימים מהקמה)" }, ttz: { on: true, name: "תט״ז בלי ארונות משויכים / מזין יותר מ־2" } };
+const S = () => RAW.settings || {};
+const stages = () => (Array.isArray(S().stages) && S().stages.length ? S().stages : DEF_STAGES).map(s => ({ ...(DEF_STAGES.find(d => d.id === s.id) || {}), ...s }));
+const stagesFor = f => stages().filter(s => !Array.isArray(s.types) || !s.types.length || s.types.includes(f.type));
+const alertCfg = () => Object.fromEntries(Object.entries(DEF_ALERTS).map(([k, v]) => [k, { ...v, ...(S().alerts?.[k] || {}) }]));
+const VAT = () => (S().vat ?? 18) / 100;
+const contractors = () => (S().contractors || []).slice().sort((a, b) => (kdN(b.kdFrom) ?? 0) - (kdN(a.kdFrom) ?? 0));
+const cName = id => contractors().find(c => c.id === id)?.name || "";
+
+/* ---------- כתיבה ---------- */
+const stamp = () => ({ updatedAt: new Date().toISOString(), updatedBy: who() });
+const fbKey = s => String(s).replace(/[.#$\/\[\]]/g, "_");
+const LKEY = "iec-local-v1";
+const saveLocal = () => { try { localStorage.setItem(LKEY, JSON.stringify(RAW)); } catch {} };
+const api = {
+  async put(col, id, obj) { if (!canEdit()) return toast("הרשאת צפייה בלבד"); const v = { ...obj, ...stamp() };
+    if (LOCAL) { RAW[col][id] = v; saveLocal(); return render(); } await fb.database().ref(`${ROOT}/${col}/${fbKey(id)}`).set(clean(v)).catch(fail); },
+  async add(col, obj) { const id = newId(); await api.put(col, id, { ...obj, createdAt: new Date().toISOString(), createdBy: who() }); return id; },
+  async update(col, id, patch) { if (!canEdit()) return toast("הרשאת צפייה בלבד"); const p = { ...patch, ...stamp() };
+    if (LOCAL) { RAW[col][id] = { ...(RAW[col][id] || {}), ...p }; Object.keys(p).forEach(k => p[k] === null && delete RAW[col][id][k]); saveLocal(); return render(); }
+    await fb.database().ref(`${ROOT}/${col}/${fbKey(id)}`).update(clean(p, true)).catch(fail); },
+  async remove(col, id) { if (!canEdit()) return; if (LOCAL) { delete RAW[col][id]; saveLocal(); return render(); } await fb.database().ref(`${ROOT}/${col}/${fbKey(id)}`).remove().catch(fail); },
+  async setSettings(patch) { const cur = { ...(RAW.settings || {}) }; delete cur.updatedAt; delete cur.updatedBy;
+    if (LOCAL) { RAW.settings = { ...cur, ...patch, ...stamp() }; saveLocal(); return render(); } await fb.database().ref(`${ROOT}/settings`).update(clean({ ...patch, ...stamp() }, true)).catch(fail); } };
+function clean(o, keepNull) { if (Array.isArray(o)) return o.map(x => clean(x)); if (o && typeof o === "object") { const r = {}; for (const [k, v] of Object.entries(o)) { if (v === undefined) continue; if (v === null && !keepNull) continue; r[fbKey(k)] = v === null ? null : clean(v); } return r; } return o; }
+const fail = e => { console.error(e); alertBox(/PERMISSION|permission/.test(String(e?.code || e?.message)) ? "השינוי לא נשמר: אין הרשאה (כללי Firebase)." : "השינוי לא נשמר: " + (e?.message || e)); };
+
+/* ---------- חישובים ---------- */
+/** מטמון לחישובים — מתאפס בכל רינדור ובכל פתיחת חלון */
+let CACHE = {}; const memo = (k, fn) => k in CACHE ? CACHE[k] : (CACHE[k] = fn());
+const listO = () => memo("O", () => list("orders")), byFac = () => memo("BF", () => { const m = {}; listO().forEach(o => (m[o.facilityId || ""] = m[o.facilityId || ""] || []).push(o)); return m; });
+const facOrders = f => byFac()[f.id] || [];
+/** הזמנה שתלויה בהזמנה מרכזת (הזמנת אב) — יורשת ממנה 444 / 880 כשאין לה משלה */
+const parentOf = o => o.parent301 ? listO().find(p => p.id !== o.id && p.iec301 && String(o.parent301).split(/[,\s]+/).includes(String(p.iec301)) && p.kind === "הזמנה מרכזת") : null;
+const ef = (o, k) => o[k] || o["ok_" + k] ? o[k] || true : (k === "ord444" || k === "req880") ? parentOf(o)?.[k] || "" : "";
+const mainOrders = f => facOrders(f).filter(o => o.kind !== "מרחק חריג");
+/** שלב בהזמנה: תאריך, או סימון "✓" (ok_<שדה>) כשידוע שהושלם אבל בלי תאריך */
+const has = (o, k) => !!ef(o, k);
+const orderTotal = o => N(o.amount), orderPaid = o => (has(o, "advanceDate") ? N(o.advance) : 0) + (has(o, "completionDate") ? N(o.completion) : 0);
+const live = f => (f.status || "פעיל") === "פעיל";
+/** מצב שלבים של מתקן: מה הושלם (ידני / אוטומטי מההזמנה), השלב הנוכחי, הבא, ותקיעה */
+function state(f) { return memo("s:" + f.id, () => state0(f)); }
+function state0(f) {
+  const ST = stagesFor(f), M = mainOrders(f), done = {}, A = alertCfg(), today = todayStr();
+  for (const s of ST) { const m = f.stages?.[s.id] || {};
+    if (m.date || m.done) { done[s.id] = { date: m.date || "", man: true }; continue; }
+    if (s.auto && M.length && M.every(o => has(o, s.auto))) { const v = M.map(o => o[s.auto] || "").sort().pop(); done[s.id] = { date: /^\d{4}-\d\d-\d\d$/.test(v) ? v : "", auto: true }; } }
+  // שלבי תשלום: שולם משלים ← גם השובר והמקדמה הושלמו
+  const pays = ST.filter(s => s.pay).sort((a, b) => b.pay - a.pay); let after = false;
+  for (const s of pays) { if (done[s.id]) after = true; else if (after) done[s.id] = { date: "", auto: true, inf: true }; }
+  let cur = null, curI = -1; ST.forEach((s, i) => { if (done[s.id]) { cur = s; curI = i; } });
+  const next = ST.slice(curI + 1).find(s => !done[s.id]) || null;
+  const refDate = cur ? done[cur.id].date : (f.createdAt || "").slice(0, 10);   // שלב שהושלם בלי תאריך — לא יודעים ממתי ממתינים, לכן לא מסמנים "תקוע" לפי ימים
+  const flags = [];
+  if (live(f) && next) {
+    const tgt = f.stages?.[next.id]?.target;
+    if (A.target.on && tgt && tgt < today) flags.push({ k: "target", t: `עבר יעד ל${next.name} (${fmtD(tgt)})`, d: days(tgt), who: next.who });
+    if (A.stuck.on && N(next.days) > 0 && refDate && days(refDate) > N(next.days)) flags.push({ k: "stuck", t: `${days(refDate)} ימים ממתין ל${next.name} (נורמה ${next.days})`, d: days(refDate) - N(next.days), who: next.who });
+  }
+  return { ST, done, cur, next, curI, refDate, flags, stuck: flags.length > 0 };
+}
+/** חוסרים בתהליך — לפי ההתראות שהוגדרו */
+function gaps(f) { return memo("g:" + f.id, () => gaps0(f)); }
+function gaps0(f) {
+  if (!live(f)) return []; const A = alertCfg(), O = facOrders(f), M = mainOrders(f), out = [], today = todayStr();
+  if (A.g444.on && M.some(o => o.iec301 && !ef(o, "ord444"))) out.push({ k: "g444", t: "יש 301 בלי 444" });
+  if (A.g880.on && M.some(o => ef(o, "ord444") && !ef(o, "req880"))) out.push({ k: "g880", t: "יש 444 בלי דרישה 880" });
+  if (A.noOrd.on && !O.length && f.type !== "תט״ז" && days((f.createdAt || today).slice(0, 10)) >= N(A.noOrd.days)) out.push({ k: "noOrd", t: "אין הזמנה" });
+  if (A.voucher.on) for (const o of O) { if (o.validUntil && !has(o, "completionDate") && o.validUntil >= addDays(today, -365)) { const dl = days(today, o.validUntil); if (dl <= N(A.voucher.days)) out.push({ k: "voucher", t: dl < 0 ? `שובר ${o.iec301 || ""} פג לפני ${-dl} ימים` : `שובר ${o.iec301 || ""} פג בעוד ${dl} ימים` }); } }
+  if (A.noUpd.on) { const lu = lastUpd(f); if (days(lu) > N(A.noUpd.days)) out.push({ k: "noUpd", t: `בלי עדכון ${days(lu)} ימים` }); }
+  if (A.ttz.on && f.type === "תט״ז") { const n = Object.keys(f.feeds || {}).length; if (!n) out.push({ k: "ttz", t: "לא שויכו ארונות" }); else if (n > 2) out.push({ k: "ttz", t: `מזין ${n} ארונות (מעל 2)` }); }
+  return out;
+}
+const lastUpd = f => { const L = Object.values(f.log || {}).map(x => x.date).sort(); return L.pop() || (f.updatedAt || f.createdAt || "").slice(0, 10); };
+const lastLog = f => Object.values(f.log || {}).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.at || "").localeCompare(String(b.at || ""))).pop();
+const fedBy = f => list("facilities").filter(t => t.type === "תט״ז" && t.feeds?.[f.id]);
+const allF = () => list("facilities").sort((a, b) => (kdN(b.kd) ?? -1) - (kdN(a.kd) ?? -1) || String(a.name).localeCompare(String(b.name), "he", { numeric: true }));
+
+/* ---------- סינון ---------- */
+function facFiltered() {
+  const F = ui.f, q = ui.q.trim().toLowerCase();
+  return allF().filter(f => { const st = state(f);
+    if (F.type && f.type !== F.type) return false; if (F.dist && f.district !== F.dist) return false; if (F.cid && f.contractorId !== F.cid) return false;
+    if (F.stage) { if (F.stage === "_none") { if (st.cur) return false; } else if (st.cur?.id !== F.stage || !live(f)) return false; }
+    if (F.only === "stuck" && !st.stuck) return false; if (F.only === "gaps" && !gaps(f).length) return false;
+    if (F.only === "inactive" ? live(f) : F.only !== "all" && !live(f)) return false;
+    return true; });
+}
+
+/* ---------- מבנה העמוד ---------- */
+const TABS = [["dash", "תמונת מצב"], ["facs", "מתקנים"], ["orders", "הזמנות ותשלומים"], ["contacts", "אנשי קשר"], ["reports", "דוחות ומצע לדיון"], ["settings", "⚙ הגדרות"]];
+function render() {
+  CACHE = {}; if (!me && !LOCAL) return;
+  const ae = document.activeElement, keep = ae && ae.id && ae.matches("input,textarea,select") ? { id: ae.id, s: ae.selectionStart } : null, sy = scrollY;
+  const nStuck = list("facilities").filter(f => state(f).stuck).length;
+  const L = S().logos || {};
+  $app.innerHTML = `<div class="top"><div class="top-in">
+      ${L.a ? `<span class="logo"><img src="${esc(L.a)}" alt=""></span>` : ""}${L.b ? `<span class="logo"><img src="${esc(L.b)}" alt=""></span>` : ""}
+      <span class="brand-bar"></span><div class="brand"><h1>${esc(S().title || "חיבורי חשמל — פרויקט המכשול")}</h1><span>מתקנים, הזמנות ותשלומים מול חברת החשמל</span></div>
+      <div class="srch"><input id="gq" placeholder="חיפוש: מספר הזמנה, ק.ד., שם מתקן, איש קשר…" value="${esc(ui.gq || "")}" autocomplete="off">${ui.gq ? searchRes(ui.gq) : ""}</div>
+      <div class="who"><b>${esc(who())}</b>${{ admin: "מנהל", edit: "עריכה", view: "צפייה" }[PERM] || ""}${LOCAL ? " · מצב הדגמה" : ""}</div>
+      ${LOCAL ? "" : `<button class="tbtn" data-a="logout">יציאה</button>`}</div>
+    <nav class="tabs">${TABS.map(([k, l]) => `<button class="tab ${ui.tab === k ? "on" : ""}" data-a="tab" data-id="${k}">${l}${k === "dash" && nStuck ? `<span class="bd">${nStuck}</span>` : ""}</button>`).join("")}</nav></div>
+    <main>${({ dash: pageDash, facs: pageFacs, orders: pageOrders, contacts: pageContacts, reports: pageReports, settings: pageSettings }[ui.tab] || pageDash)()}</main>`;
+  if (keep) { const e = document.getElementById(keep.id); if (e) { e.focus(); try { e.setSelectionRange(keep.s, keep.s); } catch {} } }
+  scrollTo(0, sy);
+}
+
+/* ---------- חיפוש כללי ---------- */
+function searchRes(q0) {
+  const q = q0.trim().toLowerCase(); if (q.length < 2) return "";
+  const hit = (...a) => a.join(" ").toLowerCase().includes(q), R = [];
+  for (const f of allF()) if (hit(f.name, f.kd, f.sec, f.place, f.type)) R.push(`<button data-a="fac" data-id="${f.id}">${TICON[f.type] || "•"} <b>${esc(f.name)}</b> <span class="muted small">ק.ד. ${esc(f.kd || "—")}</span><i>${esc(f.type)}</i></button>`);
+  for (const o of list("orders")) if (hit(o.req880, o.ord444, o.iec301, o.parent301, o.note)) { const f = RAW.facilities[o.facilityId];
+    R.push(`<button data-a="${f ? "fac" : "ord"}" data-id="${f ? o.facilityId : o.id}">🧾 <b class="ltr">${esc(o.iec301 || o.ord444 || o.req880 || "")}</b> <span class="muted small">${esc(o.kind || "")} · ${esc(f?.name || "בלי מתקן")}</span><i>הזמנה</i></button>`); }
+  for (const c of list("contacts")) if (hit(c.name, c.org, c.role, c.phone, c.email)) R.push(`<button data-a="ctc" data-id="${c.id}">👤 <b>${esc(c.name)}</b> <span class="muted small">${esc([c.org, c.role].filter(Boolean).join(" · "))}</span><i>איש קשר</i></button>`);
+  return `<div class="srch-res">${R.slice(0, 30).join("") || `<div class="empty">לא נמצא</div>`}</div>`;
+}
+
+/* ---------- תמונת מצב ---------- */
+function pageDash() {
+  const F = list("facilities"), LV = F.filter(live), ST = stages(), O = list("orders"), V = 1 + VAT();
+  if (!F.length) return `<div class="card"><h2>ברוכים הבאים</h2><p>עוד אין נתונים באתר.</p>${PERM === "admin" ? `<p>הצעד הראשון: <b>הגדרות ← ייבוא מהאתר הראשי</b> — מעביר את הזמנות חח״י, הארונות, התט״זים, חדרי הטרפו ואתרי האיסוף.</p><button class="btn o" data-a="tab" data-id="settings">להגדרות ←</button>` : "<p>מנהל צריך לבצע ייבוא ראשוני.</p>"}</div>`;
+  const stuck = LV.filter(f => state(f).stuck), gp = LV.filter(f => gaps(f).length), hand = LV.filter(f => state(f).done.hand), pw = LV.filter(f => state(f).done.power);
+  const tot = O.reduce((t, o) => t + orderTotal(o), 0), paid = O.reduce((t, o) => t + orderPaid(o), 0);
+  const kpi = (k, l, v, s, c, hot) => `<button class="kpi ${hot ? "hot" : ""}" style="--kc:${c}" data-a="go" data-id="${k}"><span>${l}</span><b>${v}</b><small>${s}</small></button>`;
+  const kp = `<div class="kpis">${kpi("all", "מתקנים פעילים", LV.length, `${F.length - LV.length} מוקפאים / בוטלו`, "#0b3a6e")}${kpi("stuck", "⏱ תקועים", stuck.length, "עברו נורמה או יעד", "#c0392b", stuck.length)}${kpi("gaps", "⚠ חוסרים בתהליך", gp.length, "מספר חסר, שובר, עדכון", "#e0a100", gp.length)}
+    ${kpi("power", "⚡ חושמלו", pw.length, `מתוך ${LV.length} · נמסרו ${hand.length}`, "#2b9a4d")}${kpi("money", "הזמנות (כולל מע״מ)", money(tot * V), `${money(tot)} לפני מע״מ`, "#0a6ec9")}${kpi("money", "נשאר לשלם (כולל מע״מ)", money((tot - paid) * V), `שולם ${money(paid * V)}`, "#f39200")}</div>`;
+  const pipe = `<div class="card"><h2>איפה כל המתקנים עומדים <small>— לחיצה על שלב מציגה את המתקנים שבו · באדום: כמה תקועים</small></h2><div class="pipe">
+    <button class="pst" style="--sc:#9aa7bb" data-a="stg" data-id="_none"><b>${LV.filter(f => !state(f).cur).length}</b><span>טרם התחיל</span><small></small></button>
+    ${ST.map(s => { const a = LV.filter(f => state(f).cur?.id === s.id), n = a.filter(f => state(f).stuck).length; return `<button class="pst" style="--sc:${s.color}" data-a="stg" data-id="${s.id}"><b>${a.length}</b><span>${esc(s.name)}</span><small>${n ? n + " תקועים" : ""}</small></button>`; }).join("")}</div></div>`;
+  const li = (f, extra) => `<button class="li" data-a="fac" data-id="${f.id}"><span class="ic">${TICON[f.type] || "•"}</span><span><b>${esc(f.name)}</b><div class="sub">${esc(f.type)} · ק.ד. ${esc(f.kd || "—")}${f.district ? " · " + esc(f.district) : ""}${cName(f.contractorId) ? " · " + esc(cName(f.contractorId)) : ""}</div></span><span class="end">${extra}</span></button>`;
+  const stuckL = stuck.map(f => [f, state(f)]).sort((a, b) => Math.max(...b[1].flags.map(x => x.d)) - Math.max(...a[1].flags.map(x => x.d)));
+  const W = ui.who || "", byWho = w => stuckL.filter(([, s]) => (s.next?.who || "—") === w), wl = [...new Set(stuckL.map(([, s]) => s.next?.who || "—"))];
+  const stuckCard = `<div class="card"><h2>⏱ מה תקוע ואצל מי <small>${stuck.length} מתקנים</small></h2>
+    ${stuck.length ? `<div class="chips" style="margin-bottom:8px"><button class="chip ${!W ? "on" : ""}" data-a="who" data-id="">הכל<small>${stuck.length}</small></button>${wl.map(w => `<button class="chip ${W === w ? "on" : ""}" data-a="who" data-id="${esc(w)}">אצל ${esc(w)}<small>${byWho(w).length}</small></button>`).join("")}</div>
+      <div class="lst">${stuckL.filter(([, s]) => !W || (s.next?.who || "—") === W).map(([f, s]) => li(f, `<span class="tag gr">אצל ${esc(s.next?.who || "—")}</span><br>` + s.flags.map(x => `<span class="tag r">${esc(x.t)}</span>`).join("<br>"))).join("")}</div>` : `<div class="empty">אין מתקנים תקועים 👍</div>`}</div>`;
+  const gapCard = `<div class="card"><h2>⚠ חוסרים בתהליך <small>${gp.length} מתקנים</small></h2>${gp.length ? `<div class="lst">${gp.map(f => li(f, gaps(f).map(g => `<span class="tag a">${esc(g.t)}</span>`).join(" "))).join("")}</div>` : `<div class="empty">אין חוסרים</div>`}</div>`;
+  const byD = `<div class="card"><h2>לפי נפה <small>מתקנים פעילים · תקועים · כסף</small></h2><div class="tw"><table class="t"><thead><tr><th>נפה</th><th>מתקנים</th><th>תקועים</th><th>חוסרים</th><th>חושמלו</th><th class="num">הזמנות (כולל מע״מ)</th><th class="num">נשאר לשלם</th></tr></thead><tbody>
+    ${[...DISTRICTS, ""].map(dd => { const a = LV.filter(f => (f.district || "") === dd); if (!a.length) return ""; const ids = new Set(a.map(f => f.id)), oo = O.filter(o => ids.has(o.facilityId) || (!o.facilityId && (o.district || "") === dd)), t = oo.reduce((s, o) => s + orderTotal(o), 0), p = oo.reduce((s, o) => s + orderPaid(o), 0);
+      return `<tr><td><b>${esc(dd || "לא שויך")}</b></td><td>${a.length}</td><td>${a.filter(f => state(f).stuck).length || ""}</td><td>${a.filter(f => gaps(f).length).length || ""}</td><td>${a.filter(f => state(f).done.power).length || ""}</td><td class="num">${money(t * V)}</td><td class="num">${money((t - p) * V)}</td></tr>`; }).join("")}</tbody></table></div></div>`;
+  return kp + pipe + `<div class="card"><h2>לאורך הקו — מצפון לדרום <small>כל נקודה = מתקן בצבע השלב שלו · עיגול אדום = תקוע · קו = תט״ז שמזין ארון</small></h2>${strip(LV)}</div>` + `<div class="grid g2">${stuckCard}${gapCard}</div>` + byD;
+}
+/** פס ק.ד.: צפון (ק.ד. גבוה) מימין, דרום משמאל — כמו הקבלנים באתר הראשי */
+function strip(F) {
+  const C = contractors().filter(c => kdN(c.kdFrom) !== null && kdN(c.kdTo) !== null), P = F.filter(f => kdN(f.kd) !== null);
+  const ks = [...C.flatMap(c => [kdN(c.kdFrom), kdN(c.kdTo)]), ...P.map(f => kdN(f.kd))]; if (!ks.length) return `<div class="empty">אין ק.ד. למתקנים</div>`;
+  const hi = Math.max(...ks), lo = Math.min(...ks), W = hi - lo || 1, x = k => ((hi - k) / W * 100);   // אחוז מימין
+  const ST = stages(), lanes = { "ארון שקד": 52, "תט״ז": 30, "חדר טרפו": 40, "אתר איסוף": 18, "העתקת עמוד": 60, "אחר": 60 };
+  const pos = f => ({ r: x(kdN(f.kd)), y: lanes[f.type] ?? 60 });
+  const dots = P.map(f => { const s = state(f), c = s.cur ? s.cur.color : "#b6c2d3", p = pos(f);
+    return `<span class="dot ${TSHAPE[f.type] || ""} ${s.stuck ? "st" : ""}" style="right:${p.r}%;top:${p.y}px;--dc:${c}" data-a="fac" data-id="${f.id}" title="${esc(`${f.name} · ק.ד. ${f.kd}\n${s.cur ? s.cur.name : "טרם התחיל"}${s.flags.map(x => "\n⏱ " + x.t).join("")}`)}"></span>`; }).join("");
+  const lines = P.filter(f => f.type === "תט״ז").flatMap(t => Object.keys(t.feeds || {}).map(id => RAW.facilities[id]).filter(c => c && kdN(c.kd) !== null).map(c => { const a = pos(t), b = pos({ ...c, id: "" });
+    return `<line x1="${100 - a.r}%" y1="${a.y}" x2="${100 - b.r}%" y2="${b.y}" stroke="#7c8fa8" stroke-width="1.4" stroke-dasharray="3 2"/>`; })).join("");
+  const secs = C.map(c => { const a = x(kdN(c.kdFrom)), b = x(kdN(c.kdTo)), r = Math.min(a, b), w = Math.abs(b - a); return `<div class="sec" style="right:${r}%;width:${w}%;--cc:${c.color || "#0a6ec9"}"><b>${esc(c.name)}</b>ק.ד. ${esc(c.kdFrom)}–${esc(c.kdTo)}</div>`; }).join("");
+  const ticks = [hi, ...[0.25, 0.5, 0.75].map(t => Math.round(hi - W * t)), lo].map(k => `<span class="kdl" style="right:${x(k)}%">${Math.round(k)}</span>`).join("");
+  return `<div style="overflow-x:auto"><div style="min-width:760px"><div class="strip"><div class="ln"></div>${ticks}<svg>${lines}</svg>${dots}${secs}</div></div></div>
+    <div class="leg"><span><i style="--dc:#b6c2d3"></i>טרם התחיל</span>${ST.map(s => `<span><i style="--dc:${s.color}"></i>${esc(s.name)}</span>`).join("")}</div>
+    <div class="leg"><span>⚫ ארון שקד / אתר איסוף</span><span>◆ תט״ז</span><span>■ חדר טרפו / העתקת עמוד</span><span>צפון מימין ← דרום משמאל</span></div>`;
+}
+
+/* ---------- מתקנים ---------- */
+function pageFacs() {
+  const F = ui.f, A = list("facilities"), L = facFiltered(), ST = stages();
+  const sel = (k, label, opts) => `<select class="inp sm" data-f="${k}"><option value="">${label}</option>${opts.map(o => { const [v, l] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}" ${F[k] === v ? "selected" : ""}>${esc(l)}</option>`; }).join("")}</select>`;
+  const only = [["", "פעילים"], ["stuck", "⏱ תקועים"], ["gaps", "⚠ חוסרים"], ["inactive", "מוקפאים / בוטלו"], ["all", "הכל"]];
+  return `<div class="card"><div class="flt"><div class="chips">${only.map(([k, l]) => `<button class="chip ${F.only === k ? "on" : ""}" data-a="only" data-id="${k}">${l}</button>`).join("")}</div><span class="spacer"></span>
+      ${sel("type", "כל הסוגים", TYPES.map(t => t[0]))}${sel("dist", "כל הנפות", DISTRICTS)}${sel("cid", "כל הקבלנים", contractors().map(c => [c.id, c.name]))}${sel("stage", "כל השלבים", [["_none", "טרם התחיל"], ...ST.map(s => [s.id, s.name])])}
+      ${canEdit() ? `<button class="btn o" data-a="newFac">+ מתקן</button>` : ""}</div>
+    <div class="muted small" style="margin-bottom:8px">${L.length} מתוך ${A.length} מתקנים · הפס בכל כרטיס = השלבים (${ST.map(s => s.name).join(" ← ")})</div>
+    ${L.length ? `<div class="fcards">${L.map(fCard).join("")}</div>` : `<div class="empty">אין מתקנים בסינון הזה</div>`}</div>`;
+}
+function fCard(f) {
+  const s = state(f), g = gaps(f), M = mainOrders(f), X = facOrders(f).filter(o => o.kind === "מרחק חריג"), ll = lastLog(f), tt = fedBy(f);
+  const num = (v, l) => v ? `<span title="${l}">${esc(v)}</span>` : `<span class="miss" title="${l} חסר">${l} —</span>`;
+  return `<button class="fc" style="--fc:${s.cur?.color || "#b6c2d3"}" data-a="fac" data-id="${f.id}">
+    <div class="h"><span>${TICON[f.type] || "•"}</span><b>${esc(f.name)}</b><span class="k">${esc(f.type)} · ק.ד. ${esc(f.kd || "—")}</span></div>
+    <div class="chain" title="${esc(s.ST.map(x => (s.done[x.id] ? "✓ " : "· ") + x.name).join("\n"))}">${s.ST.map(x => `<i class="${s.done[x.id] ? "d" : s.next?.id === x.id && s.stuck ? "x" : ""}" style="--sc:${x.color}"></i>`).join("")}</div>
+    <div class="row small"><b style="color:${s.cur?.color || "#63708a"}">${live(f) ? (s.cur ? s.cur.name : "טרם התחיל") : esc(f.status)}</b>${s.next && live(f) ? `<span class="muted">← הבא: ${esc(s.next.name)}${f.stages?.[s.next.id]?.target ? ` (יעד ${fmtD(f.stages[s.next.id].target)})` : ""}</span>` : ""}<span class="spacer"></span>${esc(f.district || "")}</div>
+    ${M.length ? M.map(o => `<div class="nums">${num(ef(o, "req880"), "880")}${num(ef(o, "ord444"), "444")}${num(o.iec301, "301")}${N(o.amount) ? `<span>${money(N(o.amount))}</span>` : ""}</div>`).join("") : live(f) && f.type !== "תט״ז" ? `<div class="nums"><span class="miss">אין הזמנה</span></div>` : ""}
+    ${X.length ? `<div class="small muted">+ ${X.length} מרחק חריג: ${X.map(o => esc(o.iec301 || "—")).join(", ")}</div>` : ""}
+    ${f.type === "תט״ז" ? `<div class="small muted">מזין: ${Object.keys(f.feeds || {}).map(id => esc(RAW.facilities[id]?.name || "?")).join(", ") || "—"}</div>` : tt.length ? `<div class="small muted">מוזן מ־${tt.map(t => esc(t.name)).join(", ")}</div>` : ""}
+    ${s.flags.length || g.length ? `<div class="chips">${s.flags.map(x => `<span class="tag r">${esc(x.t)}</span>`).join("")}${g.map(x => `<span class="tag a">${esc(x.t)}</span>`).join("")}</div>` : ""}
+    ${ll ? `<div class="last">📝 ${fmtD(ll.date)} — ${esc(ll.text)}</div>` : ""}</button>`;
+}
+
+/* ---------- חלון מתקן ---------- */
+function facModal(id) {
+  CACHE = {};
+  const f = RAW.facilities[id] ? { id, ...RAW.facilities[id] } : null; if (!f) return;
+  const ed = canEdit(), dis = ed ? "" : "disabled", s = state(f), O = facOrders(f), ST = s.ST;
+  const fld = (k, l, t = "text", opts) => `<label>${l}${opts ? `<select class="inp" data-fe="${k}" ${dis}><option value=""></option>${opts.map(o => { const [v, lb] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}" ${String(f[k] ?? "") === v ? "selected" : ""}>${esc(lb)}</option>`; }).join("")}</select>` : `<input class="inp" type="${t}" data-fe="${k}" value="${esc(f[k] ?? "")}" ${dis}>`}</label>`;
+  const cabs = list("facilities").filter(c => c.type === "ארון שקד" || c.type === "אתר איסוף" || c.type === "חדר טרפו").sort((a, b) => (kdN(b.kd) ?? 0) - (kdN(a.kd) ?? 0));
+  const stRow = (x, i) => { const m = f.stages?.[x.id] || {}, dn = s.done[x.id];
+    return `<div class="stg ${dn ? "d" : ""} ${s.next?.id === x.id && live(f) ? "nx" : ""}" style="--sc:${x.color}"><span class="n">${dn ? "✓" : i + 1}</span>
+      <span><b>${esc(x.name)}</b>${dn?.auto ? `<div class="au">${dn.inf ? "✓ לפי שלב מאוחר יותר" : "✓ אוטומטי מההזמנה"}</div>` : ""}${x.days ? `<div class="small muted">נורמה: ${x.days} ימים</div>` : ""}</span>
+      <label class="small muted">בוצע<input type="date" class="inp sm" data-fs="${x.id}|date" value="${esc(m.date || (dn?.auto ? dn.date : ""))}" ${dis}></label>
+      <label class="small muted">יעד מתואם<input type="date" class="inp sm" data-fs="${x.id}|target" value="${esc(m.target || "")}" ${dis}></label>
+      <input class="inp sm" data-fs="${x.id}|note" value="${esc(m.note || "")}" placeholder="הערה" ${dis}></div>`; };
+  const oRow = o => `<tr><td><select class="ce" data-oe="${o.id}|kind" ${dis}>${ORDER_KINDS.map(k => `<option ${k === (o.kind || "הזמנה") ? "selected" : ""}>${k}</option>`).join("")}</select></td>
+    ${["req880", "ord444", "iec301"].map(k => `<td><input class="ce ltr" data-oe="${o.id}|${k}" value="${esc(o[k] || "")}" ${dis}></td>`).join("")}
+    <td><input class="ce num" data-oe="${o.id}|amount|n" value="${esc(o.amount ?? "")}" ${dis}></td><td>${okT(o, "vAdvDate")}<input type="date" class="ce" data-oe="${o.id}|vAdvDate" value="${esc(o.vAdvDate || "")}" ${dis}></td><td>${okT(o, "advanceDate")}<input type="date" class="ce" data-oe="${o.id}|advanceDate" value="${esc(o.advanceDate || "")}" ${dis}></td>
+    <td>${okT(o, "vFinDate")}<input type="date" class="ce" data-oe="${o.id}|vFinDate" value="${esc(o.vFinDate || "")}" ${dis}></td><td>${okT(o, "completionDate")}<input type="date" class="ce" data-oe="${o.id}|completionDate" value="${esc(o.completionDate || "")}" ${dis}></td><td><input type="date" class="ce" data-oe="${o.id}|validUntil" value="${esc(o.validUntil || "")}" ${dis}></td>
+    <td>${ed && isAdmin() ? `<button class="btn del sm" data-a="delOrd" data-id="${o.id}">✕</button>` : ""}</td></tr>`;
+  const L = Object.entries(f.log || {}).sort((a, b) => String(b[1].date).localeCompare(String(a[1].date)) || String(b[1].at || "").localeCompare(String(a[1].at || "")));
+  const html = `<div class="row" data-fid-keep><h2>${TICON[f.type] || ""} ${esc(f.name)}</h2><span class="tag" style="--tc:${s.cur?.color || "#b6c2d3"};--tt:#fff">${live(f) ? (s.cur ? esc(s.cur.name) : "טרם התחיל") : esc(f.status)}</span><span class="spacer"></span><button class="btn gh" data-a="close">סגירה</button></div>
+    ${s.flags.length || gaps(f).length ? `<div class="chips" style="margin-top:6px">${s.flags.map(x => `<span class="tag r">${esc(x.t)}</span>`).join("")}${gaps(f).map(x => `<span class="tag a">${esc(x.t)}</span>`).join("")}</div>` : ""}
+    <div class="form">${fld("name", "שם")}${fld("type", "סוג", "", TYPES.map(t => t[0]))}${fld("kd", "ק.ד.")}${fld("sec", "חתך")}${fld("district", "נפה", "", DISTRICTS)}${fld("contractorId", "קבלן הגזרה", "", contractors().map(c => [c.id, c.name]))}${fld("place", "מקום / ישוב")}${fld("size", "גודל חיבור")}${fld("status", "מצב", "", ["פעיל", "מוקפא", "בוטל"])}${fld("contact", "איש קשר בחח״י", "", list("contacts").map(c => [c.id, c.name + (c.org ? " · " + c.org : "")]))}</div>
+    ${f.type === "תט״ז" ? `<div class="sec-h">⚡ ארונות שהתט״ז מזין <span class="muted small">(עד 2)</span></div><div class="row">${Object.keys(f.feeds || {}).map(cid => `<span class="tag">${esc(RAW.facilities[cid]?.name || "?")} ${ed ? `<a href="#" data-a="unfeed" data-id="${cid}">✕</a>` : ""}</span>`).join("")}
+      ${ed ? `<select class="inp sm" id="feedSel"><option value="">+ שיוך ארון…</option>${cabs.filter(c => !f.feeds?.[c.id]).map(c => `<option value="${c.id}">${esc(c.name)} · ק.ד. ${esc(c.kd || "")}</option>`).join("")}</select>` : ""}</div>` : fedBy(f).length ? `<p class="small muted">מוזן מתט״ז: ${fedBy(f).map(t => esc(t.name)).join(", ")}</p>` : ""}
+    <div class="sec-h">שלבים <span class="muted small">— תאריך ביצוע, יעד שתואם מול חח״י בישיבת תכנון, והערה. שלבי ההזמנה והתשלום מתמלאים לבד מההזמנה</span></div>${ST.map(stRow).join("")}
+    <div class="sec-h">🧾 הזמנות ותשלומים ${ed ? `<button class="btn sm" data-a="addOrd">+ הזמנה</button><button class="btn gh sm" data-a="addExc">+ מרחק חריג</button>` : ""}</div>
+    ${O.length ? `<div class="tw"><table class="t"><thead><tr><th>סוג</th><th>880</th><th>444</th><th>301</th><th class="num">סכום לפני מע״מ</th><th>שובר מקדמה</th><th>מקדמה שולמה</th><th>שובר משלים</th><th>משלים שולם</th><th>תוקף שובר</th><th></th></tr></thead><tbody>${O.map(oRow).join("")}</tbody></table></div>` : `<p class="muted">אין הזמנות למתקן הזה</p>`}
+    <div class="sec-h">📝 עדכונים</div>${ed ? `<div class="row" style="margin-bottom:8px"><input type="date" class="inp sm" id="lgD" value="${todayStr()}"><input class="inp" id="lgT" placeholder="מה התחדש (ישיבה, שיחה עם חח״י, החלטה…)" style="flex:1;min-width:220px"><button class="btn" data-a="addLog">הוספה</button></div>` : ""}
+    <div class="log">${L.map(([k, x]) => `<div><b>${fmtD(x.date)}</b>${esc(x.text)} <span class="muted small">${esc(x.by || "")}</span>${ed && isAdmin() ? ` <a href="#" data-a="delLog" data-id="${k}" class="small">מחיקה</a>` : ""}</div>`).join("") || `<span class="muted small">אין עדכונים</span>`}</div>
+    <label class="f" style="margin-top:12px">הערות קבועות<textarea class="inp" data-fe="note" rows="2" ${dis}>${esc(f.note || "")}</textarea></label>
+    ${ed && isAdmin() ? `<div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn del" data-a="delFac">מחיקת המתקן</button></div>` : ""}`;
+  openModal(html, m => {
+    m.dataset.fid = id;
+    m.querySelectorAll("[data-fe]").forEach(e => e.onchange = async () => { await api.update("facilities", id, { [e.dataset.fe]: e.value.trim() }); facModal(id); });
+    m.querySelectorAll("[data-fs]").forEach(e => e.onchange = async () => { const [sid, k] = e.dataset.fs.split("|"), cur = { ...(RAW.facilities[id].stages || {}) }; cur[sid] = { ...(cur[sid] || {}), [k]: e.value || null };
+      Object.keys(cur[sid]).forEach(x => cur[sid][x] === null && delete cur[sid][x]); await api.update("facilities", id, { stages: cur }); facModal(id); });
+    m.querySelectorAll("[data-oe]").forEach(e => e.onchange = async () => { const [oid, k, t] = e.dataset.oe.split("|"); await api.update("orders", oid, { [k]: t === "n" ? (e.value === "" ? "" : N(e.value)) : e.value.trim() }); facModal(id); });
+    const fs = m.querySelector("#feedSel"); if (fs) fs.onchange = async () => { if (!fs.value) return; const cur = { ...(RAW.facilities[id].feeds || {}) }; if (Object.keys(cur).length >= 2 && !confirmBox("לתט״ז כבר משויכים 2 ארונות. להוסיף בכל זאת?")) return; cur[fs.value] = true; await api.update("facilities", id, { feeds: cur }); facModal(id); };
+    m.querySelector("#lgT")?.addEventListener("keydown", e => { if (e.key === "Enter") m.querySelector('[data-a="addLog"]').click(); });
+  });
+}
+const isAdmin = () => PERM === "admin" || LOCAL;
+const okT = (o, k) => !o[k] && o["ok_" + k] ? `<span class="tag g" title="הושלם — בלי תאריך">✓</span>` : "";
+function openModal(html, wire, sm) {
+  const old = document.querySelector(".ov"), keepY = old && html.includes("data-fid-keep") ? old.scrollTop : 0;
+  closeModal(); const ov = document.createElement("div"); ov.className = "ov"; ov.innerHTML = `<div class="mdl ${sm ? "sm" : ""}">${html}</div>`;
+  ov.addEventListener("mousedown", e => { if (e.target === ov) closeModal(); }); document.body.appendChild(ov); wire && wire(ov.firstChild); if (keepY) ov.scrollTop = keepY;
+}
+const closeModal = () => document.querySelectorAll(".ov").forEach(e => e.remove());
+const reopen = () => { const m = document.querySelector(".mdl[data-fid]"); if (m) facModal(m.dataset.fid); };
+const alertBox = t => openModal(`<p>${esc(t)}</p><div class="row"><span class="spacer"></span><button class="btn" data-a="close">סגירה</button></div>`, null, true);
+const confirmBox = t => window.confirm(t);
+function newFacModal() {
+  openModal(`<h2>מתקן חדש</h2><div class="form"><label>סוג<select class="inp" id="nf_t">${TYPES.map(t => `<option>${t[0]}</option>`).join("")}</select></label><label>שם<input class="inp" id="nf_n" placeholder="ארון שקד ק.ד. 757"></label><label>ק.ד.<input class="inp" id="nf_k"></label>
+    <label>נפה<select class="inp" id="nf_d"><option></option>${DISTRICTS.map(d => `<option>${d}</option>`).join("")}</select></label><label>קבלן הגזרה<select class="inp" id="nf_c"><option value=""></option>${contractors().map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label><label>מספר הזמנת חח״י (301) — אם יש<input class="inp ltr" id="nf_o"></label></div>
+    <div class="row"><button class="btn" id="nf_ok">יצירה</button><button class="btn gh" data-a="close">ביטול</button></div>`, m => {
+    m.querySelector("#nf_ok").onclick = async () => { const g = k => m.querySelector(k).value.trim(), name = g("#nf_n") || `${g("#nf_t")} ק.ד. ${g("#nf_k")}`;
+      const fid = await api.add("facilities", { type: g("#nf_t"), name, kd: g("#nf_k"), district: g("#nf_d"), contractorId: g("#nf_c"), status: "פעיל", stages: {} });
+      if (g("#nf_o")) await api.add("orders", { facilityId: fid, kind: "הזמנה", iec301: g("#nf_o"), district: g("#nf_d") }); closeModal(); facModal(fid); };
+  }, true);
+}
+
+/* ---------- הזמנות ותשלומים ---------- */
+function pageOrders() {
+  const F = ui.of, q = F.q.trim().toLowerCase(), V = 1 + VAT(), ed = canEdit(), dis = ed ? "" : "disabled";
+  const fac = o => RAW.facilities[o.facilityId], payOf = o => has(o, "completionDate") ? "משלים שולם" : has(o, "vFinDate") ? "שובר משלים" : has(o, "advanceDate") ? "מקדמה שולמה" : has(o, "vAdvDate") ? "שובר מקדמה" : "לפני שובר";
+  const L = list("orders").filter(o => { const f = fac(o); const dist = f?.district || o.district || "";
+    if (F.dist && dist !== F.dist) return false; if (F.kind && (o.kind || "הזמנה") !== F.kind) return false; if (F.pay && payOf(o) !== F.pay) return false;
+    if (q && ![o.req880, o.ord444, o.iec301, o.parent301, o.note, f?.name, f?.kd].join(" ").toLowerCase().includes(q)) return false; return true; })
+    .sort((a, b) => (kdN(fac(b)?.kd) ?? -1) - (kdN(fac(a)?.kd) ?? -1) || String(a.iec301).localeCompare(String(b.iec301)));
+  const sel = (k, l, opts) => `<select class="inp sm" data-of="${k}"><option value="">${l}</option>${opts.map(o => `<option ${F[k] === o ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+  const facOpts = allF().map(f => [f.id, `${f.name}`]);
+  const inp = (o, k, cls = "", t = "text") => `${t === "date" ? okT(o, k) : ""}<input class="ce ${cls}" type="${t}" data-oe="${o.id}|${k}${cls.includes("num") ? "|n" : ""}" value="${esc(o[k] ?? "")}" ${dis}>`;
+  const sum = k => L.reduce((t, o) => t + N(o[k]), 0), tot = sum("amount"), paid = L.reduce((t, o) => t + orderPaid(o), 0);
+  return `<div class="card"><h2>🧾 הזמנות ותשלומים <small>${L.length} הזמנות · כל תא נערך ישירות · סכומים לפני מע״מ (${S().vat ?? 18}%)</small></h2>
+    <div class="flt"><input class="inp sm" id="oq" data-of="q" value="${esc(F.q)}" placeholder="חיפוש מספר / מתקן…" style="width:200px">${sel("dist", "כל הנפות", DISTRICTS)}${sel("kind", "כל הסוגים", ORDER_KINDS)}${sel("pay", "כל שלבי התשלום", ["לפני שובר", "שובר מקדמה", "מקדמה שולמה", "שובר משלים", "משלים שולם"])}
+      <span class="spacer"></span><button class="btn gh sm" data-a="ordCsv">⬇ אקסל (CSV)</button>${ed ? `<button class="btn o sm" data-a="newOrd">+ הזמנה (גם רק מספר)</button>` : ""}</div>
+    <div class="tw"><table class="t"><thead><tr><th>מתקן</th><th>סוג</th><th>דרישה 880</th><th>הזמנה 444</th><th>הזמנת חח״י 301</th><th>הזמנת אב</th><th class="num">סכום</th><th class="num">מקדמה</th><th>שובר מקדמה</th><th>שולמה</th><th class="num">משלים</th><th>שובר משלים</th><th>שולם</th><th>תוקף שובר</th><th>שלב</th><th>הערה</th>${ed && isAdmin() ? "<th></th>" : ""}</tr></thead><tbody>
+    ${L.map(o => { const f = fac(o), exp = o.validUntil && !has(o, "completionDate") && o.validUntil <= addDays(todayStr(), N(alertCfg().voucher.days));
+      return `<tr><td style="min-width:170px"><select class="ce" data-oe="${o.id}|facilityId" ${dis}><option value="">— בלי מתקן —</option>${facOpts.map(([v, l]) => `<option value="${v}" ${v === o.facilityId ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></td>
+        <td><select class="ce" data-oe="${o.id}|kind" ${dis}>${ORDER_KINDS.map(k => `<option ${k === (o.kind || "הזמנה") ? "selected" : ""}>${k}</option>`).join("")}</select></td>
+        <td>${inp(o, "req880", "ltr")}</td><td>${inp(o, "ord444", "ltr")}</td><td>${inp(o, "iec301", "ltr")}</td><td>${inp(o, "parent301", "ltr")}</td>
+        <td>${inp(o, "amount", "num")}</td><td>${inp(o, "advance", "num")}</td><td>${inp(o, "vAdvDate", "", "date")}</td><td>${inp(o, "advanceDate", "", "date")}</td><td>${inp(o, "completion", "num")}</td><td>${inp(o, "vFinDate", "", "date")}</td><td>${inp(o, "completionDate", "", "date")}</td>
+        <td ${exp ? 'style="background:#fdecea"' : ""}>${inp(o, "validUntil", "", "date")}</td><td><span class="tag ${has(o, "completionDate") ? "g" : has(o, "vFinDate") || has(o, "vAdvDate") ? "a" : "gr"}">${payOf(o)}</span></td><td style="min-width:160px">${inp(o, "note")}</td>
+        ${ed && isAdmin() ? `<td><button class="btn del sm" data-a="delOrd" data-id="${o.id}">✕</button></td>` : ""}</tr>`; }).join("")}</tbody>
+    <tfoot><tr><td colspan="6">סה״כ (${L.length}) · כולל מע״מ: ${money(tot * V)} · שולם: ${money(paid * V)} · נשאר: ${money((tot - paid) * V)}</td><td class="num">${money(tot)}</td><td class="num">${money(sum("advance"))}</td><td></td><td></td><td class="num">${money(sum("completion"))}</td><td colspan="${ed && isAdmin() ? 6 : 5}"></td></tr></tfoot></table></div></div>`;
+}
+function ordCsv() {
+  const fac = o => RAW.facilities[o.facilityId], H = ["מתקן", "סוג מתקן", "ק.ד.", "נפה", "סוג הזמנה", "880", "444", "301", "הזמנת אב", "סכום", "מקדמה", "שובר מקדמה", "מקדמה שולמה", "משלים", "שובר משלים", "משלים שולם", "תוקף שובר", "הערה"];
+  const R = list("orders").map(o => { const f = fac(o) || {}; return [f.name, f.type, f.kd, f.district || o.district, o.kind, o.req880, o.ord444, o.iec301, o.parent301, o.amount, o.advance, o.vAdvDate, o.advanceDate, o.completion, o.vFinDate, o.completionDate, o.validUntil, o.note]; });
+  download(`הזמנות-חחי-${todayStr()}.csv`, toCsv([H, ...R]), "text/csv");
+}
+const toCsv = rows => "﻿" + rows.map(r => r.map(v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }).join(",")).join("\r\n");
+const download = (name, text, type) => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: type + ";charset=utf-8" })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
+function newOrdModal() {
+  openModal(`<h2>הזמנה חדשה</h2><p class="small muted" style="margin:0">אפשר לרשום רק מספר — ולהשלים את השאר ואת המתקן אחר כך.</p><div class="form">
+    <label>מספר הזמנת חח״י (301)<input class="inp ltr" id="no_301"></label><label>הזמנת משהב״ט (444)<input class="inp ltr" id="no_444"></label><label>דרישה (880)<input class="inp ltr" id="no_880"></label>
+    <label>סוג<select class="inp" id="no_k">${ORDER_KINDS.map(k => `<option>${k}</option>`).join("")}</select></label><label>מתקן<select class="inp" id="no_f"><option value="">— אחר כך —</option>${allF().map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join("")}</select></label><label>סכום לפני מע״מ<input class="inp" id="no_a"></label></div>
+    <div class="row"><button class="btn" id="no_ok">שמירה</button><button class="btn gh" data-a="close">ביטול</button></div>`, m => {
+    m.querySelector("#no_ok").onclick = async () => { const g = k => m.querySelector(k).value.trim(); if (!g("#no_301") && !g("#no_444") && !g("#no_880")) return toast("צריך לפחות מספר אחד");
+      await api.add("orders", { iec301: g("#no_301"), ord444: g("#no_444"), req880: g("#no_880"), kind: g("#no_k"), facilityId: g("#no_f"), amount: g("#no_a") ? N(g("#no_a")) : "" }); closeModal(); toast("ההזמנה נשמרה ✓"); };
+  }, true);
+}
+
+/* ---------- אנשי קשר — כמו אנשי הקשר של גוגל ---------- */
+const AV_CLR = ["#0a6ec9", "#f39200", "#1f8a4c", "#8e5bc2", "#c0392b", "#16808f", "#5b6fb3"];
+const avClr = s => AV_CLR[[...String(s)].reduce((t, c) => t + c.charCodeAt(0), 0) % AV_CLR.length];
+function pageContacts() {
+  const q = ui.cq.trim().toLowerCase(), C = list("contacts").sort((a, b) => String(a.name).localeCompare(String(b.name), "he")), orgs = [...new Set(C.map(c => c.org).filter(Boolean))].sort();
+  const L = C.filter(c => (!ui.corg || c.org === ui.corg) && (!q || [c.name, c.org, c.role, c.district, c.phone, c.phone2, c.email, c.note].join(" ").toLowerCase().includes(q)));
+  return `<div class="card"><h2>👤 אנשי קשר <small>${C.length} אנשי קשר</small></h2>
+    <div class="flt"><input class="inp sm" id="cq" data-cq="1" value="${esc(ui.cq)}" placeholder="חיפוש שם, ארגון, טלפון…" style="width:240px"><div class="chips"><button class="chip ${!ui.corg ? "on" : ""}" data-a="corg" data-id="">הכל</button>${orgs.map(o => `<button class="chip ${ui.corg === o ? "on" : ""}" data-a="corg" data-id="${esc(o)}">${esc(o)}<small>${C.filter(c => c.org === o).length}</small></button>`).join("")}</div>
+      <span class="spacer"></span>${canEdit() ? `<button class="btn gh sm" data-a="ctcImport">⬆ ייבוא מגוגל (CSV)</button>` : ""}<button class="btn gh sm" data-a="ctcExport">⬇ ייצוא לגוגל (CSV)</button>${canEdit() ? `<button class="btn o sm" data-a="ctc" data-id="">+ איש קשר</button>` : ""}</div>
+    ${L.length ? `<div class="ct">${L.map(c => `<div class="cc"><span class="av" style="--ac:${avClr(c.name)}">${esc((c.name || "?").trim().slice(0, 1))}</span>
+      <div class="inf"><b>${esc(c.name)}</b><span>${esc([c.role, c.org].filter(Boolean).join(" · "))}</span><span class="ltr" style="text-align:right">${esc(c.phone || "")}${c.email ? " · " + esc(c.email) : ""}</span>${c.district ? `<span>נפה: ${esc(c.district)}</span>` : ""}</div>
+      <div class="acts">${c.phone ? `<a href="tel:${esc(c.phone)}" title="חיוג">📞</a><a href="https://wa.me/${esc(waNum(c.phone))}" target="_blank" rel="noopener" title="וואטסאפ">💬</a>` : ""}${c.email ? `<a href="mailto:${esc(c.email)}" title="מייל">✉</a>` : ""}<button data-a="ctc" data-id="${c.id}" title="פרטים / עריכה">✎</button></div></div>`).join("")}</div>`
+      : `<div class="empty">${C.length ? "לא נמצא" : "עוד אין אנשי קשר. אפשר להוסיף ידנית או לייבא קובץ CSV מ־Google Contacts (contacts.google.com ← ייצוא ← Google CSV)."}</div>`}</div>`;
+}
+const waNum = p => { let d = String(p).replace(/\D/g, ""); if (d.startsWith("0")) d = "972" + d.slice(1); return d; };
+function ctcModal(id) {
+  const c = id ? { id, ...(RAW.contacts[id] || {}) } : {}, ed = canEdit(), dis = ed ? "" : "disabled";
+  const F = [["name", "שם מלא"], ["org", "ארגון (חח״י, משהב״ט, קבלן…)"], ["role", "תפקיד"], ["district", "נפה / אזור"], ["phone", "טלפון נייד"], ["phone2", "טלפון נוסף"], ["email", "מייל"]];
+  const facs = list("facilities").filter(f => f.contact === id);
+  openModal(`<h2>${id ? esc(c.name) : "איש קשר חדש"}</h2><div class="form">${F.map(([k, l]) => `<label>${l}<input class="inp ${/phone|email/.test(k) ? "ltr" : ""}" id="ct_${k}" value="${esc(c[k] || "")}" ${k === "org" ? 'list="ct_orgs"' : ""} ${dis}></label>`).join("")}</div>
+    <datalist id="ct_orgs">${[...new Set(["חח״י", "משהב״ט", ...list("contacts").map(x => x.org).filter(Boolean)])].map(o => `<option value="${esc(o)}">`).join("")}</datalist>
+    <label class="f">הערות<textarea class="inp" id="ct_note" rows="2" ${dis}>${esc(c.note || "")}</textarea></label>
+    ${facs.length ? `<p class="small muted">איש הקשר של: ${facs.map(f => esc(f.name)).join(", ")}</p>` : ""}
+    <div class="row" style="margin-top:12px">${ed ? `<button class="btn" id="ct_ok">שמירה</button>` : ""}<button class="btn gh" data-a="close">סגירה</button><span class="spacer"></span>${id && ed && isAdmin() ? `<button class="btn del" id="ct_del">מחיקה</button>` : ""}</div>`, m => {
+    const ok = m.querySelector("#ct_ok"); if (ok) ok.onclick = async () => { const v = Object.fromEntries([...F.map(f => f[0]), "note"].map(k => [k, m.querySelector("#ct_" + k).value.trim()])); if (!v.name) return toast("חסר שם");
+      if (id) await api.update("contacts", id, v); else await api.add("contacts", v); closeModal(); toast("נשמר ✓"); };
+    const dl = m.querySelector("#ct_del"); if (dl) dl.onclick = async () => { if (dl.dataset.s) { await api.remove("contacts", id); closeModal(); } else { dl.dataset.s = 1; dl.textContent = "ללחוץ שוב למחיקה"; } };
+  }, true);
+}
+/** CSV: מפרק שדות במרכאות (כולל ירידות שורה בתוך שדה) */
+function parseCsv(t) { const R = []; let row = [], f = "", q = false; t = t.replace(/^﻿/, "");
+  for (let i = 0; i < t.length; i++) { const ch = t[i];
+    if (q) { if (ch === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; }
+    else if (ch === '"') q = true; else if (ch === ",") { row.push(f); f = ""; } else if (ch === "\n" || ch === "\r") { if (ch === "\r" && t[i + 1] === "\n") i++; row.push(f); R.push(row); row = []; f = ""; } else f += ch; }
+  if (f || row.length) { row.push(f); R.push(row); } return R.filter(r => r.some(x => x.trim())); }
+/** ייבוא מ־Google Contacts: תומך בפורמט החדש (First Name / Organization Name / Phone 1 - Value) ובישן (Name / Organization 1 - Name) וגם בכותרות בעברית */
+function importContacts(text) {
+  const R = parseCsv(text); if (R.length < 2) return alertBox("הקובץ ריק או לא תקין");
+  const H = R[0].map(h => h.trim().toLowerCase()), col = (...names) => { for (const n of names) { const i = H.findIndex(h => h === n.toLowerCase()); if (i >= 0) return i; } for (const n of names) { const i = H.findIndex(h => h.includes(n.toLowerCase())); if (i >= 0) return i; } return -1; };
+  const iName = col("name", "שם"), iFirst = col("first name", "given name", "שם פרטי"), iLast = col("last name", "family name", "שם משפחה"), iOrg = col("organization name", "organization 1 - name", "company", "ארגון", "חברה"),
+    iRole = col("organization title", "organization 1 - title", "job title", "תפקיד"), iMail = col("e-mail 1 - value", "email", "e-mail", "מייל", "דוא"), iPh = col("phone 1 - value", "mobile", "phone", "טלפון", "נייד"), iPh2 = col("phone 2 - value"), iNote = col("notes", "הערות"), iGrp = col("labels", "group membership");
+  const g = (r, i) => i >= 0 ? String(r[i] || "").replace(/\s*:::\s*/g, " / ").trim() : "";
+  const have = new Set(list("contacts").map(c => (c.phone || "").replace(/\D/g, "") || (c.email || "").toLowerCase() || c.name));
+  const rows = R.slice(1).map(r => ({ name: g(r, iName) || [g(r, iFirst), g(r, iLast)].filter(Boolean).join(" "), org: g(r, iOrg), role: g(r, iRole), email: g(r, iMail), phone: g(r, iPh), phone2: g(r, iPh2), note: [g(r, iNote), g(r, iGrp).replace(/\* ?myContacts|\* ?starred/gi, "").replace(/^[ /]+|[ /]+$/g, "")].filter(Boolean).join(" · ") }))
+    .filter(c => c.name || c.phone || c.email).map(c => ({ ...c, name: c.name || c.email || c.phone, dup: have.has(c.phone.replace(/\D/g, "") || c.email.toLowerCase() || c.name) }));
+  openModal(`<h2>ייבוא אנשי קשר</h2><p class="small muted">${rows.length} אנשי קשר בקובץ · ${rows.filter(r => r.dup).length} כבר קיימים (לא יוכנסו שוב). אפשר לבטל סימון למי שלא רלוונטי לפרויקט.</p>
+    <div class="row" style="margin-bottom:6px"><label class="row small"><input type="checkbox" id="ci_all" checked> סימון הכל</label><label class="small">ארגון לכל המסומנים שאין להם: <input class="inp sm" id="ci_org" placeholder="למשל חח״י"></label></div>
+    <div class="tw" style="max-height:50vh"><table class="t"><thead><tr><th></th><th>שם</th><th>ארגון</th><th>תפקיד</th><th>טלפון</th><th>מייל</th></tr></thead><tbody>${rows.map((r, i) => `<tr ${r.dup ? 'style="opacity:.45"' : ""}><td><input type="checkbox" data-ci="${i}" ${r.dup ? "disabled" : "checked"}></td><td>${esc(r.name)}</td><td>${esc(r.org)}</td><td>${esc(r.role)}</td><td class="ltr">${esc(r.phone)}</td><td class="ltr">${esc(r.email)}</td></tr>`).join("")}</tbody></table></div>
+    <div class="row" style="margin-top:10px"><button class="btn" id="ci_ok">ייבוא המסומנים</button><button class="btn gh" data-a="close">ביטול</button></div>`, m => {
+    m.querySelector("#ci_all").onchange = e => m.querySelectorAll("[data-ci]:not([disabled])").forEach(x => x.checked = e.target.checked);
+    m.querySelector("#ci_ok").onclick = async () => { const org = m.querySelector("#ci_org").value.trim(), sel = [...m.querySelectorAll("[data-ci]:checked")].map(x => rows[+x.dataset.ci]);
+      for (const r of sel) { const { dup, ...v } = r; await api.add("contacts", { ...v, org: v.org || org }); } closeModal(); toast(`נוספו ${sel.length} אנשי קשר ✓`); };
+  });
+}
+function exportContacts() {   // פורמט Google CSV — אפשר לייבא חזרה ל-contacts.google.com
+  const H = ["First Name", "Last Name", "Organization Name", "Organization Title", "E-mail 1 - Value", "Phone 1 - Label", "Phone 1 - Value", "Phone 2 - Value", "Notes"];
+  const R = list("contacts").map(c => { const p = String(c.name || "").trim().split(/\s+/); return [p[0] || "", p.slice(1).join(" "), c.org, c.role, c.email, "Mobile", c.phone, c.phone2, [c.district ? "נפה: " + c.district : "", c.note].filter(Boolean).join(" · ")]; });
+  download(`אנשי-קשר-חחי-${todayStr()}.csv`, toCsv([H, ...R]), "text/csv");
+}
+const pickFile = (accept, cb) => { const i = document.createElement("input"); i.type = "file"; i.accept = accept; i.onchange = () => { const f = i.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => cb(r.result, f); r.readAsText(f); }; i.click(); };
+
+/* ---------- דוחות ומצע לדיון ---------- */
+function pageReports() {
+  const R = ui.rep || (ui.rep = { dist: "", kind: "brief", upTo: 30 });
+  return `<div class="card"><h2>📄 דוחות ומצע לדיון</h2>
+    <div class="flt"><label class="f">סוג<select class="inp" data-rp="kind"><option value="brief" ${R.kind === "brief" ? "selected" : ""}>מצע לדיון — פערים מול הנהלת חח״י</option><option value="status" ${R.kind === "status" ? "selected" : ""}>דוח סטטוס מלא — כל המתקנים</option><option value="money" ${R.kind === "money" ? "selected" : ""}>דוח כספי — הזמנות ותשלומים</option></select></label>
+      <label class="f">נפה<select class="inp" data-rp="dist"><option value="">כל הנפות</option>${DISTRICTS.map(d => `<option ${R.dist === d ? "selected" : ""}>${d}</option>`).join("")}</select></label>
+      <label class="f">יעדים קרובים — ימים קדימה<input class="inp" type="number" data-rp="upTo" value="${esc(R.upTo)}" style="width:90px"></label>
+      ${R.kind === "brief" ? `<label class="row small"><input type="checkbox" data-rpc="internal" ${R.internal ? "checked" : ""}> כולל נושאים פנימיים (אצלנו / משהב״ט, מספרים חסרים)</label>` : ""}<span class="spacer"></span>
+      <button class="btn" data-a="repPrint">🖨 הדפסה / PDF</button><button class="btn gh" data-a="repWord">⬇ וורד</button><button class="btn gh" data-a="repCopy">העתקה</button></div>
+    <div class="note">המצע בנוי לבד מהנתונים: מה תקוע ואצל מי, יעדים שעברו, חוסרים בתהליך, שוברים שפגים, יעדים בשבועות הקרובים, והעדכון האחרון בכל מתקן. ממלאים בישיבה — ומעדכנים יעדים חדשים בכרטיס המתקן.</div>
+    <div style="border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff">${repHtml()}</div></div>`;
+}
+function repHtml() {
+  const R = ui.rep, F = list("facilities").filter(f => live(f) && (!R.dist || f.district === R.dist)), V = 1 + VAT(), today = todayStr(), ST = stages();
+  const th = t => `<th style="background:#0b3a6e;color:#fff;text-align:right;padding:5px 7px;border:1px solid #0b3a6e;font-size:10.5pt">${t}</th>`, td = (t, st = "") => `<td style="border:1px solid #cfd8e3;padding:4px 7px;vertical-align:top;font-size:10pt;${st}">${t}</td>`;
+  const tbl = (h, rows) => rows.length ? `<table style="width:100%;border-collapse:collapse;margin:4px 0 12px">${`<tr>${h.map(th).join("")}</tr>`}${rows.join("")}</table>` : `<p style="color:#63708a;margin:2px 0 12px">אין</p>`;
+  const h2 = t => `<h3 style="color:#0b3a6e;border-bottom:3px solid #f39200;padding-bottom:3px;margin:16px 0 6px;font-size:13pt">${t}</h3>`;
+  const nm = f => `<b>${esc(f.name)}</b><br><span style="color:#63708a">${esc(f.type)} · ק.ד. ${esc(f.kd || "—")}</span>`, nums = f => mainOrders(f).map(o => esc(o.iec301 || "—")).join(", ") || "—", ll = f => { const x = lastLog(f); return x ? `${fmtD(x.date)} — ${esc(x.text)}` : ""; };
+  const title = `<h2 style="color:#0b3a6e;margin:0">${R.kind === "brief" ? "מצע לדיון — פערים מול חברת החשמל" : R.kind === "money" ? "דוח כספי — הזמנות חח״י" : "דוח סטטוס — חיבורי חשמל"}</h2><div style="color:#63708a;margin-bottom:8px">${R.dist ? "נפת " + esc(R.dist) : "כל הנפות"} · נכון ל־${fmtD(today)}</div>`;
+  const sumRow = `<table style="width:100%;border-collapse:collapse;margin:6px 0 10px"><tr>${["", "טרם התחיל", ...ST.map(s => s.name), "סה״כ"].map(th).join("")}</tr>${[...(R.dist ? [R.dist] : DISTRICTS)].map(dd => { const a = F.filter(f => f.district === dd); return a.length ? `<tr>${td(`<b>${esc(dd)}</b>`)}${td(a.filter(f => !state(f).cur).length || "", "text-align:center")}${ST.map(s => td(a.filter(f => state(f).cur?.id === s.id).length || "", "text-align:center")).join("")}${td(`<b>${a.length}</b>`, "text-align:center")}</tr>` : ""; }).join("")}</table>`;
+  if (R.kind === "money") { const ids = new Set(F.map(f => f.id)), O = list("orders").filter(o => ids.has(o.facilityId) || (!o.facilityId && (!R.dist || o.district === R.dist)));
+    const t = O.reduce((s, o) => s + orderTotal(o), 0), p = O.reduce((s, o) => s + orderPaid(o), 0);
+    return title + `<p><b>סה״כ הזמנות:</b> ${money(t * V)} כולל מע״מ · <b>שולם:</b> ${money(p * V)} · <b>נשאר לשלם:</b> ${money((t - p) * V)}</p>` + h2("שוברים פתוחים — לתשלום")
+      + tbl(["מתקן", "301", "שובר", "סכום לתשלום (כולל מע״מ)", "תוקף"], O.filter(o => (has(o, "vAdvDate") && !has(o, "advanceDate")) || (has(o, "vFinDate") && !has(o, "completionDate"))).map(o => { const f = RAW.facilities[o.facilityId], adv = has(o, "vAdvDate") && !has(o, "advanceDate");
+        return `<tr>${td(f ? nm(f) : "—")}${td(esc(o.iec301 || ""))}${td(adv ? "מקדמה " + fmtD(o.vAdvDate) : "משלים " + fmtD(o.vFinDate))}${td(money(N(adv ? o.advance : o.completion) * V))}${td(fmtD(o.validUntil), o.validUntil && o.validUntil < today ? "color:#c0392b;font-weight:700" : "")}</tr>`; }))
+      + h2("כל ההזמנות") + tbl(["מתקן", "סוג", "880", "444", "301", "סכום", "שולם", "נשאר"], O.map(o => { const f = RAW.facilities[o.facilityId]; return `<tr>${td(f ? nm(f) : "—")}${td(esc(o.kind || "הזמנה"))}${td(esc(o.req880 || ""))}${td(esc(o.ord444 || ""))}${td(esc(o.iec301 || ""))}${td(money(orderTotal(o)))}${td(money(orderPaid(o)))}${td(money(orderTotal(o) - orderPaid(o)))}</tr>`; }));
+  }
+  if (R.kind === "status") return title + sumRow + h2("כל המתקנים") + tbl(["מתקן", "שלב", "הבא / יעד", "הזמנות 301", "עדכון אחרון"], F.sort((a, b) => (kdN(b.kd) ?? 0) - (kdN(a.kd) ?? 0)).map(f => { const s = state(f); return `<tr>${td(nm(f))}${td(s.cur ? esc(s.cur.name) : "טרם התחיל")}${td(s.next ? esc(s.next.name) + (f.stages?.[s.next.id]?.target ? " · " + fmtD(f.stages[s.next.id].target) : "") : "✓")}${td(nums(f))}${td(ll(f))}</tr>`; }));
+  const IG = new Set(["voucher", "ttz"]), gp = f => gaps(f).filter(g => R.internal || IG.has(g.k));   // במצע מול חח״י — רק חוסרים שנוגעים לחח״י, אלא אם סומן "כולל פנימיים"
+  const stuck = F.map(f => [f, state(f)]).filter(([, s]) => s.stuck && (R.internal || s.flags.some(x => x.who === "חח״י"))), upTo = addDays(today, N(R.upTo) || 30);
+  const up = F.map(f => [f, state(f)]).filter(([f, s]) => s.next && f.stages?.[s.next.id]?.target && f.stages[s.next.id].target >= today && f.stages[s.next.id].target <= upTo).sort((a, b) => a[0].stages[a[1].next.id].target.localeCompare(b[0].stages[b[1].next.id].target));
+  const byNext = {}; stuck.sort((a, b) => (a[1].next.who === "חח״י" ? 0 : 1) - (b[1].next.who === "חח״י" ? 0 : 1)).forEach(([f, s]) => { const k = `${s.next.name} — אצל ${s.next.who || "—"}`; (byNext[k] = byNext[k] || []).push([f, s]); });
+  return title + `<p style="margin:4px 0"><b>${F.length}</b> מתקנים פעילים · <b style="color:#c0392b">${stuck.length}</b> תקועים · <b style="color:#b07d00">${F.filter(f => gp(f).length).length}</b> עם חוסרים · <b>${up.length}</b> יעדים ב־${N(R.upTo) || 30} הימים הקרובים</p>` + sumRow
+    + h2("1. מה תקוע — לפי השלב שממתינים לו") + (Object.keys(byNext).length ? Object.entries(byNext).map(([k, a]) => `<div style="font-weight:700;margin:8px 0 2px">ממתינים ל${esc(k)} (${a.length})</div>` + tbl(["מתקן", "הזמנה 301", "כמה זמן / יעד", "עדכון אחרון", "סוכם בישיבה"], a.map(([f, s]) => `<tr>${td(nm(f))}${td(nums(f))}${td(s.flags.map(x => esc(x.t)).join("<br>"), "color:#c0392b")}${td(ll(f))}${td("&nbsp;", "width:22%")}</tr>`))).join("") : `<p style="color:#63708a">אין</p>`)
+    + h2("2. חוסרים בתהליך") + tbl(["מתקן", "חוסר", "סוכם בישיבה"], F.filter(f => gp(f).length).map(f => `<tr>${td(nm(f))}${td(gp(f).map(g => esc(g.t)).join("<br>"))}${td("&nbsp;", "width:30%")}</tr>`))
+    + h2(`3. יעדים ב־${N(R.upTo) || 30} הימים הקרובים`) + tbl(["מתקן", "שלב", "יעד", "הערה"], up.map(([f, s]) => `<tr>${td(nm(f))}${td(esc(s.next.name))}${td(fmtD(f.stages[s.next.id].target))}${td(esc(f.stages[s.next.id].note || ""))}</tr>`));
+}
+const repText = () => { const d = document.createElement("div"); d.innerHTML = repHtml(); return d.innerText; };
+
+/* ---------- הגדרות ---------- */
+function pageSettings() {
+  const ST = stages(), A = alertCfg(), ed = canEdit(), adm = isAdmin(), dis = ed ? "" : "disabled", L = S().logos || {};
+  return `<div class="grid g2"><div class="card"><h2>שלבים <small>— הוספה, שינוי שם, סדר, צבע, ומתי מתקן נחשב "תקוע"</small></h2>
+    <p class="small muted" style="margin-top:0">"ימים" = כמה ימים מותר לחכות לשלב הזה מאז שהושלם השלב הקודם — אחרי זה המתקן "תקוע" (0 = בלי). "אצל מי" — מי אמור לבצע את השלב. "סוגים" — לאילו מתקנים השלב רלוונטי. שלבים עם ✦ מתמלאים לבד מההזמנה.</p>
+    <div id="stEd">${ST.map((s, i) => ` <div class="set-st"><span class="muted">${s.auto ? "✦" : i + 1}</span><input class="inp sm" data-se="${i}|name" value="${esc(s.name)}" ${dis}><input class="inp sm" type="number" data-se="${i}|days" value="${esc(s.days ?? 0)}" title="ימים עד תקוע" ${dis}><input type="color" data-se="${i}|color" value="${esc(s.color)}" style="height:32px;width:100%" ${dis}>
+      <select class="inp sm" data-se="${i}|who" title="אצל מי השלב" ${dis}>${WHO.map(w => `<option ${w === (s.who || "") ? "selected" : ""}>${w}</option>`).join("")}</select>
+      <details><summary>${!s.types?.length ? "כל הסוגים" : s.types.length + " סוגים"}</summary>${TYPES.map(t => `<label><input type="checkbox" data-sty="${i}|${t[0]}" ${!s.types?.length || s.types.includes(t[0]) ? "checked" : ""} ${dis}>${t[0]}</label>`).join("")}</details><span class="row" style="gap:2px">${ed ? `<button class="btn gh sm" data-a="stMv" data-id="${i}|-1" ${i ? "" : "disabled"}>↑</button><button class="btn gh sm" data-a="stMv" data-id="${i}|1" ${i < ST.length - 1 ? "" : "disabled"}>↓</button>${s.auto ? "" : `<button class="btn del sm" data-a="stDel" data-id="${i}">✕</button>`}` : ""}</span></div>`).join("")}</div>
+    ${ed ? `<div class="row" style="margin-top:8px"><input class="inp sm" id="stNew" placeholder="שלב חדש (למשל: בדיקת מהנדס)"><button class="btn sm" data-a="stAdd">+ שלב</button><span class="spacer"></span><button class="btn gh sm" data-a="stReset">איפוס לברירת מחדל</button></div>` : ""}</div>
+  <div class="card"><h2>התראות <small>— מה נחשב תקוע / חסר, ואחרי כמה ימים</small></h2>${Object.entries(A).map(([k, a]) => `<div class="row" style="padding:5px 0;border-bottom:1px dashed var(--line)"><label class="row"><input type="checkbox" data-al="${k}|on" ${a.on ? "checked" : ""} ${dis}> ${esc(a.name)}</label><span class="spacer"></span>${"days" in DEF_ALERTS[k] ? `<input class="inp sm" type="number" data-al="${k}|days" value="${esc(a.days)}" style="width:80px" ${dis}> ימים` : ""}</div>`).join("")}
+    <div class="row" style="margin-top:12px"><label class="f">מע״מ (%)<input class="inp sm" type="number" data-sv="vat" value="${esc(S().vat ?? 18)}" style="width:90px" ${dis}></label><label class="f" style="flex:1">כותרת האתר<input class="inp sm" data-sv="title" value="${esc(S().title || "")}" placeholder="חיבורי חשמל — פרויקט המכשול" ${dis}></label></div></div>
+  <div class="card"><h2>לוגואים <small>— מופיעים בראש האתר ובדוחות</small></h2><div class="row">${["a", "b"].map(k => `<div style="text-align:center"><div class="logo" style="justify-content:center;min-width:120px;border:1px dashed #c8d4e3">${L[k] ? `<img src="${esc(L[k])}" alt="">` : `<span class="muted small">אין</span>`}</div>${adm ? `<div class="row" style="justify-content:center;margin-top:4px"><button class="btn gh sm" data-a="logo" data-id="${k}">העלאה</button>${L[k] ? `<button class="btn del sm" data-a="logoDel" data-id="${k}">הסרה</button>` : ""}</div>` : ""}</div>`).join("")}</div>
+    <p class="small muted">מעלים קובץ תמונה (PNG/JPG/SVG) — למשל הלוגו של חברת החשמל והסמל של צה״ל. התמונה נשמרת בנתוני האתר.</p></div>
+  <div class="card"><h2>קבלני הגזרה <small>— לפס לאורך הקו ולסינון</small></h2>${contractors().map(c => `<div class="row small" style="padding:3px 0"><i style="width:12px;height:12px;border-radius:3px;background:${esc(c.color || "#0a6ec9")}"></i><b>${esc(c.name)}</b><span class="muted">ק.ד. ${esc(c.kdFrom)}–${esc(c.kdTo)}</span></div>`).join("") || `<p class="muted">נטען בייבוא מהאתר הראשי</p>`}</div>
+  ${adm ? `<div class="card"><h2>הרשאות <small>— מי רואה ומי עורך באתר הזה</small></h2>${usersBlock()}</div>
+  <div class="card"><h2>ייבוא מהאתר הראשי <small>— הזמנות חח״י, ארונות, תט״זים, חדרי טרפו, אתרי איסוף</small></h2><p class="small">קורא את הנתונים מהאתר הראשי ומציג תצוגה מקדימה לפני שמירה. מתקן שכבר קיים כאן (לפי הפריט / המספר) לא מוכנס שוב — אפשר להריץ שוב בבטחה.</p><button class="btn o" data-a="import">ייבוא — תצוגה מקדימה</button>
+    <p class="small muted">גיבוי של כל נתוני האתר הזה: <a href="#" data-a="backup">הורדת גיבוי (JSON)</a></p></div>` : ""}</div>`;
+}
+function usersBlock() {
+  if (LOCAL) return `<p class="muted small">במצב הדגמה אין משתמשים.</p>`;
+  const U = Object.entries(BRD.users || {}).filter(([, u]) => u.active).sort((a, b) => String(a[1].name).localeCompare(String(b[1].name), "he"));
+  const auto = u => ["סופר מנהל", "מנהל"].includes(u.role) ? "מנהל — תמיד" : u.role === "חיבורי חשמל" ? "עריכה (תפקיד חיבורי חשמל)" : "";
+  return `<p class="small muted" style="margin-top:0">המשתמשים הם אותם משתמשים של האתר הראשי. מנהלים ו"חיבורי חשמל" מקבלים גישה אוטומטית; לכל השאר בוחרים כאן.</p><div class="tw"><table class="t"><thead><tr><th>שם</th><th>מייל</th><th>תפקיד באתר הראשי</th><th>גישה לאתר חח״י</th></tr></thead><tbody>
+    ${U.map(([uid, u]) => `<tr><td><b>${esc(u.name || "")}</b></td><td class="ltr">${esc(u.email || "")}</td><td>${esc(u.role || "")}</td><td>${auto(u) ? `<span class="tag g">${auto(u)}</span>` : `<select class="inp sm" data-up="${uid}"><option value="">אין גישה</option><option value="view" ${u.iec === "view" ? "selected" : ""}>צפייה</option><option value="edit" ${u.iec === "edit" ? "selected" : ""}>עריכה</option></select>`}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ---------- ייבוא מהאתר הראשי ---------- */
+async function loadBorder() {
+  if (LOCAL) { const r = await fetch("data.json?" + Date.now()).catch(() => null); const j = r && r.ok ? await r.json() : null; return j?.data || j || {}; }
+  const out = {}; for (const c of ["iecOrders", "items", "sites", "contractors"]) out[c] = (await fb.database().ref(`${BORDER}/${c}`).get()).val() || {}; return out;
+}
+function buildImport(B) {
+  const F = {}, O = {}, have = new Set(list("facilities").map(f => f.src).filter(Boolean)), haveO = new Set(list("orders").map(o => o.src).filter(Boolean));
+  const items = B.items || {}, sites = B.sites || {}, CT = B.contractors || {};
+  const mainC = it => { const c = CT[it.contractorId]; return c?.kdFrom ? it.contractorId : (it.mainId || it.contractorId || ""); };
+  const TT = { "ארון שקד": "ארון שקד", "תט״ז": "תט״ז", "חדר טרפו": "חדר טרפו" };
+  const addFac = (key, rec) => { if (have.has(key) || F[key]) return F[key]; F[key] = { ...rec, src: key, status: rec.status || "פעיל", stages: rec.stages || {} }; return F[key]; };
+  // 1. פריטים: ארונות שקד, תט״זים, חדרי טרפו
+  for (const [id, it] of Object.entries(items)) { const t = TT[it.kind]; if (!t) continue;
+    const dm = String(it.note || "").match(/נפת (?:ה)?(גליל גולן|עמקים|ירושלים)/);
+    addFac("item:" + id, { type: t, name: /^קו דיווח/.test(it.name || "") || !it.name ? `${t} ק.ד. ${it.kdFrom || ""}` : it.name, kd: it.kdFrom || "", sec: it.x_sec || "", contractorId: mainC(it), coord: it.coord || "", district: dm ? dm[1] : "", note: /שנאי קיים/.test(it.note || "") ? "מוזן משנאי קיים סמוך" : "", _noOrder: true }); }
+  // 2. הזמנות חח״י
+  const STG = { "שובר מקדמה": ["vAdv"], "מקדמה שולמה": ["vAdv", "pAdv"], "שובר משלים": ["vAdv", "pAdv", "vFin"], "משלים שולם": ["vAdv", "pAdv", "vFin", "pFin"] };
+  for (const [oid, o] of Object.entries(B.iecOrders || {})) {
+    const kind = o.kind === "חיבור חריג" ? "מרחק חריג" : o.kind === "הזמנה מרכזת" ? "הזמנה מרכזת" : "הזמנה";
+    let fkey = "";
+    if (kind !== "הזמנה מרכזת") {
+      if (o.itemId && items[o.itemId]) fkey = "item:" + o.itemId;
+      else { fkey = "iec:" + oid; const t = o.kind === "אתר איסוף" ? "אתר איסוף" : o.kind === "העתקת עמוד" ? "העתקת עמוד" : TT[o.kind] || "אחר";
+        const site = t === "אתר איסוף" ? Object.entries(sites).find(([, s]) => s.name && String(o.name || "").includes(s.name)) : null;
+        addFac(fkey, { type: t, name: o.name || o.kd || "", kd: /^\d/.test(o.kd || "") ? o.kd : (site?.[1]?.kd || ""), sec: o.sec || "", siteRef: site?.[0] || "" }); }
+      const f = F[fkey]; if (f) { f._noOrder = false; f.district = f.district || o.district || ""; f.place = f.place || o.place || ""; f.size = f.size || o.size || ""; if (!f.kd && /^\d/.test(o.kd || "")) f.kd = o.kd; if (!f.sec && o.sec) f.sec = o.sec;
+        if (o.stage === "מוקפא") f.status = "מוקפא"; if (o.stage === "בוטל") f.status = "בוטל";
+        if (o.last && kind === "הזמנה") f._log = (f._log || []).concat({ date: (o.stageDate || o.updatedAt || "").slice(0, 10) || todayStr(), text: o.last }); }
+    }
+    if (haveO.has("iec:" + oid)) continue;
+    const st = STG[o.stage] || [], dt = o.stageDate || "";
+    O["iec:" + oid] = { src: "iec:" + oid, _fkey: fkey, kind, iec301: o.orderNo || "", ord444: o.budgetNo || "", req880: "", parent301: o.parentNo || "", amount: N(o.amount) || "", advance: N(o.advance) || "", completion: N(o.completion) || "", district: o.district || "",
+      advanceDate: o.advanceDate || "", completionDate: o.completionDate || "", vAdvDate: o.stage === "שובר מקדמה" ? dt : "", vFinDate: o.stage === "שובר משלים" ? dt : "",
+      ok_advanceDate: !o.advanceDate && st.includes("pAdv"), ok_completionDate: !o.completionDate && st.includes("pFin"), ok_vAdvDate: !(o.stage === "שובר מקדמה" && dt) && st.includes("vAdv"), ok_vFinDate: !(o.stage === "שובר משלים" && dt) && st.includes("vFin"),
+      validUntil: o.validUntil || "", note: [o.note, o.coord ? "נ.צ. " + o.coord : ""].filter(Boolean).join(" · ") };
+  }
+  // 3. אתרי איסוף בלי הזמנת חח״י
+  for (const [sid, s] of Object.entries(sites)) { if (Object.values(F).some(f => f.siteRef === sid)) continue; addFac("site:" + sid, { type: "אתר איסוף", name: s.name || "", kd: s.kd || "", siteRef: sid, district: "", _noOrder: true, _site: true }); }
+  // 4. תט״ז ← ארונות: מתוך ההערה "מזין ארונות שקד 37, 36"
+  for (const f of Object.values(F)) if (f.type === "תט״ז") { const it = items[f.src.slice(5)], m = String(it?.note || "").match(/מזין ארונות? שקד\s*([\d,\s]+)/); if (!m) continue;
+    const nums = m[1].split(/[,\s]+/).filter(Boolean); f._feedNums = nums; }
+  return { F, O, CT };
+}
+async function importModal() {
+  openModal(`<h2>ייבוא מהאתר הראשי</h2><div class="empty">קורא נתונים…</div>`, null, true);
+  let B; try { B = await loadBorder(); } catch (e) { return alertBox("לא הצלחתי לקרוא את האתר הראשי: " + (e?.message || e)); }
+  const { F, O, CT } = buildImport(B), Fa = Object.values(F);
+  const grp = [["withOrd", "מתקנים עם הזמנת חח״י", Fa.filter(f => !f._noOrder)], ["cab", "ארונות שקד בלי הזמנה (עדיין)", Fa.filter(f => f._noOrder && f.type === "ארון שקד")], ["ttz", "תט״זים", Fa.filter(f => f._noOrder && f.type === "תט״ז")],
+    ["tr", "חדרי טרפו בלי הזמנה", Fa.filter(f => f._noOrder && f.type === "חדר טרפו")], ["site", "אתרי איסוף בלי הזמנת חח״י", Fa.filter(f => f._site)]];
+  openModal(`<h2>ייבוא מהאתר הראשי — תצוגה מקדימה</h2><p class="small muted">שום דבר לא נשמר עד הלחיצה על "ייבוא". מה שכבר יובא בעבר — מדולג.</p>
+    ${grp.map(([k, l, a]) => `<label class="row" style="padding:6px 0;border-bottom:1px dashed var(--line)"><input type="checkbox" data-ig="${k}" ${a.length ? "checked" : "disabled"} ${k === "site" ? "" : ""}> <b>${l}</b> <span class="tag">${a.length}</span><span class="small muted">${esc(a.slice(0, 4).map(f => f.name).join(" · "))}${a.length > 4 ? "…" : ""}</span></label>`).join("")}
+    <p class="small"><b>${Object.keys(O).length}</b> הזמנות חח״י יובאו (כולל ${Object.values(O).filter(o => o.kind === "מרחק חריג").length} מרחק חריג ו־${Object.values(O).filter(o => o.kind === "הזמנה מרכזת").length} הזמנות מרכזות). <b>${Object.keys(CT).filter(k => CT[k].kdFrom).length}</b> קבלני גזרה לפס הקו.</p>
+    <p class="small muted">שלב שהושלם באקסל המקורי בלי תאריך יסומן ✓ — אפשר להשלים תאריך אחר כך. מספרי 880 לא היו באתר הראשי — יש להשלים.</p>
+    <div class="row"><button class="btn o" id="im_ok">ייבוא</button><button class="btn gh" data-a="close">ביטול</button></div>`, m => {
+    m.querySelector("#im_ok").onclick = async () => { const on = new Set([...m.querySelectorAll("[data-ig]:checked")].map(x => x.dataset.ig)), b = m.querySelector("#im_ok"); b.disabled = true; b.textContent = "מייבא…";
+      const take = new Set(grp.filter(([k]) => on.has(k)).flatMap(([, , a]) => a.map(f => f.src)));
+      const C = Object.entries(CT).filter(([, c]) => c.kdFrom).map(([id, c], i) => ({ id, name: c.name, kdFrom: c.kdFrom, kdTo: c.kdTo, color: c.color || ["#0a6ec9", "#8e5bc2", "#f39200", "#1f8a4c"][i % 4] }));
+      await api.setSettings({ contractors: C });
+      const idOf = {}; for (const f of Object.values(F)) { if (!take.has(f.src)) continue; const { _noOrder, _site, _log, _feedNums, ...rec } = f; if (_log) rec.log = Object.fromEntries(_log.map(x => [newId(), { ...x, by: "ייבוא" }])); idOf[f.src] = await api.add("facilities", rec); }
+      for (const f of Object.values(F)) if (f._feedNums && idOf[f.src]) { const cabs = list("facilities").filter(c => c.type === "ארון שקד"), feeds = {};
+        f._feedNums.forEach(n => { const c = cabs.find(c => String(c.name).trim() === "ארון שקד " + n); if (c) feeds[c.id] = true; }); if (Object.keys(feeds).length) await api.update("facilities", idOf[f.src], { feeds }); }
+      let n = 0; for (const o of Object.values(O)) { const fid = o._fkey ? idOf[o._fkey] || list("facilities").find(f => f.src === o._fkey)?.id || "" : ""; if (o._fkey && !fid) continue; const { _fkey, ...rec } = o; await api.add("orders", { ...rec, facilityId: fid }); n++; }
+      closeModal(); toast(`יובאו ${Object.keys(idOf).length} מתקנים ו־${n} הזמנות ✓`); ui.tab = "dash"; render(); };
+  });
+}
+
+/* ---------- אירועים ---------- */
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-a]"); if (!b) { if (!e.target.closest(".srch") && ui.gq) { ui.gq = ""; render(); } return; }
+  const a = b.dataset.a, id = b.dataset.id ?? ""; if (b.tagName === "A") e.preventDefault();
+  const fid = document.querySelector(".mdl[data-fid]")?.dataset.fid;
+  if (a === "tab") { ui.tab = id; ui.gq = ""; closeModal(); render(); scrollTo(0, 0); }
+  else if (a === "close") closeModal();
+  else if (a === "fac") { ui.gq = ""; render(); facModal(id); }
+  else if (a === "ord") { ui.gq = ""; ui.tab = "orders"; ui.of.q = RAW.orders[id]?.iec301 || ""; render(); }
+  else if (a === "ctc") { ui.gq = ""; render(); ctcModal(id); }
+  else if (a === "go") { ui.tab = id === "money" ? "orders" : "facs"; ui.f = { type: "", dist: "", stage: "", cid: "", only: { stuck: "stuck", gaps: "gaps", all: "" }[id] ?? "" }; if (id === "power") ui.f.stage = "power"; render(); scrollTo(0, 0); }
+  else if (a === "stg") { ui.tab = "facs"; ui.f = { type: "", dist: "", stage: id, cid: "", only: "" }; render(); scrollTo(0, 0); }
+  else if (a === "only") { ui.f.only = id; render(); }
+  else if (a === "who") { ui.who = id; render(); }
+  else if (a === "newFac") newFacModal();
+  else if (a === "newOrd") newOrdModal();
+  else if (a === "ordCsv") ordCsv();
+  else if (a === "addOrd" || a === "addExc") { const f = RAW.facilities[fid]; await api.add("orders", { facilityId: fid, kind: a === "addExc" ? "מרחק חריג" : "הזמנה", district: f?.district || "" }); reopen(); }
+  else if (a === "delOrd") { if (!b.dataset.s) { b.dataset.s = 1; b.textContent = "שוב?"; return; } await api.remove("orders", id); reopen(); }
+  else if (a === "addLog") { const t = document.getElementById("lgT").value.trim(); if (!t) return; const d = document.getElementById("lgD").value || todayStr();
+    await api.update("facilities", fid, { log: { ...(RAW.facilities[fid].log || {}), [newId()]: { date: d, text: t, by: who(), at: new Date().toISOString() } } }); reopen(); }
+  else if (a === "delLog") { const L = { ...(RAW.facilities[fid].log || {}) }; delete L[id]; await api.update("facilities", fid, { log: L }); reopen(); }
+  else if (a === "unfeed") { const c = { ...(RAW.facilities[fid].feeds || {}) }; delete c[id]; await api.update("facilities", fid, { feeds: c }); reopen(); }
+  else if (a === "delFac") { if (!b.dataset.s) { b.dataset.s = 1; b.textContent = "ללחוץ שוב — המתקן וההזמנות שלו יימחקו"; return; } for (const o of facOrders({ id: fid })) await api.remove("orders", o.id); await api.remove("facilities", fid); closeModal(); }
+  else if (a === "corg") { ui.corg = id; render(); }
+  else if (a === "ctcImport") pickFile(".csv,text/csv", t => importContacts(t));
+  else if (a === "ctcExport") exportContacts();
+  else if (a === "repPrint") { openModal(`<div class="row noprint"><button class="btn" onclick="print()">הדפסה / שמירה כ-PDF</button><button class="btn gh" data-a="close">סגירה</button></div>${repHtml()}`); }
+  else if (a === "repWord") download(`מצע-חחי-${todayStr()}.doc`, `<html><head><meta charset="utf-8"><style>body{font-family:Arial;direction:rtl}</style></head><body dir="rtl">${repHtml()}</body></html>`, "application/msword");
+  else if (a === "repCopy") { try { await navigator.clipboard.writeText(repText()); toast("הועתק ✓"); } catch { alertBox("ההעתקה נחסמה בדפדפן"); } }
+  else if (a === "stMv" || a === "stDel" || a === "stAdd" || a === "stReset") { const ST = stages().map(s => ({ ...s }));
+    if (a === "stMv") { const [i, d] = id.split("|").map(Number); [ST[i], ST[i + d]] = [ST[i + d], ST[i]]; }
+    if (a === "stDel") { const i = +id, n = list("facilities").filter(f => f.stages?.[ST[i].id]?.date).length; if (n && !confirmBox(`השלב מסומן ב־${n} מתקנים. למחוק? (התאריכים נשמרים בנתונים)`)) return; ST.splice(+id, 1); }
+    if (a === "stAdd") { const n = document.getElementById("stNew").value.trim(); if (!n) return; ST.push({ id: "st" + newId(), name: n, color: "#5b6fb3", days: 0 }); }
+    await api.setSettings({ stages: a === "stReset" ? DEF_STAGES : ST }); }
+  else if (a === "logo") pickImg(async url => api.setSettings({ logos: { ...(S().logos || {}), [id]: url } }));
+  else if (a === "logoDel") { const L = { ...(S().logos || {}) }; delete L[id]; await api.setSettings({ logos: L }); }
+  else if (a === "import") importModal();
+  else if (a === "backup") download(`גיבוי-אתר-חחי-${todayStr()}.json`, JSON.stringify({ meta: { app: "border-iec", savedAt: new Date().toISOString(), by: who() }, data: RAW }), "application/json");
+  else if (a === "logout") fb.auth().signOut();
+});
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.id === "gq") { ui.gq = t.value; const box = t.parentElement.querySelector(".srch-res"); const h = searchRes(t.value); if (box) box.outerHTML = h || "<i></i>"; else if (h) t.insertAdjacentHTML("afterend", h); }
+  else if (t.dataset.of === "q") { ui.of.q = t.value; clearTimeout(t._t); t._t = setTimeout(render, 250); }
+  else if (t.dataset.cq) { ui.cq = t.value; clearTimeout(t._t); t._t = setTimeout(render, 200); }
+});
+document.addEventListener("change", async e => {
+  const t = e.target;
+  if (t.dataset.f) { ui.f[t.dataset.f] = t.value; render(); }
+  else if (t.dataset.of && t.dataset.of !== "q") { ui.of[t.dataset.of] = t.value; render(); }
+  else if (t.dataset.oe && !t.closest(".mdl")) { const [oid, k, ty] = t.dataset.oe.split("|"); await api.update("orders", oid, { [k]: ty === "n" ? (t.value === "" ? "" : N(t.value)) : t.value.trim() }); }
+  else if (t.dataset.sty) { const [i, ty] = t.dataset.sty.split("|"), ST = stages().map(s => ({ ...s })), cur = new Set(ST[+i].types?.length ? ST[+i].types : TYPES.map(x => x[0])); t.checked ? cur.add(ty) : cur.delete(ty);
+    ST[+i].types = cur.size === TYPES.length ? [] : [...cur]; await api.setSettings({ stages: ST }); }
+  else if (t.dataset.se) { const [i, k] = t.dataset.se.split("|"), ST = stages().map(s => ({ ...s })); ST[+i][k] = k === "days" ? N(t.value) : t.value; await api.setSettings({ stages: ST }); }
+  else if (t.dataset.al) { const [k, f] = t.dataset.al.split("|"), cur = { ...(S().alerts || {}) }; cur[k] = { ...(cur[k] || {}), [f]: f === "on" ? t.checked : N(t.value) }; await api.setSettings({ alerts: cur }); }
+  else if (t.dataset.sv) await api.setSettings({ [t.dataset.sv]: t.dataset.sv === "vat" ? N(t.value) : t.value.trim() });
+  else if (t.dataset.rp) { ui.rep[t.dataset.rp] = t.value; render(); }
+  else if (t.dataset.rpc) { ui.rep[t.dataset.rpc] = t.checked; render(); }
+  else if (t.dataset.up) { await fb.database().ref(`${BORDER}_access/${t.dataset.up}/iec`).set(t.value || null).catch(fail); toast("ההרשאה עודכנה ✓"); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); if (ui.gq) { ui.gq = ""; render(); } } });
+/** לוגו: מוקטן ל-120 פיקסלים גובה ונשמר כתמונה בנתונים */
+function pickImg(cb) { const i = document.createElement("input"); i.type = "file"; i.accept = "image/*"; i.onchange = () => { const f = i.files[0]; if (!f) return; const r = new FileReader();
+  r.onload = () => { if (/svg/.test(f.type)) return cb(r.result); const im = new Image(); im.onload = () => { const h = Math.min(120, im.height), w = Math.round(im.width * h / im.height), c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(im, 0, 0, w, h); cb(c.toDataURL("image/png")); }; im.src = r.result; }; r.readAsDataURL(f); }; i.click(); }
+
+/* ---------- כניסה ---------- */
+function renderLogin(msg = "") {
+  $app.innerHTML = `<div class="login"><div class="card"><h1>חיבורי חשמל — פרויקט המכשול</h1><p class="muted small" style="margin-top:0">כניסה עם אותו משתמש של האתר הראשי</p>
+    <label class="f">מייל<input class="inp ltr" id="lg_m" autocomplete="username"></label><label class="f" style="margin-top:8px">סיסמה<input class="inp ltr" type="password" id="lg_p" autocomplete="current-password"></label>
+    ${msg ? `<p style="color:var(--warn)">${esc(msg)}</p>` : ""}<button class="btn" id="lg_ok" style="margin-top:12px;width:100%">כניסה</button></div></div>`;
+  const go = async () => { try { await fb.auth().signInWithEmailAndPassword(document.getElementById("lg_m").value.trim(), document.getElementById("lg_p").value); } catch { renderLogin("מייל או סיסמה שגויים"); } };
+  document.getElementById("lg_ok").onclick = go; document.getElementById("lg_p").onkeydown = e => { if (e.key === "Enter") go(); };
+}
+const loadScript = src => new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+async function start() {
+  if (LOCAL) { PERM = "admin"; try { const r = await fetch("iec-data.json?" + Date.now()); if (r.ok) { const j = await r.json(); Object.assign(RAW, j.data || j); } } catch {}
+    try { const s = localStorage.getItem(LKEY); if (s) Object.assign(RAW, JSON.parse(s)); } catch {} COLS.forEach(c => RAW[c] = RAW[c] || {}); return render(); }
+  $app.innerHTML = `<div class="login"><div class="card">טוען…</div></div>`;
+  const base = "https://www.gstatic.com/firebasejs/10.12.2/";
+  await loadScript(base + "firebase-app-compat.js"); await Promise.all([loadScript(base + "firebase-auth-compat.js"), loadScript(base + "firebase-database-compat.js")]);
+  fb = firebase; fb.initializeApp(FIREBASE_CONFIG); let off = [];
+  fb.auth().onAuthStateChanged(async u => {
+    off.forEach(f => f()); off = []; user = u; me = null; PERM = "";
+    if (!u) return renderLogin();
+    const db = fb.database(), meRef = db.ref(`${BORDER}_access/${u.uid}`);
+    const cb = meRef.on("value", s => { const v = s.val(); me = v?.active ? v : null;
+      PERM = !me ? "" : ["סופר מנהל", "מנהל"].includes(me.role) ? "admin" : me.role === "חיבורי חשמל" ? "edit" : me.iec || "";
+      if (!PERM) { $app.innerHTML = `<div class="login"><div class="card"><h1>אין הרשאה</h1><p>המשתמש ${esc(u.email)} עוד לא קיבל גישה לאתר חיבורי החשמל. מנהל נותן גישה מתוך האתר הזה: הגדרות ← הרשאות.</p><button class="btn gh" id="lo">יציאה</button></div></div>`; document.getElementById("lo").onclick = () => fb.auth().signOut(); return; }
+      if (!off.bound) { off.bound = true;
+        const r = db.ref(ROOT), c1 = r.on("value", s2 => { const v2 = s2.val() || {}; COLS.forEach(c => RAW[c] = v2[c] || {}); render(); }, fail); off.push(() => r.off("value", c1));
+        if (PERM === "admin") { const ra = db.ref(`${BORDER}_access`), c2 = ra.on("value", s3 => { BRD.users = s3.val() || {}; if (ui.tab === "settings") render(); }, () => {}); off.push(() => ra.off("value", c2)); } }
+      render(); });
+    off.push(() => meRef.off("value", cb));
+  });
+}
+start();
+</script>
+</body>
+</html>
