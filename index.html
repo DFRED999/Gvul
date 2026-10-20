@@ -435,6 +435,13 @@ body.present .shell { grid-template-columns: minmax(0, 1fr); } body.present .mai
 .ct-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; } .ct-c { display: flex; gap: 12px; align-items: center; background: #fff; border: 1px solid #e3e6df; border-radius: 14px; padding: 10px 12px; }
 .ct-av { flex: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 17px; background: var(--ac); }
 .ct-inf { min-width: 0; flex: 1; } .ct-inf b { display: block; } .ct-inf span { display: block; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-wrap { display: flex; gap: 14px; align-items: flex-start; } .ct-side { width: 230px; flex: none; display: flex; flex-direction: column; gap: 2px; padding: 12px; position: sticky; top: 12px; max-height: 85vh; overflow: auto; margin: 0; }
+.ct-lb { all: unset; cursor: pointer; display: flex; justify-content: space-between; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 14px; } .ct-lb:hover { background: #eef3fa; } .ct-lb.on { background: #d6e4f7; font-weight: 700; color: #1d4f8f; } .ct-lb small { color: var(--muted); }
+.ct-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; } .ct-tag { display: inline-flex; gap: 4px; align-items: center; border: 1px solid #c9d6e8; border-radius: 8px; padding: 0 8px; font-size: 12px; color: #2d4f7c; background: #f5f8fd; white-space: nowrap; } .ct-tag a { text-decoration: none; color: #c0392b; }
+.ct-inf .ct-prof { color: #1d4f8f; font-weight: 700; } .ct-c { align-items: flex-start; } .ct-inf > .ct-acts { margin-top: 6px; } .ct-inf .ct-tags span.ct-tag { display: inline-flex; overflow: visible; font-size: 12px; color: #2d4f7c; } .ct-av.sm { width: 28px; height: 28px; font-size: 13px; display: inline-flex; vertical-align: middle; } .ct-tab td { vertical-align: middle; } .ct-tab .ct-acts a, .ct-tab .ct-acts button { width: 28px; height: 28px; }
+.ct-gh td { background: #eef3fa; font-weight: 800; color: #1d4f8f; } .ct-gh small, .ct-gh3 small { color: var(--muted); font-weight: 400; } .ct-gh3 { margin: 14px 0 8px; color: #1d4f8f; font-size: 16px; }
+.ct-vsw { display: inline-flex; border: 1px solid #cfd5cc; border-radius: 10px; overflow: hidden; } .ct-vsw button { all: unset; cursor: pointer; padding: 6px 12px; font-size: 13.5px; } .ct-vsw button.on { background: #2d6cb8; color: #fff; }
+@media (max-width: 800px) { .ct-wrap { flex-direction: column; } .ct-side { width: auto; position: static; flex-direction: row; flex-wrap: wrap; max-height: none; } }
 .ct-acts { display: flex; gap: 4px; } .ct-acts a, .ct-acts button { all: unset; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #eef3fa; font-size: 15px; } .ct-acts a:hover, .ct-acts button:hover { background: #d9e6f6; }
 tr.w-dsc > td { background: #eef7f0 !important; } tr.w-dsc .w-t { color: #4b6b55; } .btn.w-dsc-on { background: #2e7d4f; color: #fff; border-color: #2e7d4f; }
 .tp-gh { position: sticky; top: 0; z-index: 1; background: #e8f3f5; color: #155e6c; font-weight: 800; font-size: 13px; padding: 4px 10px; border-radius: 8px; margin: 8px 0 4px; } .tp-gh small { font-weight: 400; color: #5f6670; } .tp-row.tp-mv { background: #fff6d6; border-radius: 8px; }
@@ -4816,30 +4823,53 @@ const CT_CLR = ["#2e7d4f", "#2d6cb8", "#c96a12", "#8e5bc2", "#c0392b", "#16808f"
 const ctClr = s => CT_CLR[[...String(s)].reduce((t, c) => t + c.charCodeAt(0), 0) % CT_CLR.length];
 const ctWa = p => { let x = String(p).replace(/\D/g, ""); if (x.startsWith("0")) x = "972" + x.slice(1); return x; };
 const ctOrgOf = c => c.org || RAW.contractors?.[c.contractorId]?.name || "";
+const CT_PROFS = ["מודד", "קונסטרוקטור", "מתכנן כבישים", "אדריכל", "הידרולוג", "יועץ קרקע", "יועץ חשמל", "יועץ תקשורת", "יועץ בטיחות", "אגרונום", "מנהל פרויקט", "מנהל עבודה", "מפקח", "קבלן", "ספק", "עו״ד", "כלכלן"];
+const ctTags = c => Array.isArray(c.tags) ? c.tags.filter(Boolean) : String(c.tags || "").split(/\s*[,;]\s*/).filter(Boolean);
+const ctProfs = () => [...new Set([...CT_PROFS, ...list("contacts").map(c => c.prof).filter(Boolean)])];
 function pageContacts(d) {
-  const F = ui.ct || (ui.ct = { q: "", org: "" }), q = qnNorm(F.q).toLowerCase(), C = list("contacts").sort((a, b) => String(a.name).localeCompare(String(b.name), "he")), orgs = [...new Set(C.map(ctOrgOf).filter(Boolean))].sort((a, b) => a.localeCompare(b, "he"));
-  const L = C.filter(c => (!F.org || ctOrgOf(c) === F.org) && (!q || qnNorm([c.name, ctOrgOf(c), c.role, c.area, c.phone, c.phone2, c.email, c.note].join(" ")).toLowerCase().includes(q)));
-  const ed = !isViewer();
-  return `<div class="ch-banner" style="--cc:#2d6cb8"><div><h1>📇 אנשי קשר</h1><span>${C.length} אנשי קשר · קבלנים, מתכננים, רשויות, משהב״ט, חח״י ועוד</span></div>
+  const F = ui.ct || (ui.ct = { q: "", tag: "", prof: "", grp: "", view: (() => { try { return localStorage.getItem("ct-view") || "cards"; } catch (e) { return "cards"; } })() }), q = qnNorm(F.q).toLowerCase(), C = list("contacts").sort((a, b) => String(a.name).localeCompare(String(b.name), "he"));
+  const tags = [...new Set(C.flatMap(ctTags))].sort((a, b) => a.localeCompare(b, "he")), profs = [...new Set(C.map(c => c.prof).filter(Boolean))].sort((a, b) => a.localeCompare(b, "he"));
+  const L = C.filter(c => (!F.tag || ctTags(c).includes(F.tag)) && (!F.prof || (F.prof === "-" ? !c.prof : c.prof === F.prof)) && (!q || qnNorm([c.name, ctOrgOf(c), c.role, c.prof, c.area, c.phone, c.phone2, c.email, c.note, ...ctTags(c)].join(" ")).toLowerCase().includes(q)));
+  const ed = !isViewer(), tg = t => `<span class="ct-tag">${esc(t)}</span>`;
+  const acts = c => `<div class="ct-acts">${c.phone ? `<a href="tel:${esc(c.phone)}" title="חיוג">📞</a><a href="https://wa.me/${esc(ctWa(c.phone))}" target="_blank" rel="noopener" title="וואטסאפ">💬</a>` : ""}${c.email ? `<a href="mailto:${esc(c.email)}" title="מייל">✉</a>` : ""}<button data-act="ctOpen" data-id="${c.id}" title="פרטים / עריכה">✎</button></div>`;
+  const card = c => `<div class="ct-c"><span class="ct-av" style="--ac:${ctClr(c.name)}">${esc(String(c.name || "?").trim().slice(0, 1))}</span>
+      <div class="ct-inf"><b>${esc(c.name)}</b>${c.prof ? `<span class="ct-prof">${esc(c.prof)}</span>` : ""}<span>${esc([c.role, ctOrgOf(c)].filter(Boolean).join(" · "))}</span><span dir="ltr" style="text-align:right">${esc(c.phone || "")}${c.email ? " · " + esc(c.email) : ""}</span>${ctTags(c).length ? `<div class="ct-tags">${ctTags(c).map(tg).join("")}</div>` : ""}${acts(c)}</div></div>`;
+  const row = c => `<tr><td class="nowrap"><span class="ct-av sm" style="--ac:${ctClr(c.name)}">${esc(String(c.name || "?").trim().slice(0, 1))}</span> <a href="#" data-act="ctOpen" data-id="${c.id}"><b>${esc(c.name)}</b></a></td><td>${esc(c.prof || "")}</td><td>${esc([c.role, ctOrgOf(c)].filter(Boolean).join(", "))}</td>
+      <td dir="ltr" class="nowrap">${c.phone ? `<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : ""}</td><td dir="ltr">${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : ""}</td><td><div class="ct-tags">${ctTags(c).map(tg).join("")}</div></td><td>${acts(c)}</td></tr>`;
+  const gk = c => F.grp === "prof" ? c.prof || "בלי מקצוע" : F.grp === "org" ? ctOrgOf(c) || "בלי ארגון" : "";
+  const groups = F.grp ? [...new Set(L.map(gk))].sort((a, b) => (/^בלי/.test(a) - /^בלי/.test(b)) || a.localeCompare(b, "he")) : [""];
+  const body = !L.length ? `<p class="muted">${C.length ? "לא נמצא" : "עוד אין אנשי קשר. מוסיפים ידנית ב״+ איש קשר״ או מייבאים מ־Google Contacts: contacts.google.com ← ייצוא ← Google CSV."}</p>`
+    : F.view === "list" ? `<div class="tablewrap"><table class="sheet ct-tab"><thead><tr><th>שם</th><th>מקצוע</th><th>תפקיד וארגון</th><th>טלפון</th><th>מייל</th><th>תגיות</th><th></th></tr></thead><tbody>${groups.map(g => `${g ? `<tr class="ct-gh"><td colspan="7">${esc(g)} <small>${L.filter(c => gk(c) === g).length}</small></td></tr>` : ""}${L.filter(c => !g || gk(c) === g).map(row).join("")}`).join("")}</tbody></table></div>`
+    : groups.map(g => `${g ? `<h3 class="ct-gh3">${esc(g)} <small>${L.filter(c => gk(c) === g).length}</small></h3>` : ""}<div class="ct-grid">${L.filter(c => !g || gk(c) === g).map(card).join("")}</div>`).join("");
+  return `<div class="ch-banner" style="--cc:#2d6cb8"><div><h1>📇 אנשי קשר</h1><span>${C.length} אנשי קשר · ${tags.length} תגיות · ${profs.length} מקצועות</span></div>
     <div class="row" style="gap:6px">${ed ? `<button class="btn ghost" data-act="ctImp">⬆ ייבוא מגוגל (CSV)</button>` : ""}<button class="btn ghost" data-act="ctExp">⬇ ייצוא לגוגל (CSV)</button>${ed ? `<button class="btn" data-act="ctOpen" data-id="">+ איש קשר</button>` : ""}</div></div>
-    <div class="card"><div class="row" style="gap:8px;margin-bottom:10px"><input class="inp" data-ctq="1" value="${esc(F.q)}" placeholder="חיפוש שם, ארגון, תפקיד, טלפון…" style="max-width:280px">
-      <div class="ct-chips"><button class="ct-chip ${!F.org ? "on" : ""}" data-act="ctOrg" data-id="">הכל <small>${C.length}</small></button>${orgs.map(o => `<button class="ct-chip ${F.org === o ? "on" : ""}" data-act="ctOrg" data-id="${esc(o)}">${esc(o)} <small>${C.filter(c => ctOrgOf(c) === o).length}</small></button>`).join("")}</div></div>
-    ${L.length ? `<div class="ct-grid">${L.map(c => `<div class="ct-c"><span class="ct-av" style="--ac:${ctClr(c.name)}">${esc(String(c.name || "?").trim().slice(0, 1))}</span>
-      <div class="ct-inf"><b>${esc(c.name)}</b><span>${esc([c.role, ctOrgOf(c)].filter(Boolean).join(" · "))}</span><span dir="ltr" style="text-align:right">${esc(c.phone || "")}${c.email ? " · " + esc(c.email) : ""}</span>${c.area ? `<span>${esc(c.area)}</span>` : ""}</div>
-      <div class="ct-acts">${c.phone ? `<a href="tel:${esc(c.phone)}" title="חיוג">📞</a><a href="https://wa.me/${esc(ctWa(c.phone))}" target="_blank" rel="noopener" title="וואטסאפ">💬</a>` : ""}${c.email ? `<a href="mailto:${esc(c.email)}" title="מייל">✉</a>` : ""}<button data-act="ctOpen" data-id="${c.id}" title="פרטים / עריכה">✎</button></div></div>`).join("")}</div>`
-      : `<p class="muted">${C.length ? "לא נמצא" : "עוד אין אנשי קשר. מוסיפים ידנית ב״+ איש קשר״ או מייבאים מ־Google Contacts: contacts.google.com ← ייצוא ← Google CSV."}</p>`}</div>`;
+    <div class="ct-wrap"><aside class="card ct-side"><b class="small muted">תגיות</b>
+      <button class="ct-lb ${!F.tag ? "on" : ""}" data-act="ctTag" data-id="">כל אנשי הקשר <small>${C.length}</small></button>${tags.map(t => `<button class="ct-lb ${F.tag === t ? "on" : ""}" data-act="ctTag" data-id="${esc(t)}">🏷 ${esc(t)} <small>${C.filter(c => ctTags(c).includes(t)).length}</small></button>`).join("") || `<span class="muted small">עוד אין תגיות</span>`}</aside>
+    <div class="card" style="flex:1;min-width:0"><div class="row" style="gap:8px;margin-bottom:10px"><input class="inp" data-ctq="1" value="${esc(F.q)}" placeholder="חיפוש שם, מקצוע, ארגון, טלפון, תגית…" style="max-width:280px">
+      <select class="inp" data-ctf="prof" style="max-width:190px"><option value="">כל המקצועות</option>${profs.map(x => `<option ${F.prof === x ? "selected" : ""}>${esc(x)}</option>`).join("")}<option value="-" ${F.prof === "-" ? "selected" : ""}>בלי מקצוע</option></select>
+      <select class="inp" data-ctf="grp" style="max-width:170px"><option value="">בלי קיבוץ</option><option value="prof" ${F.grp === "prof" ? "selected" : ""}>קיבוץ לפי מקצוע</option><option value="org" ${F.grp === "org" ? "selected" : ""}>קיבוץ לפי ארגון</option></select>
+      <span class="spacer"></span><span class="muted small">${L.length} מוצגים</span><span class="ct-vsw"><button class="${F.view !== "list" ? "on" : ""}" data-act="ctView" data-id="cards">▦ קוביות</button><button class="${F.view === "list" ? "on" : ""}" data-act="ctView" data-id="list">☰ רשימה</button></span></div>
+    ${body}</div></div>`;
 }
 function ctModal(id) {
-  const c = id ? { id, ...(RAW.contacts?.[id] || {}) } : {}, ed = !isViewer(), dis = ed ? "" : "disabled";
-  const FL = [["name", "שם מלא"], ["org", "ארגון (קבלן, מתכנן, רשות, משהב״ט…)"], ["role", "תפקיד"], ["area", "אזור / גזרה"], ["phone", "טלפון נייד"], ["phone2", "טלפון נוסף"], ["email", "מייל"]];
+  const c = id ? { id, ...(RAW.contacts?.[id] || {}) } : { tags: ui.ct?.tag ? [ui.ct.tag] : [] }, ed = !isViewer(), dis = ed ? "" : "disabled";
+  const FL = [["name", "שם מלא"], ["prof", "מקצוע (מודד, קונסטרוקטור…)"], ["org", "ארגון / חברה"], ["role", "תפקיד"], ["area", "אזור / גזרה"], ["phone", "טלפון נייד"], ["phone2", "טלפון נוסף"], ["email", "מייל"]];
   const orgs = [...new Set(["משהב״ט", "חח״י", "רשות העתיקות", "רט״ג", ...list("contractors").map(x => x.name), ...list("contacts").map(x => x.org).filter(Boolean)])];
-  modal(`<h2 style="margin-top:0">${id ? esc(c.name) : "איש קשר חדש"}</h2><div class="form6">${FL.map(([k, l]) => `<label class="field">${l}<input class="inp" id="ct_${k}" value="${esc(c[k] || "")}" ${/phone|email/.test(k) ? 'dir="ltr"' : ""} ${k === "org" ? 'list="ct_orgs"' : ""} ${dis}></label>`).join("")}
+  let T = ctTags(c); const allT = [...new Set(list("contacts").flatMap(ctTags))];
+  modal(`<h2 style="margin-top:0">${id ? esc(c.name) : "איש קשר חדש"}</h2><div class="form6">${FL.map(([k, l]) => `<label class="field">${l}<input class="inp" id="ct_${k}" value="${esc(c[k] || "")}" ${/phone|email/.test(k) ? 'dir="ltr"' : ""} ${k === "org" ? 'list="ct_orgs"' : k === "prof" ? 'list="ct_profs"' : ""} ${dis}></label>`).join("")}
       <label class="field">קבלן (לא חובה)<select class="inp" id="ct_cid" ${dis}><option value="">—</option>${list("contractors").sort(byNorth).map(x => `<option value="${x.id}" ${x.id === c.contractorId ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label></div>
-    <datalist id="ct_orgs">${orgs.map(o => `<option value="${esc(o)}">`).join("")}</datalist>
+    <datalist id="ct_orgs">${orgs.map(o => `<option value="${esc(o)}">`).join("")}</datalist><datalist id="ct_profs">${ctProfs().map(o => `<option value="${esc(o)}">`).join("")}</datalist><datalist id="ct_tagl">${allT.map(o => `<option value="${esc(o)}">`).join("")}</datalist>
+    <div class="field">🏷 תגיות<div class="row" style="gap:6px" id="ct_tg"></div>${ed ? `<div class="row" style="gap:6px;margin-top:4px"><input class="inp sm" id="ct_tn" list="ct_tagl" placeholder="תגית — למשל גבול ירדן, מתכננים, רשויות" style="flex:1"><button class="btn ghost sm" id="ct_ta">+ תגית</button></div>` : ""}</div>
     <label class="field">הערות<textarea class="inp" id="ct_note" rows="2" ${dis}>${esc(c.note || "")}</textarea></label>
     <div class="row" style="margin-top:12px">${ed ? `<button class="btn" id="mYes">שמירה</button>` : ""}<button class="btn ghost" id="mNo">סגירה</button><span class="spacer"></span>${id && isMgr() ? `<button class="btn del" id="ct_del">מחיקה</button>` : ""}</div>`, (m, close) => {
     m.querySelector("#mNo").onclick = close;
-    const ok = m.querySelector("#mYes"); if (ok) ok.onclick = async () => { const v = Object.fromEntries([...FL.map(f => f[0]), "note"].map(k => [k, m.querySelector("#ct_" + k).value.trim()])); v.contractorId = m.querySelector("#ct_cid").value;
+    const drawT = () => { m.querySelector("#ct_tg").innerHTML = T.map((t, i) => `<span class="ct-tag">${esc(t)}${ed ? ` <a href="#" data-rt="${i}" title="הסרה">✕</a>` : ""}</span>`).join("") || `<span class="muted small">אין</span>`;
+      m.querySelectorAll("[data-rt]").forEach(x => x.onclick = e => { e.preventDefault(); T.splice(+x.dataset.rt, 1); drawT(); }); };
+    drawT();
+    const addT = () => { const i = m.querySelector("#ct_tn"), v = i.value.trim(); if (v && !T.includes(v)) T.push(v); i.value = ""; drawT(); };
+    if (m.querySelector("#ct_ta")) { m.querySelector("#ct_ta").onclick = addT; m.querySelector("#ct_tn").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); addT(); } }; }
+    const ok = m.querySelector("#mYes"); if (ok) ok.onclick = async () => { if (m.querySelector("#ct_tn")?.value.trim()) addT();
+      const v = Object.fromEntries([...FL.map(f => f[0]), "note"].map(k => [k, m.querySelector("#ct_" + k).value.trim()])); v.contractorId = m.querySelector("#ct_cid").value; v.tags = T;
       if (!v.name) return toast("חסר שם"); if (id) await api.update("contacts", id, v); else await api.add("contacts", v); close(); toast("נשמר ✓"); };
     const dl = m.querySelector("#ct_del"); if (dl) dl.onclick = async () => { if (dl.dataset.s) { await api.remove("contacts", id); close(); toast("נמחק"); } else { dl.dataset.s = 1; dl.textContent = "ללחוץ שוב למחיקה"; } };
   });
@@ -4858,29 +4888,31 @@ function ctImport(text) {
     role: col("organization title", "organization 1 - title", "job title", "תפקיד"), email: col("e-mail 1 - value", "email", "e-mail", "מייל", "דוא"), phone: col("phone 1 - value", "mobile", "phone", "טלפון", "נייד"), phone2: col("phone 2 - value"), note: col("notes", "הערות"), grp: col("labels", "group membership") };
   const g = (r, k) => I[k] >= 0 ? String(r[I[k]] || "").replace(/\s*:::\s*/g, " / ").trim() : "";
   const key = c => String(c.phone || "").replace(/\D/g, "") || String(c.email || "").toLowerCase() || c.name, have = new Set(list("contacts").map(key));
-  const rows = R.slice(1).map(r => ({ name: g(r, "name") || [g(r, "first"), g(r, "last")].filter(Boolean).join(" "), org: g(r, "org"), role: g(r, "role"), email: g(r, "email"), phone: g(r, "phone"), phone2: g(r, "phone2"),
-    note: [g(r, "note"), g(r, "grp").replace(/\* ?(myContacts|starred)/gi, "").replace(/^[ /]+|[ /]+$/g, "")].filter(Boolean).join(" · ") })).filter(c => c.name || c.phone || c.email).map(c => ({ ...c, name: c.name || c.email || c.phone })).map(c => ({ ...c, dup: have.has(key(c)) }));
+  const lbl = r => I.grp >= 0 ? String(r[I.grp] || "").split(/\s*:::\s*/).map(x => x.trim()).filter(x => x && !/^\*\s*(myContacts|starred)$/i.test(x) && !/^\*/.test(x)) : [];
+  const rows = R.slice(1).map(r => ({ name: g(r, "name") || [g(r, "first"), g(r, "last")].filter(Boolean).join(" "), org: g(r, "org"), role: g(r, "role"), email: g(r, "email"), phone: g(r, "phone"), phone2: g(r, "phone2"), tags: lbl(r), note: g(r, "note") })).filter(c => c.name || c.phone || c.email).map(c => ({ ...c, name: c.name || c.email || c.phone })).map(c => ({ ...c, dup: have.has(key(c)) }));
   modal(`<h2 style="margin-top:0">ייבוא אנשי קשר</h2><p class="small muted">${rows.length} אנשי קשר בקובץ · ${rows.filter(r => r.dup).length} כבר קיימים ולא יוכנסו שוב. מורידים סימון ממי שלא קשור לפרויקט.</p>
-    <div class="row" style="margin-bottom:6px"><label class="row small"><input type="checkbox" id="ci_all" checked> סימון הכל</label><label class="small">ארגון לכל מי שאין לו: <input class="inp sm" id="ci_org" placeholder="למשל משהב״ט"></label></div>
-    <div class="tablewrap" style="max-height:50vh"><table class="sheet"><thead><tr><th></th><th>שם</th><th>ארגון</th><th>תפקיד</th><th>טלפון</th><th>מייל</th></tr></thead><tbody>${rows.map((r, i) => `<tr ${r.dup ? 'style="opacity:.45"' : ""}><td><input type="checkbox" data-ci="${i}" ${r.dup ? "disabled" : "checked"}></td><td>${esc(r.name)}</td><td>${esc(r.org)}</td><td>${esc(r.role)}</td><td dir="ltr">${esc(r.phone)}</td><td dir="ltr">${esc(r.email)}</td></tr>`).join("")}</tbody></table></div>
+    <div class="row" style="margin-bottom:6px"><label class="row small"><input type="checkbox" id="ci_all" checked> סימון הכל</label><label class="small">ארגון לכל מי שאין לו: <input class="inp sm" id="ci_org" placeholder="למשל משהב״ט"></label><label class="small">תגית לכל המסומנים: <input class="inp sm" id="ci_tag" placeholder="למשל גבול ירדן"></label></div>
+    <div class="tablewrap" style="max-height:50vh"><table class="sheet"><thead><tr><th></th><th>שם</th><th>ארגון</th><th>תפקיד</th><th>טלפון</th><th>מייל</th><th>תגיות</th></tr></thead><tbody>${rows.map((r, i) => `<tr ${r.dup ? 'style="opacity:.45"' : ""}><td><input type="checkbox" data-ci="${i}" ${r.dup ? "disabled" : "checked"}></td><td>${esc(r.name)}</td><td>${esc(r.org)}</td><td>${esc(r.role)}</td><td dir="ltr">${esc(r.phone)}</td><td dir="ltr">${esc(r.email)}</td><td>${r.tags.map(t => `<span class="ct-tag">${esc(t)}</span>`).join("")}</td></tr>`).join("")}</tbody></table></div>
     <div class="row" style="margin-top:10px"><button class="btn" id="mYes">ייבוא המסומנים</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
     m.querySelector("#mNo").onclick = close; m.querySelector("#ci_all").onchange = e => m.querySelectorAll("[data-ci]:not([disabled])").forEach(x => x.checked = e.target.checked);
-    m.querySelector("#mYes").onclick = async () => { const org = m.querySelector("#ci_org").value.trim(), sel = [...m.querySelectorAll("[data-ci]:checked")].map(x => rows[+x.dataset.ci]);
-      for (const r of sel) { const { dup, ...v } = r; await api.add("contacts", { ...v, org: v.org || org, contractorId: "" }); } close(); toast(`נוספו ${sel.length} אנשי קשר ✓`); };
+    m.querySelector("#mYes").onclick = async () => { const org = m.querySelector("#ci_org").value.trim(), tg = m.querySelector("#ci_tag").value.trim(), sel = [...m.querySelectorAll("[data-ci]:checked")].map(x => rows[+x.dataset.ci]);
+      for (const r of sel) { const { dup, ...v } = r; await api.add("contacts", { ...v, org: v.org || org, tags: [...new Set([...v.tags, ...(tg ? [tg] : [])])], contractorId: "" }); } close(); toast(`נוספו ${sel.length} אנשי קשר ✓`); };
   });
 }
 function ctExport() {   // פורמט Google CSV — אפשר לייבא חזרה ל-contacts.google.com
-  const H = ["First Name", "Last Name", "Organization Name", "Organization Title", "E-mail 1 - Value", "Phone 1 - Label", "Phone 1 - Value", "Phone 2 - Value", "Notes"], cell = v => { const x = String(v ?? ""); return /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; };
-  const R = list("contacts").map(c => { const p = String(c.name || "").trim().split(/\s+/); return [p[0] || "", p.slice(1).join(" "), ctOrgOf(c), c.role, c.email, "Mobile", c.phone, c.phone2, [c.area, c.note].filter(Boolean).join(" · ")]; });
+  const H = ["First Name", "Last Name", "Organization Name", "Organization Title", "E-mail 1 - Value", "Phone 1 - Label", "Phone 1 - Value", "Phone 2 - Value", "Notes", "Labels"], cell = v => { const x = String(v ?? ""); return /[",\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x; };
+  const R = list("contacts").map(c => { const p = String(c.name || "").trim().split(/\s+/); return [p[0] || "", p.slice(1).join(" "), ctOrgOf(c), [c.role, c.prof].filter(Boolean).join(" / "), c.email, "Mobile", c.phone, c.phone2, [c.area, c.note].filter(Boolean).join(" · "), ["* myContacts", ...ctTags(c)].join(" ::: ")]; });
   saveFile(`אנשי-קשר-מכשול-${todayStr()}.csv`, new Blob(["" + [H, ...R].map(r => r.map(cell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
 }
 async function ctClick(act, b) {
   const id = b.dataset.id || "";
   if (act === "ctOpen") ctModal(id);
-  else if (act === "ctOrg") { ui.ct.org = id; render(); }
+  else if (act === "ctTag") { ui.ct.tag = id; render(); }
+  else if (act === "ctView") { ui.ct.view = id; try { localStorage.setItem("ct-view", id); } catch (e) {} render(); }
   else if (act === "ctExp") ctExport();
   else if (act === "ctImp") { const i = document.createElement("input"); i.type = "file"; i.accept = ".csv,text/csv"; i.onchange = () => { const f = i.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => ctImport(r.result); r.readAsText(f); }; i.click(); }
 }
+$app.addEventListener("change", e => { const t = e.target; if (!t.dataset?.ctf) return; ui.ct[t.dataset.ctf] = t.value; render(); });
 $app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.ctq) return; ui.ct.q = t.value; clearTimeout(t._tm); t._tm = setTimeout(() => { const pos = t.selectionStart; render(); const n = document.querySelector("[data-ctq]"); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 250); });
 function pageReqs(d) {
   const L = reqTable(d), cn = id => d.contractors.find(c => c.id === id)?.name || "", F = ui.reqF || "all";
