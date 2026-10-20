@@ -1,3 +1,4 @@
+iec.html — 20/10/2026
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -88,13 +89,21 @@ main { padding: 18px 22px 60px; max-width: 1600px; margin: 0 auto; }
 .fc:hover { box-shadow: 0 10px 24px -16px rgba(11,58,110,.7); }
 .fc .h { display: flex; align-items: baseline; gap: 8px; } .fc .h b { font-size: 16px; } .fc .h .k { margin-inline-start: auto; font-size: 12.5px; color: var(--mut); }
 .chain { display: flex; gap: 3px; } .chain i { flex: 1; height: 8px; border-radius: 4px; background: #e3e9f1; } .chain i.d { background: var(--sc); } .chain i.c { background: repeating-linear-gradient(45deg, var(--sc), var(--sc) 4px, #fff 4px, #fff 7px); } .chain i.x { background: #f3c1bb; }
-.fc .nums { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12.5px; } .fc .nums span { background: #f2f5f9; border-radius: 6px; padding: 1px 7px; direction: ltr; } .fc .nums span.miss { background: #fdecea; color: #a3271b; }
+.fc .nums { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12.5px; } .fc .nums span { background: #f2f5f9; border-radius: 6px; padding: 1px 7px; direction: ltr; white-space: nowrap; } .fc .nums span.miss { direction: rtl; } .fc .nums span.miss { background: #fdecea; color: #a3271b; }
 .fc .last { font-size: 13px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* ---- טבלאות ---- */
 .tw { overflow: auto; border: 1px solid var(--line); border-radius: 12px; max-height: 70vh; }
 table.t { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 14px; }
 table.t th { position: sticky; top: 0; background: #eaf1f9; color: var(--navy); text-align: right; padding: 8px; font-weight: 700; border-bottom: 1px solid var(--line); white-space: nowrap; z-index: 1; }
 table.t td { padding: 5px 8px; border-bottom: 1px solid #edf1f6; vertical-align: middle; } table.t tr:hover td { background: #f8fbff; }
+table.t td input.ce.ltr { width: auto; min-width: 12ch; field-sizing: content; text-align: left; font-variant-numeric: tabular-nums; } table.t td input.ce.num { width: auto; min-width: 10ch; field-sizing: content; }
+.vsw { display: inline-flex; border: 1px solid #c8d4e3; border-radius: 10px; overflow: hidden; } .vsw button { all: unset; cursor: pointer; padding: 5px 12px; font-size: 13.5px; } .vsw button.on { background: var(--navy); color: #fff; }
+table.mx { width: 100%; border-collapse: separate; border-spacing: 2px; font-size: 13px; } table.mx th { position: sticky; top: 0; background: #eaf1f9; color: var(--navy); padding: 6px 4px; font-weight: 700; z-index: 1; white-space: normal; min-width: 70px; max-width: 90px; line-height: 1.2; }
+table.mx th.nm, table.mx td.nm { position: sticky; right: 0; background: #fff; text-align: right; min-width: 200px; max-width: 240px; z-index: 2; } table.mx th.nm { z-index: 3; background: #eaf1f9; }
+table.mx td { text-align: center; border-radius: 6px; padding: 5px 3px; background: #eef2f7; cursor: pointer; white-space: nowrap; }
+table.mx td.d { background: var(--sc); color: #fff; font-weight: 700; } table.mx td.nx { background: #fff4e0; outline: 2px solid #f2c48a; color: #8a5a00; font-weight: 700; } table.mx td.x { background: #fde4e1; outline: 2px solid #e7a097; color: #a3271b; font-weight: 700; } table.mx td.na { background: transparent; cursor: default; }
+table.mx td.nm b { display: block; } table.mx td.nm small { color: var(--mut); } table.mx tr.gh td { background: #f4f7fb; text-align: right; font-weight: 800; color: var(--navy); position: sticky; right: 0; }
+table.t tr td select.ce { min-width: 14ch; }
 table.t td input.ce, table.t td select.ce { border: 1px solid transparent; background: transparent; border-radius: 6px; padding: 4px 6px; width: 100%; min-width: 70px; } table.t td input.ce:hover, table.t td select.ce:hover { border-color: #ccd5e1; } table.t td input.ce:focus { border-color: var(--blue); background: #fff; outline: none; }
 table.t td.num, table.t th.num { text-align: left; direction: ltr; } table.t tfoot td { position: sticky; bottom: 0; background: #fff8ec; font-weight: 800; border-top: 2px solid #f2c48a; }
 table.t tr.gh td { background: #f4f7fb; font-weight: 700; color: var(--navy); }
@@ -136,7 +145,7 @@ const LOCAL = !FIREBASE_CONFIG.apiKey;   // בלי apiKey — מצב הדגמה:
 const ROOT = "iec", BORDER = "border", COLS = ["facilities", "orders", "contacts", "settings"];
 let fb = null, user = null, me = null, PERM = "";   // PERM: admin / edit / view
 const RAW = { facilities: {}, orders: {}, contacts: {}, settings: {} }, BRD = {};   // BRD — נתוני האתר הראשי (רק לייבוא ולשמות קבלנים)
-const ui = { tab: "dash", q: "", f: { type: "", dist: "", stage: "", cid: "", only: "" }, of: { dist: "", kind: "", q: "", pay: "" }, cq: "", corg: "" };
+const ui = { fv: (() => { try { return localStorage.getItem("iec-fv") || "cards"; } catch { return "cards"; } })(), tab: "dash", q: "", f: { type: "", dist: "", stage: "", cid: "", only: "" }, of: { dist: "", kind: "", q: "", pay: "" }, cq: "", corg: "" };
 const $app = document.getElementById("app");
 
 /* ---------- כלים ---------- */
@@ -163,9 +172,9 @@ const ORDER_KINDS = ["הזמנה", "מרחק חריג", "הזמנה מרכזת",
 const WHO = ["אצלנו", "משהב״ט", "חח״י", "קבלן"];
 const NO_TTZ = TYPES.map(t => t[0]).filter(t => t !== "תט״ז");   // שלבי הזמנה ותשלום — לא לתט״ז (חח״י מספקת; משלמים על הכבילה בהזמנת הארון)
 const DEF_STAGES = [
-  { id: "s880", name: "דרישה (880)", color: "#7b8ba3", days: 14, auto: "req880", who: "אצלנו", types: NO_TTZ },
-  { id: "s444", name: "הזמנת משהב״ט (444)", color: "#5b6fb3", days: 21, auto: "ord444", who: "משהב״ט", types: NO_TTZ },
-  { id: "s301", name: "הזמנת חח״י (301)", color: "#0a6ec9", days: 30, auto: "iec301", who: "חח״י", types: NO_TTZ },
+  { id: "s880", name: "דרישה", color: "#7b8ba3", days: 14, auto: "req880", who: "אצלנו", types: NO_TTZ },
+  { id: "s444", name: "הזמנת משהב״ט", color: "#5b6fb3", days: 21, auto: "ord444", who: "משהב״ט", types: NO_TTZ },
+  { id: "s301", name: "הזמנת חח״י", color: "#0a6ec9", days: 30, auto: "iec301", who: "חח״י", types: NO_TTZ },
   { id: "vAdv", name: "שובר מקדמה", color: "#2e9bb8", days: 30, auto: "vAdvDate", pay: 1, who: "חח״י", types: NO_TTZ },
   { id: "pAdv", name: "מקדמה שולמה", color: "#1d8f8a", days: 14, auto: "advanceDate", pay: 2, who: "אצלנו", types: NO_TTZ },
   { id: "vFin", name: "שובר משלים", color: "#e0a100", days: 60, auto: "vFinDate", pay: 3, who: "חח״י", types: NO_TTZ },
@@ -175,10 +184,11 @@ const DEF_STAGES = [
   { id: "hand", name: "מסירה", color: "#1b6b3a", days: 30, who: "חח״י" }];
 const DEF_ALERTS = { stuck: { on: true, name: "תקוע בשלב — לפי מספר הימים שהוגדר לכל שלב" }, target: { on: true, name: "עבר תאריך יעד שתואם מול חח״י" },
   voucher: { on: true, days: 10, name: "שובר שתוקפו פג בעוד (ימים)" }, noUpd: { on: true, days: 30, name: "מתקן פעיל בלי עדכון (ימים)" },
-  g444: { on: true, name: "יש הזמנת חח״י (301) בלי הזמנת משהב״ט (444)" }, g880: { on: true, name: "יש 444 בלי דרישה (880)" },
+  g444: { on: true, name: "יש הזמנת חח״י בלי הזמנת משהב״ט" }, g880: { on: true, name: "יש הזמנת משהב״ט בלי דרישה" },
   noOrd: { on: true, days: 0, name: "מתקן בלי אף הזמנה (ימים מהקמה)" }, ttz: { on: true, name: "תט״ז בלי ארונות משויכים / מזין יותר מ־2" } };
 const S = () => RAW.settings || {};
-const stages = () => (Array.isArray(S().stages) && S().stages.length ? S().stages : DEF_STAGES).map(s => ({ ...(DEF_STAGES.find(d => d.id === s.id) || {}), ...s }));
+const OLD_NAMES = { "דרישה (880)": "דרישה", "הזמנת משהב״ט (444)": "הזמנת משהב״ט", "הזמנת חח״י (301)": "הזמנת חח״י" };
+const stages = () => (Array.isArray(S().stages) && S().stages.length ? S().stages : DEF_STAGES).map(s => ({ ...(DEF_STAGES.find(d => d.id === s.id) || {}), ...s, name: OLD_NAMES[s.name] || s.name }));
 const stagesFor = f => stages().filter(s => !Array.isArray(s.types) || !s.types.length || s.types.includes(f.type));
 const alertCfg = () => Object.fromEntries(Object.entries(DEF_ALERTS).map(([k, v]) => [k, { ...v, ...(S().alerts?.[k] || {}) }]));
 const VAT = () => (S().vat ?? 18) / 100;
@@ -241,8 +251,8 @@ function state0(f) {
 function gaps(f) { return memo("g:" + f.id, () => gaps0(f)); }
 function gaps0(f) {
   if (!live(f)) return []; const A = alertCfg(), O = facOrders(f), M = mainOrders(f), out = [], today = todayStr();
-  if (A.g444.on && M.some(o => o.iec301 && !ef(o, "ord444"))) out.push({ k: "g444", t: "יש 301 בלי 444" });
-  if (A.g880.on && M.some(o => ef(o, "ord444") && !ef(o, "req880"))) out.push({ k: "g880", t: "יש 444 בלי דרישה 880" });
+  if (A.g444.on && M.some(o => o.iec301 && !ef(o, "ord444"))) out.push({ k: "g444", t: "חסרה הזמנת משהב״ט" });
+  if (A.g880.on && M.some(o => ef(o, "ord444") && !ef(o, "req880"))) out.push({ k: "g880", t: "חסרה דרישה" });
   if (A.noOrd.on && !O.length && f.type !== "תט״ז" && days((f.createdAt || today).slice(0, 10)) >= N(A.noOrd.days)) out.push({ k: "noOrd", t: "אין הזמנה" });
   if (A.voucher.on) for (const o of O) { if (o.validUntil && !has(o, "completionDate") && o.validUntil >= addDays(today, -365)) { const dl = days(today, o.validUntil); if (dl <= N(A.voucher.days)) out.push({ k: "voucher", t: dl < 0 ? `שובר ${o.iec301 || ""} פג לפני ${-dl} ימים` : `שובר ${o.iec301 || ""} פג בעוד ${dl} ימים` }); } }
   if (A.noUpd.on) { const lu = lastUpd(f); if (days(lu) > N(A.noUpd.days)) out.push({ k: "noUpd", t: `בלי עדכון ${days(lu)} ימים` }); }
@@ -344,18 +354,43 @@ function pageFacs() {
   const only = [["", "פעילים"], ["stuck", "⏱ תקועים"], ["gaps", "⚠ חוסרים"], ["inactive", "מוקפאים / בוטלו"], ["all", "הכל"]];
   return `<div class="card"><div class="flt"><div class="chips">${only.map(([k, l]) => `<button class="chip ${F.only === k ? "on" : ""}" data-a="only" data-id="${k}">${l}</button>`).join("")}</div><span class="spacer"></span>
       ${sel("type", "כל הסוגים", TYPES.map(t => t[0]))}${sel("dist", "כל הנפות", DISTRICTS)}${sel("cid", "כל הקבלנים", contractors().map(c => [c.id, c.name]))}${sel("stage", "כל השלבים", [["_none", "טרם התחיל"], ...ST.map(s => [s.id, s.name])])}
+      <span class="vsw">${[["cards", "קוביות"], ["table", "טבלה"], ["matrix", "מטריצה"]].map(([k, l]) => `<button class="${(ui.fv || "cards") === k ? "on" : ""}" data-a="fv" data-id="${k}">${l}</button>`).join("")}</span>
       ${canEdit() ? `<button class="btn o" data-a="newFac">+ מתקן</button>` : ""}</div>
-    <div class="muted small" style="margin-bottom:8px">${L.length} מתוך ${A.length} מתקנים · הפס בכל כרטיס = השלבים (${ST.map(s => s.name).join(" ← ")})</div>
-    ${L.length ? `<div class="fcards">${L.map(fCard).join("")}</div>` : `<div class="empty">אין מתקנים בסינון הזה</div>`}</div>`;
+    <div class="muted small" style="margin-bottom:8px">${L.length} מתוך ${A.length} מתקנים · לחיצה על מתקן פותחת אותו לעריכה</div>
+    ${!L.length ? `<div class="empty">אין מתקנים בסינון הזה</div>` : ui.fv === "table" ? facTable(L) : ui.fv === "matrix" ? facMatrix(L) : `<div class="fcards">${L.map(fCard).join("")}</div>`}</div>`;
+}
+/** תצוגת טבלה: שורה לכל מתקן */
+function facTable(L) {
+  const V = 1 + VAT(), nums = (f, k) => mainOrders(f).map(o => ef(o, k)).filter(v => v && v !== true).map(v => `<div class="ltr nowrap">${esc(v)}</div>`).join("") || `<span class="muted">—</span>`;
+  return `<div class="tw"><table class="t"><thead><tr><th>מתקן</th><th>סוג</th><th>ק.ד.</th><th>נפה</th><th>קבלן</th><th>שלב נוכחי</th><th>הבא / יעד</th><th>דרישה</th><th>הזמנת משהב״ט</th><th>הזמנת חח״י</th><th class="num">סכום (כולל מע״מ)</th><th>תקוע / חוסרים</th><th>עדכון אחרון</th></tr></thead><tbody>
+    ${L.map(f => { const s = state(f), g = gaps(f), ll = lastLog(f), t = s.next && f.stages?.[s.next.id]?.target, amt = facOrders(f).reduce((x, o) => x + orderTotal(o), 0);
+      return `<tr data-a="fac" data-id="${f.id}" style="cursor:pointer"><td class="nowrap"><b>${TICON[f.type] || ""} ${esc(f.name)}</b></td><td class="nowrap">${esc(f.type)}</td><td class="nowrap">${esc(f.kd || "")}</td><td class="nowrap">${esc(f.district || "")}</td><td class="nowrap">${esc(cName(f.contractorId))}</td>
+        <td><span class="tag" style="--tc:${s.cur?.color || "#e3e9f1"};--tt:${s.cur ? "#fff" : "#5c6678"}">${live(f) ? (s.cur ? esc(s.cur.name) : "טרם התחיל") : esc(f.status)}</span></td>
+        <td class="small">${s.next && live(f) ? esc(s.next.name) + (t ? `<div class="${t < todayStr() ? "tag r" : "muted"}">יעד ${fmtD(t)}</div>` : "") : ""}</td>
+        <td class="small">${nums(f, "req880")}</td><td class="small">${nums(f, "ord444")}</td><td class="small">${nums(f, "iec301")}</td><td class="num nowrap">${amt ? money(amt * V) : ""}</td>
+        <td>${s.flags.map(x => `<span class="tag r">${esc(x.t)}</span>`).join(" ")} ${g.map(x => `<span class="tag a">${esc(x.t)}</span>`).join(" ")}</td>
+        <td class="small" style="max-width:260px">${ll ? `<b>${fmtD(ll.date)}</b> ${esc(ll.text)}` : ""}</td></tr>`; }).join("")}</tbody></table></div>`;
+}
+/** תצוגת מטריצה: מתקן × שלב — ירוק/צבע = בוצע (תאריך), כתום = הבא, אדום = הבא ותקוע */
+function facMatrix(L) {
+  const ST = stages(), byT = TYPES.map(t => [t[0], L.filter(f => f.type === t[0])]).filter(([, a]) => a.length);
+  const cell = (f, s, x) => { const ap = x.ST.some(y => y.id === s.id); if (!ap) return `<td class="na"></td>`; const d = x.done[s.id], m = f.stages?.[s.id] || {};
+    if (d) return `<td class="d" style="--sc:${s.color}" data-a="fac" data-id="${f.id}" title="${esc(s.name)}: ${d.date ? fmtD(d.date) : "בוצע"}">${d.date ? fmtD(d.date).slice(0, 5) : "✓"}</td>`;
+    if (x.next?.id === s.id && live(f)) return `<td class="${x.stuck ? "x" : "nx"}" data-a="fac" data-id="${f.id}" title="${esc(x.flags.map(y => y.t).join("\n") || "השלב הבא")}">${m.target ? "יעד " + fmtD(m.target).slice(0, 5) : x.stuck ? "תקוע" : "הבא"}</td>`;
+    return `<td data-a="fac" data-id="${f.id}">${m.target ? `<span class="muted">${fmtD(m.target).slice(0, 5)}</span>` : ""}</td>`; };
+  return `<div class="tw"><table class="mx"><thead><tr><th class="nm">מתקן</th>${ST.map(s => `<th style="border-bottom:3px solid ${s.color}">${esc(s.name)}<div class="small muted" style="font-weight:400">אצל ${esc(s.who || "—")}</div></th>`).join("")}</tr></thead><tbody>
+    ${byT.map(([t, a]) => `<tr class="gh"><td colspan="${ST.length + 1}">${TICON[t] || ""} ${t} · ${a.length}</td></tr>${a.map(f => { const x = state(f);
+      return `<tr><td class="nm" data-a="fac" data-id="${f.id}" style="cursor:pointer"><b>${esc(f.name)}</b><small>ק.ד. ${esc(f.kd || "—")}${f.district ? " · " + esc(f.district) : ""}${live(f) ? "" : " · " + esc(f.status)}</small></td>${ST.map(s => cell(f, s, x)).join("")}</tr>`; }).join("")}`).join("")}</tbody></table></div>
+    <div class="leg"><span><i style="--dc:#1d8f8a"></i>בוצע (תאריך)</span><span><i style="--dc:#f2c48a"></i>השלב הבא / יעד</span><span><i style="--dc:#e7a097"></i>הבא ותקוע</span><span>תא ריק = עוד לא · אפור בהיר = לא רלוונטי לסוג</span></div>`;
 }
 function fCard(f) {
   const s = state(f), g = gaps(f), M = mainOrders(f), X = facOrders(f).filter(o => o.kind === "מרחק חריג"), ll = lastLog(f), tt = fedBy(f);
-  const num = (v, l) => v ? `<span title="${l}">${esc(v)}</span>` : `<span class="miss" title="${l} חסר">${l} —</span>`;
+  const num = (v, l) => v ? `<span title="${l}">${esc(v)}</span>` : `<span class="miss">אין ${l}</span>`;
   return `<button class="fc" style="--fc:${s.cur?.color || "#b6c2d3"}" data-a="fac" data-id="${f.id}">
     <div class="h"><span>${TICON[f.type] || "•"}</span><b>${esc(f.name)}</b><span class="k">${esc(f.type)} · ק.ד. ${esc(f.kd || "—")}</span></div>
     <div class="chain" title="${esc(s.ST.map(x => (s.done[x.id] ? "✓ " : "· ") + x.name).join("\n"))}">${s.ST.map(x => `<i class="${s.done[x.id] ? "d" : s.next?.id === x.id && s.stuck ? "x" : ""}" style="--sc:${x.color}"></i>`).join("")}</div>
     <div class="row small"><b style="color:${s.cur?.color || "#63708a"}">${live(f) ? (s.cur ? s.cur.name : "טרם התחיל") : esc(f.status)}</b>${s.next && live(f) ? `<span class="muted">← הבא: ${esc(s.next.name)}${f.stages?.[s.next.id]?.target ? ` (יעד ${fmtD(f.stages[s.next.id].target)})` : ""}</span>` : ""}<span class="spacer"></span>${esc(f.district || "")}</div>
-    ${M.length ? M.map(o => `<div class="nums">${num(ef(o, "req880"), "880")}${num(ef(o, "ord444"), "444")}${num(o.iec301, "301")}${N(o.amount) ? `<span>${money(N(o.amount))}</span>` : ""}</div>`).join("") : live(f) && f.type !== "תט״ז" ? `<div class="nums"><span class="miss">אין הזמנה</span></div>` : ""}
+    ${M.length ? M.map(o => `<div class="nums">${num(ef(o, "req880"), "דרישה")}${num(ef(o, "ord444"), "הזמנת משהב״ט")}${num(o.iec301, "הזמנת חח״י")}${N(o.amount) ? `<span>${money(N(o.amount))}</span>` : ""}</div>`).join("") : live(f) && f.type !== "תט״ז" ? `<div class="nums"><span class="miss">אין הזמנה</span></div>` : ""}
     ${X.length ? `<div class="small muted">+ ${X.length} מרחק חריג: ${X.map(o => esc(o.iec301 || "—")).join(", ")}</div>` : ""}
     ${f.type === "תט״ז" ? `<div class="small muted">מזין: ${Object.keys(f.feeds || {}).map(id => esc(RAW.facilities[id]?.name || "?")).join(", ") || "—"}</div>` : tt.length ? `<div class="small muted">מוזן מ־${tt.map(t => esc(t.name)).join(", ")}</div>` : ""}
     ${s.flags.length || g.length ? `<div class="chips">${s.flags.map(x => `<span class="tag r">${esc(x.t)}</span>`).join("")}${g.map(x => `<span class="tag a">${esc(x.t)}</span>`).join("")}</div>` : ""}
@@ -388,7 +423,7 @@ function facModal(id) {
       ${ed ? `<select class="inp sm" id="feedSel"><option value="">+ שיוך ארון…</option>${cabs.filter(c => !f.feeds?.[c.id]).map(c => `<option value="${c.id}">${esc(c.name)} · ק.ד. ${esc(c.kd || "")}</option>`).join("")}</select>` : ""}</div>` : fedBy(f).length ? `<p class="small muted">מוזן מתט״ז: ${fedBy(f).map(t => esc(t.name)).join(", ")}</p>` : ""}
     <div class="sec-h">שלבים <span class="muted small">— תאריך ביצוע, יעד שתואם מול חח״י בישיבת תכנון, והערה. שלבי ההזמנה והתשלום מתמלאים לבד מההזמנה</span></div>${ST.map(stRow).join("")}
     <div class="sec-h">🧾 הזמנות ותשלומים ${ed ? `<button class="btn sm" data-a="addOrd">+ הזמנה</button><button class="btn gh sm" data-a="addExc">+ מרחק חריג</button>` : ""}</div>
-    ${O.length ? `<div class="tw"><table class="t"><thead><tr><th>סוג</th><th>880</th><th>444</th><th>301</th><th class="num">סכום לפני מע״מ</th><th>שובר מקדמה</th><th>מקדמה שולמה</th><th>שובר משלים</th><th>משלים שולם</th><th>תוקף שובר</th><th></th></tr></thead><tbody>${O.map(oRow).join("")}</tbody></table></div>` : `<p class="muted">אין הזמנות למתקן הזה</p>`}
+    ${O.length ? `<div class="tw"><table class="t"><thead><tr><th>סוג</th><th>דרישה</th><th>הזמנת משהב״ט</th><th>הזמנת חח״י</th><th class="num">סכום לפני מע״מ</th><th>שובר מקדמה</th><th>מקדמה שולמה</th><th>שובר משלים</th><th>משלים שולם</th><th>תוקף שובר</th><th></th></tr></thead><tbody>${O.map(oRow).join("")}</tbody></table></div>` : `<p class="muted">אין הזמנות למתקן הזה</p>`}
     <div class="sec-h">📝 עדכונים</div>${ed ? `<div class="row" style="margin-bottom:8px"><input type="date" class="inp sm" id="lgD" value="${todayStr()}"><input class="inp" id="lgT" placeholder="מה התחדש (ישיבה, שיחה עם חח״י, החלטה…)" style="flex:1;min-width:220px"><button class="btn" data-a="addLog">הוספה</button></div>` : ""}
     <div class="log">${L.map(([k, x]) => `<div><b>${fmtD(x.date)}</b>${esc(x.text)} <span class="muted small">${esc(x.by || "")}</span>${ed && isAdmin() ? ` <a href="#" data-a="delLog" data-id="${k}" class="small">מחיקה</a>` : ""}</div>`).join("") || `<span class="muted small">אין עדכונים</span>`}</div>
     <label class="f" style="margin-top:12px">הערות קבועות<textarea class="inp" data-fe="note" rows="2" ${dis}>${esc(f.note || "")}</textarea></label>
@@ -416,7 +451,7 @@ const alertBox = t => openModal(`<p>${esc(t)}</p><div class="row"><span class="s
 const confirmBox = t => window.confirm(t);
 function newFacModal() {
   openModal(`<h2>מתקן חדש</h2><div class="form"><label>סוג<select class="inp" id="nf_t">${TYPES.map(t => `<option>${t[0]}</option>`).join("")}</select></label><label>שם<input class="inp" id="nf_n" placeholder="ארון שקד ק.ד. 757"></label><label>ק.ד.<input class="inp" id="nf_k"></label>
-    <label>נפה<select class="inp" id="nf_d"><option></option>${DISTRICTS.map(d => `<option>${d}</option>`).join("")}</select></label><label>קבלן הגזרה<select class="inp" id="nf_c"><option value=""></option>${contractors().map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label><label>מספר הזמנת חח״י (301) — אם יש<input class="inp ltr" id="nf_o"></label></div>
+    <label>נפה<select class="inp" id="nf_d"><option></option>${DISTRICTS.map(d => `<option>${d}</option>`).join("")}</select></label><label>קבלן הגזרה<select class="inp" id="nf_c"><option value=""></option>${contractors().map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label><label>הזמנת חח״י — אם יש<input class="inp ltr" id="nf_o"></label></div>
     <div class="row"><button class="btn" id="nf_ok">יצירה</button><button class="btn gh" data-a="close">ביטול</button></div>`, m => {
     m.querySelector("#nf_ok").onclick = async () => { const g = k => m.querySelector(k).value.trim(), name = g("#nf_n") || `${g("#nf_t")} ק.ד. ${g("#nf_k")}`;
       const fid = await api.add("facilities", { type: g("#nf_t"), name, kd: g("#nf_k"), district: g("#nf_d"), contractorId: g("#nf_c"), status: "פעיל", stages: {} });
@@ -439,26 +474,26 @@ function pageOrders() {
   return `<div class="card"><h2>🧾 הזמנות ותשלומים <small>${L.length} הזמנות · כל תא נערך ישירות · סכומים לפני מע״מ (${S().vat ?? 18}%)</small></h2>
     <div class="flt"><input class="inp sm" id="oq" data-of="q" value="${esc(F.q)}" placeholder="חיפוש מספר / מתקן…" style="width:200px">${sel("dist", "כל הנפות", DISTRICTS)}${sel("kind", "כל הסוגים", ORDER_KINDS)}${sel("pay", "כל שלבי התשלום", ["לפני שובר", "שובר מקדמה", "מקדמה שולמה", "שובר משלים", "משלים שולם"])}
       <span class="spacer"></span><button class="btn gh sm" data-a="ordCsv">⬇ אקסל (CSV)</button>${ed ? `<button class="btn o sm" data-a="newOrd">+ הזמנה (גם רק מספר)</button>` : ""}</div>
-    <div class="tw"><table class="t"><thead><tr><th>מתקן</th><th>סוג</th><th>דרישה 880</th><th>הזמנה 444</th><th>הזמנת חח״י 301</th><th>הזמנת אב</th><th class="num">סכום</th><th class="num">מקדמה</th><th>שובר מקדמה</th><th>שולמה</th><th class="num">משלים</th><th>שובר משלים</th><th>שולם</th><th>תוקף שובר</th><th>שלב</th><th>הערה</th>${ed && isAdmin() ? "<th></th>" : ""}</tr></thead><tbody>
+    <div class="tw"><table class="t"><thead><tr><th>מתקן</th><th>סוג</th><th>דרישה</th><th>הזמנת משהב״ט</th><th>הזמנת חח״י</th><th>הזמנת אב</th><th class="num">סכום</th><th class="num">מקדמה</th><th>שובר מקדמה</th><th>שולמה</th><th class="num">משלים</th><th>שובר משלים</th><th>שולם</th><th>תוקף שובר</th><th>שלב</th><th>הערה</th>${ed && isAdmin() ? "<th></th>" : ""}</tr></thead><tbody>
     ${L.map(o => { const f = fac(o), exp = o.validUntil && !has(o, "completionDate") && o.validUntil <= addDays(todayStr(), N(alertCfg().voucher.days));
       return `<tr><td style="min-width:170px"><select class="ce" data-oe="${o.id}|facilityId" ${dis}><option value="">— בלי מתקן —</option>${facOpts.map(([v, l]) => `<option value="${v}" ${v === o.facilityId ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></td>
         <td><select class="ce" data-oe="${o.id}|kind" ${dis}>${ORDER_KINDS.map(k => `<option ${k === (o.kind || "הזמנה") ? "selected" : ""}>${k}</option>`).join("")}</select></td>
-        <td>${inp(o, "req880", "ltr")}</td><td>${inp(o, "ord444", "ltr")}</td><td>${inp(o, "iec301", "ltr")}</td><td>${inp(o, "parent301", "ltr")}</td>
+        <td>${inp(o, "req880", "ltr").replace("<input ", `<input placeholder="${esc(o.req880 ? "" : parentOf(o)?.req880 || "")}" title="${!o.req880 && parentOf(o)?.req880 ? "מההזמנה המרכזת" : ""}" `)}</td><td>${inp(o, "ord444", "ltr").replace("<input ", `<input placeholder="${esc(o.ord444 ? "" : parentOf(o)?.ord444 || "")}" title="${!o.ord444 && parentOf(o)?.ord444 ? "מההזמנה המרכזת" : ""}" `)}</td><td>${inp(o, "iec301", "ltr")}</td><td>${inp(o, "parent301", "ltr")}</td>
         <td>${inp(o, "amount", "num")}</td><td>${inp(o, "advance", "num")}</td><td>${inp(o, "vAdvDate", "", "date")}</td><td>${inp(o, "advanceDate", "", "date")}</td><td>${inp(o, "completion", "num")}</td><td>${inp(o, "vFinDate", "", "date")}</td><td>${inp(o, "completionDate", "", "date")}</td>
         <td ${exp ? 'style="background:#fdecea"' : ""}>${inp(o, "validUntil", "", "date")}</td><td><span class="tag ${has(o, "completionDate") ? "g" : has(o, "vFinDate") || has(o, "vAdvDate") ? "a" : "gr"}">${payOf(o)}</span></td><td style="min-width:160px">${inp(o, "note")}</td>
         ${ed && isAdmin() ? `<td><button class="btn del sm" data-a="delOrd" data-id="${o.id}">✕</button></td>` : ""}</tr>`; }).join("")}</tbody>
     <tfoot><tr><td colspan="6">סה״כ (${L.length}) · כולל מע״מ: ${money(tot * V)} · שולם: ${money(paid * V)} · נשאר: ${money((tot - paid) * V)}</td><td class="num">${money(tot)}</td><td class="num">${money(sum("advance"))}</td><td></td><td></td><td class="num">${money(sum("completion"))}</td><td colspan="${ed && isAdmin() ? 6 : 5}"></td></tr></tfoot></table></div></div>`;
 }
 function ordCsv() {
-  const fac = o => RAW.facilities[o.facilityId], H = ["מתקן", "סוג מתקן", "ק.ד.", "נפה", "סוג הזמנה", "880", "444", "301", "הזמנת אב", "סכום", "מקדמה", "שובר מקדמה", "מקדמה שולמה", "משלים", "שובר משלים", "משלים שולם", "תוקף שובר", "הערה"];
+  const fac = o => RAW.facilities[o.facilityId], H = ["מתקן", "סוג מתקן", "ק.ד.", "נפה", "סוג הזמנה", "דרישה", "הזמנת משהב״ט", "הזמנת חח״י", "הזמנת אב", "סכום", "מקדמה", "שובר מקדמה", "מקדמה שולמה", "משלים", "שובר משלים", "משלים שולם", "תוקף שובר", "הערה"];
   const R = list("orders").map(o => { const f = fac(o) || {}; return [f.name, f.type, f.kd, f.district || o.district, o.kind, o.req880, o.ord444, o.iec301, o.parent301, o.amount, o.advance, o.vAdvDate, o.advanceDate, o.completion, o.vFinDate, o.completionDate, o.validUntil, o.note]; });
   download(`הזמנות-חחי-${todayStr()}.csv`, toCsv([H, ...R]), "text/csv");
 }
-const toCsv = rows => "﻿" + rows.map(r => r.map(v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }).join(",")).join("\r\n");
+const toCsv = rows => "" + rows.map(r => r.map(v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }).join(",")).join("\r\n");
 const download = (name, text, type) => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: type + ";charset=utf-8" })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
 function newOrdModal() {
   openModal(`<h2>הזמנה חדשה</h2><p class="small muted" style="margin:0">אפשר לרשום רק מספר — ולהשלים את השאר ואת המתקן אחר כך.</p><div class="form">
-    <label>מספר הזמנת חח״י (301)<input class="inp ltr" id="no_301"></label><label>הזמנת משהב״ט (444)<input class="inp ltr" id="no_444"></label><label>דרישה (880)<input class="inp ltr" id="no_880"></label>
+    <label>הזמנת חח״י<input class="inp ltr" id="no_301"></label><label>הזמנת משהב״ט<input class="inp ltr" id="no_444"></label><label>דרישה<input class="inp ltr" id="no_880"></label>
     <label>סוג<select class="inp" id="no_k">${ORDER_KINDS.map(k => `<option>${k}</option>`).join("")}</select></label><label>מתקן<select class="inp" id="no_f"><option value="">— אחר כך —</option>${allF().map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join("")}</select></label><label>סכום לפני מע״מ<input class="inp" id="no_a"></label></div>
     <div class="row"><button class="btn" id="no_ok">שמירה</button><button class="btn gh" data-a="close">ביטול</button></div>`, m => {
     m.querySelector("#no_ok").onclick = async () => { const g = k => m.querySelector(k).value.trim(); if (!g("#no_301") && !g("#no_444") && !g("#no_880")) return toast("צריך לפחות מספר אחד");
@@ -496,7 +531,7 @@ function ctcModal(id) {
   }, true);
 }
 /** CSV: מפרק שדות במרכאות (כולל ירידות שורה בתוך שדה) */
-function parseCsv(t) { const R = []; let row = [], f = "", q = false; t = t.replace(/^﻿/, "");
+function parseCsv(t) { const R = []; let row = [], f = "", q = false; t = t.replace(/^/, "");
   for (let i = 0; i < t.length; i++) { const ch = t[i];
     if (q) { if (ch === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += ch; }
     else if (ch === '"') q = true; else if (ch === ",") { row.push(f); f = ""; } else if (ch === "\n" || ch === "\r") { if (ch === "\r" && t[i + 1] === "\n") i++; row.push(f); R.push(row); row = []; f = ""; } else f += ch; }
@@ -550,17 +585,17 @@ function repHtml() {
   if (R.kind === "money") { const ids = new Set(F.map(f => f.id)), O = list("orders").filter(o => ids.has(o.facilityId) || (!o.facilityId && (!R.dist || o.district === R.dist)));
     const t = O.reduce((s, o) => s + orderTotal(o), 0), p = O.reduce((s, o) => s + orderPaid(o), 0);
     return title + `<p><b>סה״כ הזמנות:</b> ${money(t * V)} כולל מע״מ · <b>שולם:</b> ${money(p * V)} · <b>נשאר לשלם:</b> ${money((t - p) * V)}</p>` + h2("שוברים פתוחים — לתשלום")
-      + tbl(["מתקן", "301", "שובר", "סכום לתשלום (כולל מע״מ)", "תוקף"], O.filter(o => (has(o, "vAdvDate") && !has(o, "advanceDate")) || (has(o, "vFinDate") && !has(o, "completionDate"))).map(o => { const f = RAW.facilities[o.facilityId], adv = has(o, "vAdvDate") && !has(o, "advanceDate");
+      + tbl(["מתקן", "הזמנת חח״י", "שובר", "סכום לתשלום (כולל מע״מ)", "תוקף"], O.filter(o => (has(o, "vAdvDate") && !has(o, "advanceDate")) || (has(o, "vFinDate") && !has(o, "completionDate"))).map(o => { const f = RAW.facilities[o.facilityId], adv = has(o, "vAdvDate") && !has(o, "advanceDate");
         return `<tr>${td(f ? nm(f) : "—")}${td(esc(o.iec301 || ""))}${td(adv ? "מקדמה " + fmtD(o.vAdvDate) : "משלים " + fmtD(o.vFinDate))}${td(money(N(adv ? o.advance : o.completion) * V))}${td(fmtD(o.validUntil), o.validUntil && o.validUntil < today ? "color:#c0392b;font-weight:700" : "")}</tr>`; }))
-      + h2("כל ההזמנות") + tbl(["מתקן", "סוג", "880", "444", "301", "סכום", "שולם", "נשאר"], O.map(o => { const f = RAW.facilities[o.facilityId]; return `<tr>${td(f ? nm(f) : "—")}${td(esc(o.kind || "הזמנה"))}${td(esc(o.req880 || ""))}${td(esc(o.ord444 || ""))}${td(esc(o.iec301 || ""))}${td(money(orderTotal(o)))}${td(money(orderPaid(o)))}${td(money(orderTotal(o) - orderPaid(o)))}</tr>`; }));
+      + h2("כל ההזמנות") + tbl(["מתקן", "סוג", "דרישה", "הזמנת משהב״ט", "הזמנת חח״י", "סכום", "שולם", "נשאר"], O.map(o => { const f = RAW.facilities[o.facilityId]; return `<tr>${td(f ? nm(f) : "—")}${td(esc(o.kind || "הזמנה"))}${td(esc(o.req880 || ""))}${td(esc(o.ord444 || ""))}${td(esc(o.iec301 || ""))}${td(money(orderTotal(o)))}${td(money(orderPaid(o)))}${td(money(orderTotal(o) - orderPaid(o)))}</tr>`; }));
   }
-  if (R.kind === "status") return title + sumRow + h2("כל המתקנים") + tbl(["מתקן", "שלב", "הבא / יעד", "הזמנות 301", "עדכון אחרון"], F.sort((a, b) => (kdN(b.kd) ?? 0) - (kdN(a.kd) ?? 0)).map(f => { const s = state(f); return `<tr>${td(nm(f))}${td(s.cur ? esc(s.cur.name) : "טרם התחיל")}${td(s.next ? esc(s.next.name) + (f.stages?.[s.next.id]?.target ? " · " + fmtD(f.stages[s.next.id].target) : "") : "✓")}${td(nums(f))}${td(ll(f))}</tr>`; }));
+  if (R.kind === "status") return title + sumRow + h2("כל המתקנים") + tbl(["מתקן", "שלב", "הבא / יעד", "הזמנות חח״י", "עדכון אחרון"], F.sort((a, b) => (kdN(b.kd) ?? 0) - (kdN(a.kd) ?? 0)).map(f => { const s = state(f); return `<tr>${td(nm(f))}${td(s.cur ? esc(s.cur.name) : "טרם התחיל")}${td(s.next ? esc(s.next.name) + (f.stages?.[s.next.id]?.target ? " · " + fmtD(f.stages[s.next.id].target) : "") : "✓")}${td(nums(f))}${td(ll(f))}</tr>`; }));
   const IG = new Set(["voucher", "ttz"]), gp = f => gaps(f).filter(g => R.internal || IG.has(g.k));   // במצע מול חח״י — רק חוסרים שנוגעים לחח״י, אלא אם סומן "כולל פנימיים"
   const stuck = F.map(f => [f, state(f)]).filter(([, s]) => s.stuck && (R.internal || s.flags.some(x => x.who === "חח״י"))), upTo = addDays(today, N(R.upTo) || 30);
   const up = F.map(f => [f, state(f)]).filter(([f, s]) => s.next && f.stages?.[s.next.id]?.target && f.stages[s.next.id].target >= today && f.stages[s.next.id].target <= upTo).sort((a, b) => a[0].stages[a[1].next.id].target.localeCompare(b[0].stages[b[1].next.id].target));
   const byNext = {}; stuck.sort((a, b) => (a[1].next.who === "חח״י" ? 0 : 1) - (b[1].next.who === "חח״י" ? 0 : 1)).forEach(([f, s]) => { const k = `${s.next.name} — אצל ${s.next.who || "—"}`; (byNext[k] = byNext[k] || []).push([f, s]); });
   return title + `<p style="margin:4px 0"><b>${F.length}</b> מתקנים פעילים · <b style="color:#c0392b">${stuck.length}</b> תקועים · <b style="color:#b07d00">${F.filter(f => gp(f).length).length}</b> עם חוסרים · <b>${up.length}</b> יעדים ב־${N(R.upTo) || 30} הימים הקרובים</p>` + sumRow
-    + h2("1. מה תקוע — לפי השלב שממתינים לו") + (Object.keys(byNext).length ? Object.entries(byNext).map(([k, a]) => `<div style="font-weight:700;margin:8px 0 2px">ממתינים ל${esc(k)} (${a.length})</div>` + tbl(["מתקן", "הזמנה 301", "כמה זמן / יעד", "עדכון אחרון", "סוכם בישיבה"], a.map(([f, s]) => `<tr>${td(nm(f))}${td(nums(f))}${td(s.flags.map(x => esc(x.t)).join("<br>"), "color:#c0392b")}${td(ll(f))}${td("&nbsp;", "width:22%")}</tr>`))).join("") : `<p style="color:#63708a">אין</p>`)
+    + h2("1. מה תקוע — לפי השלב שממתינים לו") + (Object.keys(byNext).length ? Object.entries(byNext).map(([k, a]) => `<div style="font-weight:700;margin:8px 0 2px">ממתינים ל${esc(k)} (${a.length})</div>` + tbl(["מתקן", "הזמנת חח״י", "כמה זמן / יעד", "עדכון אחרון", "סוכם בישיבה"], a.map(([f, s]) => `<tr>${td(nm(f))}${td(nums(f))}${td(s.flags.map(x => esc(x.t)).join("<br>"), "color:#c0392b")}${td(ll(f))}${td("&nbsp;", "width:22%")}</tr>`))).join("") : `<p style="color:#63708a">אין</p>`)
     + h2("2. חוסרים בתהליך") + tbl(["מתקן", "חוסר", "סוכם בישיבה"], F.filter(f => gp(f).length).map(f => `<tr>${td(nm(f))}${td(gp(f).map(g => esc(g.t)).join("<br>"))}${td("&nbsp;", "width:30%")}</tr>`))
     + h2(`3. יעדים ב־${N(R.upTo) || 30} הימים הקרובים`) + tbl(["מתקן", "שלב", "יעד", "הערה"], up.map(([f, s]) => `<tr>${td(nm(f))}${td(esc(s.next.name))}${td(fmtD(f.stages[s.next.id].target))}${td(esc(f.stages[s.next.id].note || ""))}</tr>`));
 }
@@ -644,7 +679,7 @@ async function importModal() {
   openModal(`<h2>ייבוא מהאתר הראשי — תצוגה מקדימה</h2><p class="small muted">שום דבר לא נשמר עד הלחיצה על "ייבוא". מה שכבר יובא בעבר — מדולג.</p>
     ${grp.map(([k, l, a]) => `<label class="row" style="padding:6px 0;border-bottom:1px dashed var(--line)"><input type="checkbox" data-ig="${k}" ${a.length ? "checked" : "disabled"} ${k === "site" ? "" : ""}> <b>${l}</b> <span class="tag">${a.length}</span><span class="small muted">${esc(a.slice(0, 4).map(f => f.name).join(" · "))}${a.length > 4 ? "…" : ""}</span></label>`).join("")}
     <p class="small"><b>${Object.keys(O).length}</b> הזמנות חח״י יובאו (כולל ${Object.values(O).filter(o => o.kind === "מרחק חריג").length} מרחק חריג ו־${Object.values(O).filter(o => o.kind === "הזמנה מרכזת").length} הזמנות מרכזות). <b>${Object.keys(CT).filter(k => CT[k].kdFrom).length}</b> קבלני גזרה לפס הקו.</p>
-    <p class="small muted">שלב שהושלם באקסל המקורי בלי תאריך יסומן ✓ — אפשר להשלים תאריך אחר כך. מספרי 880 לא היו באתר הראשי — יש להשלים.</p>
+    <p class="small muted">שלב שהושלם באקסל המקורי בלי תאריך יסומן ✓ — אפשר להשלים תאריך אחר כך. מספרי דרישה לא היו באתר הראשי — יש להשלים.</p>
     <div class="row"><button class="btn o" id="im_ok">ייבוא</button><button class="btn gh" data-a="close">ביטול</button></div>`, m => {
     m.querySelector("#im_ok").onclick = async () => { const on = new Set([...m.querySelectorAll("[data-ig]:checked")].map(x => x.dataset.ig)), b = m.querySelector("#im_ok"); b.disabled = true; b.textContent = "מייבא…";
       const take = new Set(grp.filter(([k]) => on.has(k)).flatMap(([, , a]) => a.map(f => f.src)));
@@ -672,6 +707,7 @@ document.addEventListener("click", async e => {
   else if (a === "stg") { ui.tab = "facs"; ui.f = { type: "", dist: "", stage: id, cid: "", only: "" }; render(); scrollTo(0, 0); }
   else if (a === "only") { ui.f.only = id; render(); }
   else if (a === "who") { ui.who = id; render(); }
+  else if (a === "fv") { ui.fv = id; try { localStorage.setItem("iec-fv", id); } catch {} render(); }
   else if (a === "newFac") newFacModal();
   else if (a === "newOrd") newOrdModal();
   else if (a === "ordCsv") ordCsv();
@@ -758,3 +794,4 @@ start();
 </script>
 </body>
 </html>
+
