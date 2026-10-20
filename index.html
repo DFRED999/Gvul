@@ -1,4 +1,4 @@
-index.html — 19/10/2026
+index.html — 20/10/2026
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
@@ -1234,7 +1234,7 @@ function renderInner() {
 /** מפת גזרה לאורך הק.ד.: הזמנות, קטעי תכנון, רצועת התקדמות לכל אבן דרך, פריטים (עם מספר / ק.ד.), נושאים פתוחים ותוכניות */
 function sectorMap(d, c) {
   const r = kdRange(c); if (!r) return "";
-  const W = r.hi - r.lo, X = k => ((Math.max(r.lo, Math.min(r.hi, k)) - r.lo) / W * 100).toFixed(2), today = todayStr(), wkD = addDays(today, -7);
+  const W = r.hi - r.lo, X = k => ((Math.max(r.lo, Math.min(r.hi, k)) - r.lo) / W * 100).toFixed(2), today = todayStr(), wkD = wkBase(today);
   const span = (a, b) => `right:${(100 - X(Math.max(a, b))).toString()}%;width:${Math.max(0.35, X(Math.max(a, b)) - X(Math.min(a, b))).toFixed(2)}%`;
   const at = k => `right:${(100 - X(k)).toString()}%`;
   const lane = (label, sub, body, cls = "", ico = "", col = "") => `<div class="sm-l ${cls}" ${col ? `style="--lc:${col}"` : ""}><div class="sm-lab" ${col ? `style="--lc:${col}"` : ""}>${ico ? `<i>${ico}</i>` : ""}<div><b>${label}</b>${sub ? `<small>${sub}</small>` : ""}</div></div><div class="sm-tr">${body}</div></div>`;
@@ -2322,7 +2322,7 @@ function logoData(file) {
 const cColor = (d, c) => c.color || C_COLORS[Math.max(0, d.contractors.filter(isMain).sort(byOrder).findIndex(x => x.id === c.id)) % C_COLORS.length];   // צבע קבוע לקבלן — לא תלוי בסדר התצוגה
 /** ראש צבעוני לעמוד קבלן ראשי: באנר, אריחי מספרים, 7 אבני דרך */
 function contractorHero(d, c, { ords, cov }) {
-  const today = todayStr(), col = cColor(d, c), now = snapshot(d, c, today), wk = snapshot(d, c, addDays(today, -7)), mo = snapshot(d, c, addDays(today, -30));
+  const today = todayStr(), col = cColor(d, c), now = snapshot(d, c, today), wk = snapshot(d, c, wkBase(today)), mo = snapshot(d, c, addDays(today, -30));
   const dn = x => (x.overall || 0) * x.km, m = v => Math.round(v * 1000).toLocaleString("he-IL"), w = dn(now) - dn(wk), mm = dn(now) - dn(mo);
   const open = d.issues.filter(i => i.contractorId === c.id && i.status !== "סגור"), hold = open.filter(i => i.status === "HOLD").length, mg = open.filter(i => i.mgmt).length;
   const dv = deliveryCoverage(kdRange(c), d.deliveries.filter(x => x.contractorId === c.id)), pend = d.progress.filter(p => p.contractorId === c.id && p.review === "לבדיקה").length;
@@ -2332,7 +2332,7 @@ function contractorHero(d, c, { ords, cov }) {
       <div class="ov-ring ch-ring" title="גדר עומדת · כל המלאכות: ${now.overall === null ? "—" : Math.round(now.overall * 100) + "%"}">${ring(FZ.len ? FZ.stand / FZ.len : null, "#fff", 84).replace('stroke="#e9ece6"', 'stroke="rgba(255,255,255,.28)"')}<b>${FZ.len ? Math.round(FZ.stand / FZ.len * 100) + "%" : "—"}</b><em class="ov-rl" style="color:#fff;opacity:.85">גדר</em></div></div>
     <div class="ch-tiles" style="--cc:${col}">
       ${tile("t1", "🧱 גדר עומדת", num(Math.round(FZ.stand), 0), `מתוך ${m(now.km)} מ׳ · יסוד ${num(Math.round(FZ.found), 0)} · גמורה ${num(Math.round(FZ.done), 0)} · כל המלאכות ${now.overall === null ? "—" : Math.round(now.overall * 100) + "%"}`, `data-act="ctab" data-id="progress" role="button"`)}
-      ${tile("t2", "השבוע", w > 0.0005 ? `+${m(w)}` : "—", w > 0.0005 ? "מ׳ ב-7 הימים האחרונים" : "ללא ביצוע השבוע", `data-act="ctab" data-id="progress" role="button"`)}
+      ${tile("t2", "השבוע", w > 0.0005 ? `+${m(w)}` : "—", w > 0.0005 ? "מ׳ מיום ראשון " + fmtD(weekStart(today)) : "ללא ביצוע השבוע", `data-act="ctab" data-id="progress" role="button"`)}
       ${tile("t3", "החודש", mm > 0.0005 ? `+${m(mm)}` : "—", mm > 0.0005 ? "מ׳ ב-30 הימים האחרונים" : "ללא ביצוע החודש", `data-act="ctab" data-id="progress" role="button"`)}
       ${tile(`t4 iss-hot ${open.some(i => priN(i.priority) === "דחוף") ? "urg" : ""}`, "⚠ נושאים פתוחים <em>לחיצה ←</em>", open.length, `${(u => u ? `🔴 ${u} דחופים · ` : "")(open.filter(i => priN(i.priority) === "דחוף").length)}${hold ? `HOLD: ${hold}` : "אין HOLD"}${mg ? ` · ${mg} להנהלה` : ""}`, `data-act="ctab" data-id="issues" role="button"`)}
       ${tile("t5", "הזמנות", ords.length, cov ? `כיסוי הגזרה ${Math.round(cov.pct * 100)}%` : "—", `data-act="ctab" data-id="orders" role="button"`)}
@@ -2395,7 +2395,7 @@ function metricState(d, c, M, asOf = null) {
 function metricTile(d, M) {
   const T = todayStr(), mains = d.contractors.filter(isMain).sort(byNorth), fence = M.k === "fence";
   const st = (c, a) => { if (!fence) return metricState(d, c, M, a); const f = fenceState(d, c, a); return { has: f.has || f.found > 0, done: f.stand, kd: f.kd.stand, kdF: f.kd.found, kdD: f.kd.done, len: f.len, found: f.found, fin: f.done }; };
-  const F = mains.map(c => ({ c, col: cColor(d, c), now: st(c), wk: st(c, addDays(T, -7)) })).filter(x => x.now.has);
+  const F = mains.map(c => ({ c, col: cColor(d, c), now: st(c), wk: st(c, wkBase(T)) })).filter(x => x.now.has);
   const km = v => (v / 1000).toLocaleString("he-IL", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   if (!F.length) return `<div class="mt" style="--mc:${M.color}"><span class="mt-h">${esc(M.name)}</span><b class="muted" style="font-size:15px">אין מלאכה כזו</b></div>`;
   const L = F.reduce((t, x) => t + x.now.len, 0), dn = F.reduce((t, x) => t + x.now.done, 0), wk = dn - F.reduce((t, x) => t + x.wk.done, 0), pc = L ? Math.round(dn / L * 100) : 0;
@@ -2418,7 +2418,7 @@ function ovMetricsBlock(d) {
   return `<div class="row" style="margin:14px 0 -4px;align-items:center"><span class="small muted">מדדי ביצוע — כל הקו</span><span class="spacer"></span><button class="btn ghost sm" data-act="ovPick">☰ מה להציג</button></div>${cards}${pick}`;
 }
 function overviewHero(d) {
-  const today = todayStr(), wkD = addDays(today, -7), moD = addDays(today, -30);
+  const today = todayStr(), wkD = wkBase(today), moD = addDays(today, -30);
   const mains = d.contractors.filter(isMain).map((c, i) => ({ c, col: cColor(d, c), now: snapshot(d, c, today), wk: snapshot(d, c, wkD), mo: snapshot(d, c, moD) }));
   const dn = x => (x.overall || 0) * x.km;
   const km = mains.reduce((t, s) => t + s.now.km, 0), done = mains.reduce((t, s) => t + dn(s.now), 0), dW = done - mains.reduce((t, s) => t + dn(s.wk), 0), dM = done - mains.reduce((t, s) => t + dn(s.mo), 0);
@@ -2570,6 +2570,8 @@ function guessStage(name) {
    ===================================================================== */
 const trackStart = () => RAW.tableConfig?.settings?.trackStart || "";
 const weekStart = s => { const t = new Date(s + "T12:00:00"); t.setDate(t.getDate() - t.getDay()); return t.toISOString().slice(0, 10); };
+/** "השבוע" = מיום ראשון של השבוע הנוכחי (לא 7 ימים אחורה): נקודת ההשוואה היא מוצאי השבת שלפניו */
+const wkBase = (t = todayStr()) => addDays(weekStart(t), -1);
 const PERIODS = [["week", "השבוע"], ["prevweek", "שבוע קודם"], ["w2", "שבועיים"], ["w3", "3 שבועות"], ["w4", "חודש (4 שב׳)"], ["w13", "3 חודשים"], ["track", "מתחילת המעקב"], ["custom", "טווח חופשי"]];
 function periodRange(key, end) {
   const ws = weekStart(end);
@@ -2808,7 +2810,7 @@ function pageSpecialist(d, c) {
     tab = zonesBlock(d, c) + execTab(d, c);
   } else tab = issuesTab(d, c);
   const st = itemStats(its);
-  const spCol = (KIND_ICON[specs[0]] || KIND_ICON[its[0]?.kind] || { c: "#5f6670" }).c, wkD = addDays(todayStr(), -7);
+  const spCol = (KIND_ICON[specs[0]] || KIND_ICON[its[0]?.kind] || { c: "#5f6670" }).c, wkD = wkBase();
   const kTiles = [...new Set(its.map(i => i.kind || "אחר"))].map(k => { const ii = its.filter(i => (i.kind || "אחר") === k && i.status !== "מבוטל"), dn2 = ii.filter(i => i.status === "הושלם").length, ip = ii.filter(i => i.status === "בביצוע").length, I = KIND_ICON[k] || { c: "#5f6670", i: '<circle cx="12" cy="12" r="7"/>' }, wk = ii.filter(i => i.status === "הושלם" && i.doneDate && i.doneDate > wkD).length;
     return `<button class="ov-sp" data-act="kindOnly" data-id="${id}" data-k="${esc(k)}" style="--kc:${I.c}" title="להציג רק ${esc(KIND_PLURAL[k] || k)}"><i>${matSvg(I.i)}</i><div><b>${esc(KIND_PLURAL[k] || k)}</b><span class="ov-spn"><b>${dn2}</b>/${ii.length} הושלמו${ip ? ` · ${ip} בביצוע` : ""}</span>${wk ? `<span class="ov-wk">השבוע +${wk}</span>` : ""}</div><div class="ov-spbar"><em style="width:${ii.length ? Math.round(dn2 / ii.length * 100) : 0}%"></em></div></button>`; }).join("");
   return `<div class="ch-banner" style="--cc:${spCol}">${cLogo(c, "ban")}<div><h1>${esc(c.name)}</h1><span>קבלן ייעודי${c.sector ? ` · ${esc(c.sector)}` : ""}${specs.length ? ` · ${specs.map(esc).join(" · ")}` : ""}</span></div></div>
@@ -3002,7 +3004,7 @@ function execTab(d, c) {
 
   const PDAYS = [[7, "שבוע"], [14, "שבועיים"], [21, "3 שבועות"], [30, "חודש"], [60, "חודשיים"], [90, "3 חודשים"], [182, "חצי שנה"], [365, "שנה"]];
   const pD = ui.pDays || 7, pL = (PDAYS.find(x => x[0] === pD) || PDAYS[0])[1], pHead = pD === 7 ? "השבוע" : `ב${pL.replace(/^(\d)/, "־$1")}`;
-  const stW = execState(d, c.id, addDays(todayStr(), -pD)), wkOf = Object.fromEntries(stW.rows.map(q => [q.a.id, q.done || 0]));
+  const stW = execState(d, c.id, pD === 7 ? wkBase() : addDays(todayStr(), -pD)), wkOf = Object.fromEntries(stW.rows.map(q => [q.a.id, q.done || 0]));
   const mGroups = [...STAGE_GROUPS.map(G => ({ G, rows: st.rows.filter(r => G.stages.includes(r.a.stage)) })), { G: { name: "ללא שלב", color: "#6b7280", tint: "#f1f2f3" }, rows: st.rows.filter(r => !STAGES.includes(r.a.stage)) }].filter(x => x.rows.length);
   const icoOf = a => { const M = matOf(a), G = stageGroup(a.stage); return { c: M?.c || G?.color || "#6b7280", ink: M?.ink, i: M ? matSvg(M.i) : "" }; };
   const n0 = v => num(v, 0);
@@ -3016,7 +3018,7 @@ function execTab(d, c) {
     const src = mode === "ord" ? (eoOf[r.a.id] || []) : r.cells;
     const cells = r.unit ? `<td class="pm-c muted small" colspan="${nCols}">נספר ביחידות — ${mode === "ord" ? "לא לפי הזמנות" : "לא לפי קטעים"}</td>` : src.map(cl => cellH(cl, I)).join("");
     return `<tr>${name}${tot}${wk}${cells}</tr>`; };
-  const pmTable = (mode, heads, nCols, foot = "") => `<div class="tablewrap pm-wrap"><table class="pmx"><thead><tr><th>מלאכה</th><th>סה״כ בוצע</th><th class="pm-wh">${esc(pHead)}</th>${heads}</tr></thead><tbody>
+  const pmTable = (mode, heads, nCols, foot = "") => `<div class="tablewrap pm-wrap"><table class="pmx"><thead><tr><th>מלאכה</th><th>סה״כ בוצע</th><th class="pm-wh">${esc(pHead)}${pD === 7 ? `<div class="muted small" style="font-weight:400">מ־${fmtD(weekStart(todayStr()))}</div>` : ""}</th>${heads}</tr></thead><tbody>
     ${mGroups.map(({ G, rows }) => `<tr class="pm-g" style="--g:${G.color};--gt:${G.tint}"><td colspan="${3 + nCols}"><b>${esc(G.name)}</b></td></tr>${rows.map(r => pmRow(r, mode, nCols)).join("")}`).join("")}${foot}
   </tbody></table></div>`;
   const matrix = pmTable("seg", st.ds.map(x => `<th>${esc(segLabel(x))}${x.full ? "" : " (חלקי)"}<div class="muted" style="font-weight:500">${x.len === null ? "אין אורך" : MTR(x.len)}</div></th>`).join(""), st.ds.length);
@@ -5139,7 +5141,7 @@ async function initMap(d) {
     window.L.polyline(pth, { color: "#1f2a24", weight: 9, opacity: .25 }).addTo(map);
     window.L.polyline(pth, { color: cColor(d, c), weight: 5, opacity: .9 }).addTo(map).bindTooltip(`${esc2(c.name)} · ק.ד. ${kdTxt(r)}`, { sticky: true }); });
   // ביצוע לפי אבן דרך
-  if (M.g) { const G = STAGE_GROUPS.find(x => x.name === M.g), wk = addDays(todayStr(), -7);
+  if (M.g) { const G = STAGE_GROUPS.find(x => x.name === M.g), wk = wkBase();
     d.contractors.filter(isMain).forEach(c => { const dn = kdDone(d, c, todayStr()), dw = kdDone(d, c, wk), ga = d.activities.filter(a => a.contractorId === c.id && G.stages.includes(a.stage)).map(a => a.id);
       const uni = ids => mergeIvs(ids.flatMap(id => dn[id] || []).map(x => [...x])), now = uni(ga), old = mergeIvs(ga.flatMap(id => dw[id] || []).map(x => [...x]));
       now.forEach(([a, b]) => { const pth = kdPath(Ln, a, b); if (pth) window.L.polyline(pth, { color: G.color, weight: 11, opacity: .85 }).addTo(map).bindTooltip(`${esc2(c.name)} · ${esc2(G.name)} · ק.ד. ${Math.round(b)}–${Math.round(a)}`, { sticky: true }); });
