@@ -161,6 +161,8 @@ table.ot .tg { all: unset; cursor: pointer; display: inline-block; width: 20px; 
 .set-st { display: grid; grid-template-columns: 24px 1fr 62px 46px 96px 92px auto; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px dashed var(--line); }
 .set-st details { font-size: 12.5px; } .set-st details summary { cursor: pointer; color: var(--blue); } .set-st details label { display: flex; gap: 4px; align-items: center; }
 @media print { .top, .noprint, .ov > .mdl > .row { display: none !important; } body { background: #fff; } .ov { position: static; padding: 0; background: #fff; } .mdl { box-shadow: none; width: 100%; padding: 0; } main { display: none; } }
+.gtab tr.gw td { background: #fff6f4; }
+.gtab td { vertical-align: top; }
 </style>
 </head>
 <body>
@@ -229,14 +231,14 @@ const fbKey = s => String(s).replace(/[.#$\/\[\]]/g, "_");
 const LKEY = "iec-local-v1";
 const saveLocal = () => { try { localStorage.setItem(LKEY, JSON.stringify(RAW)); } catch {} };
 const api = {
-  async put(col, id, obj) { if (!canEdit()) return toast("הרשאת צפייה בלבד"); const v = { ...obj, ...stamp() };
+  async put(col, id, obj) { if (!canEdit()) return toast("הרשאת צפייה בלבד"); const v = { ...obj, ...stamp() }; { const b0 = RAW[col]?.[id]; logW(col, id, b0 ? "upd" : "add", b0, v); }
     if (LOCAL) { RAW[col][id] = v; saveLocal(); return render(); } await fb.database().ref(`${ROOT}/${col}/${fbKey(id)}`).set(clean(v)).catch(fail); },
   async add(col, obj) { const id = newId(); await api.put(col, id, { ...obj, createdAt: new Date().toISOString(), createdBy: who() }); return id; },
-  async update(col, id, patch) { if (!canEdit()) return toast("הרשאת צפייה בלבד"); const p = { ...patch, ...stamp() };
+  async update(col, id, patch) { if (!canEdit()) return toast("הרשאת צפייה בלבד"); const p = { ...patch, ...stamp() }; logW(col, id, "upd", RAW[col]?.[id], patch, true);
     if (LOCAL) { RAW[col][id] = { ...(RAW[col][id] || {}), ...p }; Object.keys(p).forEach(k => p[k] === null && delete RAW[col][id][k]); saveLocal(); return render(); }
     await fb.database().ref(`${ROOT}/${col}/${fbKey(id)}`).update(clean(p, true)).catch(fail); },
-  async remove(col, id) { if (!canEdit()) return; if (LOCAL) { delete RAW[col][id]; saveLocal(); return render(); } await fb.database().ref(`${ROOT}/${col}/${fbKey(id)}`).remove().catch(fail); },
-  async setSettings(patch) { const cur = { ...(RAW.settings || {}) }; delete cur.updatedAt; delete cur.updatedBy;
+  async remove(col, id) { if (!canEdit()) return; logW(col, id, "del", RAW[col]?.[id]); if (LOCAL) { delete RAW[col][id]; saveLocal(); return render(); } await fb.database().ref(`${ROOT}/${col}/${fbKey(id)}`).remove().catch(fail); },
+  async setSettings(patch) { if (canEdit()) logW("settings", "", "upd", null, patch); const cur = { ...(RAW.settings || {}) }; delete cur.updatedAt; delete cur.updatedBy;
     if (LOCAL) { RAW.settings = { ...cur, ...patch, ...stamp() }; saveLocal(); return render(); } await fb.database().ref(`${ROOT}/settings`).update(clean({ ...patch, ...stamp() }, true)).catch(fail); } };
 function clean(o, keepNull) { if (Array.isArray(o)) return o.map(x => clean(x)); if (o && typeof o === "object") { const r = {}; for (const [k, v] of Object.entries(o)) { if (v === undefined) continue; if (v === null && !keepNull) continue; r[fbKey(k)] = v === null ? null : clean(v); } return r; } return o; }
 const fail = e => { console.error(e); alertBox(/PERMISSION|permission/.test(String(e?.code || e?.message)) ? "השינוי לא נשמר: אין הרשאה (כללי Firebase)." : "השינוי לא נשמר: " + (e?.message || e)); };
@@ -353,6 +355,7 @@ function facFiltered() {
 const TABS = [["dash", "תמונת מצב"], ["facs", "מתקנים"], ["orders", "הזמנות ותשלומים"], ["contacts", "אנשי קשר"], ["reports", "דוחות ומצע לדיון"], ["settings", "⚙ הגדרות"]];
 function render() {
   CACHE = {}; if (!me && !LOCAL) return;
+  if (!window.__snap && IEC_READY && BRD_PROG) setTimeout(ensureSnap, 2500);
   const ae = document.activeElement, keep = ae && ae.id && ae.matches("input,textarea,select") ? { id: ae.id, s: ae.selectionStart } : null, sy = scrollY;
   const nStuck = list("facilities").filter(f => state(f).stuck).length;
   const L = S().logos || {};
@@ -405,7 +408,7 @@ function pageDash() {
   const apr = PD.length ? `<div class="card" style="border:2px solid #f2c48a"><h2>📋 דיווחי מפקחים שממתינים לאישור <small>${PD.length} — אחרי האישור הם מסמנים את השלב במתקן, כאן ובאתר הגבול</small></h2><div class="lst">${PD.map(p => `<div class="li" style="cursor:default"><span class="ic">📋</span><span><b>${esc(AN(p))}</b><div class="sub">${esc(FN(p))}${p.secFrom !== "" && p.secFrom != null && p.secTo !== "" ? ` · חתכים ${esc(p.secFrom)}–${esc(p.secTo)}` : ""} · ${fmtD(p.date)} · ${esc(String(p.reportedBy || "").split("@")[0])}${p.note ? " · " + esc(p.note) : ""}</div></span>
     <span class="end">${canEdit() ? `<button class="btn sm" data-a="repOk" data-id="${p.pid}">✓ אישור</button> <button class="btn del sm" data-a="repNo" data-id="${p.pid}">✕ דחייה</button>` : `<span class="tag a">ממתין</span>`}</span></div>`).join("")}</div></div>` : "";
   const cab = cableM();
-  return kp + apr + pipe + (cab ? `<div class="card"><h2>🧵 השחלת כבלים <small>לפי דיווחי מפקחים מאושרים</small></h2><b style="font-size:24px;color:var(--navy)">${Math.round(cab).toLocaleString("he-IL")} מ׳</b></div>` : "") + `<div class="card"><h2>לאורך הקו — מצפון לדרום <small>כל נקודה = מתקן בצבע השלב שלו · עיגול אדום = תקוע · קו = תט״ז שמזין ארון</small></h2>${strip(LV)}</div>` + `<div class="grid g2">${stuckCard}${gapCard}</div>` + byD;
+  return weekBanner() + kp + apr + pipe + (cab ? `<div class="card"><h2>🧵 השחלת כבלים <small>לפי דיווחי מפקחים מאושרים</small></h2><b style="font-size:24px;color:var(--navy)">${Math.round(cab).toLocaleString("he-IL")} מ׳</b></div>` : "") + `<div class="card"><h2>לאורך הקו — מצפון לדרום <small>כל נקודה = מתקן בצבע השלב שלו · עיגול אדום = תקוע · קו = תט״ז שמזין ארון</small></h2>${strip(LV)}</div>` + `<div class="grid g2">${stuckCard}${gapCard}</div>` + byD;
 }
 /** פס ק.ד.: צפון (ק.ד. גבוה) מימין, דרום משמאל — כמו הקבלנים באתר הראשי */
 function strip(F) {
@@ -578,7 +581,7 @@ const upOf = o => memo("up:" + o.id, () => { const n = nums301(o); return n.leng
 const kidsOf = o => memo("kids", () => { const m = {}; listO().forEach(x => { const u = upOf(x); if (u) (m[u.id] = m[u.id] || []).push(x); }); return m; })[o.id] || [];
 const allKids = o => kidsOf(o).flatMap(k => [k, ...allKids(k)]);
 const OV = [["mod", "🏛 הזמנות משהב״ט"], ["par", "🗂 הזמנות אב (חח״י)"], ["iec", "🧾 הזמנות חח״י"], ["table", "✎ טבלה לעריכה"]];
-const ordViewSw = () => `<span class="vsw lv">${OV.map(([k, l]) => `<button class="${(ui.ov || "mod") === k ? "on" : ""}" data-a="ov" data-id="${k}">${l}</button>`).join("")}</span>`;
+const ordViewSw = () => `<span class="vsw lv">${OV.map(([k, l]) => `<button class="${(ui.ov || "mod") === k ? "on" : ""}" data-a="ov" data-id="${k}">${l}</button>`).join("")}</span>${canEdit() ? `<button class="btn gh sm" data-a="gili" title="עדכון תשלומים וסטטוסים מהאקסל של גילי — מציג מה ישתנה ומבקש אישור">⬆ עדכון מאקסל</button>` : ""}`;
 /** הזמנות משהב״ט: רשומות (mods) + מספרי 444 שמופיעים בהזמנות חח״י. מפתח = המספר */
 const modList = () => memo("mods", () => { const m = {}; list("mods").forEach(r => { if (r.num) m[r.num] = { ...r, rid: r.id }; });
   listO().forEach(o => { const n = ef(o, "ord444"); if (n && n !== true && !m[n]) m[n] = { num: String(n), virt: true }; }); return Object.values(m).sort((a, b) => String(a.num).localeCompare(String(b.num))); });
@@ -652,6 +655,7 @@ function orderModal(oid) {
     <div class="chainbar">${[["דרישה", ef(o, "req880")], ["הזמנת משהב״ט", ef(o, "ord444")]].map(([l, v]) => `<span class="cb ${v && v !== true ? "" : "miss"}"><small>${l}</small>${v && v !== true ? (l === "הזמנת משהב״ט" ? `<a href="#" data-a="mod" data-id="${esc(v)}" class="ltr">${esc(v)}</a>` : `<b class="ltr">${esc(v)}</b>`) : "חסר"}</span>`).join("<i>←</i>")}
       ${upChain.map(u => `<i>←</i><span class="cb"><small>${esc(u.kind === "הזמנה מרכזת" ? "הזמנת אב" : u.kind || "הזמנה")}</small>${ordLink(u)}</span>`).join("")}<i>←</i><span class="cb on"><small>${esc(o.kind || "הזמנה")}</small><b class="ltr">${esc(o.iec301 || "—")}</b></span>
       ${K.length ? `<i>←</i><span class="cb"><small>תחתיה</small><b>${K.length} הזמנות</b></span>` : ""}</div>
+    ${o.gNote ? `<div class="note" style="margin-top:8px">📝 <b>סטטוס מהאקסל${o.gAt ? ` (${fmtD(o.gAt)})` : ""}:</b> ${esc(o.gNote)}</div>` : ""}
     <div class="grid g2" style="margin-top:12px"><div>
       <div class="sec-h">פרטי ההזמנה</div><div class="form">${inp("iec301", "הזמנת חח״י", "text", "ltr")}<label>סוג<select class="inp" data-oc="kind" ${dis}>${ORDER_KINDS.map(k => `<option ${k === (o.kind || "הזמנה") ? "selected" : ""}>${k}</option>`).join("")}</select></label>
         <label>הזמנת משהב״ט<input class="inp ltr" data-oc="ord444" value="${esc(o.ord444 || "")}" placeholder="${esc(!o.ord444 && ef(o, "ord444") !== true ? ef(o, "ord444") || "" : "")}" ${dis}>${inh("ord444")}</label><label>דרישה<input class="inp ltr" data-oc="req880" value="${esc(o.req880 || "")}" placeholder="${esc(!o.req880 && ef(o, "req880") !== true ? ef(o, "req880") || "" : "")}" ${dis}>${inh("req880")}</label>
@@ -834,15 +838,16 @@ const pickFile = (accept, cb) => { const i = document.createElement("input"); i.
 function pageReports() {
   const R = ui.rep || (ui.rep = { dist: "", kind: "brief", upTo: 30 });
   return `<div class="card"><h2>📄 דוחות ומצע לדיון</h2>
-    <div class="flt"><label class="f">סוג<select class="inp" data-rp="kind"><option value="brief" ${R.kind === "brief" ? "selected" : ""}>מצע לדיון — פערים מול הנהלת חח״י</option><option value="status" ${R.kind === "status" ? "selected" : ""}>דוח סטטוס מלא — כל המתקנים</option><option value="money" ${R.kind === "money" ? "selected" : ""}>דוח כספי — הזמנות ותשלומים</option></select></label>
-      <label class="f">נפה<select class="inp" data-rp="dist"><option value="">כל הנפות</option>${DISTRICTS.map(d => `<option ${R.dist === d ? "selected" : ""}>${d}</option>`).join("")}</select></label>
+    <div class="flt"><label class="f">סוג<select class="inp" data-rp="kind"><option value="week" ${R.kind === "week" ? "selected" : ""}>📒 דוח שינויים שבועי (ראשון–שבת)</option><option value="brief" ${R.kind === "brief" ? "selected" : ""}>מצע לדיון — פערים מול הנהלת חח״י</option><option value="status" ${R.kind === "status" ? "selected" : ""}>דוח סטטוס מלא — כל המתקנים</option><option value="money" ${R.kind === "money" ? "selected" : ""}>דוח כספי — הזמנות ותשלומים</option></select></label>
+      ${R.kind === "week" ? wkCtl() : `<label class="f">נפה<select class="inp" data-rp="dist"><option value="">כל הנפות</option>${DISTRICTS.map(d => `<option ${R.dist === d ? "selected" : ""}>${d}</option>`).join("")}</select></label>
       <label class="f">יעדים קרובים — ימים קדימה<input class="inp" type="number" data-rp="upTo" value="${esc(R.upTo)}" style="width:90px"></label>
-      ${R.kind === "brief" ? `<label class="row small"><input type="checkbox" data-rpc="internal" ${R.internal ? "checked" : ""}> כולל נושאים פנימיים (אצלנו / משהב״ט, מספרים חסרים)</label>` : ""}<span class="spacer"></span>
+      ${R.kind === "brief" ? `<label class="row small"><input type="checkbox" data-rpc="internal" ${R.internal ? "checked" : ""}> כולל נושאים פנימיים (אצלנו / משהב״ט, מספרים חסרים)</label>` : ""}`}<span class="spacer"></span>
       <button class="btn" data-a="repPrint">🖨 הדפסה / PDF</button><button class="btn gh" data-a="repWord">⬇ וורד</button><button class="btn gh" data-a="repCopy">העתקה</button></div>
-    <div class="note">המצע בנוי לבד מהנתונים: מה תקוע ואצל מי, יעדים שעברו, חוסרים בתהליך, שוברים שפגים, יעדים בשבועות הקרובים, והעדכון האחרון בכל מתקן. ממלאים בישיבה — ומעדכנים יעדים חדשים בכרטיס המתקן.</div>
+    ${R.kind === "week" ? `<div class="note">מה השתנה בשבוע (ראשון–שבת): מתקנים שעברו שלב, תשלומים ושוברים, דיווחי מפקחים, הזמנות ומתקנים חדשים, סטטוסים מהאקסל — ומי עדכן. כל שינוי באתר נרשם ביומן אוטומטית. ביום ראשון מופיע בתמונת המצב ״הדוח השבועי מוכן״.</div>` : `<div class="note">המצע בנוי לבד מהנתונים: מה תקוע ואצל מי, יעדים שעברו, חוסרים בתהליך, שוברים שפגים, יעדים בשבועות הקרובים, והעדכון האחרון בכל מתקן. ממלאים בישיבה — ומעדכנים יעדים חדשים בכרטיס המתקן.</div>`}
     <div style="border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff">${repHtml()}</div></div>`;
 }
 function repHtml() {
+  if (ui.rep?.kind === "week") return weekHtml();
   const R = ui.rep, F = list("facilities").filter(f => live(f) && (!R.dist || f.district === R.dist)), V = 1 + VAT(), today = todayStr(), ST = stages();
   const th = t => `<th style="background:#0b3a6e;color:#fff;text-align:right;padding:5px 7px;border:1px solid #0b3a6e;font-size:10.5pt">${t}</th>`, td = (t, st = "") => `<td style="border:1px solid #cfd8e3;padding:4px 7px;vertical-align:top;font-size:10pt;${st}">${t}</td>`;
   const tbl = (h, rows) => rows.length ? `<table style="width:100%;border-collapse:collapse;margin:4px 0 12px">${`<tr>${h.map(th).join("")}</tr>`}${rows.join("")}</table>` : `<p style="color:#63708a;margin:2px 0 12px">אין</p>`;
@@ -910,7 +915,8 @@ let BRD_ITEMS = null, BRD_CT = null, IEC_READY = false, SYNC_T0 = null, SYNC_LAS
 function itemRec(it, CT) { const t = SYNC_T[it.kind], c = CT?.[it.contractorId];
   return { type: t, name: itemName(it, t), kd: String(it.kdFrom ?? ""), sec: String(it.x_sec ?? ""), contractorId: c?.kdFrom ? it.contractorId : (it.mainId || it.contractorId || ""), coord: it.coord || "" }; }
 function syncSoon() { clearTimeout(SYNC_T0); SYNC_T0 = setTimeout(() => syncItems().catch(e => console.error("sync", e)), 1200); }
-async function syncItems(manual) {
+async function syncItems(manual) { LOGSRC = "סנכרון מאתר הגבול"; try { return await syncItems0(manual); } finally { LOGSRC = ""; } }
+async function syncItems0(manual) {
   if (!canEdit() || !IEC_READY || !BRD_ITEMS) return null;
   const ign = S().ignoredSrc || {}, bySrc = {}; list("facilities").forEach(f => { if (f.src) bySrc[f.src] = f; });
   let add = 0, upd = 0, gone = 0; const newTtz = [];
@@ -998,6 +1004,240 @@ async function importModal() {
   });
 }
 
+/* =====================================================================
+   יומן שינויים (iec_log) + צילום מצב שבועי (iec_snap) + דוח שבועי ראשון–שבת
+   ===================================================================== */
+const LOGR = "iec_log", SNAPR = "iec_snap";
+let LOGMEM = [], LOGSRC = "";   // LOGSRC — מקור השינוי שמתבצע כרגע (סנכרון, אקסל…), נרשם עם כל רשומה
+const FLD = { name: "שם", type: "סוג", kd: "ק.ד.", district: "נפה", note: "הערה", status: "סטטוס", contractorId: "קבלן", iec301: "הזמנת חח״י", ord444: "הזמנת משהב״ט", req880: "דרישה", amount: "סכום", advance: "מקדמה", completion: "משלים",
+  vAdvDate: "שובר מקדמה", advanceDate: "מקדמה שולמה", vFinDate: "שובר משלים", completionDate: "משלים שולם", validUntil: "תוקף שובר", kind: "סוג הזמנה", parent301: "הזמנת אב", facilityId: "מתקן", gNote: "סטטוס מהאקסל", gAt: "תאריך האקסל",
+  feeds: "מזין", date: "תאריך", target: "יעד", done: "הושלם", num: "מספר", phone: "טלפון", email: "מייל", org: "ארגון", role: "תפקיד", coord: "נ.צ.", place: "מיקום", size: "גודל", sec: "חתך", srcGone: "נמחק באתר הגבול" };
+const PAYF = ["vAdvDate", "advanceDate", "vFinDate", "completionDate"];
+const SKIPF = new Set(["updatedAt", "updatedBy", "createdAt", "createdBy"]);
+const flat = (o, p = "", out = {}) => { if (o && typeof o === "object" && !Array.isArray(o)) { for (const [k, v] of Object.entries(o)) flat(v, p ? p + "/" + k : k, out); } else if (p) out[p] = o; return out; };
+function fldName(path) { const a = String(path).split("/");
+  if (a[0].startsWith("ok_")) return (FLD[a[0].slice(3)] || a[0]) + " (✓ בלי תאריך)";
+  if (a[0] === "stages") { const st = stages().find(s => s.id === a[1]); return `${st?.name || a[1]} · ${FLD[a[2]] || a[2] || ""}`; }
+  if (a[0] === "feeds") return "מזין: " + (RAW.facilities[a[1]]?.name || a[1] || "");
+  return FLD[a[0]] || a[0]; }
+function fldVal(path, v) { if (v === undefined || v === null || v === "" || v === false) return ""; if (v === true) return "✓";
+  if (path === "facilityId") return RAW.facilities[v]?.name || v; if (path === "contractorId") return cName(v) || v;
+  v = String(v); if (/^\d{4}-\d\d-\d\d$/.test(v)) return fmtD(v); return v.length > 90 ? v.slice(0, 88) + "…" : v; }
+function recLbl(col, r) { r = r || {};
+  if (col === "orders") { const f = RAW.facilities[r.facilityId]; return [r.iec301 || (r.kind === "הזמנה מרכזת" ? "הזמנת אב" : "הזמנה בלי מספר"), f?.name].filter(Boolean).join(" · "); }
+  if (col === "mods") return "הזמנת משהב״ט " + (r.num || ""); if (col === "settings") return "הגדרות"; return String(r.name || r.title || ""); }
+/** ההבדלים בין רשומה לפני ואחרי: [שם שדה, לפני, אחרי] (רישומי יומן חדשים — כטקסט) */
+function diffRec(before, patch, onlyKeys) {
+  const out = [];
+  for (const k of onlyKeys ? Object.keys(patch || {}) : [...new Set([...Object.keys(before || {}), ...Object.keys(patch || {})])]) { if (SKIPF.has(k)) continue;
+    const b0 = (before || {})[k], a0 = (patch || {})[k];
+    if (k === "log") { const B = b0 || {}, A = a0 || {}; Object.entries(A).forEach(([id, x]) => { if (!B[id] && x?.text) out.push(["רישום", "", String(x.text).slice(0, 120)]); }); continue; }
+    const B = flat(b0, k), A = flat(a0, k); if (!Object.keys(B).length && typeof b0 !== "object") B[k] = b0; if (!Object.keys(A).length && typeof a0 !== "object") A[k] = a0;
+    for (const p of new Set([...Object.keys(B), ...Object.keys(A)])) { const x = fldVal(p, B[p]), y = fldVal(p, A[p]); if (x !== y) out.push([fldName(p), x, y]); } }
+  return out;
+}
+function logW(col, id, op, before, after, onlyKeys) {
+  try {
+    const rec = { at: new Date().toISOString(), by: who(), uid: user?.uid || "", col, id: String(id || ""), op, lbl: recLbl(col, op === "del" ? before : { ...(before || {}), ...(after || {}) }) };
+    if (LOGSRC) rec.src = LOGSRC;
+    if (op === "upd") { if (col === "settings") rec.f = Object.keys(after || {}).filter(k => !SKIPF.has(k)).map(k => [({ stages: "שלבים", alerts: "התראות", contractors: "קבלנים", logos: "לוגו", ignoredSrc: "מתקנים שהוסרו", vat: "מע״מ", title: "כותרת" })[k] || k, "", "עודכן"]);
+      else rec.f = diffRec(before, after, onlyKeys).slice(0, 30);
+      if (!rec.f.length) return; }
+    else if (op === "add") { const r = after || {}; rec.f = (col === "orders" ? ["iec301", "kind", "amount", ...PAYF] : col === "facilities" ? ["type", "kd", "district"] : []).filter(k => r[k]).map(k => [fldName(k), "", fldVal(k, r[k])]); if (!rec.f.length) delete rec.f; }
+    if (LOCAL || !fb) { LOGMEM.push(rec); return; }
+    fb.database().ref(LOGR).push(rec).catch(() => {});
+  } catch (e) { console.warn("log", e); }
+}
+const wkStart = s => { const t = new Date(s + "T12:00:00"); t.setDate(t.getDate() - t.getDay()); return t.toISOString().slice(0, 10); };
+const wkRange = wk => [new Date(wk + "T00:00:00").toISOString(), new Date(addDays(wk, 7) + "T00:00:00").toISOString()];
+const WDAY = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+/** מצב כל מתקן כרגע: שלב נוכחי + תקוע — נשמר פעם בשבוע (בכניסה הראשונה של עורך) כדי להשוות שבוע מול שבוע */
+function snapNow() { const o = {}; list("facilities").forEach(f => { const s = state(f); o[fbKey(f.id)] = (s.cur?.id || "-") + (s.stuck ? "|!" : "") + (live(f) ? "" : "|x"); }); return o; }
+async function ensureSnap() {
+  if (window.__snap || !canEdit() || !IEC_READY || !BRD_PROG || !list("facilities").length) return; window.__snap = true;
+  const wk = wkStart(todayStr());
+  if (LOCAL || !fb) { SNAPS[wk] = SNAPS[wk] || { at: new Date().toISOString(), f: snapNow() }; return; }
+  try { const r = fb.database().ref(`${SNAPR}/${wk}`), s = await r.get(); if (!s.exists()) await r.set({ at: new Date().toISOString(), by: who(), f: snapNow() }); } catch (e) {}
+}
+let SNAPS = {};
+async function wlLoad(wk) {
+  const W = ui.wl; if (W.data[wk] !== undefined) return; W.data[wk] = null;
+  const [a, b] = wkRange(wk), nx = addDays(wk, 7); let recs = [];
+  if (LOCAL || !fb) recs = LOGMEM.filter(r => r.at >= a && r.at < b);
+  else { try { const sn = await fb.database().ref(LOGR).orderByChild("at").startAt(a).endAt(b).once("value"); recs = Object.values(sn.val() || {}).filter(r => r && r.at < b); W.err = ""; }
+      catch (e) { W.err = /permission/i.test(String(e?.code || e?.message)) ? "אין הרשאה לקרוא את היומן — צריך לפרסם את כללי Firebase המעודכנים." : String(e?.message || e); }
+    for (const k of [wk, nx]) if (SNAPS[k] === undefined) { try { const s = await fb.database().ref(`${SNAPR}/${k}`).get(); SNAPS[k] = s.val() || null; } catch (e) { SNAPS[k] = null; } } }
+  W.data[wk] = recs; render();
+}
+/** השוואה לגיבוי (קובץ JSON של האתר): מה השתנה מאז — לשבוע הראשון, לפני שהיומן פעל */
+function baseDiff(B) {
+  const out = [], at = B.meta?.savedAt || "";
+  for (const col of ["facilities", "orders", "mods"]) { const O = B.data?.[col] || {}, Nw = RAW[col] || {};
+    for (const [id, r] of Object.entries(Nw)) { const o = O[id]; if (!o) { out.push({ at: r.createdAt || at, by: r.createdBy || r.updatedBy || "—", col, id, op: "add", lbl: recLbl(col, r) }); continue; }
+      const f = diffRec(o, r); if (f.length) out.push({ at: r.updatedAt || at, by: r.updatedBy || "—", col, id, op: "upd", lbl: recLbl(col, r), f }); }
+    for (const [id, o] of Object.entries(O)) if (!Nw[id]) out.push({ at, by: "—", col, id, op: "del", lbl: recLbl(col, o) }); }
+  return out;
+}
+function baseSnap(B) { const keep = {}; COLS.forEach(c => keep[c] = RAW[c]); try { COLS.forEach(c => RAW[c] = B.data?.[c] || (c === "settings" ? keep.settings : {})); CACHE = {}; return snapNow(); } finally { COLS.forEach(c => RAW[c] = keep[c]); CACHE = {}; } }
+const stName = id => stages().find(s => s.id === id)?.name || (id === "-" ? "לפני דרישה" : id);
+const wlState = () => ui.wl || (ui.wl = { wk: addDays(wkStart(todayStr()), -7), data: {} });
+function wkCtl() { const W = wlState(), cur = wkStart(todayStr());
+  return W.base ? `<span class="tag">השוואה לגיבוי מ־${fmtD(String(W.base.at).slice(0, 10))}</span><button class="btn gh sm" data-a="wlBaseClr">✕ חזרה ליומן השבועי</button>`
+    : `<button class="btn gh sm" data-a="wlWk" data-id="-7">◀ שבוע קודם</button><b class="nowrap">${fmtD(W.wk)}–${fmtD(addDays(W.wk, 6))}</b>${W.wk < cur ? `<button class="btn gh sm" data-a="wlWk" data-id="7">שבוע הבא ▶</button>` : ""}${W.wk !== cur ? `<button class="btn gh sm" data-a="wlWk" data-id="cur">השבוע</button>` : ""}<button class="btn gh sm" data-a="wlRe" title="רענון">⟳</button><button class="btn gh sm" data-a="wlBase" title="בחירת קובץ גיבוי (JSON) של האתר — מציג מה השתנה מאז">📂 השוואה לגיבוי</button>`; }
+function weekHtml() {
+  const W = wlState(), cur = wkStart(todayStr()), isCur = W.wk === cur, nx = addDays(W.wk, 7);
+  if (!W.base && W.data[W.wk] === undefined) setTimeout(() => wlLoad(W.wk), 0);
+  const raw = W.base ? W.base.recs : W.data[W.wk], V = 1 + VAT();
+  const head = `<h2 style="margin:0 0 4px">דוח שינויים שבועי — ${W.base ? `מאז הגיבוי של ${fmtD(String(W.base.at).slice(0, 10))}` : `שבוע ${fmtD(W.wk)}–${fmtD(addDays(W.wk, 6))}`}</h2><div class="small muted" style="margin-bottom:10px">${W.base ? "השוואה בין קובץ הגיבוי לנתונים עכשיו" : isCur ? "השבוע הנוכחי — עד עכשיו" : "ראשון עד שבת"} · הופק ${fmtD(todayStr())}</div>`;
+  if (!raw) return head + `<p class="muted">טוען את היומן…</p>`;
+  const R = raw.slice().sort((x, y) => String(x.at).localeCompare(String(y.at))), sec = (t, body, n) => body ? `<h3 style="margin:16px 0 6px;border-bottom:2px solid #0a6ec9;padding-bottom:3px">${t}${n !== undefined ? ` <small style="color:#888;font-weight:400">(${n})</small>` : ""}</h3>${body}` : "";
+  const tbl = (hd, rows) => rows.length ? `<table class="t" style="width:100%;border-collapse:collapse"><thead><tr>${hd.map(h => `<th style="text-align:right;border-bottom:1px solid #ccc;padding:3px 6px">${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td style="border-bottom:1px solid #eee;padding:3px 6px;vertical-align:top">${c}</td>`).join("")}</tr>`).join("")}</tbody></table>` : "";
+  const fac = r => r.col === "orders" ? RAW.orders[r.id]?.facilityId : r.col === "facilities" ? r.id : "";
+  const fLink = id => id && RAW.facilities[id] ? `<a href="#" data-a="fac" data-id="${id}">${esc(RAW.facilities[id].name)}</a>` : "";
+  const oLink = r => RAW.orders[r.id] ? ordLink({ id: r.id, ...RAW.orders[r.id] }) : esc(r.lbl);
+  // 1. התקדמות שלבים — צילום תחילת השבוע מול סוף השבוע (או עכשיו)
+  const s0 = W.base ? W.base.snap : SNAPS[W.wk]?.f, s1 = !W.base && !isCur && SNAPS[nx]?.f ? SNAPS[nx].f : snapNow();
+  let stg = "", stgN = 0, stuckIn = [], stuckOut = [];
+  if (s0) { const ord = id => stages().findIndex(s => s.id === id), rows = [];
+    for (const f of allF()) { const k = fbKey(f.id), a = String(s0[k] || ""), b = String(s1[k] || ""); if (!b) continue; const [sa, fa] = a.split("|"), [sb] = b.split("|");
+      if (a && sa !== sb) rows.push([fLink(f.id), esc(f.type || ""), a ? esc(stName(sa)) : "חדש", `<b>${esc(stName(sb))}</b>`, ord(sb) > ord(sa) ? "▲" : "▼"]);
+      if (a && !a.includes("|!") && b.includes("|!")) stuckIn.push(f); if (a.includes("|!") && !b.includes("|!")) stuckOut.push(f); }
+    stgN = rows.length; stg = tbl(["מתקן", "סוג", "היה", "עכשיו", ""], rows.sort((x, y) => String(y[3]).localeCompare(String(x[3]), "he"))) || `<p class="muted small">אף מתקן לא עבר שלב.</p>`;
+    if (stuckIn.length || stuckOut.length) stg += `<p class="small" style="margin:6px 0">${stuckIn.length ? `⏱ <b>נכנסו למצב תקוע:</b> ${stuckIn.map(f => fLink(f.id)).join(", ")}<br>` : ""}${stuckOut.length ? `✓ <b>השתחררו:</b> ${stuckOut.map(f => fLink(f.id)).join(", ")}` : ""}</p>`; }
+  else stg = `<p class="muted small">אין צילום מצב מתחילת השבוע הזה (הצילום נשמר בכניסה הראשונה של כל שבוע, מהשבוע שבו הועלתה הגרסה). אפשר להשוות לקובץ גיבוי: ״📂 השוואה לגיבוי״.</p>`;
+  // 2. תשלומים ושוברים
+  const payRows = []; let payT = 0;
+  R.filter(r => r.col === "orders" && r.f).forEach(r => (r.f || []).forEach(([n, b0, a0]) => { const k = PAYF.find(k => n.startsWith(FLD[k])); if (!k || !a0 || b0 === a0) return;
+    const o = RAW.orders[r.id] || {}, amt = k === "advanceDate" ? N(o.advance) : k === "completionDate" ? N(o.completion) : 0; if (amt) payT += amt;
+    payRows.push([oLink(r), fLink(o.facilityId), `<b>${esc(FLD[k])}</b>`, esc(a0 === "✓" ? "סומן (בלי תאריך)" : a0), amt ? money(amt * V) : "", esc(r.src || r.by)]); }));
+  const pay = tbl(["הזמנה", "מתקן", "מה", "תאריך", "סכום (כולל מע״מ)", "מי / מקור"], payRows) + (payT ? `<p class="small"><b>סה״כ תשלומים שנרשמו: ${money(payT * V)}</b> (כולל מע״מ · לפי תאריך הרישום באתר, לא תאריך התשלום)</p>` : "");
+  // 3. דיווחי מפקחים (מאתר הדיווחים) בשבוע
+  const [ra, rb] = wkRange(W.wk); const reps = W.base ? [] : Object.entries(BRD_PROG || {}).filter(([, p]) => p.contractorId === IEC_CID && ((p.createdAt || "") >= ra && (p.createdAt || "") < rb || (p.reviewedAt || "") >= ra && (p.reviewedAt || "") < rb));
+  const facOfItem = {}; list("facilities").forEach(f => { const k = srcItemId(f); if (k) facOfItem[k] = f.id; });
+  const repT = tbl(["תאריך", "מלאכה", "מתקן", "דיווח", "סטטוס"], reps.map(([pid, p]) => [fmtD(p.date), esc(BRD_ACTS?.[p.activityId]?.name || ""), Object.keys(p.itemIds || {}).map(i => fLink(facOfItem[i]) || esc(p.loc || "")).join(", ") || esc(p.loc || ""), esc(p.reportedByName || String(p.reportedBy || "").split("@")[0]), p.review === "לבדיקה" ? "⏳ ממתין לאישור" : p.review === "נדחה" ? "✗ נדחה" : "✓ אושר"]));
+  // 4. חדשים / נמחקו
+  const nw = R.filter(r => r.op === "add" && (r.col === "orders" || r.col === "facilities" || r.col === "mods")), dl = R.filter(r => r.op === "del" && r.col !== "contacts");
+  const nwT = tbl(["", "מה", "פרטים", "מי"], [...nw.map(r => ["➕", r.col === "orders" ? oLink(r) : r.col === "facilities" ? fLink(r.id) || esc(r.lbl) : esc(r.lbl), esc((r.f || []).map(x => `${x[0]}: ${x[2]}`).join(" · ")), esc(r.src || r.by)]), ...dl.map(r => ["🗑", `<s>${esc(r.lbl)}</s>`, esc({ orders: "הזמנה", facilities: "מתקן", mods: "הזמנת משהב״ט" }[r.col] || r.col), esc(r.by)])]);
+  // 5. סטטוסים והערות (כולל ״עבר לאלעוז״ מהאקסל, רישומי יומן במתקנים ובהזמנות)
+  const nt = []; R.filter(r => r.f && r.op === "upd").forEach(r => r.f.forEach(([n, b0, a0]) => { if (!/^(הערה|סטטוס מהאקסל|רישום|סטטוס)$/.test(n) || !a0) return; nt.push([r.col === "orders" ? oLink(r) : fLink(r.id) || esc(r.lbl), esc(n), esc(a0), esc(r.src || r.by)]); }));
+  const ntT = tbl(["על מה", "שדה", "עכשיו", "מי / מקור"], nt);
+  // 6. שינויים אחרים בהזמנות ובמתקנים (מספרים, סכומים, יעדים, שלבים ידניים)
+  const oth = []; R.filter(r => r.f && r.op === "upd" && r.col !== "settings").forEach(r => r.f.forEach(([n, b0, a0]) => { if (/^(הערה|סטטוס מהאקסל|רישום|סטטוס|תאריך האקסל)$/.test(n) || PAYF.some(k => n.startsWith(FLD[k]))) return; oth.push([r.col === "orders" ? oLink(r) : fLink(r.id) || esc(r.lbl), esc(n), `<s style="color:#999">${esc(b0 || "ריק")}</s> ← <b>${esc(a0 || "ריק")}</b>`, esc(r.src || r.by)]); }));
+  // 7. מי עדכן
+  const P = {}; R.forEach(r => { const k = r.src || r.by; P[k] = (P[k] || 0) + 1; });
+  const pT = Object.entries(P).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<span class="tag" style="margin:2px">${esc(k)} · ${n}</span>`).join(" ");
+  const sum = `<div class="kpis" style="margin:8px 0">${[["עברו שלב", stgN, "#2b9a4d"], ["תשלומים / שוברים", payRows.length, "#f39200"], ["דיווחי מפקחים", reps.length, "#8e5bc2"], ["חדשים", nw.length, "#0a6ec9"], ["נכנסו לתקוע", stuckIn.length, "#c0392b"]].map(([l, v, c]) => `<div class="kpi" style="--kc:${c}"><span>${l}</span><b>${v}</b></div>`).join("")}</div>`;
+  return head + (W.err ? `<p style="color:#b3261e"><b>⚠ ${esc(W.err)}</b></p>` : "") + (!R.length && !W.base ? `<p class="small muted">היומן ריק לשבוע הזה${wkStart(todayStr()) === W.wk ? "" : " (ייתכן שהיומן עוד לא פעל אז — אפשר ״📂 השוואה לגיבוי״)"}.</p>` : "") + sum
+    + sec("⚡ התקדמות שלבים", stg, stgN) + sec("💰 תשלומים ושוברים", pay, payRows.length) + sec("🦺 דיווחי מפקחים", repT, reps.length) + sec("🆕 חדשים ונמחקו", nwT, nw.length + dl.length)
+    + sec("📝 סטטוסים, הערות ורישומים", ntT, nt.length) + sec("✎ שינויים נוספים", tbl(["על מה", "שדה", "שינוי", "מי / מקור"], oth), oth.length) + (pT ? sec("👥 מי עדכן (מספר שינויים)", `<div>${pT}</div>`) : "");
+}
+function weekBanner() {
+  if (PERM !== "admin" && PERM !== "edit" || ui.wlLater) return ""; const wk = addDays(wkStart(todayStr()), -7); let seen = ""; try { seen = localStorage.getItem("iec-wl-seen") || ""; } catch (e) {}
+  if (seen >= wk) return "";
+  return `<div class="note row" style="gap:8px;align-items:center;margin-bottom:12px">📒 <b>הדוח השבועי מוכן</b> — שבוע ${fmtD(wk)}–${fmtD(addDays(wk, 6))}: מה התקדם, מה שולם, מה נתקע ומי עדכן<span class="spacer"></span><button class="btn sm" data-a="wlOpen">לפתיחה</button><button class="btn gh sm" data-a="wlLater">אחר כך</button></div>`;
+}
+/* =====================================================================
+   עדכון מאקסל (הקובץ של גילי): משווה כל שורה להזמנה באתר, מציג מה ישתנה — ומעדכן רק מה שסימנת
+   ===================================================================== */
+const XLSX_SRC = ["https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js", "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"];
+async function loadXlsx() { if (window.XLSX) return; for (const u of XLSX_SRC) { try { await loadScript(u); if (window.XLSX) return; } catch (e) {} } throw new Error("לא ניתן לטעון את רכיב האקסל (אין חיבור לאינטרנט?)"); }
+/** "שולם 6.10" / "9.9" / "ב12.8" → תאריך. בלי שנה: השנה הנוכחית, ואם יוצא בעתיד — השנה הקודמת */
+function gDate(s, ref = todayStr()) {
+  if (typeof s === "number" && /\.1$/.test(String(s))) s = String(s) + "0";
+  const m = String(s ?? "").match(/(\d{1,2})[.\/](\d{1,2})(?:[.\/](\d{2,4}))?/); if (!m) return "";
+  let d = +m[1], mo = +m[2], y = m[3] ? +(m[3].length === 2 ? "20" + m[3] : m[3]) : +ref.slice(0, 4); if (d < 1 || d > 31 || mo < 1 || mo > 12) return "";
+  let r = `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  if (!m[3] && r > ref) { if (mo === 1 && typeof s === "number") r = `${y}-10-${String(d).padStart(2, "0")}`; if (r > ref) r = `${y - 1}-${r.slice(5)}`; }
+  return r;
+}
+function giliParse(rows, fileDate) {
+  const hi = rows.findIndex(r => r.some(c => /מספר\s*הזמנה/.test(String(c)))); if (hi < 0) throw new Error("לא נמצאה בקובץ עמודה ״מספר הזמנה״");
+  const H = rows[hi].map(c => String(c).trim()), col = re => H.findIndex(h => re.test(h));
+  const C = { num: col(/מספר\s*הזמנה/), st: col(/סטטוס/), amt: col(/סכום/), desc: col(/תיאור|נושא/), vf: col(/משלים/), note: col(/הערות/) };
+  const by301 = {}; listO().forEach(o => { if (o.iec301) by301[String(o.iec301).trim()] = o; });
+  const G = {}, miss = []; let section = "";
+  for (const r of rows.slice(hi + 1)) {
+    const cell = k => C[k] >= 0 ? r[C[k]] : "", txt = k => String(cell(k) ?? "").trim(), n = String(cell("num") ?? "").replace(/\D/g, "");
+    if (!/^30\d{7}$/.test(n)) { const t = r.map(c => String(c ?? "").trim()).filter(Boolean); if (t.length === 1 && !/^\d+$/.test(t[0])) section = t[0]; continue; }
+    const o = by301[n]; if (!o) { miss.push({ n, desc: txt("desc"), st: txt("st") }); continue; }
+    const g = G[o.id] || (G[o.id] = { o, n, rows: [], sections: new Set() }); g.rows.push({ st: cell("st"), amt: cell("amt"), desc: txt("desc"), vf: cell("vf"), note: txt("note") }); if (section) g.sections.add(section);
+  }
+  const V = 1 + VAT(), near = (a, b) => b > 0 && Math.abs(a - b) <= Math.max(2, b * 0.003), out = [];
+  for (const g of Object.values(G)) {
+    const o = g.o, ch = [], warn = [], adv = N(o.advance), comp = N(o.completion), add = (k, v, why, on = true) => ch.push({ k, v, why, on });
+    let advD = null, compD = null, advOk = false, compOk = false, notes = [];
+    for (const r of g.rows) {
+      const st = String(r.st ?? "").trim(), amt = N(r.amt), all = [r.desc, String(r.vf ?? ""), r.note].join(" · ");
+      // תשלום בעמודת הסטטוס: "שולם 24.6" או רק תאריך
+      if (st && !/לא\s*שולם/.test(st) && (/שולם/.test(st) || /^\d{1,2}[.\/]\d{1,2}/.test(st) || typeof r.st === "number") && !/מקדמה שולמה/.test(st)) {
+        const d = gDate(r.st, fileDate); let kind = "";
+        if (amt) kind = near(amt, adv * V) || near(amt, adv) ? "adv" : near(amt, comp * V) || near(amt, comp) ? "comp" : "?";
+        if (!amt || kind === "?") { const guess = !has(o, "advanceDate") ? "adv" : has(o, "vFinDate") ? "comp" : "adv";
+          if (kind === "?") warn.push(`הסכום באקסל ${amt.toLocaleString("he-IL")} לא תואם את המקדמה (${money(adv * V)})${comp ? ` או המשלים (${money(comp * V)})` : ""} באתר — נראה כמו ${guess === "adv" ? "מקדמה" : "משלים"}`);
+          kind = kind === "?" ? guess + "?" : guess; }
+        if (kind.startsWith("adv")) advD = { d, sure: !kind.endsWith("?") }; else compD = { d, sure: !kind.endsWith("?") };
+      }
+      if (/מקדמה שולמה/.test(st)) advOk = true;
+      const cm = all.match(/שולם\s*משלים\s*(?:ב\s*)?(\d{1,2}[.\/]\d{1,2}(?:[.\/]\d{2,4})?)?/);
+      if (cm) { if (cm[1]) compD = { d: gDate(cm[1], fileDate), sure: true }; else compOk = true; }
+      if (cm) [r.vf, r.note, r.amt].map(N).forEach(x => { if (x > 100 && near(x, adv * V)) warn.push(`ליד ״שולם משלים״ רשום ${x.toLocaleString("he-IL")} — זה סכום המקדמה, לא המשלים`); });
+      notes.push(...[typeof r.st === "string" && !/^\s*(שולם\s*)?\d{1,2}[.\/]\d{1,2}\s*$/.test(st) ? st : "", typeof r.vf === "string" ? String(r.vf).trim() : "", r.note].filter(x => x && !/^חסר$/.test(x) && !/^[\d.,\s]+$/.test(x)));
+    }
+    for (const s of g.sections) if (/במלואן/.test(s) && !has(o, "completionDate") && !compD) { compOk = true; }
+    const setDate = (k, x, lbl) => { if (!x) return; const cur = o[k];
+      if (x.d && cur === x.d) return;
+      if (x.d && cur && cur !== x.d) { add(k, x.d, `${lbl}: באתר ${fmtD(cur)}, באקסל ${fmtD(x.d)}`, false); warn.push(`${lbl} — תאריך שונה מהאתר`); return; }
+      if (!x.d && has(o, k)) return;
+      add(k, x.d || true, `${lbl}${x.d ? "" : " (בלי תאריך)"}`, x.sure !== false); };
+    setDate("advanceDate", advD || (advOk ? { d: "" } : null), "מקדמה שולמה");
+    setDate("completionDate", compD || (compOk ? { d: "" } : null), "משלים שולם");
+    const cd = ch.find(c => c.k === "completionDate")?.v; if (cd && cd !== true && o.vFinDate && cd < o.vFinDate) { warn.push(`תאריך המשלים (${fmtD(cd)}) לפני שובר המשלים (${fmtD(o.vFinDate)})`); ch.forEach(c => c.k === "completionDate" && (c.on = false)); }
+    if (warn.length) ch.forEach(c => { if (c.k !== "gNote") c.on = c.on && !warn.some(w => /לא תואם/.test(w)); });
+    const sec = [...g.sections].filter(s => !/במלואן|הושלם/.test(s) || true);
+    const gn = [...new Set([...notes, ...sec])].join(" · ").slice(0, 300);
+    if (gn && gn !== (o.gNote || "")) add("gNote", gn, "סטטוס מהאקסל", true);
+    if (ch.length) add("gAt", fileDate, "", true);
+    if (ch.length > 1 || warn.length) out.push({ o, n: g.n, ch, warn, desc: g.rows[0].desc, sections: [...g.sections] });
+  }
+  return { out, miss, total: Object.keys(G).length };
+}
+function giliImport() {
+  if (!canEdit()) return toast("הרשאת צפייה בלבד");
+  const i = document.createElement("input"); i.type = "file"; i.accept = ".xlsx,.xls";
+  i.onchange = async () => { const f = i.files[0]; if (!f) return;
+    try { await loadXlsx(); const wb = XLSX.read(await f.arrayBuffer(), { type: "array", cellDates: false });
+      const ws = wb.Sheets[wb.SheetNames.find(n => XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1 }).some(r => r.some(c => /מספר\s*הזמנה/.test(String(c))))) || wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" }), fd = gDate(f.name.replace(/[_\-]/g, ".")) || todayStr();
+      giliModal(giliParse(rows, fd), f.name, fd);
+    } catch (e) { alertBox("לא הצלחתי לקרוא את הקובץ: " + (e?.message || e)); } };
+  i.click();
+}
+function giliModal(P, name, fd) {
+  const nCh = P.out.reduce((t, x) => t + x.ch.filter(c => c.k !== "gAt").length, 0), V = 1 + VAT();
+  const rowH = (x, i) => { const f = RAW.facilities[x.o.facilityId];
+    return `<tr class="${x.warn.length ? "gw" : ""}"><td class="nowrap">${ordLink(x.o)}</td><td>${f ? esc(f.name) : `<span class="muted">${esc(x.desc)}</span>`}<div class="small muted">באתר: ${payTag(x.o)}</div></td>
+      <td>${x.ch.filter(c => c.k !== "gAt").map((c, j) => `<label class="row small" style="gap:6px;align-items:flex-start;margin:2px 0"><input type="checkbox" data-gc="${i}|${x.ch.indexOf(c)}" ${c.on ? "checked" : ""}><span><b>${esc(c.k === "gNote" ? "סטטוס מהאקסל" : c.why)}</b>${c.k === "gNote" ? `: ${esc(c.v)}` : c.v === true ? "" : ` — ${fmtD(c.v)}`}</span></label>`).join("")}
+        ${x.warn.map(w => `<div class="small" style="color:#b3261e">⚠ ${esc(w)}</div>`).join("")}</td></tr>`; };
+  openModal(`<div class="row"><h2>⬆ עדכון מאקסל — <bdi>${esc(name)}</bdi></h2><span class="spacer"></span><button class="btn gh" data-a="close">ביטול</button></div>
+    <div class="note">נבדקו ${P.total} הזמנות מהקובץ (תאריך הקובץ: ${fmtD(fd)}). בכל שורה מסומן מה ישתנה באתר. שורות עם ⚠ לא מסומנות — לבדוק מול גילי ולסמן ידנית אם נכון. השינויים נרשמים ביומן עם המקור ״אקסל ${fmtD(fd)}״ ויופיעו בדוח השבועי.</div>
+    ${P.miss.length ? `<div class="note" style="border-color:#e0a100">לא נמצאו באתר (${P.miss.length}): ${P.miss.map(m => `<span class="ltr">${esc(m.n)}</span> ${esc(m.desc)}`).join(" · ")}</div>` : ""}
+    ${P.out.length ? `<div class="tw" style="max-height:60vh;overflow:auto"><table class="t gtab"><thead><tr><th>הזמנה</th><th>מתקן</th><th>מה ישתנה</th></tr></thead><tbody>${P.out.map(rowH).join("")}</tbody></table></div>` : `<p>אין שינויים — האתר מעודכן לפי הקובץ.</p>`}
+    <div class="row" style="margin-top:10px;gap:8px">${P.out.length ? `<button class="btn" id="gYes">עדכון השינויים המסומנים</button><button class="btn gh sm" id="gAll">סימון הכל</button><button class="btn gh sm" id="gNone">ניקוי</button>` : ""}<span class="muted small" id="gCnt"></span></div>`,
+    m => { const cnt = () => { const n = m.querySelectorAll("[data-gc]:checked").length; const el = m.querySelector("#gCnt"); if (el) el.textContent = `${n} מסומנים מתוך ${nCh}`; }; cnt();
+      m.querySelectorAll("[data-gc]").forEach(c => c.onchange = cnt);
+      m.querySelector("#gAll")?.addEventListener("click", () => { m.querySelectorAll("[data-gc]").forEach(c => c.checked = true); cnt(); });
+      m.querySelector("#gNone")?.addEventListener("click", () => { m.querySelectorAll("[data-gc]").forEach(c => c.checked = false); cnt(); });
+      m.querySelector("#gYes")?.addEventListener("click", async () => {
+        const pick = {}; m.querySelectorAll("[data-gc]:checked").forEach(c => { const [i, j] = c.dataset.gc.split("|").map(Number); (pick[i] = pick[i] || []).push(P.out[i].ch[j]); });
+        const ids = Object.keys(pick); if (!ids.length) return toast("לא סומן כלום");
+        LOGSRC = `אקסל ${fmtD(fd)}`;
+        try { for (const i of ids) { const x = P.out[i], patch = {};
+            pick[i].forEach(c => { if (c.v === true) patch["ok_" + c.k] = true; else patch[c.k] = c.v; });
+            patch.gAt = fd; await api.update("orders", x.o.id, patch); } }
+        finally { LOGSRC = ""; }
+        closeModal(); toast(`עודכנו ${ids.length} הזמנות ✓`); render(); });
+    });
+}
 /* ---------- אירועים ---------- */
 document.addEventListener("click", async e => {
   if (!e.target.closest(".ms")) { if (ui.msOpen) ui.msOpen = ""; document.querySelectorAll("details.ms[open]").forEach(d => d.open = false); }
@@ -1057,6 +1297,14 @@ document.addEventListener("click", async e => {
   else if (a === "logo") pickImg(async url => api.setSettings({ logos: { ...(S().logos || {}), [id]: url } }));
   else if (a === "logoDel") { const L = { ...(S().logos || {}) }; delete L[id]; await api.setSettings({ logos: L }); }
   else if (a === "import") importModal();
+  else if (a === "gili") giliImport();
+  else if (a === "wlLater") { ui.wlLater = true; render(); }
+  else if (a === "wlOpen") { try { localStorage.setItem("iec-wl-seen", addDays(wkStart(todayStr()), -7)); } catch (e) {} ui.tab = "reports"; ui.rep = { dist: "", upTo: 30, ...(ui.rep || {}), kind: "week" }; wlState().wk = addDays(wkStart(todayStr()), -7); wlState().base = null; render(); scrollTo(0, 0); }
+  else if (a === "wlWk") { const W = wlState(), cur = wkStart(todayStr()); W.wk = id === "cur" ? cur : addDays(W.wk, +id); if (W.wk > cur) W.wk = cur; render(); }
+  else if (a === "wlRe") { const W = wlState(); delete W.data[W.wk]; delete SNAPS[W.wk]; delete SNAPS[addDays(W.wk, 7)]; render(); }
+  else if (a === "wlBaseClr") { wlState().base = null; render(); }
+  else if (a === "wlBase") pickFile(".json,application/json", t => { try { const j = JSON.parse(t); if (!j?.data?.facilities) throw new Error("זה לא קובץ גיבוי של אתר חיבורי החשמל");
+      wlState().base = { at: j.meta?.savedAt || "", recs: baseDiff(j), snap: baseSnap(j) }; render(); } catch (e) { alertBox("לא ניתן לקרוא את הקובץ: " + (e?.message || e)); } });
   else if (a === "syncNow") { await syncItems(true); render(); }
   else if (a === "repOk" || a === "repNo") { const p = BRD_PROG?.[id]; if (!p) return;
     if (a === "repNo" && !confirm("לדחות את הדיווח? הוא יסומן \"נדחה\" גם באתר הגבול.")) return;
