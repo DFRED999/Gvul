@@ -700,7 +700,7 @@ ${rqList()}${covModal(c, seg, acts)}${unit ? unitModal(act, c.id) : ""}${rqModal
       $("rqsend").disabled = true;
       const rec = { contractorId: c.id, kind: F.kind, text: F.text.trim(), kdFrom: F.kf.trim(), kdTo: F.kt.trim(), urgent: !!F.urgent, date: today(), status: "פתוח",
         reportedBy: me.email, reportedByName: me.name || "", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), updatedBy: me.email };
-      try { await fb.database().ref(`${ROOT}/requests`).push(rec); S.rq = null; S.rqOpen = false; S.msg = "הפנייה נשלחה ✓ — התשובה תופיע ב״הפניות שלי״"; S.err = false; }
+      try { const rr = await fb.database().ref(`${ROOT}/requests`).push(rec); rlog("requests", rr.key, "add", rec); S.rq = null; S.rqOpen = false; S.msg = "הפנייה נשלחה ✓ — התשובה תופיע ב״הפניות שלי״"; S.err = false; }
       catch (e) { S.rqMsg = "השליחה נכשלה — אין הרשאה (צריך לעדכן את כללי Firebase) או אין חיבור"; }
       view(); }; }
   app.querySelectorAll("[data-mytog]").forEach(b => b.onclick = () => { myCfg().open = !S.my.open; mySave(); view(); });
@@ -719,7 +719,7 @@ ${rqList()}${covModal(c, seg, acts)}${unit ? unitModal(act, c.id) : ""}${rqModal
   if ($("rqfrom")) { $("rqfrom").onchange = e => { S.rqF.from = e.target.value; view(); }; $("rqto").onchange = e => { S.rqF.to = e.target.value; view(); }; }
   const rqFilter = () => { const q = (S.rqQ || "").trim().toLowerCase(); let n = 0; app.querySelectorAll("#rqcard .rqi").forEach(el => { const ok = !q || el.dataset.rqs.includes(q); el.hidden = !ok; if (ok) n++; }); if ($("rqcnt")) $("rqcnt").textContent = `${n} פניות`; };
   if ($("rqq")) { $("rqq").oninput = e => { S.rqQ = e.target.value; rqFilter(); }; rqFilter(); }
-  app.querySelectorAll("[data-rqdel]").forEach(b => b.onclick = async () => { if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "בטוח?"; return; } await fb.database().ref(`${ROOT}/requests/${b.dataset.rqdel}`).remove(); });
+  app.querySelectorAll("[data-rqdel]").forEach(b => b.onclick = async () => { if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "בטוח?"; return; } const r0 = RQ?.[b.dataset.rqdel]; await fb.database().ref(`${ROOT}/requests/${b.dataset.rqdel}`).remove(); rlog("requests", b.dataset.rqdel, "del", r0); });
   app.querySelectorAll("[data-un]").forEach(b => b.onclick = () => { S.unOpen = b.dataset.un; view(); });
   app.querySelectorAll("[data-unx]").forEach(b => b.onclick = e => { if (e.target === b || b.tagName === "BUTTON") { S.unOpen = null; view(); } });
   app.querySelectorAll("[data-gpick]").forEach(b => b.onclick = () => { const id = b.dataset.gpick; S.gsel = S.gsel.includes(id) ? S.gsel.filter(x => x !== id) : [...S.gsel, id]; S.grOk = false; S.msg = ""; view(); });
@@ -732,7 +732,7 @@ ${rqList()}${covModal(c, seg, acts)}${unit ? unitModal(act, c.id) : ""}${rqModal
     S.acts = isU(id) || S.acts.some(isU) ? (S.acts.includes(id) ? [] : [id]) : S.acts.includes(id) ? S.acts.filter(x => x !== id) : [...S.acts, id];
     S.msg = ""; S.dup = null; view(); });
   app.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { S.segId = b.dataset.s; S.dup = null; view(); });
-  app.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "בטוח?"; return; } await fb.database().ref(`${ROOT}/progress/${b.dataset.del}`).remove(); });
+  app.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "בטוח?"; return; } { const r0 = D.progress?.[b.dataset.del]; await fb.database().ref(`${ROOT}/progress/${b.dataset.del}`).remove(); rlog("progress", b.dataset.del, "del", r0); } });
   $("dt").onchange = e => { if (e.target.value && +e.target.value.slice(0, 4) > 1990) S.date = e.target.value; };
   $("note").oninput = e => S.note = e.target.value;
   const numIn = (id, k) => { const el = $(id); if (!el) return; el.oninput = () => { if (S.dup) { S.dup = null; document.querySelector(".dup")?.remove(); } S[k] = el.value.trim() === "" ? "" : Number(el.value); const mm = $("m"); if (mm) { const v = S.from !== "" && S.to !== "" && !isNaN(S.from) && !isNaN(S.to) ? Math.abs(S.to - S.from) * SECTION_M : null; mm.textContent = v === null ? "" : v.toLocaleString("he-IL") + " מ׳"; } }; };
@@ -775,7 +775,7 @@ ${rqList()}${covModal(c, seg, acts)}${unit ? unitModal(act, c.id) : ""}${rqModal
   };
   const sendRecs = async (recs, extra = "") => {
     $("send").disabled = true;
-    try { for (const r of recs) await fb.database().ref(`${ROOT}/progress`).push(r);
+    try { for (const r of recs) { const rr = await fb.database().ref(`${ROOT}/progress`).push(r); rlog("progress", rr.key, "add", r); }
       const nA = new Set(recs.map(r => r.activityId)).size;
       const mOf = rs => (rs.reduce((s, r) => s + Math.abs(r.secTo - r.secFrom), 0) * SECTION_M).toLocaleString("he-IL") + " מ׳";
       const len = gr ? `${S.gsel.length} ${isC ? "סבכות" : "יח׳"} (${S.gsel.map(id => labOf(IT(id))).join(", ")})` : unit ? `${S.qty} יח׳` : nA > 1 ? [...new Set(recs.map(r => r.activityId))].map(id => `${short(D.activities?.[id]?.name || "")} ${mOf(recs.filter(r => r.activityId === id))}`).join(" · ") : mOf(recs); S.dup = null;
@@ -797,6 +797,11 @@ const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${e
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
 /* ניטור שגיאות — נרשם ב-border/errLog (נראה באתר הראשי: הגדרות ← יומן שגיאות) */
+/** יומן שינויים (border_log) — מה המפקח שלח / מחק, כדי שהמנהלים יראו בדוח השבועי מי דיווח וכמה */
+function rlog(col, id, op, r) { try { if (!fb || !user) return; r = r || {};
+  const lbl = [D.contractors?.[r.contractorId]?.name, col === "progress" ? `${D.activities?.[r.activityId]?.name || "דיווח"}${r.secFrom !== undefined && r.secFrom !== "" && r.secFrom !== null ? ` · חתכים ${r.secFrom}–${r.secTo}` : r.qty ? ` · ${r.qty} יח׳` : ""}${r.date ? ` · ${String(r.date).slice(8, 10)}/${String(r.date).slice(5, 7)}` : ""}` : String(r.text || "").slice(0, 100)].filter(Boolean).join(" · ");
+  fb.database().ref(`${ROOT}_log`).push({ at: new Date().toISOString(), by: me?.name || user.email || "", uid: user.uid, col, id: String(id || ""), op, lbl, ...(r.contractorId ? { cid: r.contractorId } : {}), src: "דיווחים" }).catch(() => {});
+} catch (e) {} }
 let errN = 0, lastAct = ""; const errSeen = new Set();
 function logErr(kind, msg, stack) { try {
   msg = String(msg || "שגיאה").slice(0, 300); if (errSeen.has(msg)) return; errSeen.add(msg);
