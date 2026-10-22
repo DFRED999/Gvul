@@ -163,6 +163,7 @@ table.ot .tg { all: unset; cursor: pointer; display: inline-block; width: 20px; 
 @media print { .top, .noprint, .ov > .mdl > .row { display: none !important; } body { background: #fff; } .ov { position: static; padding: 0; background: #fff; } .mdl { box-shadow: none; width: 100%; padding: 0; } main { display: none; } }
 .gtab tr.gw td { background: #fff6f4; }
 .gtab td { vertical-align: top; }
+@media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
 </style>
 </head>
 <body>
@@ -838,12 +839,12 @@ const pickFile = (accept, cb) => { const i = document.createElement("input"); i.
 function pageReports() {
   const R = ui.rep || (ui.rep = { dist: "", kind: "brief", upTo: 30 });
   return `<div class="card"><h2>📄 דוחות ומצע לדיון</h2>
-    <div class="flt"><label class="f">סוג<select class="inp" data-rp="kind"><option value="week" ${R.kind === "week" ? "selected" : ""}>📒 דוח שינויים שבועי (ראשון–שבת)</option><option value="brief" ${R.kind === "brief" ? "selected" : ""}>מצע לדיון — פערים מול הנהלת חח״י</option><option value="status" ${R.kind === "status" ? "selected" : ""}>דוח סטטוס מלא — כל המתקנים</option><option value="money" ${R.kind === "money" ? "selected" : ""}>דוח כספי — הזמנות ותשלומים</option></select></label>
-      ${R.kind === "week" ? wkCtl() : `<label class="f">נפה<select class="inp" data-rp="dist"><option value="">כל הנפות</option>${DISTRICTS.map(d => `<option ${R.dist === d ? "selected" : ""}>${d}</option>`).join("")}</select></label>
+    <div class="flt"><label class="f">סוג<select class="inp" data-rp="kind"><option value="marked" ${R.kind === "marked" ? "selected" : ""}>🖍 דוח סטטוס מסומן — מה השתנה בשבוע</option><option value="week" ${R.kind === "week" ? "selected" : ""}>📒 דוח שינויים שבועי (ראשון–שבת)</option><option value="brief" ${R.kind === "brief" ? "selected" : ""}>מצע לדיון — פערים מול הנהלת חח״י</option><option value="status" ${R.kind === "status" ? "selected" : ""}>דוח סטטוס מלא — כל המתקנים</option><option value="money" ${R.kind === "money" ? "selected" : ""}>דוח כספי — הזמנות ותשלומים</option></select></label>
+      ${R.kind === "week" || R.kind === "marked" ? wkCtl() + (R.kind === "marked" ? `<label class="row small"><input type="checkbox" data-rpc="onlyCh" ${R.onlyCh ? "checked" : ""}> רק מתקנים שהשתנו</label>` : "") : `<label class="f">נפה<select class="inp" data-rp="dist"><option value="">כל הנפות</option>${DISTRICTS.map(d => `<option ${R.dist === d ? "selected" : ""}>${d}</option>`).join("")}</select></label>
       <label class="f">יעדים קרובים — ימים קדימה<input class="inp" type="number" data-rp="upTo" value="${esc(R.upTo)}" style="width:90px"></label>
       ${R.kind === "brief" ? `<label class="row small"><input type="checkbox" data-rpc="internal" ${R.internal ? "checked" : ""}> כולל נושאים פנימיים (אצלנו / משהב״ט, מספרים חסרים)</label>` : ""}`}<span class="spacer"></span>
       <button class="btn" data-a="repPrint">🖨 הדפסה / PDF</button><button class="btn gh" data-a="repWord">⬇ וורד</button><button class="btn gh" data-a="repCopy">העתקה</button></div>
-    ${R.kind === "week" ? `<div class="note">מה השתנה בשבוע (ראשון–שבת): מתקנים שעברו שלב, תשלומים ושוברים, דיווחי מפקחים, הזמנות ומתקנים חדשים, סטטוסים מהאקסל — ומי עדכן. כל שינוי באתר נרשם ביומן אוטומטית. ביום ראשון מופיע בתמונת המצב ״הדוח השבועי מוכן״.</div>` : `<div class="note">המצע בנוי לבד מהנתונים: מה תקוע ואצל מי, יעדים שעברו, חוסרים בתהליך, שוברים שפגים, יעדים בשבועות הקרובים, והעדכון האחרון בכל מתקן. ממלאים בישיבה — ומעדכנים יעדים חדשים בכרטיס המתקן.</div>`}
+    ${R.kind === "marked" ? `<div class="note">דוח הסטטוס הרגיל, ובו כל מתקן שהשתנה בשבוע הנבחר צבוע ומפורט: צהוב — התקדם, כחול — סטטוס/הערה, אדום — נכנס למצב תקוע. בסוף — טבלת פירוט. אפשר לבחור שבוע, או ״📂 השוואה לגיבוי״.</div>` : R.kind === "week" ? `<div class="note">מה השתנה בשבוע (ראשון–שבת): מתקנים שעברו שלב, תשלומים ושוברים, דיווחי מפקחים, הזמנות ומתקנים חדשים, סטטוסים מהאקסל — ומי עדכן. כל שינוי באתר נרשם ביומן אוטומטית. ביום ראשון מופיע בתמונת המצב ״הדוח השבועי מוכן״.</div>` : `<div class="note">המצע בנוי לבד מהנתונים: מה תקוע ואצל מי, יעדים שעברו, חוסרים בתהליך, שוברים שפגים, יעדים בשבועות הקרובים, והעדכון האחרון בכל מתקן. ממלאים בישיבה — ומעדכנים יעדים חדשים בכרטיס המתקן.</div>`}
     <div style="border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff">${repHtml()}</div></div>`;
 }
 function repHtml() {
@@ -862,7 +863,8 @@ function repHtml() {
         return `<tr>${td(f ? nm(f) : "—")}${td(esc(o.iec301 || ""))}${td(adv ? "מקדמה " + fmtD(o.vAdvDate) : "משלים " + fmtD(o.vFinDate))}${td(money(N(adv ? o.advance : o.completion) * V))}${td(fmtD(o.validUntil), o.validUntil && o.validUntil < today ? "color:#c0392b;font-weight:700" : "")}</tr>`; }))
       + h2("כל ההזמנות") + tbl(["מתקן", "סוג", "דרישה", "הזמנת משהב״ט", "הזמנת חח״י", "סכום", "שולם", "נשאר"], O.map(o => { const f = RAW.facilities[o.facilityId]; return `<tr>${td(f ? nm(f) : "—")}${td(esc(o.kind || "הזמנה"))}${td(esc(o.req880 || ""))}${td(esc(o.ord444 || ""))}${td(esc(o.iec301 || ""))}${td(money(orderTotal(o)))}${td(money(orderPaid(o)))}${td(money(orderTotal(o) - orderPaid(o)))}</tr>`; }));
   }
-  if (R.kind === "status") return title + sumRow + h2("כל המתקנים") + tbl(["מתקן", "שלב", "הבא / יעד", "הזמנות חח״י", "עדכון אחרון"], F.sort((a, b) => (kdN(b.kd) ?? 0) - (kdN(a.kd) ?? 0)).map(f => { const s = state(f); return `<tr>${td(nm(f))}${td(s.cur ? esc(s.cur.name) : "טרם התחיל")}${td(s.next ? esc(s.next.name) + (f.stages?.[s.next.id]?.target ? " · " + fmtD(f.stages[s.next.id].target) : "") : "✓")}${td(nums(f))}${td(ll(f))}</tr>`; }));
+  if (R.kind === "marked") return markedHtml(th, td, tbl, h2, nm, nums, ll, sumRow, F);
+  if (R.kind === "status") return title + sumRow + h2("מה נשאר לעשות — לפי שלב") + leftHtml(F, th, td) + h2("כל המתקנים") + tbl(["מתקן", "שלב", trackHead(), "הבא / יעד", "הזמנות חח״י", "עדכון אחרון"], F.sort((a, b) => (kdN(b.kd) ?? 0) - (kdN(a.kd) ?? 0)).map(f => { const s = state(f); return `<tr>${td(nm(f))}${td(s.cur ? esc(s.cur.name) : "טרם התחיל")}${td(trackHtml(f), "padding:3px 4px")}${td(s.next ? esc(s.next.name) + (f.stages?.[s.next.id]?.target ? " · " + fmtD(f.stages[s.next.id].target) : "") : "✓")}${td(nums(f))}${td(ll(f))}</tr>`; }));
   const IG = new Set(["voucher", "ttz"]), gp = f => gaps(f).filter(g => R.internal || IG.has(g.k));   // במצע מול חח״י — רק חוסרים שנוגעים לחח״י, אלא אם סומן "כולל פנימיים"
   const stuck = F.map(f => [f, state(f)]).filter(([, s]) => s.stuck && (R.internal || s.flags.some(x => x.who === "חח״י"))), upTo = addDays(today, N(R.upTo) || 30);
   const up = F.map(f => [f, state(f)]).filter(([f, s]) => s.next && f.stages?.[s.next.id]?.target && f.stages[s.next.id].target >= today && f.stages[s.next.id].target <= upTo).sort((a, b) => a[0].stages[a[1].next.id].target.localeCompare(b[0].stages[b[1].next.id].target));
@@ -1131,6 +1133,68 @@ function weekHtml() {
     + sec("⚡ התקדמות שלבים", stg, stgN) + sec("💰 תשלומים ושוברים", pay, payRows.length) + sec("🦺 דיווחי מפקחים", repT, reps.length) + sec("🆕 חדשים ונמחקו", nwT, nw.length + dl.length)
     + sec("📝 סטטוסים, הערות ורישומים", ntT, nt.length) + sec("✎ שינויים נוספים", tbl(["על מה", "שדה", "שינוי", "מי / מקור"], oth), oth.length) + (pT ? sec("👥 מי עדכן (מספר שינויים)", `<div>${pT}</div>`) : "");
 }
+/** מה השתנה בכל מתקן בשבוע הנבחר (או מאז גיבוי): שלב (צילום תחילת שבוע מול סוף), תשלומים, סטטוסים, דיווחי מפקחים, שינויים אחרים */
+function wkChanges() {
+  const W = wlState(), cur = wkStart(todayStr()), isCur = W.wk === cur, nx = addDays(W.wk, 7);
+  if (!W.base && W.data[W.wk] === undefined) setTimeout(() => wlLoad(W.wk), 0);
+  const recs = W.base ? W.base.recs : W.data[W.wk]; if (!recs) return null;
+  const s0 = W.base ? W.base.snap : SNAPS[W.wk]?.f, s1 = !W.base && !isCur && SNAPS[nx]?.f ? SNAPS[nx].f : snapNow(), ord = id => stages().findIndex(s => s.id === id);
+  const byF = {}, noF = [], F = id => byF[id] || (byF[id] = { pays: [], notes: [], other: [], reps: [], who: new Set(), stage: null, stuckIn: false, stuckOut: false, isNew: false });
+  for (const r of recs) { const fid = r.col === "facilities" ? r.id : r.col === "orders" ? RAW.orders[r.id]?.facilityId : "";
+    if (!fid || !RAW.facilities[fid]) { if (r.col !== "settings" && r.col !== "contacts") noF.push(r); continue; }
+    const x = F(fid); x.who.add(r.src || r.by); if (r.op === "add" && r.col === "facilities") x.isNew = true;
+    if (r.op === "add" && r.col === "orders") x.other.push(`הזמנה חדשה ${r.lbl.split(" · ")[0]}`);
+    if (r.op === "del") x.other.push(`נמחקה ${r.col === "orders" ? "הזמנה " : ""}${r.lbl.split(" · ")[0]}`);
+    (r.f || []).forEach(([n, b0, a0]) => { const pk = PAYF.find(k => n.startsWith(FLD[k])), on = r.col === "orders" ? (RAW.orders[r.id]?.iec301 ? ` (${RAW.orders[r.id].iec301})` : "") : "";
+      if (pk) { if (a0) x.pays.push(`${FLD[pk]} ${a0 === "✓" ? "" : a0}${on}`.trim()); }
+      else if (/^(הערה|סטטוס מהאקסל|רישום)$/.test(n)) { if (a0) x.notes.push(a0); }
+      else if (!/^(תאריך האקסל)$/.test(n)) x.other.push(`${n}: ${b0 || "ריק"} ← ${a0 || "ריק"}`); }); }
+  if (s0) for (const f of allF()) { const k = fbKey(f.id), a = String(s0[k] || ""), b = String(s1[k] || ""); if (!b) continue; const [sa] = a.split("|"), [sb] = b.split("|");
+    if (!a) { if (!W.base || !W.base.snap[k]) F(f.id).isNew = true; continue; }
+    if (sa !== sb) F(f.id).stage = [sa, sb, ord(sb) > ord(sa)];
+    if (!a.includes("|!") && b.includes("|!")) F(f.id).stuckIn = true; if (a.includes("|!") && !b.includes("|!")) F(f.id).stuckOut = true; }
+  if (!W.base) { const [ra, rb] = wkRange(W.wk), foi = {}; list("facilities").forEach(f => { const k = srcItemId(f); if (k) foi[k] = f.id; });
+    Object.values(BRD_PROG || {}).filter(p => p.contractorId === IEC_CID && ((p.createdAt || "") >= ra && (p.createdAt || "") < rb || (p.reviewedAt || "") >= ra && (p.reviewedAt || "") < rb))
+      .forEach(p => Object.keys(p.itemIds || {}).forEach(i => { if (foi[i]) { const x = F(foi[i]); x.reps.push(`${BRD_ACTS?.[p.activityId]?.name || "דיווח"} ${fmtD(p.date)} — ${p.reportedByName || String(p.reportedBy || "").split("@")[0]}${p.review === "לבדיקה" ? " (ממתין לאישור)" : p.review === "נדחה" ? " (נדחה)" : ""}`); x.who.add(p.reportedByName || "מפקח"); } })); }
+  for (const x of Object.values(byF)) x.color = x.stuckIn || (x.stage && !x.stage[2]) ? "r" : x.stage || x.pays.length || x.reps.length || x.isNew ? "y" : x.notes.length || x.other.length || x.stuckOut ? "b" : "";
+  return { byF, noF, hasSnap: !!s0, label: W.base ? `מאז הגיבוי של ${fmtD(String(W.base.at).slice(0, 10))}` : `שבוע ${fmtD(W.wk)}–${fmtD(addDays(W.wk, 6))}${isCur ? " (עד עכשיו)" : ""}` };
+}
+const MK_BG = { y: "#fff3a6", b: "#dcecff", r: "#ffd6d6" };
+function mkText(x, short) {
+  const p = []; if (x.isNew) p.push("<b>מתקן חדש</b>");
+  if (x.stage) p.push(`<b>שלב: ${esc(stName(x.stage[0]))} ← ${esc(stName(x.stage[1]))}</b>`);
+  x.pays.forEach(t => p.push(esc(t))); x.reps.forEach(t => p.push("🦺 " + esc(t)));
+  if (x.stuckIn) p.push(`<span style="color:#b00000"><b>⏱ נכנס למצב תקוע</b></span>`); if (x.stuckOut) p.push("✓ יצא ממצב תקוע");
+  [...new Set(x.notes)].forEach(t => p.push(`<span style="color:#45526b">📝 ${esc(t)}</span>`)); if (!short) x.other.forEach(t => p.push(`<span style="color:#63708a">${esc(t)}</span>`));
+  return p.join(" · ");
+}
+/** מסלול השלבים של מתקן — אותו סדר ואותו רוחב בכל שורה (טבלה קטנה, כדי שיעבוד גם בהדפסה ובוורד): מלא = בוצע, מסגרת עבה = השלב הבא, ריק = נשאר, נקודה = לא רלוונטי לסוג */
+function trackHtml(f) {
+  const s = state(f), mine = new Set(stagesFor(f).map(x => x.id)), left = s.ST.filter(x => !s.done[x.id]).length;
+  return `<table style="border-collapse:separate;border-spacing:2px;margin:0"><tr>${stages().map(x => { const d = s.done[x.id], nx = s.next?.id === x.id, na = !mine.has(x.id);
+    return `<td title="${esc(x.name)}" style="width:13px;height:11px;padding:0;border-radius:3px;font-size:7pt;line-height:9px;text-align:center;${na ? "border:1px dotted #d3d9e2;color:#c3cad6" : d ? `background:${x.color};border:1px solid ${x.color}` : nx ? `border:2px solid ${x.color};background:#fff` : "border:1px solid #c3cad6;background:#fff"}">${na ? "·" : ""}</td>`; }).join("")}</tr></table><div style="font-size:8pt;color:#63708a;margin-top:1px">${left ? `נשארו ${left} מתוך ${s.ST.length}` : "<b style=\"color:#1b6b3a\">הושלם ✓</b>"}</div>`;
+}
+const trackHead = () => `<table style="border-collapse:separate;border-spacing:2px;margin:0"><tr>${stages().map(x => `<td title="${esc(x.name)}" style="width:13px;padding:0;font-size:6.5pt;color:#fff;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);height:58px;white-space:nowrap">${esc(x.name)}</td>`).join("")}</tr></table>`;
+/** כמה מתקנים עוד צריכים כל שלב — ״מה נשאר לעשות״ */
+function leftHtml(F, th, td) {
+  const rows = stages().map(x => { const need = F.filter(f => stagesFor(f).some(y => y.id === x.id)), left = need.filter(f => !state(f).done[x.id]), nxt = left.filter(f => state(f).next?.id === x.id), st = nxt.filter(f => state(f).stuck), pct = need.length ? Math.round((need.length - left.length) / need.length * 100) : 0;
+    return `<tr>${td(`<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${x.color};vertical-align:middle"></span> <b>${esc(x.name)}</b>`)}${td(esc(x.who || ""))}${td(`<b>${left.length}</b> מתוך ${need.length}`, "text-align:center")}${td(nxt.length || "", "text-align:center")}${td(st.length ? `<b style="color:#c0392b">${st.length}</b>` : "", "text-align:center")}
+      ${td(`<table style="width:100%;border-collapse:collapse;margin:0"><tr><td style="padding:0;height:9px;width:${pct}%;background:${x.color}"></td><td style="padding:0;height:9px;background:#e6eaf0"></td></tr></table><span style="font-size:8pt;color:#63708a">${pct}% בוצע</span>`, "width:28%")}</tr>`; });
+  return `<table style="width:100%;border-collapse:collapse;margin:4px 0 12px"><tr>${["שלב", "אצל מי", "נשאר לבצע", "הבא בתור (ממתינים לו עכשיו)", "מהם תקועים", "התקדמות"].map(th).join("")}</tr>${rows.join("")}</table>`;
+}
+function markedHtml(th, td, tbl, h2, nm, nums, ll, sumRow, F) {
+  const R = ui.rep, C = wkChanges();
+  if (!C) return `<p class="muted">טוען את היומן…</p>`;
+  const title = `<h2 style="color:#0b3a6e;margin:0">דוח סטטוס — מה השתנה</h2><div style="color:#63708a;margin-bottom:6px">${R.dist ? "נפת " + esc(R.dist) : "כל הנפות"} · ${C.label} · הופק ${fmtD(todayStr())}</div>`;
+  const leg = `<div style="font-size:9.5pt;margin:4px 0 8px"><b>סימון:</b> <span style="background:${MK_BG.y};padding:0 6px">צהוב</span> התקדם (שלב, תשלום, דיווח, חדש) · <span style="background:${MK_BG.b};padding:0 6px">כחול</span> סטטוס / הערה / עדכון פרטים · <span style="background:${MK_BG.r};padding:0 6px">אדום</span> נכנס למצב תקוע או חזר שלב${C.hasSnap ? "" : ` · <span style="color:#b07d00">אין צילום מצב מתחילת השבוע — שינויי שלב מוצגים רק דרך התשלומים שנרשמו</span>`}</div>`;
+  const L = F.sort((a, b) => (kdN(b.kd) ?? 0) - (kdN(a.kd) ?? 0)).filter(f => !R.onlyCh || C.byF[f.id]?.color);
+  const rows = L.map(f => { const s = state(f), x = C.byF[f.id], bg = x?.color ? `background:${MK_BG[x.color]};` : "";
+    return `<tr>${td(nm(f), bg)}${td(s.cur ? esc(s.cur.name) : "טרם התחיל", bg)}${td(trackHtml(f), bg + "padding:3px 4px")}${td(s.next ? esc(s.next.name) + (f.stages?.[s.next.id]?.target ? " · " + fmtD(f.stages[s.next.id].target) : "") : "✓", bg)}${td(nums(f), bg)}${td(x?.color ? mkText(x, true) : `<span style="color:#9aa3b2">${ll(f)}</span>`, bg + "font-size:9pt")}</tr>`; });
+  const chF = allF().filter(f => C.byF[f.id]?.color && (!R.dist || f.district === R.dist)), grp = [["r", "⚠ דורש תשומת לב — נכנס למצב תקוע / חזר שלב"], ["y", "✓ התקדם"], ["b", "📝 סטטוס, הערות ועדכוני פרטים"]];
+  const sum = h2(`פירוט השינויים (${chF.length} מתקנים)`) + grp.map(([c, t]) => { const a = chF.filter(f => C.byF[f.id].color === c); return a.length ? `<div style="font-weight:700;margin:8px 0 2px">${t} (${a.length})</div>` + tbl(["מתקן", "הזמנות חח״י", "שלב עכשיו", "מה השתנה", "מי / מקור"], a.map(f => { const x = C.byF[f.id], bg = `background:${MK_BG[c]};`; return `<tr>${td(nm(f), bg)}${td(nums(f), bg)}${td(esc(state(f).cur?.name || "טרם התחיל"), bg)}${td(mkText(x), bg + "font-size:9pt")}${td(esc([...x.who].join(", ")), bg + "font-size:9pt")}</tr>`; })) : ""; }).join("")
+    + (C.noF.length ? `<div style="font-weight:700;margin:8px 0 2px">הזמנות בלי מתקן / הזמנות משהב״ט (${C.noF.length})</div>` + tbl(["על מה", "מה השתנה", "מי / מקור"], C.noF.map(r => `<tr>${td(esc(r.lbl))}${td(r.op === "add" ? "חדש" : r.op === "del" ? "נמחק" : (r.f || []).map(([n, b0, a0]) => `${esc(n)}: ${esc(b0 || "ריק")} ← <b>${esc(a0 || "ריק")}</b>`).join("<br>"), "font-size:9pt")}${td(esc(r.src || r.by), "font-size:9pt")}</tr>`)) : "");
+  return title + leg + sumRow + h2("מה נשאר לעשות — לפי שלב") + leftHtml(F, th, td) + h2(`כל המתקנים${R.onlyCh ? " — רק מה שהשתנה" : ""}`) + tbl(["מתקן", "שלב", trackHead(), "הבא / יעד", "הזמנות חח״י", "מה השתנה"], rows) + sum;
+}
 function weekBanner() {
   if (PERM !== "admin" && PERM !== "edit" || ui.wlLater) return ""; const wk = addDays(wkStart(todayStr()), -7); let seen = ""; try { seen = localStorage.getItem("iec-wl-seen") || ""; } catch (e) {}
   if (seen >= wk) return "";
@@ -1299,7 +1363,7 @@ document.addEventListener("click", async e => {
   else if (a === "import") importModal();
   else if (a === "gili") giliImport();
   else if (a === "wlLater") { ui.wlLater = true; render(); }
-  else if (a === "wlOpen") { try { localStorage.setItem("iec-wl-seen", addDays(wkStart(todayStr()), -7)); } catch (e) {} ui.tab = "reports"; ui.rep = { dist: "", upTo: 30, ...(ui.rep || {}), kind: "week" }; wlState().wk = addDays(wkStart(todayStr()), -7); wlState().base = null; render(); scrollTo(0, 0); }
+  else if (a === "wlOpen") { try { localStorage.setItem("iec-wl-seen", addDays(wkStart(todayStr()), -7)); } catch (e) {} ui.tab = "reports"; ui.rep = { dist: "", upTo: 30, ...(ui.rep || {}), kind: "marked" }; wlState().wk = addDays(wkStart(todayStr()), -7); wlState().base = null; render(); scrollTo(0, 0); }
   else if (a === "wlWk") { const W = wlState(), cur = wkStart(todayStr()); W.wk = id === "cur" ? cur : addDays(W.wk, +id); if (W.wk > cur) W.wk = cur; render(); }
   else if (a === "wlRe") { const W = wlState(); delete W.data[W.wk]; delete SNAPS[W.wk]; delete SNAPS[addDays(W.wk, 7)]; render(); }
   else if (a === "wlBaseClr") { wlState().base = null; render(); }
