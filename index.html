@@ -765,6 +765,22 @@ a.btn { text-decoration: none; }
 .od-card.od-part { padding: 6px 8px; border-radius: 8px; } .od-card.od-part .od-amt { font-size: 14px; }
 .od-card.od-part .od-g > div.w, .od-card.od-part .od-g > div:nth-child(n+4) { display: none; }
 .od-sum { gap: 8px; margin-bottom: 8px; } .od-sum > div { padding: 5px 10px; border-radius: 10px; } .od-sum b { font-size: 15px; } .od-sum span { font-size: 11px; }
+.lg-bar { display: inline-block; height: 10px; border-radius: 5px; background: #4a5a8c; vertical-align: middle; }
+.lg-tab tr.on td { background: #eef1fb; }
+.lg-d { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 10px; margin-inline-end: 2px; background: #eceef2; color: #9aa0ab; }
+.lg-d.on { background: #4a5a8c; color: #fff; }
+.lg-chips { margin: 8px 0; }
+.lg-dh { margin: 14px 0 6px; font-size: 15px; border-bottom: 1px solid var(--line, #e3e6ea); padding-bottom: 4px; }
+.lg-dh small { color: #8a92a0; font-weight: 400; }
+.lg-l { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 5px 4px; border-bottom: 1px dashed #eceef2; font-size: 13px; }
+.lg-t { color: #8a92a0; font-variant-numeric: tabular-nums; min-width: 38px; }
+.lg-c { background: #eef1fb; color: #3d4a78; border-radius: 6px; padding: 0 6px; font-size: 12px; }
+.lg-del .lg-lb { text-decoration: line-through; color: #b3261e; }
+.lg-f { flex-basis: 100%; padding-inline-start: 48px; display: flex; flex-wrap: wrap; gap: 2px 12px; color: #4b5260; font-size: 12px; }
+.lg-f s { color: #a0a6b0; }
+.lg-ban { background: #eef1fb; border-color: #c9d1ef; }
+body.dark .lg-c, body.dark .lg-tab tr.on td, body.dark .lg-ban { background: #2a3150; color: #dfe4f7; }
+@media print { .noprint, .side, .mtop, nav { display: none !important; } }
 </style>
 </head>
 <body>
@@ -928,32 +944,64 @@ function denyWrite(col, id, obj) {
 }
 /** כתיבה שנכשלה (בד״כ כללי Firebase) — מציגים למשתמש במקום להיכשל בשקט */
 const writeFail = col => e => { console.error("write failed", col, e); setTimeout(() => { render(); alertMsg(/PERMISSION_DENIED|permission/i.test(String(e?.code || e?.message)) ? (col === "users" ? "השינוי לא נשמר: Firebase דחה את הכתיבה. לשנות משתמשים יכול רק ״מנהל״ או ״סופר מנהל״ פעיל — ובתנאי שכללי Firebase העדכניים פורסמו (Realtime Database ← Rules)." : "השינוי לא נשמר: אין הרשאה לפי כללי Firebase.") : "השינוי לא נשמר: " + (e?.message || e)); }, 0); };
+/* ---------- יומן שינויים: כל כתיבה נרשמת ב-border_log (מי, מתי, מה, לפני ← אחרי). רק מנהלים קוראים; כתיבה בלבד — אי אפשר לשנות רשומה קיימת ---------- */
+const LOG_ROOT = DB_ROOT + "_log", LOG_SKIP_COL = new Set(["tableConfig", "snapshots", "errLog", "survey", "alerts"]), LOG_SKIP_F = new Set(["updatedAt", "updatedBy", "createdAt", "createdBy", "unseen", "_secLen", "_secParts", "_secs", "_kdr"]);
+const LOG_COLN = { sites: "אתרי איסוף", issues: "נושאים ומשימות", budget: "תקציב ואומדן", contractors: "קבלנים", orders: "הזמנות", designOffices: "משרדי תכנון", designSegments: "קטעי תכנון", activities: "מלאכות", progress: "דיווחי ביצוע", deliveries: "מסירות תוכניות", iecOrders: "הזמנות חח״י", items: "פריטים", requests: "פניות מהשטח", contacts: "אנשי קשר", users: "משתמשים", kdSections: "ק.ד.↔חתכים", reqs: "דרישות", tasks: "משימות", mtgs: "ישיבות", meetings: "ישיבות", import: "ייבוא נתונים", restore: "טעינת גיבוי" };
+const LOG_FN = { status: "סטטוס", review: "אישור", priority: "עדיפות", owner: "אחראי", due: "יעד", note: "הערה", notes: "הערות", qty: "כמות", date: "תאריך", doneDate: "תאריך ביצוע", kdFrom: "מק.ד.", kdTo: "עד ק.ד.", secFrom: "מחתך", secTo: "עד חתך", amount: "סכום", name: "שם", title: "כותרת", stage: "שלב", stageDate: "תאריך שלב", kind: "סוג", contractorId: "קבלן", activityId: "מלאכה", reply: "תשובה", phone: "טלפון", email: "מייל", tags: "תגיות", prof: "מקצוע", role: "תפקיד", active: "פעיל", org: "ארגון", orderNo: "מספר הזמנה", discussed: "נדון בישיבה", updates: "עדכונים", updated: "עודכן", segmentId: "קטע", itemIds: "פריטים", correction: "בקשת תיקון", opened: "נפתח" };
+let LOGMEM = [];
+const logVal = (k, v) => { if (v === undefined || v === null || v === "") return ""; if (k === "contractorId") return RAW.contractors?.[v]?.name || v; if (k === "activityId") return RAW.activities?.[v]?.name || v; if (k === "segmentId") return RAW.designSegments?.[v]?.name || v;
+  if (typeof v === "object") return "•"; v = String(v); if (/^\d{4}-\d\d-\d\d$/.test(v)) return fmtD(v); return v.length > 90 ? v.slice(0, 88) + "…" : v; };
+function logLbl(col, r) {
+  if (!r) return ""; const c = col !== "contractors" && RAW.contractors?.[r.contractorId]?.name;
+  const a = col === "progress" ? `${RAW.activities?.[r.activityId]?.name || "דיווח"}${r.secFrom !== undefined && r.secFrom !== "" && r.secFrom !== null ? ` · חתכים ${r.secFrom}–${r.secTo}` : r.qty ? ` · ${r.qty} יח׳` : ""}${r.date ? ` · ${fmtD(r.date)}` : ""}`
+    : col === "issues" ? `${r.code || ""} ${r.title || ""}`.trim() : col === "users" ? (r.name || r.email || "") : String(r.name || r.title || r.orderNo || r.kind || r.email || "");
+  const s = [c, a].filter(Boolean).join(" · "); return s.length > 140 ? s.slice(0, 138) + "…" : s;
+}
+const logGet = (o, path) => String(path).split("/").reduce((x, k) => x == null ? undefined : x[k], o);
+function logChange(col, id, op, before, after) {
+  try {
+    if (LOG_SKIP_COL.has(col) || col === "*") return;
+    const rec = { at: new Date().toISOString(), by: me?.name || user?.email || "מקומי", uid: user?.uid || "", col, id: String(id || ""), op, lbl: logLbl(col, after || before) };
+    const r0 = after || before || {}; if (r0.contractorId) rec.cid = r0.contractorId;
+    if (op === "upd") { const f = {};
+      for (const k of Object.keys(after || {})) { if (LOG_SKIP_F.has(k)) continue; const b0 = logGet(before, k), a0 = after[k];
+        if (JSON.stringify(b0 ?? "") === JSON.stringify(a0 ?? "")) continue; f[fbKey(k).slice(0, 60)] = [logVal(k, b0), logVal(k, a0)]; }
+      if (!Object.keys(f).length) return; rec.f = f; if (before && !rec.lbl) rec.lbl = logLbl(col, before); }
+    if (LOCAL || !fb) { LOGMEM.push(rec); return; }
+    fb.database().ref(LOG_ROOT).push(rec).catch(() => {});
+  } catch (e) {}
+}
 const api = {
   async add(col, obj) {
     if (denyWrite(col, null, obj)) return null;
     const id = newId();
     if (col === "issues" && !obj.code) obj = { ...obj, code: nextIssueCode(obj.contractorId, obj.scope) };
+    logChange(col, id, "add", null, obj);
     if (LOCAL) { RAW[col][id] = { ...obj, ...stamp() }; touched(); render(); return id; }
     await refOf(col, id).set(fbSafe({ ...obj, ...stamp() })).catch(writeFail(col)); return id;
   },
   async update(col, id, patch) {
     if (denyWrite(col, id, patch)) return;
+    logChange(col, id, "upd", RAW[col]?.[id], patch);
     if (LOCAL) { RAW[col][id] = { ...RAW[col][id], ...patch, ...stamp() }; touched(); render(); return; }
     await refOf(col, id).update(fbSafe({ ...patch, ...stamp() })).catch(writeFail(col));
   },
   async put(col, id, obj) {
     if (denyWrite(col, id, obj)) return;
+    { const b0 = RAW[col]?.[id]; logChange(col, id, obj === null ? "del" : b0 ? "upd" : "add", b0, obj); }
     if (LOCAL) { if (obj === null) delete RAW[col][id]; else RAW[col][id] = obj; touched(); render(); return; }
     await refOf(col, id).set(obj === null ? null : fbSafe(obj)).catch(writeFail(col));
   },
   async remove(col, id) {
     if (denyWrite(col, id)) return;
+    logChange(col, id, "del", RAW[col]?.[id], null);
     if (LOCAL) { delete RAW[col][id]; touched(); render(); return; }
     await refOf(col, id).remove().catch(writeFail(col));
   },
   /** החלפת כל הנתונים (מגיבוי) */
   async replaceAll(data, source, savedAt) {
     if (denyWrite("*")) return;
+    logChange("restore", "", "add", null, { name: `טעינת גיבוי מלא (${source || ""})` });
     if (LOCAL) { applyData(data, source, savedAt, true); storeLocal(); render(); return; }
     await fb.database().ref(DB_ROOT).set(fbSafe(Object.fromEntries(DATA_COLS.map(c => [c, data[c] || {}]))));
     META.source = source;
@@ -1119,7 +1167,7 @@ const NAV_ALL = () => [
   { group: "תכנון", items: [["segments", "קטעי תכנון"], ["deliveries", "מסירות תוכניות"]] },
   { group: "ניהול שוטף", items: [["survey", "סקר שטח"], ["svcmp", "סקר מול דיווחים"], ["dq", "🩺 איכות נתונים", "", "", (() => { try { return dqChecks(D()).filter(c => c.sev === "red" && c.n).length; } catch { return 0; } })()]] },
   { group: "", items: [["contacts", "📇 אנשי קשר"]] },
-  { group: "דוחות", items: [["mreport", "דוח הנהלה"], ["budget", "💰 תקציב ואומדן"], ["reqs", "🧾 דרישות ויתרות"]] },
+  { group: "דוחות", items: [["mreport", "דוח הנהלה"], ["budget", "💰 תקציב ואומדן"], ["reqs", "🧾 דרישות ויתרות"], ...(isMgr() ? [["activity", "📒 יומן פעילות"]] : [])] },
   { group: "", items: [["settings", "הגדרות"]] },
 ];
 const PLANS = {
@@ -1220,7 +1268,7 @@ function renderInner() {
   document.body.classList.toggle("ro", isViewer());
   document.body.classList.toggle("dark", !!ui.dark); document.body.classList.toggle("present", !!ui.present);
   const p = ui.page;
-  const body = p === "overview" ? (weeklySnapshot(d), sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "budget" ? pageBudget(d) : p === "reqs" ? pageReqs(d) : p === "contacts" ? pageContacts(d) : p === "work" || p === "meeting" || p === "mytasks" || p === "mtgarch" ? (p === "mtgarch" && (ui.wtab = "disc"), pageWork(d)) : p.startsWith("disc:") ? pageDisc(d, p.slice(5)) : p === "sites" ? pageSites(d) : p.startsWith("site:") ? pageSite(d, p.slice(5)) : p === "power" ? pageIec(d) : p === "culverts" ? pageCulverts(d) : p.startsWith("k:") ? pageComp(d, p.slice(2)) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
+  const body = p === "overview" ? (weeklySnapshot(d), lgBanner() + sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "budget" ? pageBudget(d) : p === "reqs" ? pageReqs(d) : p === "contacts" ? pageContacts(d) : p === "activity" ? pageActivity(d) : p === "work" || p === "meeting" || p === "mytasks" || p === "mtgarch" ? (p === "mtgarch" && (ui.wtab = "disc"), pageWork(d)) : p.startsWith("disc:") ? pageDisc(d, p.slice(5)) : p === "sites" ? pageSites(d) : p.startsWith("site:") ? pageSite(d, p.slice(5)) : p === "power" ? pageIec(d) : p === "culverts" ? pageCulverts(d) : p.startsWith("k:") ? pageComp(d, p.slice(2)) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
     : p === "segments" ? pageSegments(d) : p === "deliveries" ? pageDeliveries(d) : p === "settings" ? pageSettings(d) : p === "mreport" ? pageMreport(d) : pagePlan(p);
   $app.innerHTML = `
   <div class="mtop"><button class="mbtn" data-act="menu" aria-label="תפריט" aria-expanded="${ui.menu ? "true" : "false"}"><span></span><span></span><span></span></button>
@@ -3187,7 +3235,7 @@ const daysSince = s => s ? Math.floor((Date.now() - new Date(s + "T12:00:00")) /
 /** עדכון של הרבה רשומות בפעולה אחת (ב-Firebase: עדכון רב-נתיבי אחד) */
 async function bulkPatch(col, ids, patch) {
   if (!ids.length || denyWrite(col, ids[0], patch)) return;
-  const st = stamp();
+  const st = stamp(); ids.forEach(id => logChange(col, id, "upd", RAW[col]?.[id], patch));
   if (LOCAL) { ids.forEach(id => { if (RAW[col][id]) RAW[col][id] = { ...RAW[col][id], ...patch, ...st }; }); touched(); render(); return true; }
   // עדכון מרובה־נתיבים: המפתחות הם נתיבים ("progress/<id>/review") — אסור להעביר אותם דרך fbSafe (שהופך "/" ל-"_" וכך הכתיבה הלכה למפתח זבל ולא לדיווח)
   const upd = {}; ids.forEach(id => Object.entries({ ...patch, ...st }).forEach(([k, v]) => { if (v !== undefined) upd[`${col}/${fbKey(id)}/${fbKey(k)}`] = v && typeof v === "object" ? fbSafe(v) : v; }));
@@ -4836,6 +4884,86 @@ const ctOrgOf = c => c.org || RAW.contractors?.[c.contractorId]?.name || "";
 const CT_PROFS = ["מודד", "קונסטרוקטור", "מתכנן כבישים", "אדריכל", "הידרולוג", "יועץ קרקע", "יועץ חשמל", "יועץ תקשורת", "יועץ בטיחות", "אגרונום", "מנהל פרויקט", "מנהל עבודה", "מפקח", "קבלן", "ספק", "עו״ד", "כלכלן"];
 const ctTags = c => Array.isArray(c.tags) ? c.tags.filter(Boolean) : String(c.tags || "").split(/\s*[,;]\s*/).filter(Boolean);
 const ctProfs = () => [...new Set([...CT_PROFS, ...list("contacts").map(c => c.prof).filter(Boolean)])];
+/* =====================================================================
+   יומן פעילות שבועי (ראשון–שבת): מי עדכן מה וכמה — מנהלים בלבד
+   ===================================================================== */
+const LG_DAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+const lgPrevWk = () => addDays(weekStart(todayStr()), -7);
+const lgRange = wk => [new Date(wk + "T00:00:00").toISOString(), new Date(addDays(wk, 7) + "T00:00:00").toISOString()];
+const lgHM = at => { const t = new Date(at); return isNaN(t) ? "" : `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`; };
+function lgUserName(email) { const e = String(email || "").toLowerCase(), u = list("users").find(x => String(x.email || "").toLowerCase() === e); return u?.name || (e ? e.split("@")[0] : "—"); }
+/** שבוע שלפני הפעלת היומן: הערכה לפי חותמות "נוצר / עודכן לאחרונה" שעל הרשומות (רק השינוי האחרון בכל רשומה נראה) */
+function lgStamps(wk) {
+  const [a, b] = lgRange(wk), out = [];
+  for (const c of DATA_COLS) { if (LOG_SKIP_COL.has(c)) continue;
+    for (const [id, r] of Object.entries(RAW[c] || {})) { if (!r || typeof r !== "object") continue;
+      const cr = String(r.createdAt || ""), up = String(r.updatedAt || "");
+      if (cr >= a && cr < b) out.push({ at: cr, by: r.reportedByName || lgUserName(r.reportedBy || r.createdBy || r.updatedBy), col: c, id, op: "add", lbl: logLbl(c, r) });
+      else if (up >= a && up < b) out.push({ at: up, by: lgUserName(r.updatedBy), col: c, id, op: "upd", lbl: logLbl(c, r) }); } }
+  return out;
+}
+async function lgLoad(wk) {
+  const L = ui.lg; if (L.data[wk] !== undefined) return; L.data[wk] = null;
+  const [a, b] = lgRange(wk); let recs = [];
+  if (LOCAL || !fb) recs = LOGMEM.filter(r => r.at >= a && r.at < b);
+  else try { const sn = await fb.database().ref(LOG_ROOT).orderByChild("at").startAt(a).endAt(b).once("value"); recs = Object.values(sn.val() || {}).filter(r => r && r.at < b); L.err = ""; }
+    catch (e) { L.err = /permission/i.test(String(e?.code || e?.message)) ? "אין הרשאה לקרוא את היומן — צריך לפרסם את כללי Firebase המעודכנים." : String(e?.message || e); }
+  L.data[wk] = recs; render();
+}
+function lgBanner() {
+  if (!isMgr() || ui.lgLater) return ""; const wk = lgPrevWk(); let seen = ""; try { seen = localStorage.getItem("lg-seen") || ""; } catch (e) {}
+  if (seen >= wk) return "";
+  return `<div class="since lg-ban"><span class="since-h">📒 הדוח השבועי מוכן</span><span>שבוע ${fmtD(wk)}–${fmtD(addDays(wk, 6))}: מי עדכן מה וכמה</span><span class="spacer"></span><button class="btn sm" data-act="lgOpen">לפתיחה</button><button class="btn ghost sm" data-act="lgLater">אחר כך</button></div>`;
+}
+const LG_OP = { add: ["➕", "חדש"], upd: ["✎", "עדכון"], del: ["🗑", "מחיקה"] };
+function lgFields(r) {
+  const f = r.f || {}; return Object.entries(f).map(([k, v]) => { const [b0, a0] = Array.isArray(v) ? v : ["", ""], n = LOG_FN[k] || (/^x_/.test(k) ? "שדה" : k);
+    return b0 === "•" || a0 === "•" ? `<span>${esc(n)}</span>` : `<span>${esc(n)}: <s>${esc(b0 || "ריק")}</s> ← <b>${esc(a0 || "ריק")}</b></span>`; }).join("");
+}
+function pageActivity(d) {
+  const L = ui.lg || (ui.lg = { wk: lgPrevWk(), who: "", col: "", data: {}, more: 0 });
+  if (L.data[L.wk] === undefined) setTimeout(() => lgLoad(L.wk), 0);
+  const raw = L.data[L.wk], curWk = weekStart(todayStr()), isCur = L.wk === curWk;
+  const head = `<div class="ch-banner" style="--cc:#4a5a8c"><div><h1>📒 יומן פעילות</h1><span>שבוע ${fmtD(L.wk)}–${fmtD(addDays(L.wk, 6))} (ראשון–שבת)${isCur ? " · השבוע הנוכחי, עד עכשיו" : ""}</span></div>
+    <div class="row noprint" style="gap:6px"><button class="btn ghost" data-act="lgWk" data-id="-7">◀ שבוע קודם</button>${L.wk < curWk ? `<button class="btn ghost" data-act="lgWk" data-id="7">שבוע הבא ▶</button>` : ""}${isCur ? "" : `<button class="btn ghost" data-act="lgWk" data-id="cur">השבוע</button>`}<button class="btn ghost" data-act="lgRe">⟳</button><button class="btn ghost" data-act="lgPrint">🖨 הדפסה</button></div></div>`;
+  if (!raw) return head + `<div class="card"><p class="muted">טוען את היומן…</p></div>`;
+  const est = !raw.length, R0 = (est ? lgStamps(L.wk) : raw.slice()).sort((x, y) => String(y.at).localeCompare(String(x.at)));
+  const inCol = r => !L.col || r.col === L.col, inWho = r => !L.who || r.by === L.who, R = R0.filter(r => inCol(r) && inWho(r));
+  const P = {}; R0.filter(inCol).forEach(r => { const p = P[r.by] || (P[r.by] = { n: 0, add: 0, upd: 0, del: 0, rep: 0, days: new Set(), last: "", cols: {} });
+    p.n++; p[r.op] = (p[r.op] || 0) + 1; if (r.col === "progress" && r.op === "add") p.rep++; p.days.add(new Date(r.at).getDay()); if (r.at > p.last) p.last = r.at; p.cols[r.col] = (p.cols[r.col] || 0) + 1; });
+  const people = Object.entries(P).sort((a, b) => b[1].n - a[1].n), mx = people[0]?.[1].n || 1;
+  const C = {}; R0.filter(inWho).forEach(r => C[r.col] = (C[r.col] || 0) + 1);
+  const RW = R0.filter(inWho), tile = (n, l, c) => `<div class="ch-t" style="border-top:4px solid ${c}"><b style="color:${c}">${n}</b><span>${l}</span></div>`;
+  const repN = RW.filter(r => r.col === "progress" && r.op === "add").length, apN = RW.filter(r => r.col === "progress" && r.f?.review).length;
+  const isN = RW.filter(r => r.col === "issues" && r.op === "add").length, isC = RW.filter(r => r.col === "issues" && r.f?.status?.[1] === "סגור").length;
+  const tiles = `<div class="ch-tiles st-tiles">${tile(RW.length, "פעולות", "#4a5a8c")}${tile(people.length, "אנשים פעילים", "#2d6cb8")}${tile(repN, "דיווחי ביצוע חדשים", "#2e8b57")}${est ? "" : tile(apN, "דיווחים שאושרו / נבדקו", "#5a9a3a")}${tile(isN, "נושאים נפתחו", "#c77a12")}${est ? "" : tile(isC, "נושאים נסגרו", "#7a4fb0")}</div>`;
+  const colTop = p => Object.entries(p.cols).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, n]) => `${esc(LOG_COLN[c] || c)} ${n}`).join(" · ");
+  const ptab = people.length ? `<div class="tablewrap"><table class="sheet lg-tab"><thead><tr><th>מי</th><th>פעולות</th><th></th><th>חדשים</th><th>עדכונים</th><th>מחיקות</th><th>דיווחי ביצוע</th><th>ימים פעילים</th><th>בעיקר</th><th>אחרון</th></tr></thead><tbody>
+    ${people.map(([n, p]) => `<tr class="${L.who === n ? "on" : ""}"><td><a href="#" data-act="lgWho" data-id="${esc(n)}"><b>${esc(n)}</b></a></td><td><b>${p.n}</b></td><td style="min-width:90px"><span class="lg-bar" style="width:${Math.max(4, Math.round(p.n / mx * 100))}%"></span></td><td>${p.add || ""}</td><td>${p.upd || ""}</td><td>${p.del ? `<span style="color:#b3261e">${p.del}</span>` : ""}</td><td>${p.rep || ""}</td>
+      <td class="nowrap">${LG_DAYS.map((x, i) => `<span class="lg-d ${p.days.has(i) ? "on" : ""}" title="${x}">${"אבגדהוש"[i]}</span>`).join("")}</td><td class="small">${colTop(p)}</td><td class="small nowrap">${est ? fmtD(p.last.slice(0, 10)) : `${LG_DAYS[new Date(p.last).getDay()]} ${lgHM(p.last)}`}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">לא נרשמה פעילות בשבוע הזה.</p>`;
+  const chips = `<div class="row lg-chips noprint" style="gap:6px;flex-wrap:wrap"><button class="ct-lb ${!L.col ? "on" : ""}" data-act="lgCol" data-id="">הכל <small>${RW.length}</small></button>${Object.entries(C).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<button class="ct-lb ${L.col === c ? "on" : ""}" data-act="lgCol" data-id="${esc(c)}">${esc(LOG_COLN[c] || c)} <small>${n}</small></button>`).join("")}${L.who ? `<button class="ct-lb on" data-act="lgWho" data-id="">✕ ${esc(L.who)}</button>` : ""}</div>`;
+  const lim = 300 + L.more * 500, shown = R.slice(0, lim);
+  const byDay = LG_DAYS.map((x, i) => [i, shown.filter(r => new Date(r.at).getDay() === i)]).filter(([, a]) => a.length).reverse();
+  const line = r => `<div class="lg-l lg-${r.op}"><span class="lg-t">${est ? "" : lgHM(r.at)}</span><span class="lg-op" title="${LG_OP[r.op]?.[1] || ""}">${LG_OP[r.op]?.[0] || "•"}</span><b class="lg-by">${esc(r.by)}</b><span class="lg-c">${esc(LOG_COLN[r.col] || r.col)}</span><span class="lg-lb">${esc(r.lbl || "")}</span>${r.f ? `<span class="lg-f">${lgFields(r)}</span>` : ""}</div>`;
+  const det = byDay.map(([i, a]) => `<h3 class="lg-dh">${LG_DAYS[i]} ${fmtD(addDays(L.wk, i))} <small>${a.length}</small></h3>${a.map(line).join("")}`).join("") || `<p class="muted">אין פעולות${L.who || L.col ? " לפי הסינון" : ""}.</p>`;
+  return head + (L.err ? `<div class="card" style="border-color:#b3261e"><b style="color:#b3261e">⚠ ${esc(L.err)}</b></div>` : "")
+    + (est ? `<div class="card small" style="background:#fff8e6"><b>היומן המלא עוד לא פעל בשבוע הזה.</b> מוצגת הערכה לפי חותמות ״נוצר / עודכן לאחרונה״ על הרשומות. מכל רשומה רואים רק את השינוי האחרון, ובלי פירוט שדות. מהשבוע שבו העלית את הגרסה הזו כל פעולה נרשמת במלואה.</div>` : "")
+    + tiles + `<div class="card"><h2 style="margin-top:0">מי עשה מה</h2>${ptab}</div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">פירוט${L.who ? ` — ${esc(L.who)}` : ""}</h2><span class="muted small">${R.length} פעולות</span></div>${chips}<div class="lg-det">${det}</div>${R.length > lim ? `<button class="btn ghost noprint" data-act="lgMore">עוד ${R.length - lim}…</button>` : ""}</div>`;
+}
+async function lgClick(act, b) {
+  const L = ui.lg || (ui.lg = { wk: lgPrevWk(), who: "", col: "", data: {}, more: 0 }), v = b.dataset.id;
+  if (act === "lgWk") { L.wk = v === "cur" ? weekStart(todayStr()) : addDays(L.wk, +v); if (L.wk > weekStart(todayStr())) L.wk = weekStart(todayStr()); L.more = 0; }
+  else if (act === "lgWho") L.who = L.who === v ? "" : v;
+  else if (act === "lgCol") L.col = v;
+  else if (act === "lgMore") L.more++;
+  else if (act === "lgRe") delete L.data[L.wk];
+  else if (act === "lgPrint") return window.print();
+  else if (act === "lgLater") ui.lgLater = true;
+  else if (act === "lgOpen") { try { localStorage.setItem("lg-seen", lgPrevWk()); } catch (e) {} L.wk = lgPrevWk(); ui.page = "activity"; }
+  render();
+}
+
 function pageContacts(d) {
   const F = ui.ct || (ui.ct = { q: "", tag: "", prof: "", grp: "", view: (() => { try { return localStorage.getItem("ct-view") || "cards"; } catch (e) { return "cards"; } })() }), q = qnNorm(F.q).toLowerCase(), C = list("contacts").sort((a, b) => String(a.name).localeCompare(String(b.name), "he"));
   const tags = [...new Set(C.flatMap(ctTags))].sort((a, b) => a.localeCompare(b, "he")), profs = [...new Set(C.map(c => c.prof).filter(Boolean))].sort((a, b) => a.localeCompare(b, "he"));
@@ -5407,6 +5535,7 @@ function mergeFromJson(j, fname) {
         <p class="small">שום נתון קיים לא יימחק או ישתנה.</p>
         <div class="row"><button class="btn" id="mYes" ${Object.keys(add).length ? "" : "disabled"}>הוספה</button><button class="btn ghost" id="mNo">ביטול</button></div>`,
         (m, close) => { m.querySelector("#mNo").onclick = close; m.querySelector("#mYes").onclick = async () => { close();
+          logChange("import", "", "add", null, { name: `ייבוא מקובץ ${f.name}: ${lines}` });
           if (LOCAL) { for (const [c, o] of Object.entries(add)) RAW[c] = { ...(RAW[c] || {}), ...o }; touched(); render(); }
           else { const up = {}; for (const [c, o] of Object.entries(add)) for (const [id, v] of Object.entries(o)) up[`${c}/${fbKey(id)}`] = fbSafe(v); await fb.database().ref(DB_ROOT).update(up); }
           toast("הנתונים נוספו ✓");
@@ -7035,6 +7164,7 @@ $app.addEventListener("click", async e => {
   if (/^w[A-Z]/.test(act)) return wClick(act, b);
   if (/^site[A-Z]/.test(act)) return siteClick(act, b);
   if (/^ct[A-Z]/.test(act)) return ctClick(act, b);
+  if (/^lg[A-Z]/.test(act)) return lgClick(act, b);
   if (/^bg[A-Z]/.test(act)) return bgClick(act, b);
   if (/^ins[A-Z]/.test(act)) return inspClick(act, b);
   if (act === "menu") { ui.menu = !ui.menu; render(); return; }
