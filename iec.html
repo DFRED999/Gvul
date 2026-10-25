@@ -169,6 +169,10 @@ table.ot .tg { all: unset; cursor: pointer; display: inline-block; width: 20px; 
 table.dsh-o tr.clk { cursor: pointer; } table.dsh-o tr.clk:hover td { background: #f2f7fd; } table.dsh-o tr.tot td { background: #eef2f8; font-weight: 700; }
 .tag { max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
 main { overflow-x: clip; }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: #fafbfd; font-size: 12.5px; }
+.flow > b { margin-inline-end: 6px; color: var(--navy); } .flow i { font-style: normal; color: #9aa3b2; }
+.flow .fl { display: inline-flex; flex-direction: column; gap: 2px; padding: 4px 8px; border-radius: 9px; border: 1.5px solid #d6dde8; background: #fff; } .flow .fl span { font-size: 11px; color: #63708a; }
+.flow .fl.d { border-color: #9fd3b0; background: #effaf2; } .flow .fl.on { border: 2.5px solid #e0a100; background: #fff8e6; } .flow .fl .inp { padding: 2px 4px; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -487,7 +491,8 @@ function fCard(f) {
     <div class="chain" title="${esc(s.ST.map(x => (s.done[x.id] ? "✓ " : "· ") + x.name).join("\n"))}">${s.ST.map(x => `<i class="${s.done[x.id] ? "d" : s.next?.id === x.id && s.stuck ? "x" : ""}" style="--sc:${x.color}"></i>`).join("")}</div>
     <div class="row small"><b style="color:${s.cur?.color || "#63708a"}">${live(f) ? (s.cur ? s.cur.name : "טרם התחיל") : esc(f.status)}</b>${s.next && live(f) ? `<span class="muted">← הבא: ${esc(s.next.name)}${f.stages?.[s.next.id]?.target ? ` (יעד ${fmtD(f.stages[s.next.id].target)})` : ""}</span>` : ""}<span class="spacer"></span>${esc(f.district || "")}</div>
     ${M.length ? M.map(o => `<div class="nums">${num(ef(o, "req880"), "דרישה")}${num(ef(o, "ord444"), "הזמנת משהב״ט")}${num(o.iec301, "הזמנת חח״י", o.id)}${N(o.amount) ? `<span>${money(N(o.amount))}</span>` : ""}</div>`).join("") : live(f) && f.type !== "תט״ז" ? `<div class="nums"><span class="miss">אין הזמנה</span></div>` : ""}
-    ${X.length ? `<div class="small muted">+ ${X.length} מרחק חריג: ${X.map(o => esc(o.iec301 || "—")).join(", ")}</div>` : ""}
+    ${excLines(f).map(x => `<div class="small" style="color:${x.paid ? "#1d7a46" : "#8a5a00"}">${esc(x.t)}</div>`).join("")}
+    ${M.flatMap(vSteps).map(st => `<div class="small" style="color:${st.late ? "#b3261e" : "#8a5a00"}">💳 ${esc(st.t)}${st.d !== null ? ` · ${st.d} ימים` : ""}</div>`).join("")}
     ${f.type === "תט״ז" ? `<div class="small muted">מזין: ${Object.keys(f.feeds || {}).map(id => esc(RAW.facilities[id]?.name || "?")).join(", ") || "—"}</div>` : tt.length ? `<div class="small muted">מוזן מ־${tt.map(t => esc(t.name)).join(", ")}</div>` : ""}
     ${s.flags.length || g.length ? `<div class="chips">${s.flags.map(x => `<span class="tag r">${esc(x.t)}</span>`).join("")}${g.map(x => `<span class="tag a">${esc(x.t)}</span>`).join("")}</div>` : ""}
     ${ll ? `<div class="last">📝 ${fmtD(ll.date)} — ${esc(ll.text)}</div>` : ""}</button>`;
@@ -521,10 +526,11 @@ function facModal(id) {
     ${f.type === "תט״ז" ? `<div class="sec-h">⚡ ארונות שהתט״ז מזין <span class="muted small">(עד 2)</span></div><div class="row">${Object.keys(f.feeds || {}).map(cid => `<span class="tag">${esc(RAW.facilities[cid]?.name || "?")} ${ed ? `<a href="#" data-a="unfeed" data-id="${cid}">✕</a>` : ""}</span>`).join("")}
       ${ed ? `<select class="inp sm" id="feedSel"><option value="">+ שיוך ארון…</option>${cabs.filter(c => !f.feeds?.[c.id]).map(c => `<option value="${c.id}">${esc(c.name)} · ק.ד. ${esc(c.kd || "")}</option>`).join("")}</select>` : ""}</div>` : fedBy(f).length ? `<p class="small muted">מוזן מתט״ז: ${fedBy(f).map(t => esc(t.name)).join(", ")}</p>` : ""}
     <div class="sec-h">שלבים <span class="muted small">— תאריך ביצוע, יעד שתואם מול חח״י בישיבת תכנון, והערה. שלבי ההזמנה והתשלום מתמלאים לבד מההזמנה</span></div>${ST.map(stRow).join("")}
+    ${excLines(f).map(x => `<div class="note" style="margin-top:6px;${x.paid ? "border-color:#9fd3b0;background:#effaf2" : ""}">${esc(x.t)}</div>`).join("")}
     <div class="sec-h">🧾 הזמנות ותשלומים ${ed ? `<button class="btn sm" data-a="addOrd">+ הזמנה</button><button class="btn gh sm" data-a="addExc">+ מרחק חריג</button>` : ""}</div>
     ${O.length ? `<div class="tw"><table class="t"><thead><tr><th>סוג</th><th>דרישה</th><th>הזמנת משהב״ט</th><th>הזמנת חח״י</th><th class="num">סכום לפני מע״מ</th><th>שובר מקדמה</th><th>מקדמה שולמה</th><th>שובר משלים</th><th>משלים שולם</th><th>תוקף שובר</th><th></th></tr></thead><tbody>${O.map(oRow).join("")}</tbody></table></div>` : `<p class="muted">אין הזמנות למתקן הזה</p>`}
     <div class="sec-h">📝 עדכונים</div>${ed ? `<div class="row" style="margin-bottom:8px"><input type="date" class="inp sm" id="lgD" value="${todayStr()}"><input class="inp" id="lgT" placeholder="מה התחדש (ישיבה, שיחה עם חח״י, החלטה…)" style="flex:1;min-width:220px"><button class="btn" data-a="addLog">הוספה</button></div>` : ""}
-    <div class="log">${L.map(([k, x]) => `<div><b>${fmtD(x.date)}</b>${esc(x.text)} <span class="muted small">${esc(x.by || "")}</span>${ed && isAdmin() ? ` <a href="#" data-a="delLog" data-id="${k}" class="small">מחיקה</a>` : ""}</div>`).join("") || `<span class="muted small">אין עדכונים</span>`}</div>
+    <div class="log tl">${facTimeline(f).map(x => `<div><b>${fmtD(x.date)}</b>${esc(x.text)} <span class="muted small">${esc([x.src !== "מתקן" ? x.src : "", x.by].filter(Boolean).join(" · "))}</span>${x.del && ed && isAdmin() ? ` <a href="#" data-a="delLog" data-id="${x.del}" class="small">מחיקה</a>` : ""}</div>`).join("") || `<span class="muted small">אין עדכונים</span>`}</div>
     <label class="f" style="margin-top:12px">הערות קבועות<textarea class="inp" data-fe="note" rows="2" ${dis}>${esc(f.note || "")}</textarea></label>
     ${ed && isAdmin() ? `<div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn del" data-a="delFac">מחיקת המתקן</button></div>` : ""}`;
   openModal(html, m => {
@@ -663,7 +669,10 @@ function orderModal(oid) {
     <div><div class="sec-h">💰 כסף ותשלומים <span class="muted small">(הסכומים לפני מע״מ — בסוגריים כולל ${S().vat ?? 18}%)</span></div>
       <div class="money-box"><div><small>סכום ההזמנה</small><b>${money(orderTotal(o))}</b><span>${money(orderTotal(o) * V)}</span></div><div><small>שולם</small><b style="color:var(--ok)">${money(orderPaid(o))}</b><span>${money(orderPaid(o) * V)}</span></div><div><small>נשאר לשלם</small><b style="color:var(--org)">${money(orderTotal(o) - orderPaid(o))}</b><span>${money((orderTotal(o) - orderPaid(o)) * V)}</span></div></div>
       <div class="form">${inp("amount", "סכום ההזמנה", "num", "ltr")}${inp("advance", "מקדמה", "num", "ltr")}${inp("completion", "משלים", "num", "ltr")}</div>
-      <div class="paytl">${pay.map(([k, l, a]) => `<div class="${has(o, k) ? "d" : ""}"><i></i><b>${l}</b><span>${o[k] ? fmtD(o[k]) : has(o, k) ? "✓ בלי תאריך" : "—"}</span><small>${N(o[a]) ? money(N(o[a]) * V) : ""}</small>${ed ? `<input type="date" class="inp sm" data-oc="${k}" value="${esc(o[k] || "")}">` : ""}</div>`).join("")}</div></div></div>
+      <div class="paytl">${pay.map(([k, l, a]) => `<div class="${has(o, k) ? "d" : ""}"><i></i><b>${l}</b><span>${o[k] ? fmtD(o[k]) : has(o, k) ? "✓ בלי תאריך" : "—"}</span><small>${N(o[a]) ? money(N(o[a]) * V) : ""}</small>${ed ? `<input type="date" class="inp sm" data-oc="${k}" value="${esc(o[k] || "")}">` : ""}</div>`).join("")}</div>
+      ${["adv", "fin"].map(w => { const F = FLOW[w], on = has(o, F.v) || o[F.eng] || o[F.amon]; if (!on || (has(o, F.p) && !o[F.eng] && !o[F.amon])) return ""; const st = vStep(o, w);
+        const step = (k, l, d) => `<label class="fl ${d ? "d" : ""} ${st?.k === k ? "on" : ""}"><span>${l}</span>${ed ? `<input type="date" class="inp sm" data-oc="${k}" value="${esc(o[k] || "")}">` : `<b>${d ? fmtD(d) : "—"}</b>`}</label>`;
+        return `<div class="flow"><b>אישור שובר ה${F.l}</b><span class="fl d"><span>שובר התקבל</span><b>${o[F.v] ? fmtD(o[F.v]) : "✓"}</b></span><i>←</i>${step(F.eng, "הועבר למהנדס החשמל (אלעוז)", o[F.eng])}<i>←</i>${step(F.amon, "הועבר לאמו״ן", o[F.amon])}<i>←</i><span class="fl ${has(o, F.p) ? "d" : ""}"><span>שולם</span><b>${o[F.p] ? fmtD(o[F.p]) : has(o, F.p) ? "✓" : "—"}</b></span>${st ? `<span class="tag ${st.late ? "r" : "a"}" style="margin-inline-start:6px">${esc(st.t)}${st.d !== null ? ` · ${st.d} ימים` : ""}</span>` : ""}</div>`; }).join("")}</div></div>
     ${K.length ? `<div class="sec-h">🌳 הזמנות שתחת ההזמנה הזו</div>${kidsT}` : ""}
     ${ed && o.kind === "הזמנה מרכזת" ? `<div class="row" style="margin-top:8px"><button class="btn o sm" data-a="parAddOrd">+ הזמנה חדשה תחת הזמנת האב</button><button class="btn gh sm" data-a="oAssign">+ שיוך הזמנות קיימות</button></div>` : ""}
     <div class="sec-h">📝 עדכונים על ההזמנה</div>${ed ? `<div class="row" style="margin-bottom:8px"><input type="date" class="inp sm" id="olD" value="${todayStr()}"><input class="inp" id="olT" placeholder="מה התחדש — שובר הגיע, תשלום, תיאום עם חח״י…" style="flex:1;min-width:220px"><button class="btn" data-a="oLog">הוספה</button></div>` : ""}
@@ -1011,7 +1020,7 @@ async function importModal() {
 const LOGR = "iec_log", SNAPR = "iec_snap";
 let LOGMEM = [], LOGSRC = "";   // LOGSRC — מקור השינוי שמתבצע כרגע (סנכרון, אקסל…), נרשם עם כל רשומה
 const FLD = { name: "שם", type: "סוג", kd: "ק.ד.", district: "נפה", note: "הערה", status: "סטטוס", contractorId: "קבלן", iec301: "הזמנת חח״י", ord444: "הזמנת משהב״ט", req880: "דרישה", amount: "סכום", advance: "מקדמה", completion: "משלים",
-  vAdvDate: "שובר מקדמה", advanceDate: "מקדמה שולמה", vFinDate: "שובר משלים", completionDate: "משלים שולם", validUntil: "תוקף שובר", kind: "סוג הזמנה", parent301: "הזמנת אב", facilityId: "מתקן", gNote: "סטטוס מהאקסל", gAt: "תאריך האקסל", chk: "לבדיקה",
+  vAdvDate: "שובר מקדמה", advanceDate: "מקדמה שולמה", vFinDate: "שובר משלים", completionDate: "משלים שולם", validUntil: "תוקף שובר", kind: "סוג הזמנה", parent301: "הזמנת אב", facilityId: "מתקן", gNote: "סטטוס מהאקסל", gAt: "תאריך האקסל", chk: "לבדיקה", advEng: "שובר מקדמה — למהנדס החשמל", advAmon: "שובר מקדמה — לאמו״ן", finEng: "שובר משלים — למהנדס החשמל", finAmon: "שובר משלים — לאמו״ן",
   feeds: "מזין", date: "תאריך", target: "יעד", done: "הושלם", num: "מספר", phone: "טלפון", email: "מייל", org: "ארגון", role: "תפקיד", coord: "נ.צ.", place: "מיקום", size: "גודל", sec: "חתך", srcGone: "נמחק באתר הגבול" };
 const PAYF = ["vAdvDate", "advanceDate", "vFinDate", "completionDate"];
 const SKIPF = new Set(["updatedAt", "updatedBy", "createdAt", "createdBy"]);
@@ -1275,6 +1284,11 @@ function giliParse(rows, fileDate) {
     setDate("completionDate", compD || (compOk ? { d: "" } : null), "משלים שולם");
     const cd = ch.find(c => c.k === "completionDate")?.v; if (cd && cd !== true && o.vFinDate && cd < o.vFinDate) { warn.push(`תאריך המשלים (${fmtD(cd)}) לפני שובר המשלים (${fmtD(o.vFinDate)})`); ch.forEach(c => c.k === "completionDate" && (c.on = false)); }
     if (warn.length) ch.forEach(c => { if (c.k !== "gNote") c.on = c.on && !warn.some(w => /לא תואם/.test(w)); });
+    // ״עבר לאלעוז״ = הועבר למהנדס החשמל · ״אמו״ן״ = הועבר לאמו״ן — לשובר המשלים, אלא אם כתוב מקדמה (או שהמקדמה עוד לא שולמה)
+    const allT = g.rows.map(r => [r.st, r.vf, r.note].join(" ")).join(" "), wF = /משלים/.test(allT) ? "fin" : /מקדמה/.test(allT.replace(/מקדמה שולמה/g, "")) ? "adv" : has(o, "advanceDate") ? "fin" : "adv", FF = FLOW[wF];
+    const paidW = ch.some(c => c.k === FF.p) || has(o, FF.p);
+    if (/אלעוז/.test(allT) && !paidW && !o[FF.eng]) add(FF.eng, fileDate, `שובר ה${FF.l} הועבר למהנדס החשמל (אלעוז)`, true);
+    if (/אמו["״]?ן/.test(allT) && !paidW && !o[FF.amon]) add(FF.amon, fileDate, `שובר ה${FF.l} הועבר לאמו״ן`, true);
     const sec = [...g.sections].filter(s => !/במלואן|הושלם/.test(s) || true);
     const gn = [...new Set([...notes, ...sec])].join(" · ").slice(0, 300);
     if (gn && gn !== (o.gNote || "")) add("gNote", gn, "סטטוס מהאקסל", true);
@@ -1320,10 +1334,49 @@ function giliModal(P, name, fd) {
             if (chk && x.warn.length) { const cur = RAW.orders[x.o.id] || {}, t = `אקסל ${fmtD(fd)}: ${x.warn.join(" · ")}`;
               if (!String(cur.chk || "").includes(x.warn[0])) { patch.chk = cur.chk ? `${cur.chk} | ${t}` : t;
                 patch.log = { ...(cur.log || {}), [newId()]: { date: todayStr(), text: `⚠ לבדיקה — ${t}`, by: who(), at: new Date().toISOString() } }; } }
+            if (patch.gNote) { const cur = RAW.orders[x.o.id] || {}; patch.log = { ...(patch.log || cur.log || {}), [newId()]: { date: fd, text: "📝 מגילי: " + patch.gNote, by: "אקסל", at: new Date().toISOString() } }; }
             patch.gAt = fd; await api.update("orders", x.o.id, patch); } }
         finally { LOGSRC = ""; }
         closeModal(); toast(`עודכנו ${ids.length} הזמנות ✓`); render(); });
     });
+}
+/* =====================================================================
+   מסלול אישור שובר: שובר התקבל ← אצל מהנדס החשמל (אלעוז) ← אצל אמו״ן ← שולם
+   לכל שובר (מקדמה / משלים) נשמרים תאריכי העברה: advEng/advAmon · finEng/finAmon
+   ===================================================================== */
+const FLOW = { adv: { v: "vAdvDate", p: "advanceDate", eng: "advEng", amon: "advAmon", amt: "advance", l: "מקדמה" }, fin: { v: "vFinDate", p: "completionDate", eng: "finEng", amon: "finAmon", amt: "completion", l: "משלים" } };
+const flowDays = () => ({ v: 7, eng: 10, amon: 14, ...(S().flowDays || {}) });   // נורמה: שובר שהגיע ולא הועבר · אצל המהנדס · אצל אמו״ן
+/** איפה נמצא השובר: null = אין שובר / כבר שולם */
+function vStep(o, w) {
+  const F = FLOW[w]; if (has(o, F.p) || (w === "adv" && has(o, "completionDate"))) return null;
+  if (!has(o, F.v) && !o[F.eng] && !o[F.amon]) return null;
+  const st = o[F.amon] ? ["amon", "אצל אמו״ן", o[F.amon], "משהב״ט"] : o[F.eng] ? ["eng", "אצל מהנדס החשמל", o[F.eng], "אצלנו"] : ["v", "שובר התקבל — להעביר למהנדס", /^\d{4}/.test(String(o[F.v] || "")) ? o[F.v] : "", "אצלנו"];
+  const d = st[2] ? days(st[2]) : null, late = d !== null && d > flowDays()[st[0]];
+  return { w, k: st[0], t: `שובר ${F.l} ${st[1]}`, since: st[2], d, late, who: st[3], amt: N(o[F.amt]) };
+}
+const vSteps = o => ["adv", "fin"].map(w => vStep(o, w)).filter(Boolean);
+/** שורת סטטוס תשלום להזמנה (גם מרחק חריג): מה שולם ומה ממתין ואצל מי */
+function payLine(o) {
+  const p = []; if (has(o, "advanceDate") || has(o, "completionDate")) p.push(`מקדמה ✓${o.advanceDate ? " " + fmtD(o.advanceDate) : ""}`);
+  if (has(o, "completionDate")) p.push(`משלים ✓${o.completionDate ? " " + fmtD(o.completionDate) : ""}`);
+  vSteps(o).forEach(s => p.push(`${s.t}${s.d !== null ? ` · ${s.d} ימים` : ""}`));
+  if (!p.length) p.push(has(o, "advanceDate") ? "ממתין לשובר משלים" : o.iec301 ? "ממתין לשובר מקדמה" : "טרם הוזמן");
+  else if (has(o, "advanceDate") && !has(o, "vFinDate") && !has(o, "completionDate") && !vStep(o, "fin")) p.push("ממתין לשובר משלים מחח״י");
+  return p.join(" · ");
+}
+const excLines = f => facOrders(f).filter(o => o.kind === "מרחק חריג").map(o => ({ o, t: `⚡ מרחק חריג ${o.iec301 || ""}: ${payLine(o)}`, paid: has(o, "completionDate") }));
+/** ציר זמן למתקן: עדכונים ידניים + עדכוני ההזמנות שלו + הערות מגילי + תשלומים ושוברים + ״לבדיקה״ + דיווחי מפקחים */
+function facTimeline(f) {
+  const T = [], add = (date, text, by, src, del) => date && T.push({ date: String(date).slice(0, 10), text, by: by || "", src, del });
+  Object.entries(f.log || {}).forEach(([k, x]) => add(x.date, x.text, x.by, "מתקן", k));
+  for (const o of facOrders(f)) { const n = o.iec301 || o.kind || "הזמנה";
+    Object.values(o.log || {}).forEach(x => add(x.date, x.text, x.by, n));
+    if (o.gNote && !Object.values(o.log || {}).some(x => String(x.text).includes(o.gNote))) add(o.gAt || (o.updatedAt || "").slice(0, 10), "📝 מגילי: " + o.gNote, "אקסל", n);
+    [["vAdvDate", "שובר מקדמה התקבל"], ["advEng", "שובר מקדמה הועבר למהנדס החשמל"], ["advAmon", "שובר מקדמה הועבר לאמו״ן"], ["advanceDate", "מקדמה שולמה"], ["vFinDate", "שובר משלים התקבל"], ["finEng", "שובר משלים הועבר למהנדס החשמל"], ["finAmon", "שובר משלים הועבר לאמו״ן"], ["completionDate", "משלים שולם"]]
+      .forEach(([k, l]) => { if (/^\d{4}-\d\d-\d\d$/.test(String(o[k] || ""))) add(o[k], `💳 ${l}${["advanceDate", "completionDate"].includes(k) && N(o[k === "advanceDate" ? "advance" : "completion"]) ? ` · ${money(N(o[k === "advanceDate" ? "advance" : "completion"]) * (1 + VAT()))}` : ""}`, "", n); });
+    if (o.chk) add(todayStr(), "⚠ לבדיקה: " + o.chk, "", n); }
+  Object.values(repMap().m).filter(r => r && repMap().facOf && Object.keys(r.itemIds || {}).some(i => repMap().facOf[i] === f.id)).forEach(r => add(r.date, `🦺 ${r.act?.name || BRD_ACTS?.[r.activityId]?.name || "דיווח מפקח"} (מאושר)`, r.reportedByName || String(r.reportedBy || "").split("@")[0], "אתר הדיווחים"));
+  return T.sort((a, b) => b.date.localeCompare(a.date));
 }
 /* =====================================================================
    תמונת מצב — אצל מי הכדור ומה הכי משפיע על ההתקדמות
@@ -1337,8 +1390,9 @@ const paidNot = f => live(f) && !!state(f).done.pFin && !state(f).done.power;
 function ballOf(f) {
   const s = state(f), R = { ours: [], iec: [] }, V = 1 + VAT(); if (!live(f)) return R;
   for (const o of facOrders(f)) { const pd = payDue(o);
-    if (pd) { const dl = o.validUntil ? days(todayStr(), o.validUntil) : null; R.ours.push({ t: `לתשלום: ${pd.k} ${money(pd.amt * V)}${dl !== null && dl <= 14 ? ` · ${dl < 0 ? "השובר פג" : `השובר פג בעוד ${dl} ימים`}` : ""}`, w: dl !== null && dl <= 14 ? 5 : 4, c: dl !== null && dl <= 14 ? "r" : "a" }); }
-    if (/אלעוז/.test(o.gNote || "")) R.ours.push({ t: "אצל אלעוז: " + (String(o.gNote).match(/[^·]*אלעוז[^·]*/) || [""])[0].trim(), w: 3, c: "a" });
+    if (pd) { const dl = o.validUntil ? days(todayStr(), o.validUntil) : null, st = vStep(o, pd.k === "משלים" ? "fin" : "adv");
+      R.ours.push({ t: `לתשלום: ${pd.k} ${money(pd.amt * V)}${st ? ` · ${st.k === "v" ? "להעביר למהנדס" : st.k === "eng" ? "אצל מהנדס החשמל" : "אצל אמו״ן"}${st.d !== null ? ` ${st.d} ימים` : ""}` : ""}${dl !== null && dl <= 14 ? ` · ${dl < 0 ? "השובר פג" : `השובר פג בעוד ${dl} ימים`}` : ""}`, w: dl !== null && dl <= 14 ? 5 : st?.late ? 4.5 : 4, c: dl !== null && dl <= 14 || st?.late ? "r" : "a" }); }
+    if (/אלעוז/.test(o.gNote || "") && !payDue(o)) R.ours.push({ t: "אצל אלעוז: " + (String(o.gNote).match(/[^·]*אלעוז[^·]*/) || [""])[0].trim(), w: 3, c: "a" });
     if (o.chk) R.ours.push({ t: "⚠ לבדיקה מול גילי", w: 3, c: "r" }); }
   gaps(f).filter(g => g.k === "g444" || g.k === "noOrd").forEach(g => R.ours.push({ t: g.t, w: g.k === "noOrd" ? 1 : 2, c: "gr" }));
   if (paidNot(f)) R.iec.push({ t: `שולם במלואו — עוד לא חובר${s.done.pFin.date ? ` (שולם ${fmtD(s.done.pFin.date)})` : ""}`, w: 5, c: "r" });
@@ -1363,7 +1417,7 @@ function pageDash() {
   const tot = O.reduce((t, o) => t + orderTotal(o), 0), paid = O.reduce((t, o) => t + orderPaid(o), 0);
   const kpi = (go, l, v, s, c, hot) => `<button class="kpi ${hot ? "hot" : ""}" style="--kc:${c}" data-a="dgo" data-id="${go}"><span>${l}</span><b>${v}</b><small>${s}</small></button>`;
   const kp = `<div class="kpis">${kpi("f:powered", "⚡ חושמלו", `${pw.length} / ${LV.length}`, `מתקנים פעילים · נמסרו ${LV.filter(f => state(f).done.hand).length}`, "#2b9a4d")}
-    ${kpi("f:payDue", "💳 לתשלום עכשיו", money(dueAmt * V), `${due.length} שוברים ממתינים לנו · כולל מע״מ`, "#f39200", due.length)}
+    ${(() => { const S3 = { v: 0, eng: 0, amon: 0 }; due.forEach(o => { const st = vStep(o, payDue(o).k === "משלים" ? "fin" : "adv"); if (st) S3[st.k]++; }); return kpi("f:payDue", "💳 לתשלום עכשיו", money(dueAmt * V), `${due.length} שוברים · ${S3.v} להעביר · ${S3.eng} אצל המהנדס · ${S3.amon} באמו״ן`, "#f39200", due.length); })()}
     ${kpi("f:voucher", "⏳ שוברים שפגים", exp.length, "פג או יפוג בתוך 14 יום", "#c0392b", exp.length)}
     ${kpi("f:paidNot", "🔌 שולמו — לא חוברו", pn.length, "לדחוף מול הנהלת חח״י", "#8e5bc2", pn.length)}
     ${kpi("f:ours", "🙋 הכדור אצלנו", ours.length, "מתקנים שממתינים לנו / למשהב״ט", "#b07d00", ours.length)}
