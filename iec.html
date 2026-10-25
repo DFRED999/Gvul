@@ -293,6 +293,11 @@ async function repSet(fid, stage, date) {
   await api.update("facilities", fid, { log: { ...(RAW.facilities[fid].log || {}), [newId()]: { date: todayStr(), text: date ? `${st?.name}: ${cur ? fmtD(cur.date) + " ← " : ""}${fmtD(date)} (עודכן מאתר חח״י, גם באתר הגבול)` : `${st?.name}: בוטל (גם באתר הגבול)`, by: who(), at: new Date().toISOString() } } });
   return true;
 }
+/** הקבלן סיים — לפי סטטוס הפריט באתר הגבול (״הושלם״, שמתאמי הקבלנים מעדכנים). מידע בלבד: לא משנה את שלבי חח״י */
+const ctrDone = f => { const it = BRD_ITEMS?.[srcItemId(f)]; return it && it.status === "הושלם" ? { date: it.doneDate || "", by: it.updatedBy || "" } : null; };
+const readyTgt = f => f.type === "תט״ז" ? "exec" : "power";
+const readyF = f => live(f) && !!ctrDone(f) && !state(f).done[readyTgt(f)];
+const readyDays = f => { const c = ctrDone(f); return c?.date ? days(c.date) : null; };
 function state(f) { return memo("s:" + f.id, () => state0(f)); }
 function state0(f) {
   const ST = stagesFor(f), M = mainOrders(f), done = {}, A = alertCfg(), today = todayStr();
@@ -358,6 +363,7 @@ const TABS = [["dash", "תמונת מצב"], ["facs", "מתקנים"], ["orders"
 function render() {
   CACHE = {}; if (!me && !LOCAL) return;
   if (!window.__snap && IEC_READY && BRD_PROG) setTimeout(ensureSnap, 2500);
+  if (!window.__deep && IEC_READY) { window.__deep = true; const m = location.hash.match(/fac=([^&]+)/), id = m && decodeURIComponent(m[1]); if (id && RAW.facilities[id]) setTimeout(() => { ui.tab = "facs"; render(); openDet("fac", id); }, 200); }
   const SCS = ".tw, .lst, .pipe, .tabs", scK = e => (e.closest(".card")?.querySelector("h2")?.textContent || "") + "|" + e.className, scr = [...$app.querySelectorAll(SCS)].map(e => [scK(e), e.scrollTop, e.scrollLeft]);
   const ae = document.activeElement, keep = ae && ae.id && ae.matches("input,textarea,select") ? { id: ae.id, s: ae.selectionStart } : null, sy = scrollY;
   const nStuck = list("facilities").filter(f => state(f).stuck).length;
@@ -412,7 +418,9 @@ function pageDash() {
   const apr = PD.length ? `<div class="card" style="border:2px solid #f2c48a"><h2>📋 דיווחי מפקחים שממתינים לאישור <small>${PD.length} — אחרי האישור הם מסמנים את השלב במתקן, כאן ובאתר הגבול</small></h2><div class="lst">${PD.map(p => `<div class="li" style="cursor:default"><span class="ic">📋</span><span><b>${esc(AN(p))}</b><div class="sub">${esc(FN(p))}${p.secFrom !== "" && p.secFrom != null && p.secTo !== "" ? ` · חתכים ${esc(p.secFrom)}–${esc(p.secTo)}` : ""} · ${fmtD(p.date)} · ${esc(String(p.reportedBy || "").split("@")[0])}${p.note ? " · " + esc(p.note) : ""}</div></span>
     <span class="end">${canEdit() ? `<button class="btn sm" data-a="repOk" data-id="${p.pid}">✓ אישור</button> <button class="btn del sm" data-a="repNo" data-id="${p.pid}">✕ דחייה</button>` : `<span class="tag a">ממתין</span>`}</span></div>`).join("")}</div></div>` : "";
   const cab = cableM();
-  return weekBanner() + kp + apr + pipe + (cab ? `<div class="card"><h2>🧵 השחלת כבלים <small>לפי דיווחי מפקחים מאושרים</small></h2><b style="font-size:24px;color:var(--navy)">${Math.round(cab).toLocaleString("he-IL")} מ׳</b></div>` : "") + `<div class="card"><h2>לאורך הקו — מצפון לדרום <small>כל נקודה = מתקן בצבע השלב שלו · עיגול אדום = תקוע · קו = תט״ז שמזין ארון</small></h2>${strip(LV)}</div>` + `<div class="grid g2">${stuckCard}${gapCard}</div>` + byD;
+  const RD = LV.filter(readyF).sort((a, b) => (readyDays(b) ?? -1) - (readyDays(a) ?? -1));
+  const rdCard = RD.length ? `<div class="card" style="border:2px solid #f2c48a"><h2>🏗 מוכן לחח״י — הקבלן סיים, חח״י עוד לא <small>${RD.length} מתקנים · לפי זמן ההמתנה · הסטטוס מתעדכן באתר הגבול</small></h2><div class="lst">${RD.map(f => li(f, `<span class="tag a">ממתין ל${esc(stages().find(x => x.id === readyTgt(f))?.name || "")}${readyDays(f) !== null ? ` · ${readyDays(f)} ימים` : ""}</span>`)).join("")}</div></div>` : "";
+  return weekBanner() + kp + apr + rdCard + pipe + (cab ? `<div class="card"><h2>🧵 השחלת כבלים <small>לפי דיווחי מפקחים מאושרים</small></h2><b style="font-size:24px;color:var(--navy)">${Math.round(cab).toLocaleString("he-IL")} מ׳</b></div>` : "") + `<div class="card"><h2>לאורך הקו — מצפון לדרום <small>כל נקודה = מתקן בצבע השלב שלו · עיגול אדום = תקוע · קו = תט״ז שמזין ארון</small></h2>${strip(LV)}</div>` + `<div class="grid g2">${stuckCard}${gapCard}</div>` + byD;
 }
 /** פס ק.ד.: צפון (ק.ד. גבוה) מימין, דרום משמאל — כמו הקבלנים באתר הראשי */
 function strip(F) {
@@ -525,6 +533,7 @@ function facModal(id) {
   const L = Object.entries(f.log || {}).sort((a, b) => String(b[1].date).localeCompare(String(a[1].date)) || String(b[1].at || "").localeCompare(String(a[1].at || "")));
   const html = `<div class="row" data-fid-keep><h2>${TICON[f.type] || ""} ${esc(f.name)}</h2><span class="tag" style="--tc:${s.cur?.color || "#b6c2d3"};--tt:#fff">${live(f) ? (s.cur ? esc(s.cur.name) : "טרם התחיל") : esc(f.status)}</span><span class="spacer"></span>${backBtn()}<button class="btn gh" data-a="close">סגירה</button></div>
     ${s.flags.length || gaps(f).length ? `<div class="chips" style="margin-top:6px">${s.flags.map(x => `<span class="tag r">${esc(x.t)}</span>`).join("")}${gaps(f).map(x => `<span class="tag a">${esc(x.t)}</span>`).join("")}</div>` : ""}
+    ${ctrDone(f) ? `<div class="note" style="margin-top:6px;${readyF(f) ? "border-color:#f2c48a;background:#fff7e6" : ""}">🏗 <b>באתר הגבול: הקבלן סיים</b>${ctrDone(f).date ? ` · ${fmtD(ctrDone(f).date)}` : ""}${readyF(f) ? ` — <b style="color:#a4520c">מוכן לחח״י, ממתין ל${esc(stages().find(x => x.id === readyTgt(f))?.name || "")}${readyDays(f) !== null ? ` · ${readyDays(f)} ימים` : ""}</b>` : ""}</div>` : ""}
     ${f.src?.startsWith("item:") ? `<p class="small muted" style="margin:6px 0 0">🔄 מקושר לפריט באתר הגבול — שם, סוג, ק.ד., חתך, קבלן ונ.צ. מתעדכנים משם אוטומטית. כאן מנהלים הזמנות, שלבים ועדכונים.</p>` : ""}
     <div class="form">${fld("name", "שם")}${fld("type", "סוג", "", TYPES.map(t => t[0]))}${fld("kd", "ק.ד.")}${fld("sec", "חתך")}${fld("district", "נפה", "", DISTRICTS)}${fld("contractorId", "קבלן הגזרה", "", contractors().map(c => [c.id, c.name]))}${fld("place", "מקום / ישוב")}${fld("size", "גודל חיבור")}${fld("status", "מצב", "", ["פעיל", "מוקפא", "בוטל"])}${fld("contact", "איש קשר בחח״י", "", list("contacts").map(c => [c.id, c.name + (c.org ? " · " + c.org : "")]))}</div>
     ${f.type === "תט״ז" ? `<div class="sec-h">⚡ ארונות שהתט״ז מזין <span class="muted small">(עד 2)</span></div><div class="row">${Object.keys(f.feeds || {}).map(cid => `<span class="tag">${esc(RAW.facilities[cid]?.name || "?")} ${ed ? `<a href="#" data-a="unfeed" data-id="${cid}">✕</a>` : ""}</span>`).join("")}
@@ -857,7 +866,7 @@ function repHtml() {
   const th = t => `<th style="background:#0b3a6e;color:#fff;text-align:right;padding:5px 7px;border:1px solid #0b3a6e;font-size:10.5pt">${t}</th>`, td = (t, st = "") => `<td style="border:1px solid #cfd8e3;padding:4px 7px;vertical-align:top;font-size:10pt;${st}">${t}</td>`;
   const tbl = (h, rows) => rows.length ? `<table style="width:100%;border-collapse:collapse;margin:4px 0 12px"><thead><tr>${h.map(th).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>` : `<p style="color:#63708a;margin:2px 0 12px">אין</p>`;
   const h2 = t => `<h3 style="color:#0b3a6e;border-bottom:3px solid #f39200;padding-bottom:3px;margin:16px 0 6px;font-size:13pt">${t}</h3>`;
-  const nm = f => `<b>${esc(f.name)}</b><br><span style="color:#63708a">${esc(f.type)} · ק.ד. ${esc(f.kd || "—")}</span>`, nums = f => mainOrders(f).map(o => esc(o.iec301 || "—")).join(", ") || "—", ll = f => { const x = lastLog(f); return x ? `${fmtD(x.date)} — ${esc(x.text)}` : ""; };
+  const nm = f => `<b>${esc(f.name)}</b><br><span style="color:#63708a">${esc(f.type)} · ק.ד. ${esc(f.kd || "—")}</span>${readyF(f) ? `<br><span style="color:#a4520c;font-weight:700;font-size:9pt">🏗 מוכן לחח״י${readyDays(f) !== null ? ` · ${readyDays(f)} ימים` : ""}</span>` : ""}`, nums = f => mainOrders(f).map(o => esc(o.iec301 || "—")).join(", ") || "—", ll = f => { const x = lastLog(f); return x ? `${fmtD(x.date)} — ${esc(x.text)}` : ""; };
   const title = `<h2 style="color:#0b3a6e;margin:0">${R.kind === "brief" ? "מצע לדיון — פערים מול חברת החשמל" : R.kind === "money" ? "דוח כספי — הזמנות חח״י" : "דוח סטטוס — חיבורי חשמל"}</h2><div style="color:#63708a;margin-bottom:8px">${R.dist ? "נפת " + esc(R.dist) : "כל הנפות"} · נכון ל־${fmtD(today)}</div>`;
   const sumTbl = (L, ttl) => { if (!L.length) return ""; const ds = [...(R.dist ? [R.dist] : DISTRICTS), ...(L.some(f => !DISTRICTS.includes(f.district)) && !R.dist ? [""] : [])], cnt = (a, s) => a.filter(f => s ? state(f).cur?.id === s.id : !state(f).cur).length || "";
     const row = (lbl, a, tot) => `<tr>${td(`<b>${esc(lbl)}</b>`, tot ? "background:#eef2f8" : "")}${td(cnt(a, null), "text-align:center" + (tot ? ";background:#eef2f8;font-weight:700" : ""))}${ST.map(s => td(cnt(a, s), "text-align:center" + (tot ? ";background:#eef2f8;font-weight:700" : ""))).join("")}${td(`<b>${a.length}</b>`, "text-align:center" + (tot ? ";background:#eef2f8" : ""))}</tr>`;
@@ -1448,7 +1457,7 @@ async function start() {
         { const rp = db.ref(`${BORDER}/progress`), ra2 = db.ref(`${BORDER}/activities`);   // דיווחי מפקחים של חח״י — לשלבים, לאישורים ולהשחלת כבלים
           const cp = rp.on("value", x => { BRD_PROG = x.val() || {}; render(); }, () => { BRD_PROG = {}; }), ca = ra2.on("value", x => { BRD_ACTS = x.val() || {}; render(); }, () => { BRD_ACTS = {}; });
           off.push(() => rp.off("value", cp), () => ra2.off("value", ca)); }
-        if (PERM !== "view") { const ri = db.ref(`${BORDER}/items`), rc = db.ref(`${BORDER}/contractors`);   // סנכרון: כל שינוי בפריטים באתר הגבול מגיע לכאן מיד
+        { const ri = db.ref(`${BORDER}/items`), rc = db.ref(`${BORDER}/contractors`);   // סנכרון: כל שינוי בפריטים באתר הגבול מגיע לכאן מיד
           const ci = ri.on("value", x => { BRD_ITEMS = x.val() || {}; syncSoon(); }, () => {}), cc = rc.on("value", x => { BRD_CT = x.val() || {}; syncSoon(); }, () => {});
           off.push(() => ri.off("value", ci), () => rc.off("value", cc)); }
         if (PERM === "admin") { const ra = db.ref(`${BORDER}_access`), c2 = ra.on("value", s3 => { BRD.users = s3.val() || {}; if (ui.tab === "settings") render(); }, () => {}); off.push(() => ra.off("value", c2)); } }
