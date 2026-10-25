@@ -23,7 +23,7 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); }
 button, input, select, textarea { font: inherit; color: inherit; }
 
 .shell { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: 100vh; }
-.side { background: var(--side); color: var(--side-ink); padding: 18px 12px; display: flex; flex-direction: column; gap: 2px; }
+.side { background: var(--side); color: var(--side-ink); padding: 18px 12px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; height: 100vh; overflow-y: auto; align-self: start; }
 .brand { font-weight: 800; font-size: 18px; color: #fff; padding: 0 10px 14px; line-height: 1.25; }
 .brand small { display: block; font-weight: 400; font-size: 12px; color: var(--side-muted); margin-top: 2px; }
 .grp { font-size: 11.5px; letter-spacing: .04em; color: var(--side-muted); padding: 12px 12px 4px; }
@@ -52,7 +52,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .mscrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .2s; }
   .mscrim.on { opacity: 1; pointer-events: auto; }
   .shell { grid-template-columns: minmax(0, 1fr); }
-  .side { position: fixed; top: 0; bottom: 0; inset-inline-start: 0; width: min(300px, 84vw); z-index: 50; overflow-y: auto; transform: translateX(105%); transition: transform .22s ease; padding-top: max(18px, env(safe-area-inset-top)); box-shadow: -8px 0 24px rgba(0,0,0,.3); }
+  .side { position: fixed; height: auto; top: 0; bottom: 0; inset-inline-start: 0; width: min(300px, 84vw); z-index: 50; overflow-y: auto; transform: translateX(105%); transition: transform .22s ease; padding-top: max(18px, env(safe-area-inset-top)); box-shadow: -8px 0 24px rgba(0,0,0,.3); }
   .side.open { transform: none; }
   .side .nav { padding: 11px 12px; font-size: 16px; }
   .main { padding: 18px 16px 60px; }
@@ -833,7 +833,7 @@ const SECTION_M = 20;          // מרחק בין חתכים (מ׳) — קבוע
 /* =====================================================================
    §2 עזרים
    ===================================================================== */
-const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "requests", "snapshots", "tasks", "mtgs", "sites", "budget", "reqs", "contacts", "tableConfig", "errLog", "users"];
+const COLS = ["contractors", "orders", "designOffices", "designSegments", "activities", "progress", "deliveries", "issues", "meetings", "items", "kdSections", "iecOrders", "alerts", "survey", "requests", "snapshots", "tasks", "mtgs", "sites", "budget", "reqs", "contacts", "opex", "tableConfig", "errLog", "users"];
 /* קבלנים ייעודיים — עובדים לרוחב הקו לפי התמחות (שערים, מבני חשמל, פינוי מוקשים, סבכות…) ומנוהלים לפי "פריטי עבודה" */
 const SPECIALTIES = ["ארון שקד", "חדר טרפו", "תט״ז", "שערים", "פינוי מוקשים", "סבכות למעבירי מים", "תקשורת", "מעבירי מים", "מעביר אירי", "אחר"];
 const ITEM_STATUS = ["טרם", "מתוכנן", "בביצוע", "הושלם", "HOLD", "מבוטל"];
@@ -947,7 +947,7 @@ function denyWrite(col, id, obj) {
 const writeFail = col => e => { console.error("write failed", col, e); setTimeout(() => { render(); alertMsg(/PERMISSION_DENIED|permission/i.test(String(e?.code || e?.message)) ? (col === "users" ? "השינוי לא נשמר: Firebase דחה את הכתיבה. לשנות משתמשים יכול רק ״מנהל״ או ״סופר מנהל״ פעיל — ובתנאי שכללי Firebase העדכניים פורסמו (Realtime Database ← Rules)." : "השינוי לא נשמר: אין הרשאה לפי כללי Firebase.") : "השינוי לא נשמר: " + (e?.message || e)); }, 0); };
 /* ---------- יומן שינויים: כל כתיבה נרשמת ב-border_log (מי, מתי, מה, לפני ← אחרי). רק מנהלים קוראים; כתיבה בלבד — אי אפשר לשנות רשומה קיימת ---------- */
 const LOG_ROOT = DB_ROOT + "_log", LOG_SKIP_COL = new Set(["tableConfig", "snapshots", "errLog", "survey", "alerts"]), LOG_SKIP_F = new Set(["updatedAt", "updatedBy", "createdAt", "createdBy", "unseen", "_secLen", "_secParts", "_secs", "_kdr"]);
-const LOG_COLN = { sites: "אתרי איסוף", issues: "נושאים ומשימות", budget: "תקציב ואומדן", contractors: "קבלנים", orders: "הזמנות", designOffices: "משרדי תכנון", designSegments: "קטעי תכנון", activities: "מלאכות", progress: "דיווחי ביצוע", deliveries: "מסירות תוכניות", iecOrders: "הזמנות חח״י", items: "פריטים", requests: "פניות מהשטח", contacts: "אנשי קשר", users: "משתמשים", kdSections: "ק.ד.↔חתכים", reqs: "דרישות", tasks: "משימות", mtgs: "ישיבות", meetings: "ישיבות", import: "ייבוא נתונים", restore: "טעינת גיבוי" };
+const LOG_COLN = { sites: "אתרי איסוף", issues: "נושאים ומשימות", budget: "תקציב ואומדן", contractors: "קבלנים", orders: "הזמנות", designOffices: "משרדי תכנון", designSegments: "קטעי תכנון", activities: "מלאכות", progress: "דיווחי ביצוע", deliveries: "מסירות תוכניות", iecOrders: "הזמנות חח״י", items: "פריטים", requests: "פניות מהשטח", contacts: "אנשי קשר", users: "משתמשים", kdSections: "ק.ד.↔חתכים", reqs: "דרישות", tasks: "משימות", mtgs: "ישיבות", meetings: "ישיבות", opex: "תקציב תפעולי", import: "ייבוא נתונים", restore: "טעינת גיבוי" };
 const LOG_FN = { status: "סטטוס", review: "אישור", priority: "עדיפות", owner: "אחראי", due: "יעד", note: "הערה", notes: "הערות", qty: "כמות", date: "תאריך", doneDate: "תאריך ביצוע", kdFrom: "מק.ד.", kdTo: "עד ק.ד.", secFrom: "מחתך", secTo: "עד חתך", amount: "סכום", name: "שם", title: "כותרת", stage: "שלב", stageDate: "תאריך שלב", kind: "סוג", contractorId: "קבלן", activityId: "מלאכה", reply: "תשובה", phone: "טלפון", email: "מייל", tags: "תגיות", prof: "מקצוע", role: "תפקיד", active: "פעיל", org: "ארגון", orderNo: "מספר הזמנה", discussed: "נדון בישיבה", updates: "עדכונים", updated: "עודכן", segmentId: "קטע", itemIds: "פריטים", correction: "בקשת תיקון", opened: "נפתח" };
 let LOGMEM = [];
 const logVal = (k, v) => { if (v === undefined || v === null || v === "") return ""; if (k === "contractorId") return RAW.contractors?.[v]?.name || v; if (k === "activityId") return RAW.activities?.[v]?.name || v; if (k === "segmentId") return RAW.designSegments?.[v]?.name || v;
@@ -1168,7 +1168,7 @@ const NAV_ALL = () => [
   { group: "תכנון", items: [["segments", "קטעי תכנון"], ["deliveries", "מסירות תוכניות"]] },
   { group: "ניהול שוטף", items: [["survey", "סקר שטח"], ["svcmp", "סקר מול דיווחים"], ["dq", "🩺 איכות נתונים", "", "", (() => { try { return dqChecks(D()).filter(c => c.sev === "red" && c.n).length; } catch { return 0; } })()]] },
   { group: "", items: [["contacts", "📇 אנשי קשר"]] },
-  { group: "דוחות", items: [["mreport", "דוח הנהלה"], ["budget", "💰 תקציב ואומדן"], ["reqs", "🧾 דרישות ויתרות"], ...(isMgr() ? [["activity", "📒 יומן פעילות"]] : [])] },
+  { group: "דוחות", items: [["mreport", "דוח הנהלה"], ["budget", "💰 תקציב ואומדן"], ["reqs", "🧾 דרישות ויתרות"], ...(isMgr() ? [["opex", "🗂 תקציב תפעולי"], ["activity", "📒 יומן פעילות"]] : [])] },
   { group: "", items: [["settings", "הגדרות"]] },
 ];
 const PLANS = {
@@ -1262,6 +1262,7 @@ function renderInner() {
   // לשמור מה היה פתוח/גלול כדי שעדכון לא "יסגור" את המסך: חלונות מתקפלים וגלילה פנימית של טבלאות
   const keyOf = el => (el.querySelector("summary")?.textContent || "").replace(/\d+/g, "#").trim();
   const openDet = new Set([...document.querySelectorAll("details[open]")].map(keyOf));
+  const sideY = document.querySelector(".side")?.scrollTop || 0;
   const wrapScroll = [...document.querySelectorAll(".tablewrap")].map(w => [w.querySelector("table")?.dataset.table || "", w.scrollTop, w.scrollLeft]);
   const d = Object.fromEntries(COLS.map(c => [c, list(c)]));
   const nav = NAV();
@@ -1269,7 +1270,7 @@ function renderInner() {
   document.body.classList.toggle("ro", isViewer());
   document.body.classList.toggle("dark", !!ui.dark); document.body.classList.toggle("present", !!ui.present);
   const p = ui.page;
-  const body = p === "overview" ? (weeklySnapshot(d), lgBanner() + sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "budget" ? pageBudget(d) : p === "reqs" ? pageReqs(d) : p === "contacts" ? pageContacts(d) : p === "activity" ? pageActivity(d) : p === "work" || p === "meeting" || p === "mytasks" || p === "mtgarch" ? (p === "mtgarch" && (ui.wtab = "disc"), pageWork(d)) : p.startsWith("disc:") ? pageDisc(d, p.slice(5)) : p === "sites" ? pageSites(d) : p.startsWith("site:") ? pageSite(d, p.slice(5)) : p === "power" ? pageIec(d) : p === "culverts" ? pageCulverts(d) : p.startsWith("k:") ? pageComp(d, p.slice(2)) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
+  const body = p === "overview" ? (weeklySnapshot(d), lgBanner() + sinceBanner(d) + alertsStrip(d) + pageOverview(d)) : p === "alerts" ? pageAlerts(d) : p === "requests" ? pageRequests(d) : p === "approvals" ? pageApprovals(d) : p === "map" ? pageMap(d) : p === "dq" ? pageDQ(d) : p === "svcmp" ? pageSvCmp(d) : p === "budget" ? pageBudget(d) : p === "reqs" ? pageReqs(d) : p === "contacts" ? pageContacts(d) : p === "activity" ? pageActivity(d) : p === "opex" ? pageOpex(d) : p === "work" || p === "meeting" || p === "mytasks" || p === "mtgarch" ? (p === "mtgarch" && (ui.wtab = "disc"), pageWork(d)) : p.startsWith("disc:") ? pageDisc(d, p.slice(5)) : p === "sites" ? pageSites(d) : p.startsWith("site:") ? pageSite(d, p.slice(5)) : p === "power" ? pageIec(d) : p === "culverts" ? pageCulverts(d) : p.startsWith("k:") ? pageComp(d, p.slice(2)) : p === "survey" ? pageSurvey(d) : p.startsWith("c:") ? pageContractor(d, p.slice(2))
     : p === "segments" ? pageSegments(d) : p === "deliveries" ? pageDeliveries(d) : p === "settings" ? pageSettings(d) : p === "mreport" ? pageMreport(d) : pagePlan(p);
   $app.innerHTML = `
   <div class="mtop"><button class="mbtn" data-act="menu" aria-label="תפריט" aria-expanded="${ui.menu ? "true" : "false"}"><span></span><span></span><span></span></button>
@@ -1297,6 +1298,7 @@ function renderInner() {
   if (p === "map") initMap(d);
   document.querySelectorAll("details").forEach(el => { if (openDet.has(keyOf(el))) el.open = true; });
   const wraps = [...document.querySelectorAll(".tablewrap")];
+  { const sd = document.querySelector(".side"); if (sd) sd.scrollTop = sideY; }
   wrapScroll.forEach(([t, top, left], i) => { const w = (t && wraps.find(x => x.querySelector("table")?.dataset.table === t)) || wraps[i]; if (w) { w.scrollTop = top; w.scrollLeft = left; } });
   window.scrollTo(0, scroll);
   if (focusId) document.getElementById(focusId)?.focus();
@@ -4710,7 +4712,8 @@ function bgData(d) {
     doneEst: sum(exDone, exAmt), doneCov: sum(exDone, x => x.excluded ? 0 : exCov(x)),
     nextEst: sum(exNext, exAmt), nextCov: sum(exNext, x => x.excluded ? 0 : exCov(x)),
     siteEst: siteTot, siteOrd: cfg.sitesOrdered };
-  T.est = T.earthEst + T.doneEst + T.nextEst + T.siteEst; T.cov = T.earthOrd + T.doneCov + T.nextCov + T.siteOrd; T.left = T.est - T.cov;
+  const OX = oxByField(); T.opexEst = sum(OX, r => r.est); T.opexCov = sum(OX, r => r.com);
+  T.est = T.earthEst + T.doneEst + T.nextEst + T.siteEst + T.opexEst; T.cov = T.earthOrd + T.doneCov + T.nextCov + T.siteOrd + T.opexCov; T.left = T.est - T.cov;
   const specs = d.contractors.filter(c => !isMain(c)).map(c => ({ c, amt: sum(d.orders.filter(o => o.contractorId === c.id), bgOrdAmt), n: d.orders.filter(o => o.contractorId === c.id).length })).filter(x => x.n);
   const iec = { n: d.iecOrders.length, amt: sum(d.iecOrders, x => bgN(x.amount)), exc: sum(d.iecOrders, x => bgN(x.excAmount)) };
   const byC = earth.map(e => { const mine = arr => arr.filter(x => x.contractorId === e.c.id && !x.excluded);
@@ -4722,7 +4725,7 @@ function bgData(d) {
 }
 /** סרגל העלויות (מהדף הראשי) — בתוך מסך התקציב: חלוקה לקטגוריות + קובייה לכל קבלן ולכל רכיב (שערים, סבכות, חח״י, אתרי איסוף…) */
 function budgetBar(d, R, M) {
-  const T = R.T, parts = [["עבודות עפר", T.earthEst, "#7a5c3e"], ["עבודות נוספות", T.doneEst + T.nextEst, "#4a6d93"], ["אתרי איסוף", T.siteEst, "#2f6b4f"]].filter(p => p[1] > 0);
+  const T = R.T, parts = [["עבודות עפר", T.earthEst, "#7a5c3e"], ["עבודות נוספות", T.doneEst + T.nextEst, "#4a6d93"], ["אתרי איסוף", T.siteEst, "#2f6b4f"], ["תקציב תפעולי", T.opexEst, "#6b5a3a"]].filter(p => p[1] > 0);
   const col = c => c.c ? (c.sp ? (KIND_ICON[specsOf(c.c)[0]] || {}).c || "#8a9a90" : cColor(d, c.c)) : "#2f6b4f";
   const cube = c => { const x = M.colT(c.id), nm = c.id ? c.name : (M.L.some(l => !l.col && l.cat === "אתרי איסוף") && M.L.filter(l => !l.col).every(l => l.cat === "אתרי איסוף") ? "אתרי איסוף" : c.name);
     return `<div style="--cc:${col(c)}" data-act="bgCol" data-id="${esc(c.id)}" role="button" title="אומדן ${bgM(x.est)} · כוסה ${bgM(x.cov)}"><b>${esc(nm)}</b><span>${bgMM(x.est)}</span><small>${x.est - x.cov > 1 ? `חסר ${bgMM(x.est - x.cov)}` : "כוסה במלואו"}</small>${c.c && R.earth.find(e => e.c.id === c.id)?.bad.length ? `<em title="יש הזמנה שהתקציב שלה לא תואם לאורך × מחיר">⚠</em>` : ""}</div>`; };
@@ -4779,7 +4782,7 @@ function pageBudgetEdit(d) {
     <p class="small muted" style="margin:6px 0 0">לא כולל תפעול (מדידות, מפקחים, מתאמים, מתכננים, רטג, עתיקות, מעבדה וכד׳).</p></div></div>`;
 }
 /* ---------- תקציב: תמונה כוללת — מטריצה סוג עבודה × גזרה (צפון → דרום), העמקה בלחיצה ---------- */
-const BG_ROWS = ["עבודות עפר", "גשרים ומעברים", "שערים", "סבכות", "חשמל", "עבודות נוספות", "אחר", "אתרי איסוף"];
+const BG_ROWS = ["עבודות עפר", "גשרים ומעברים", "שערים", "סבכות", "חשמל", "עבודות נוספות", "אחר", "אתרי איסוף", "תקציב תפעולי"];
 const bgMs = v => (Math.round((v || 0) / 1e5) / 10).toLocaleString("he-IL", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 /** כל שורות האומדן במבנה אחד: סוג, גזרה (קבלן ראשי או "" = כללי), מבצע, אומדן, מה כוסה (הוזמן + הועבר) */
 function bgLines(d, R) {
@@ -4788,6 +4791,7 @@ function bgLines(d, R) {
   R.extras.filter(x => !x.excluded).forEach(x => L.push({ cat: x.cat && BG_ROWS.includes(x.cat) ? x.cat : "עבודות נוספות", area: x.areaId ?? (mainIds.has(x.contractorId) ? x.contractorId : ""),
     exec: x.contractorId || "", title: x.title || "", est: bgN(x.amount), cov: bgN(x.transferred) + bgN(x.ordered) + bgLinkedAmt(x), x, phase: x.phase === "בוצע" ? "בוצע" : "יבוצע", note: x.note || "" }));
   R.sites.forEach(x => L.push({ cat: "אתרי איסוף", area: "", exec: "", title: x.title || "", est: bgN(x.mast) + bgN(x.build), cov: 0, site: x, note: x.note || "" }));
+  oxByField().forEach(r => L.push({ cat: "תקציב תפעולי", area: "", exec: "", title: `תפעולי — ${r.f}`, est: r.est, cov: r.com, opex: r, note: `${r.a.length} ספקים · שולם ${bgM(r.paid)}` }));
   if (R.cfg.sitesOrdered) L.push({ cat: "אתרי איסוף", area: "", exec: "", title: "הזמנות שיצאו לאתרי איסוף", est: 0, cov: R.cfg.sitesOrdered, sitesOrd: true });
   L.forEach(l => { if (l.area && !mainIds.has(l.area)) l.area = "";
     // מבצע בפועל: שערים / סבכות / טרפו / חח״י — קבלן ייעודי גם אם בשורה רשום קבלן העפר של הגזרה
@@ -4859,7 +4863,7 @@ function reqTable(d) {
   const M = new Map(), get = no => { const n = reqNorm(no); if (!n) return null; if (!M.has(n)) M.set(n, { no: n, key: n, rec: null, orders: [], iec: null, pendOrd: [] }); return M.get(n); };
   d.reqs.forEach(r => { const x = get(r.no) || (M.set("~" + r.id, { no: "", key: "~" + r.id, rec: null, orders: [], iec: null, pendOrd: [] }), M.get("~" + r.id)); x.rec = r; });
   (RAW.tableConfig?.iec?.budgetReqs || []).forEach(r => { const x = get(r.no); if (x) x.iec = r; });
-  d.orders.forEach(o => { const x = get(o.x_reqNo); if (x) x.orders.push(o); });
+  [...d.orders, ...oxAsOrders()].forEach(o => { const x = get(o.x_reqNo); if (x) x.orders.push(o); });
   // מספרי הזמנות שנרשמו בדרישה עצמה — לפעמים יש הזמנה לפני שיש מספר דרישה: מצרפים הזמנות שעוד אין להן מס׳ דרישה
   d.reqs.forEach(r => { const nos = reqOrdNos(r); if (!nos.length) return; const x = M.get(reqNorm(r.no) || "~" + r.id); if (!x) return;
     nos.forEach(n => { const os = d.orders.filter(o => reqNorm(o.x_ordNo) === n); os.filter(o => !reqNorm(o.x_reqNo) && !x.orders.includes(o)).forEach(o => x.orders.push(o)); if (!os.length) x.pendOrd.push(n); }); });
@@ -4892,6 +4896,91 @@ const ctOrgOf = c => c.org || RAW.contractors?.[c.contractorId]?.name || "";
 const CT_PROFS = ["מודד", "קונסטרוקטור", "מתכנן כבישים", "אדריכל", "הידרולוג", "יועץ קרקע", "יועץ חשמל", "יועץ תקשורת", "יועץ בטיחות", "אגרונום", "מנהל פרויקט", "מנהל עבודה", "מפקח", "קבלן", "ספק", "עו״ד", "כלכלן"];
 const ctTags = c => Array.isArray(c.tags) ? c.tags.filter(Boolean) : String(c.tags || "").split(/\s*[,;]\s*/).filter(Boolean);
 const ctProfs = () => [...new Set([...CT_PROFS, ...list("contacts").map(c => c.prof).filter(Boolean)])];
+/* =====================================================================
+   תקציב תפעולי — מתכננים, מתאמים מול רשויות (רט״ג, רשות העתיקות), יועצים…
+   התקשרות לכל ספק (היקף, דרישה, הזמנה) + חשבונות ותשלומים. מנהלים בלבד.
+   נכנס לאומדן הכולל (״תקציב ואומדן״) ולדרישות ויתרות (לפי מספר הדרישה).
+   ===================================================================== */
+const OX_FIELDS = ["מתכננים", "מתאם רט״ג", "מתאם רשות העתיקות", "יועצים", "מודדים", "פיקוח", "אגרות והיתרים", "אחר"];
+const OX_PST = ["התקבל חשבון", "אושר לתשלום", "שולם"];
+const oxList = () => list("opex").sort((a, b) => OX_FIELDS.indexOf(a.field) - OX_FIELDS.indexOf(b.field) || String(a.name).localeCompare(String(b.name), "he"));
+const oxPays = x => Object.entries(x.pays || {}).map(([id, p]) => ({ id, ...p })).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+const oxPaid = x => oxPays(x).filter(p => p.status === "שולם").reduce((t, p) => t + bgN(p.amount), 0);
+const oxPend = x => oxPays(x).filter(p => p.status !== "שולם").reduce((t, p) => t + bgN(p.amount), 0);
+const oxBudgets = () => tcfg("opex").budgets || {};
+const oxFields = () => [...new Set([...OX_FIELDS, ...list("opex").map(x => x.field).filter(Boolean), ...Object.keys(oxBudgets())])];
+/** סיכום לכל תחום: תקציב מתוכנן, התקשרויות, שולם — ולאומדן הכולל: הגדול מבין התקציב לתחום וסכום ההתקשרויות */
+function oxByField() {
+  const B = oxBudgets(), L = oxList();
+  return oxFields().map(f => { const a = L.filter(x => (x.field || "אחר") === f), com = a.reduce((t, x) => t + bgN(x.amount), 0), paid = a.reduce((t, x) => t + oxPaid(x), 0), plan = bgN(B[f]);
+    return { f, a, com, paid, pend: a.reduce((t, x) => t + oxPend(x), 0), plan, est: Math.max(plan, com) }; }).filter(r => r.a.length || r.plan);
+}
+/** התקשרויות עם מספר דרישה — נספרות בטבלת הדרישות כמו הזמנה (בלי קבלן; שם הספק מוצג) */
+const oxAsOrders = () => list("opex").filter(x => reqNorm(x.reqNo)).map(x => ({ id: "opex:" + x.id, _opex: x.id, name: `${x.field || "תפעולי"}: ${x.name}${x.subject ? " — " + x.subject : ""}`, contractorId: "", x_cname: x.name, x_reqNo: x.reqNo, x_ordNo: x.ordNo || "", x_amount: x.amount }));
+function pageOpex(d) {
+  if (!isMgr()) return `<div class="card"><p>החוצץ הזה למנהלים בלבד.</p></div>`;
+  const F = ui.ox || (ui.ox = { f: "", q: "" }), ed = !isViewer(), R = oxByField(), L = oxList(), q = String(F.q || "").trim().toLowerCase();
+  const tot = k => R.reduce((t, r) => t + r[k], 0), com = tot("com"), paid = tot("paid"), plan = tot("plan");
+  const tile = (l, v, c, s) => `<div class="ch-t" style="border-top:4px solid ${c}"><span>${l}</span><b>${v}</b>${s ? `<small>${s}</small>` : ""}</div>`;
+  const bar = (paid, com, plan) => { const T = Math.max(com, plan, paid) || 1, w = v => (Math.max(0, v) / T * 100).toFixed(1);
+    return `<div class="rq-bar" title="שולם ${bgM(paid)} · בהתקשרות ${bgM(com)}${plan ? ` · תקציב ${bgM(plan)}` : ""}"><i class="i" style="width:${w(paid)}%"></i><i class="p" style="width:${w(com - paid)}%"></i></div>`; };
+  const fRows = R.map(r => `<tr class="${F.f === r.f ? "on" : ""}"><td><a href="#" data-act="oxF" data-id="${esc(r.f)}"><b>${esc(r.f)}</b></a> <span class="small muted">${r.a.length} ספקים</span></td>
+      <td>${ed ? `<input class="cell" data-oxb="${esc(r.f)}" value="${r.plan ? esc(num(Math.round(r.plan), 0)) : ""}" placeholder="תקציב…" style="width:13ch">` : r.plan ? bgM(r.plan) : "—"}</td><td class="nowrap">${bgM(r.com)}</td><td class="nowrap"><b style="color:#2f7d4f">${bgM(r.paid)}</b></td><td class="nowrap">${bgM(r.com - r.paid)}</td>
+      <td class="nowrap">${r.plan ? `<b class="${r.plan - r.com < 0 ? "rq-neg" : "rq-pos"}">${bgM(r.plan - r.com)}</b>` : "—"}</td><td style="min-width:120px">${bar(r.paid, r.com, r.plan)}</td></tr>`).join("");
+  const rows = L.filter(x => (!F.f || (x.field || "אחר") === F.f) && (!q || [x.name, x.subject, x.field, x.reqNo, x.ordNo, x.note].join(" ").toLowerCase().includes(q)));
+  const last = x => { const p = oxPays(x).pop(); return p ? `${fmtD(p.date)} · ${bgM(bgN(p.amount))} · ${esc(p.status || "")}` : `<span class="muted">—</span>`; };
+  const eRow = x => { const pd = oxPaid(x), pe = oxPend(x), am = bgN(x.amount);
+    return `<tr class="${x.status === "הסתיים" ? "rq-closed" : ""}"><td><a href="#" data-act="oxOpen" data-id="${x.id}"><b>${esc(x.name)}</b></a><div class="small muted">${esc(x.field || "")}${x.subject ? " · " + esc(x.subject) : ""}</div></td>
+      <td class="small nowrap" dir="ltr">${esc(x.reqNo || "—")}<br>${esc(x.ordNo || "—")}</td><td class="nowrap">${am ? bgM(am) : `<span class="muted">חסר</span>`}</td><td class="nowrap"><b style="color:#2f7d4f">${bgM(pd)}</b>${pe ? `<div class="small" style="color:#b86b1d">ממתין ${bgM(pe)}</div>` : ""}</td>
+      <td class="nowrap">${am ? `<b class="${am - pd < 0 ? "rq-neg" : ""}">${bgM(am - pd)}</b>` : "—"}</td><td style="min-width:100px">${am ? bar(pd, am, 0) : ""}</td><td class="small">${last(x)}</td><td><button class="btn ghost sm" data-act="oxOpen" data-id="${x.id}">פירוט</button></td></tr>`; };
+  const grp = [...new Set(rows.map(x => x.field || "אחר"))];
+  return `<div class="ch-banner" style="--cc:#6b5a3a"><div><h1>🗂 תקציב תפעולי</h1><span>מתכננים, מתאמים מול רשויות, יועצים ועוד — התקשרות, חשבונות ותשלומים. נכנס לאומדן הכולל ול״דרישות ויתרות״ לפי מספר הדרישה.</span></div>
+    ${ed ? `<button class="btn" data-act="oxOpen" data-id="">+ ספק / התקשרות</button>` : ""}</div>
+  <div class="ch-tiles" style="grid-template-columns:repeat(5,minmax(0,1fr))">${tile("תקציב מתוכנן", plan ? bgMM(plan) : "—", "#6b5a3a")}${tile("היקף התקשרויות", bgMM(com), "#4a6d93", `${L.length} ספקים`)}${tile("שולם", bgMM(paid), "#2f7d4f")}${tile("נשאר לשלם", bgMM(com - paid), "#b86b1d")}${tile("חשבונות ממתינים", bgMM(tot("pend")), "#c0392b", `${L.reduce((t, x) => t + oxPays(x).filter(p => p.status !== "שולם").length, 0)} חשבונות`)}</div>
+  <div class="card"><h2 style="margin-top:0">לפי תחום</h2><div class="tablewrap"><table class="sheet rq-t"><thead><tr><th>תחום</th><th>תקציב מתוכנן</th><th>בהתקשרויות</th><th>שולם</th><th>נשאר לשלם</th><th>יתרת תקציב</th><th>ניצול</th></tr></thead><tbody>
+    ${fRows || `<tr><td colspan="7" class="c muted">עוד אין התקשרויות. מוסיפים ב״+ ספק / התקשרות״.</td></tr>`}
+    ${R.length > 1 ? `<tr class="rq-sub"><td><b>סה״כ</b></td><td><b>${plan ? bgM(plan) : "—"}</b></td><td><b>${bgM(com)}</b></td><td><b>${bgM(paid)}</b></td><td><b>${bgM(com - paid)}</b></td><td>${plan ? `<b>${bgM(plan - com)}</b>` : ""}</td><td>${bar(paid, com, plan)}</td></tr>` : ""}</tbody></table></div>
+    <p class="small muted" style="margin:6px 0 0">באומדן הכולל של הפרויקט נספר לכל תחום הגדול מבין התקציב המתוכנן וסכום ההתקשרויות. התקציב לתחום — לא חובה.</p></div>
+  <div class="card"><div class="row" style="gap:8px;margin-bottom:8px"><h2 style="margin:0">ספקים והתקשרויות${F.f ? ` — ${esc(F.f)}` : ""}</h2>${F.f ? `<button class="btn ghost sm" data-act="oxF" data-id="">✕ כל התחומים</button>` : ""}<span class="spacer"></span><input class="inp" data-oxq="1" value="${esc(F.q || "")}" placeholder="חיפוש ספק, נושא, מספר…" style="max-width:240px"></div>
+    <div class="tablewrap"><table class="sheet rq-t"><thead><tr><th>ספק</th><th>דרישה / הזמנה</th><th>היקף התקשרות</th><th>שולם</th><th>נשאר</th><th>ניצול</th><th>חשבון אחרון</th><th></th></tr></thead><tbody>
+    ${grp.map(g => `<tr class="rq-gh" style="--rc:#6b5a3a"><td colspan="8">${esc(g)}</td></tr>${rows.filter(x => (x.field || "אחר") === g).map(eRow).join("")}`).join("") || `<tr><td colspan="8" class="c muted">אין</td></tr>`}</tbody></table></div></div>`;
+}
+function oxModal(id) {
+  const x = id ? { id, ...(RAW.opex?.[id] || {}) } : { field: ui.ox?.f || "", status: "פעיל", pays: {} }, ed = !isViewer(), dis = ed ? "" : "disabled";
+  const names = [...new Set([...list("contacts").map(c => c.org || c.name), ...list("opex").map(o => o.name)].filter(Boolean))];
+  const P = oxPays(x), am = bgN(x.amount), pd = oxPaid(x);
+  const inp = (k, l, more = "") => `<label class="field" style="flex:1">${l}<input class="inp" id="ox_${k}" value="${esc(x[k] ?? "")}" ${more} ${dis}></label>`;
+  modal(`<h2 style="margin-top:0">${id ? esc(x.name) : "ספק / התקשרות חדשה"}</h2>
+    <div class="row" style="gap:8px">${inp("name", "ספק / משרד", 'list="ox_names"')}<label class="field" style="flex:1">תחום<input class="inp" id="ox_field" list="ox_fields" value="${esc(x.field || "")}" ${dis}></label><label class="field" style="flex:.7">סטטוס<select class="inp" id="ox_status" ${dis}>${["פעיל", "הסתיים"].map(s => `<option ${s === (x.status || "פעיל") ? "selected" : ""}>${s}</option>`).join("")}</select></label></div>
+    <div class="row" style="gap:8px">${inp("subject", "נושא ההתקשרות", 'placeholder="למשל: תכנון מפורט קטע 4, ליווי רט״ג"')}${inp("amount", "היקף התקשרות (₪)", 'inputmode="decimal"')}</div>
+    <div class="row" style="gap:8px">${inp("reqNo", "מספר דרישה", 'dir="ltr" placeholder="880…"')}${inp("ordNo", "מספר הזמנה", 'dir="ltr" placeholder="444…"')}${inp("note", "הערה")}</div>
+    <datalist id="ox_names">${names.map(n => `<option value="${esc(n)}">`).join("")}</datalist><datalist id="ox_fields">${oxFields().map(n => `<option value="${esc(n)}">`).join("")}</datalist>
+    ${id ? `<h3 style="margin:12px 0 4px">חשבונות ותשלומים <span class="small muted">שולם ${bgM(pd)}${am ? ` מתוך ${bgM(am)} · נשאר ${bgM(am - pd)}` : ""}</span></h3>
+    ${P.length ? `<div class="tablewrap" style="max-height:220px"><table class="sheet"><thead><tr><th>תאריך</th><th>מס׳ חשבון</th><th>סכום</th><th>סטטוס</th><th>הערה</th><th></th></tr></thead><tbody>${P.map(p => `<tr><td class="nowrap">${fmtD(p.date)}</td><td dir="ltr">${esc(p.inv || "")}</td><td class="nowrap">${bgM(bgN(p.amount))}</td>
+      <td>${ed ? `<select class="inp" data-oxps="${p.id}" style="min-width:12ch">${OX_PST.map(s => `<option ${s === p.status ? "selected" : ""}>${s}</option>`).join("")}</select>` : esc(p.status || "")}</td><td class="small">${esc(p.note || "")}</td><td>${ed ? `<button class="btn ghost sm" data-oxpd="${p.id}" title="מחיקה">✕</button>` : ""}</td></tr>`).join("")}</tbody></table></div>` : `<p class="small muted">עוד אין חשבונות</p>`}
+    ${ed ? `<div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap"><input type="date" class="inp" id="op_d" value="${todayStr()}" style="max-width:150px"><input class="inp" id="op_i" placeholder="מס׳ חשבון" dir="ltr" style="max-width:120px"><input class="inp" id="op_a" placeholder="סכום" style="max-width:120px" inputmode="decimal">
+      <select class="inp" id="op_s" style="max-width:150px">${OX_PST.map(s => `<option>${s}</option>`).join("")}</select><input class="inp" id="op_n" placeholder="הערה" style="flex:1;min-width:120px"><button class="btn sm" id="op_add">+ חשבון</button></div>` : ""}` : `<p class="small muted">אחרי השמירה אפשר להוסיף חשבונות ותשלומים.</p>`}
+    <p class="small" id="ox_m" style="color:#c0392b;min-height:1em;margin:6px 0"></p>
+    <div class="row">${ed ? `<button class="btn" id="mYes">שמירה</button>` : ""}<button class="btn ghost" id="mNo">סגירה</button><span class="spacer"></span>${ed && id ? `<button class="btn ghost" id="ox_del" style="color:#b3261e">מחיקה</button>` : ""}</div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = close; if (!ed) return;
+    const g = k => m.querySelector("#ox_" + k).value.trim();
+    m.querySelector("#mYes").onclick = async () => { if (!g("name")) return m.querySelector("#ox_m").textContent = "צריך שם ספק";
+      const rec = { name: g("name"), field: g("field") || "אחר", status: m.querySelector("#ox_status").value, subject: g("subject"), amount: reqAmt(g("amount")) || "", reqNo: reqNorm(g("reqNo")), ordNo: g("ordNo"), note: g("note") };
+      if (id) await api.update("opex", id, rec); else { const nid = await api.add("opex", { ...rec, pays: {} }); close(); return oxModal(nid); }
+      close(); render(); toast("נשמר ✓"); };
+    m.querySelector("#op_add")?.addEventListener("click", async () => { const a = reqAmt(m.querySelector("#op_a").value); if (!a) return m.querySelector("#ox_m").textContent = "צריך סכום";
+      await api.update("opex", id, { pays: { ...(RAW.opex[id].pays || {}), [newId()]: { date: m.querySelector("#op_d").value, inv: m.querySelector("#op_i").value.trim(), amount: a, status: m.querySelector("#op_s").value, note: m.querySelector("#op_n").value.trim() } } }); close(); oxModal(id); });
+    m.querySelectorAll("[data-oxps]").forEach(s => s.onchange = async () => { const P = { ...(RAW.opex[id].pays || {}) }; P[s.dataset.oxps] = { ...P[s.dataset.oxps], status: s.value, ...(s.value === "שולם" ? { paidAt: todayStr() } : {}) }; await api.update("opex", id, { pays: P }); close(); oxModal(id); });
+    m.querySelectorAll("[data-oxpd]").forEach(b => b.onclick = async () => { if (b.dataset.s !== "1") { b.dataset.s = "1"; b.textContent = "בטוח?"; return; } const P = { ...(RAW.opex[id].pays || {}) }; delete P[b.dataset.oxpd]; await api.update("opex", id, { pays: P }); close(); oxModal(id); });
+    m.querySelector("#ox_del")?.addEventListener("click", async e => { const b = e.target; if (b.dataset.s !== "1") { b.dataset.s = "1"; b.textContent = "ללחוץ שוב — כולל כל החשבונות"; return; } await api.remove("opex", id); close(); render(); });
+  });
+}
+async function oxClick(act, b) {
+  const F = ui.ox || (ui.ox = { f: "", q: "" });
+  if (act === "oxOpen") return oxModal(b.dataset.id || "");
+  if (act === "oxF") { F.f = F.f === b.dataset.id ? "" : b.dataset.id; render(); }
+}
+
 /* =====================================================================
    יומן פעילות שבועי (ראשון–שבת): מי עדכן מה וכמה — מנהלים בלבד
    ===================================================================== */
@@ -7186,6 +7275,7 @@ $app.addEventListener("click", async e => {
   if (/^site[A-Z]/.test(act)) return siteClick(act, b);
   if (/^ct[A-Z]/.test(act)) return ctClick(act, b);
   if (/^lg[A-Z]/.test(act)) return lgClick(act, b);
+  if (/^ox[A-Z]/.test(act)) return oxClick(act, b);
   if (/^bg[A-Z]/.test(act)) return bgClick(act, b);
   if (/^ins[A-Z]/.test(act)) return inspClick(act, b);
   if (act === "menu") { ui.menu = !ui.menu; render(); return; }
@@ -7483,6 +7573,8 @@ $app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?
 $app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?.req) return; const [no, k] = t.dataset.req.split("|"), r = no.startsWith("~") ? { id: no.slice(1) } : list("reqs").find(x => reqNorm(x.no) === no), v = reqAmt(t.value);
   if (r) await api.update("reqs", r.id, { [k]: v || "" }); else if (v) await api.add("reqs", { no, amount: v, title: "", status: "פתוחה", alloc: {} }); render(); });
 $app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.alq) return; ui.alQ = t.value; alApplyQ(); });
+$app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.oxq) return; (ui.ox = ui.ox || { f: "" }).q = t.value; clearTimeout(window.__oxq); window.__oxq = setTimeout(() => { render(); const el = document.querySelector("[data-oxq]"); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 250); });
+$app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?.oxb) return; const B = { ...oxBudgets() }, v = reqAmt(t.value); if (v) B[t.dataset.oxb] = v; else delete B[t.dataset.oxb]; await setCfg("opex", { budgets: B }); render(); toast("נשמר ✓"); });
 $app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.gsearch) return; (ui.gsearch = ui.gsearch || {})[t.dataset.gsearch] = t.value; applyFilters(); applyGSearch(); });
 $app.addEventListener("change", async e => {
   const t = e.target;
