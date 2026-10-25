@@ -219,9 +219,13 @@ const DEF_STAGES = [
   { id: "s444", name: "הזמנת משהב״ט", color: "#5b6fb3", days: 21, auto: "ord444", who: "משהב״ט", types: NO_TTZ },
   { id: "s301", name: "הזמנת חח״י", color: "#0a6ec9", days: 30, auto: "iec301", who: "חח״י", types: NO_TTZ },
   { id: "vAdv", name: "שובר מקדמה", color: "#2e9bb8", days: 30, auto: "vAdvDate", pay: 1, who: "חח״י", types: NO_TTZ },
-  { id: "pAdv", name: "מקדמה שולמה", color: "#1d8f8a", days: 14, auto: "advanceDate", pay: 2, who: "אצלנו", types: NO_TTZ },
-  { id: "vFin", name: "שובר משלים", color: "#e0a100", days: 60, auto: "vFinDate", pay: 3, who: "חח״י", types: NO_TTZ },
-  { id: "pFin", name: "משלים שולם", color: "#f39200", days: 14, auto: "completionDate", pay: 4, who: "אצלנו", types: NO_TTZ },
+  { id: "aEng", name: "מקדמה אצל המהנדס", color: "#6aa7b8", days: 7, auto: "advEng", pay: 2, who: "אצלנו", types: NO_TTZ },
+  { id: "aAmon", name: "מקדמה באמו״ן", color: "#4f8f9e", days: 10, auto: "advAmon", pay: 3, who: "אצלנו", types: NO_TTZ },
+  { id: "pAdv", name: "מקדמה שולמה", color: "#1d8f8a", days: 14, auto: "advanceDate", pay: 4, who: "משהב״ט", types: NO_TTZ },
+  { id: "vFin", name: "שובר משלים", color: "#e0a100", days: 60, auto: "vFinDate", pay: 5, who: "חח״י", types: NO_TTZ },
+  { id: "fEng", name: "משלים אצל המהנדס", color: "#d9a93a", days: 7, auto: "finEng", pay: 6, who: "אצלנו", types: NO_TTZ },
+  { id: "fAmon", name: "משלים באמו״ן", color: "#c98a1f", days: 10, auto: "finAmon", pay: 7, who: "אצלנו", types: NO_TTZ },
+  { id: "pFin", name: "משלים שולם", color: "#f39200", days: 14, auto: "completionDate", pay: 8, who: "משהב״ט", types: NO_TTZ },
   { id: "exec", name: "ביצוע", color: "#8e5bc2", days: 60, who: "חח״י" },
   { id: "power", name: "חישמול", color: "#2b9a4d", days: 30, who: "חח״י" },
   { id: "hand", name: "מסירה", color: "#1b6b3a", days: 30, who: "חח״י" }];
@@ -231,7 +235,10 @@ const DEF_ALERTS = { stuck: { on: true, name: "תקוע בשלב — לפי מס
   noOrd: { on: true, days: 0, name: "מתקן בלי אף הזמנה (ימים מהקמה)" }, ttz: { on: true, name: "תט״ז בלי ארונות משויכים / מזין יותר מ־2" } };
 const S = () => RAW.settings || {};
 const OLD_NAMES = { "דרישה (880)": "דרישה", "הזמנת משהב״ט (444)": "הזמנת משהב״ט", "הזמנת חח״י (301)": "הזמנת חח״י" };
-const stages = () => (Array.isArray(S().stages) && S().stages.length ? S().stages : DEF_STAGES).map(s => { const d = DEF_STAGES.find(d => d.id === s.id) || {}; return { ...d, ...s, ...(d.types ? { types: d.types } : {}), name: OLD_NAMES[s.name] || s.name }; });
+const stagesList = () => { const sv = Array.isArray(S().stages) && S().stages.length ? S().stages.slice() : DEF_STAGES.slice();
+  DEF_STAGES.forEach((d, i) => { if (sv.some(x => x.id === d.id)) return; const prev = DEF_STAGES.slice(0, i).reverse().find(p => sv.some(x => x.id === p.id)); sv.splice(prev ? sv.findIndex(x => x.id === prev.id) + 1 : 0, 0, d); });
+  return sv; };
+const stages = () => stagesList().map(s => { const d = DEF_STAGES.find(d => d.id === s.id) || {}; return { ...d, ...s, ...(d.types ? { types: d.types } : {}), name: OLD_NAMES[s.name] || s.name }; });
 const stagesFor = f => stages().filter(s => !Array.isArray(s.types) || !s.types.length || s.types.includes(f.type));
 const alertCfg = () => Object.fromEntries(Object.entries(DEF_ALERTS).map(([k, v]) => [k, { ...v, ...(S().alerts?.[k] || {}) }]));
 const VAT = () => (S().vat ?? 18) / 100;
@@ -453,7 +460,7 @@ function feedOrder(L) {
 }
 /** תצוגת טבלה: שורה לכל מתקן */
 function facTable(L) {
-  const V = 1 + VAT(), nums = (f, k) => mainOrders(f).map(o => ef(o, k)).filter(v => v && v !== true).map(v => `<div class="ltr nowrap">${esc(v)}</div>`).join("") || `<span class="muted">—</span>`;
+  const V = 1 + VAT(), nums = (f, k) => [...new Map(facOrders(f).filter(o => o.kind !== "הזמנה מרכזת").map(o => [String(ef(o, k)), o])).entries()].filter(([v]) => v && v !== "true" && v !== "undefined").map(([v, o]) => `<div class="ltr nowrap">${esc(v)}${k === "iec301" && o.kind === "מרחק חריג" ? ` <span class="muted small">(חריג)</span>` : ""}</div>`).join("") || `<span class="muted">—</span>`;
   return `<div class="tw"><table class="t"><thead><tr><th>מתקן</th><th>סוג</th><th>ק.ד.</th><th>נפה</th><th>קבלן</th><th>שלב נוכחי</th><th>הבא / יעד</th><th>דרישה</th><th>הזמנת משהב״ט</th><th>הזמנת חח״י</th><th class="num">סכום (כולל מע״מ)</th><th>תקוע / חוסרים</th><th>עדכון אחרון</th></tr></thead><tbody>
     ${feedOrder(L).map(({ f, role, gi, by }) => { const s = state(f), g = gaps(f), ll = lastLog(f), t = s.next && f.stages?.[s.next.id]?.target, amt = facOrders(f).reduce((x, o) => x + orderTotal(o), 0), c = FG_CLR[(gi || 0) % FG_CLR.length];
       return `<tr data-a="fac" data-id="${f.id}" class="${role === "ttz" ? "fg-t" : role === "fed" ? "fg-c" : ""}" style="cursor:pointer;--fg:${c}"><td class="nowrap">${role === "fed" ? `<span class="fg-ar" title="מוזן מ־${esc(by.name)}">└⚡</span> ` : ""}<b>${TICON[f.type] || ""} ${esc(f.name)}</b>${role === "ttz" ? ` <span class="fg-lbl">מזין ${Object.keys(f.feeds).length}</span>` : role === "fed" ? ` <span class="muted small">מ־${esc(by.name)}</span>` : ""}</td><td class="nowrap">${esc(f.type)}</td><td class="nowrap">${esc(f.kd || "")}</td><td class="nowrap">${esc(f.district || "")}</td><td class="nowrap">${esc(cName(f.contractorId))}</td>
@@ -494,7 +501,8 @@ function fCard(f) {
     <div class="chain" title="${esc(s.ST.map(x => (s.done[x.id] ? "✓ " : "· ") + x.name).join("\n"))}">${s.ST.map(x => `<i class="${s.done[x.id] ? "d" : s.next?.id === x.id && s.stuck ? "x" : ""}" style="--sc:${x.color}"></i>`).join("")}</div>
     <div class="row small"><b style="color:${s.cur?.color || "#63708a"}">${live(f) ? (s.cur ? s.cur.name : "טרם התחיל") : esc(f.status)}</b>${s.next && live(f) ? `<span class="muted">← הבא: ${esc(s.next.name)}${f.stages?.[s.next.id]?.target ? ` (יעד ${fmtD(f.stages[s.next.id].target)})` : ""}</span>` : ""}<span class="spacer"></span>${esc(f.district || "")}</div>
     ${M.length ? M.map(o => `<div class="nums">${num(ef(o, "req880"), "דרישה")}${num(ef(o, "ord444"), "הזמנת משהב״ט")}${num(o.iec301, "הזמנת חח״י", o.id)}${N(o.amount) ? `<span>${money(N(o.amount))}</span>` : ""}</div>`).join("") : live(f) && f.type !== "תט״ז" ? `<div class="nums"><span class="miss">אין הזמנה</span></div>` : ""}
-    ${excLines(f).map(x => `<div class="small" style="color:${x.paid ? "#1d7a46" : "#8a5a00"}">${esc(x.t)}</div>`).join("")}
+    ${facOrders(f).filter(o => o.kind === "מרחק חריג" || (isFeeder(f) && o.kind !== "הזמנה מרכזת")).map(o => `<div class="nums">${num(ef(o, "ord444"), "הזמנת משהב״ט")}${num(o.iec301, "הזמנת חח״י", o.id)}<span class="muted">${o.kind === "מרחק חריג" ? "מרחק חריג" : "הזנה"}</span>${N(o.amount) ? `<span>${money(N(o.amount))}</span>` : ""}</div>`).join("")}
+    ${excLines(f).map(x => `<div class="small" style="color:${x.paid ? "#1d7a46" : "#8a5a00"}">${esc(x.t.replace(/^⚡ (מרחק חריג|הזמנת חח״י) \d*: /, "⚡ "))}</div>`).join("")}
     ${(isFeeder(f) ? [] : M).flatMap(vSteps).map(st => `<div class="small" style="color:${st.late ? "#b3261e" : "#8a5a00"}">💳 ${esc(st.t)}${st.d !== null ? ` · ${st.d} ימים` : ""}</div>`).join("")}
     ${isFeeder(f) ? `<div class="small muted">מזין: ${Object.keys(f.feeds || {}).map(id => esc(RAW.facilities[id]?.name || "?")).join(", ") || "—"}</div>` : tt.length ? `<div class="small muted">מוזן מ־${tt.map(t => esc(t.name)).join(", ")}</div>` : ""}
     ${s.flags.length || g.length ? `<div class="chips">${s.flags.map(x => `<span class="tag r">${esc(x.t)}</span>`).join("")}${g.map(x => `<span class="tag a">${esc(x.t)}</span>`).join("")}</div>` : ""}
