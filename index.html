@@ -785,6 +785,8 @@ body.dark .lg-c, body.dark .lg-tab tr.on td, body.dark .lg-ban { background: #2a
 .pw-tr { display: inline-flex; gap: 3px; vertical-align: middle; margin-inline-end: 6px; } .pw-tr i { width: 17px; height: 17px; display: inline-grid; place-items: center; font-size: 10px; font-style: normal; font-weight: 700; color: #fff; border: 1.5px solid #c3cad6; background: #f3f5f8; }
 .pw-tr i.d { background: var(--c); border-color: var(--c); } .pw-tr i.nx { border: 3px solid var(--c); background: #fff; } .pw-tr i.na { border: 1px dashed #dde2ea; background: transparent; }
 .pw-t tr.pw-stuck td { background: #fff3f1; } .pw-t tr.pw-ready td { background: #fff7e6; }
+.rq-on b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.rq-o { margin: 1px 0; } .rq-o b { display: block; text-align: right; } .rq-o small { display: block; color: var(--muted, #7a828c); font-size: 11.5px; line-height: 1.25; }
 </style>
 </head>
 <body>
@@ -4879,7 +4881,7 @@ function reqTable(d) {
   const M = new Map(), get = no => { const n = reqNorm(no); if (!n) return null; if (!M.has(n)) M.set(n, { no: n, key: n, rec: null, orders: [], iec: null, pendOrd: [] }); return M.get(n); };
   d.reqs.forEach(r => { const x = get(r.no) || (M.set("~" + r.id, { no: "", key: "~" + r.id, rec: null, orders: [], iec: null, pendOrd: [] }), M.get("~" + r.id)); x.rec = r; });
   (RAW.tableConfig?.iec?.budgetReqs || []).forEach(r => { const x = get(r.no); if (x) x.iec = r; });
-  [...d.orders, ...oxAsOrders(), ...iecModOrders()].forEach(o => { const x = get(o.x_reqNo); if (x) x.orders.push(o); });
+  [...d.orders, ...oxAsOrders(), ...iecModOrders()].forEach(o => { const x = get(o.x_reqNo); if (x) x.orders.push(o); else if (o._iecMod) M.set("~iec:" + o._iecMod, { no: "", key: "~iec:" + o._iecMod, rec: null, orders: [o], iec: null, pendOrd: [], iecMod: o._iecMod }); });
   // מספרי הזמנות שנרשמו בדרישה עצמה — לפעמים יש הזמנה לפני שיש מספר דרישה: מצרפים הזמנות שעוד אין להן מס׳ דרישה
   d.reqs.forEach(r => { const nos = reqOrdNos(r); if (!nos.length) return; const x = M.get(reqNorm(r.no) || "~" + r.id); if (!x) return;
     nos.forEach(n => { const os = d.orders.filter(o => reqNorm(o.x_ordNo) === n); os.filter(o => !reqNorm(o.x_reqNo) && !x.orders.includes(o)).forEach(o => x.orders.push(o)); if (!os.length) x.pendOrd.push(n); }); });
@@ -4974,7 +4976,7 @@ function iecModOrders() {
   const E = iecE(); if (!E) return [];
   const V = 1 + E.VAT(), mainNos = new Set(list("orders").map(o => reqNorm(o.x_ordNo)).filter(Boolean));
   return E.modList().filter(m => !mainNos.has(reqNorm(m.num))).map(m => { const os = E.modOrders(m.num), sumO = os.reduce((t, o) => t + E.orderTotal(o), 0) * V, amt = Math.round(bgN(m.amount) ? bgN(m.amount) * V : sumO);
-    return { id: "iecmod:" + m.num, _iecMod: m.num, _nIec: os.length, _amtSrc: bgN(m.amount) ? "סכום הזמנת משהב״ט" : "סכום הזמנות חח״י כולל מע״מ", name: `חח״י · הזמנת משהב״ט ${m.num}${m.note ? " — " + m.note : ""}`, contractorId: IEC_CID, x_reqNo: m.req880 || "", x_ordNo: String(m.num), x_amount: amt }; });
+    return { id: "iecmod:" + m.num, _iecMod: m.num, _nIec: os.length, _amtSrc: bgN(m.amount) ? "סכום הזמנת משהב״ט כולל מע״מ" : "סכום הזמנות חח״י תחתיה כולל מע״מ", name: `הזמנת משהב״ט לחח״י${m.note ? " — " + m.note : ""}`, contractorId: IEC_CID, x_reqNo: m.req880 || "", x_ordNo: String(m.num), x_amount: amt }; });
 }
 /** תא "חיבור חח״י" בפריט: מאתר חח״י (שלב נוכחי של המתקן) — ואם אין גישה, מהטבלה הישנה */
 function iecItemCell(d, i) {
@@ -5338,9 +5340,9 @@ function pageReqs(d) {
   const rows = L.filter(P[F] || P.all), ed = !isViewer();
   const reqRow = r => { const cc = r.cs[0] ? cColor(d, d.contractors.find(c => c.id === r.cs[0])) : "#9aa3ad";
       const ords = [...new Map(r.orders.map(o => [reqNorm(o.x_ordNo) || "—" + String(o.name || "").replace(/\s+/g, ""), o])).values()];
-      return `<tr class="rq-row ${r.closed ? "rq-closed" : ""}" style="--rc:${cc}"><td class="nowrap" dir="ltr">${r.no ? `<b>${esc(r.no)}</b>` : `<span class="rq-nono" dir="rtl">⚠ חסר מס׳ דרישה</span>`}</td><td class="small nowrap"><b style="color:${cc}">${[...r.cs.map(cn), ...r.ext].map(esc).join(", ") || "—"}</b>${r.site ? `<div class="muted">📡 אתרי איסוף</div>` : ""}</td>
-      <td class="small">${ords.map(o => `<div class="nowrap">${esc(o.name || "הזמנה")} · ${o.x_ordNo ? `<span dir="ltr">${esc(o.x_ordNo)}</span>` : `<span class="muted">טרם יצא</span>`}</div>`).join("")}${r.pendOrd.map(n => `<div class="nowrap">הזמנה <span dir="ltr">${esc(n)}</span> <span class="muted">· לא בטבלת ההזמנות</span></div>`).join("")}${ords.length || r.pendOrd.length ? "" : `<span class="muted">—</span>`}</td><td class="small">${esc(r.rec?.title || (r.iec ? "חיבורי חח״י" : ""))}</td>
-      <td>${ed ? `<input class="cell rq-amt ${r.hasAmt ? "" : "miss"}" data-req="${r.key}|amount" value="${r.hasAmt ? esc(num(Math.round(r.amount), 0)) : ""}" placeholder="סכום…" title="אפשר לכתוב גם 40 מ׳">` : r.hasAmt ? bgM(r.amount) : "—"}</td>
+      return `<tr class="rq-row ${r.closed ? "rq-closed" : ""}" style="--rc:${cc}"><td class="nowrap" dir="ltr">${r.no ? `<b>${esc(r.no)}</b>` : `<span class="rq-nono" dir="rtl">⚠ חסר מס׳ דרישה</span>${r.iecMod ? `<div class="small muted" dir="rtl">להשלים באתר חח״י</div>` : ""}`}</td><td class="small rq-on">${ords.map(o => `<div class="rq-o">${o.x_ordNo ? `<b dir="ltr">${esc(o.x_ordNo)}</b>` : `<b class="muted">טרם יצא</b>`}<small>${esc(o.name || "הזמנה")}</small></div>`).join("")}${r.pendOrd.map(n => `<div class="rq-o"><b dir="ltr">${esc(n)}</b><small>לא בטבלת ההזמנות</small></div>`).join("")}${ords.length || r.pendOrd.length ? "" : `<span class="muted">—</span>`}</td><td class="small nowrap"><b style="color:${cc}">${[...r.cs.map(cn), ...r.ext].map(esc).join(", ") || "—"}</b>${r.site ? `<div class="muted">📡 אתרי איסוף</div>` : ""}</td>
+<td class="small">${esc(r.rec?.title || (r.iec ? "חיבורי חח״י" : ""))}</td>
+      <td>${r.iecMod ? `<span class="muted small">—</span>` : ed ? `<input class="cell rq-amt ${r.hasAmt ? "" : "miss"}" data-req="${r.key}|amount" value="${r.hasAmt ? esc(num(Math.round(r.amount), 0)) : ""}" placeholder="סכום…" title="אפשר לכתוב גם 40 מ׳">` : r.hasAmt ? bgM(r.amount) : "—"}</td>
       <td class="nowrap">${r.issued ? bgM(r.issued) : "—"}${r.nOrd > 1 ? ` <span class="small muted">(${r.nOrd} הזמנות)</span>` : ""}</td><td class="nowrap">${r.planned ? bgM(r.planned) : "—"}</td><td class="nowrap">${r.alloc ? bgM(r.alloc) : "—"}</td>
       <td class="nowrap"><b class="${r.hasAmt ? (r.free < -1 ? "rq-neg" : "rq-pos") : "muted"}">${r.hasAmt ? bgM(r.free) : "חסר סכום"}</b></td><td>${r.hasAmt ? reqBar(r) : ""}</td>
       <td><button class="btn ghost sm" data-act="reqOpen" data-id="${r.key}">פירוט</button></td></tr>`; };
@@ -5351,7 +5353,7 @@ function pageReqs(d) {
     ${tile("over", "חריגה מהדרישה", L.filter(P.over).length, "#c0392b")}${tile("noamt", "חסר סכום דרישה", L.filter(P.noamt).length, "#b86b1d")}${L.some(P.nono) ? tile("nono", "חסר מס׳ דרישה", L.filter(P.nono).length, "#8a6d00") : ""}</div>
   ${(() => { const M = iecModOrders(), nr = M.filter(o => !reqNorm(o.x_reqNo)); return M.length ? `<div class="card" style="border-color:${nr.length ? "#e0b44c" : "#cfe3d4"}"><b>⚡ הזמנות משהב״ט לחברת החשמל — מאתר חח״י (${M.length})</b> <span class="small muted">נכנסות לדרישה לפי ״מספר דרישה״ שבהזמנת משהב״ט באתר חח״י. הסכום (כולל מע״מ): סכום הזמנת משהב״ט, ואם לא נרשם — סכום הזמנות חח״י תחתיה.</span>
     ${nr.length ? `<div class="small" style="margin-top:6px;color:#8a6d00"><b>⚠ ${nr.length} בלי מספר דרישה — עוד לא נספרות באף דרישה:</b> ${nr.map(o => `<span class="pill" dir="ltr">${esc(o.x_ordNo)}</span> <span class="muted">${o._nIec} הזמנות · ${bgM(o.x_amount)}</span>`).join(" · ")} — להשלים באתר חח״י: הזמנות ← הזמנות משהב״ט ← ״דרישה״.</div>` : ""}</div>` : ""; })()}
-  <div class="card"><div class="tablewrap"><table class="sheet rq-t"><thead><tr><th>מס׳ דרישה</th><th>קבלן</th><th>הזמנה</th><th>תיאור</th><th>סכום הדרישה</th><th>הוזמן</th><th>טרם יצא</th><th>שויך ליתרה</th><th>יתרה פנויה</th><th style="min-width:90px">ניצול</th><th></th></tr></thead><tbody>
+  <div class="card"><div class="tablewrap"><table class="sheet rq-t"><thead><tr><th>מס׳ דרישה</th><th>מס׳ הזמנה</th><th>קבלן</th><th>תיאור</th><th>סכום הדרישה</th><th>הוזמן</th><th>טרם יצא</th><th>שויך ליתרה</th><th>יתרה פנויה</th><th style="min-width:90px">ניצול</th><th></th></tr></thead><tbody>
     ${(() => { const out = []; let curC = null, acc = null;
       const flush = () => { if (!acc) return; const c = d.contractors.find(x => x.id === curC); out.push(`<tr class="rq-sub" style="--rc:${acc.cc}"><td colspan="4"><b>סה״כ ${esc(c?.name || "ללא קבלן")}</b> <span class="small muted">· ${acc.n} דרישות${acc.miss ? ` · ${acc.miss} בלי סכום` : ""}</span></td><td class="nowrap"><b>${acc.amt ? bgM(acc.amt) : "—"}</b></td><td class="nowrap"><b>${bgM(acc.iss)}</b></td><td class="nowrap">${acc.pl ? bgM(acc.pl) : "—"}</td><td class="nowrap">${acc.al ? bgM(acc.al) : "—"}</td><td class="nowrap"><b class="${acc.free < -1 ? "rq-neg" : "rq-pos"}">${acc.amt ? bgM(acc.free) : "—"}</b></td><td colspan="2">${acc.amt ? reqBar({ amount: acc.amt, issued: acc.iss, planned: acc.pl, alloc: acc.al, free: acc.free }) : ""}</td></tr>`); };
       rows.forEach(r => { const k = r.cs[0] || ""; if (k !== curC) { flush(); curC = k; const c = d.contractors.find(x => x.id === k); acc = { cc: c ? cColor(d, c) : "#9aa3ad", n: 0, miss: 0, amt: 0, iss: 0, pl: 0, al: 0, free: 0 };
@@ -5363,6 +5365,10 @@ function pageReqs(d) {
 }
 function reqModal(no) {
   const d = D(), r = reqTable(d).find(x => x.key === no || x.no === no); if (!r) return;
+  if (r.iecMod) { const o = r.orders[0]; return modal(`<h2 style="margin-top:0">הזמנת משהב״ט לחברת החשמל <span dir="ltr">${esc(r.iecMod)}</span></h2>
+    <p>מגיעה מאתר חח״י: ${o._nIec} הזמנות חח״י תחתיה · ${bgM(o.x_amount)} (${esc(o._amtSrc)}).</p>
+    <p class="rq-nono" style="display:block;white-space:normal;padding:8px 10px">⚠ עוד אין לה מספר דרישה, ולכן היא לא נספרת באף דרישה. את מספר הדרישה רושמים באתר חח״י: הזמנות ← הזמנות משהב״ט ← ${esc(r.iecMod)} ← ״דרישה״. מיד אחרי השמירה היא תעבור כאן לשורה של הדרישה.</p>
+    <div class="row"><a class="btn" href="iec.html" target="_blank" rel="noopener">פתיחת אתר חח״י ↗</a><button class="btn ghost" id="mNo">סגירה</button></div>`, (m, close) => m.querySelector("#mNo").onclick = close); }
   const cn = id => d.contractors.find(c => c.id === id)?.name || "", ed = !isViewer();
   const lines = bgLines(d, bgData(d)).filter(l => l.x && (!r.cs.length || r.cs.includes(l.col) || r.cs.includes(l.area)) && l.est - l.cov > 1);
   const oRow = o => `<tr><td>${esc(o.name || "")}</td><td class="small">${esc(cn(o.contractorId))}</td><td dir="ltr" class="small">${esc(o.x_ordNo || "—")}</td><td class="small">${esc(ordStatusTxt(o) || "")}</td><td class="nowrap">${bgM(bgOrdAmt(o))}</td></tr>`;
