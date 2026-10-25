@@ -1028,7 +1028,7 @@ function readLocal() { try { const j = JSON.parse(localStorage.getItem(LS_KEY) |
 /** בחירה בין data.json לעותק העבודה בדפדפן — החדש מביניהם, בלי לאבד שינויים שלא גובו */
 /** מלאכות של חח״י שהמפקח מדווח עליהן בבחירת מתקן — נוספות פעם אחת אם חסרות (מזהה קבוע, בלי כפולים).
     דיווח מאושר שלהן מסמן את השלב באתר חיבורי החשמל: הצבת תט״ז → ביצוע; חישמול ארונות / חדרי טרפו, חיבור אתר איסוף → חישמול */
-const IEC_ACTS = [["act-iec-cab", "חישמול ארונות שקד", 4], ["act-iec-site", "חיבור אתרי איסוף", 5]];
+const IEC_ACTS = [["act-iec-cab", "חישמול ארונות שקד", 4], ["act-iec-site", "חיבור אתרי איסוף", 5], ["act-iec-trafo", "הצבת שנאי בחדר טרפו", 3]];
 async function ensureIecActs() {
   if (window.__iecActs || !isMgr() || !RAW.contractors?.[IEC_CID] || !RAW.activities) return; window.__iecActs = true;
   const have = list("activities").filter(a => a.contractorId === IEC_CID);
@@ -3278,8 +3278,8 @@ function iecChecks(d) {
   const out = [], F = E.allF().filter(E.live), st = f => E.state(f);
   const fL = (f, extra = "") => ({ id: f.id, t: `${f.name}${extra}`, dist: f.district || "", kd: kdNum(f.kd), go: { page: "power", q: f.name } });
   const add = (key, sev, title, lines, x = {}) => { if (lines.length) out.push({ key, sev, title, lines: lines.sort((a, b) => IEC_DISTRICTS.indexOf(a.dist) - IEC_DISTRICTS.indexOf(b.dist) || (a.kd ?? 1e9) - (b.kd ?? 1e9)), ...x }); };
-  add("iecDoneOpen", "orange", "פריט מסומן ״הושלם״ באתר הגבול — וחח״י עוד לא ביצעה / חיברה", F.filter(f => pwReady(E, f)).map(f => { const it = pwItem(E, f); return fL(f, ` · בחח״י: ${st(f).cur?.name || "טרם התחיל"}${it.doneDate ? ` · הקבלן סיים ${fmtD(it.doneDate)}` : ""}`); }), { hint: "מוכן מצד הקבלן — לדחוף מול חח״י (מטופל באתר חח״י)", dq: true });
-  add("iecNoOrder", "orange", "מתקנים בלי הזמנת חח״י", F.filter(f => f.type !== "תט״ז" && !E.facOrders(f).length).map(f => fL(f)), { hint: "פותחים הזמנה באתר חח״י", dq: true });
+  add("iecDoneOpen", "orange", "פריט מסומן ״הושלם״ באתר הגבול — ועוד לא חושמל / בוצע", F.filter(f => pwReady(E, f)).map(f => { const it = pwItem(E, f); return fL(f, ` · הבא: ${st(f).next?.name || "—"}${st(f).next?.who ? ` (אצל ${st(f).next.who})` : ""}${it.doneDate ? ` · הקבלן סיים ${fmtD(it.doneDate)}` : ""}`); }), { hint: "הקבלן סיים — לקדם את השלב הבא (מטופל באתר חח״י)", dq: true });
+  add("iecNoOrder", "orange", "מתקנים בלי הזמנת חח״י", F.filter(f => !["תט״ז", "חדר טרפו"].includes(f.type) && !E.facOrders(f).length).map(f => fL(f)), { hint: "פותחים הזמנה באתר חח״י", dq: true });
   add("iecValid", "red", "שוברים שפג תוקפם או יפוג בתוך 14 יום", E.listO().filter(o => o.validUntil && !E.has(o, "completionDate") && o.validUntil >= addDays(todayStr(), -365) && daysTo(o.validUntil) <= 14).map(o => { const f = IECD.facilities?.[o.facilityId]; return { id: o.id, t: `${o.iec301 || ""} · ${f?.name || ""} · ${daysTo(o.validUntil) < 0 ? "פג ב־" : "יפוג ב־"}${fmtD(o.validUntil)}`, dist: f?.district || o.district || "", kd: kdNum(f?.kd), go: { page: "power", q: o.iec301 || "" } }; }));
   add("iecStuck", "orange", "מתקנים תקועים (לפי הנורמות באתר חח״י)", F.filter(f => st(f).stuck).map(f => fL(f, ` · ${st(f).flags.map(x => x.t).join(" · ")}`)));
   add("iecPaidNot", "orange", "שולמו במלואן ועוד לא חוברו — לדרוש מועד חיבור", F.filter(f => st(f).done.pFin && !st(f).done.power).map(f => ({ ...fL(f), sh: f.kd ? String(f.kd) : f.name })), { compact: true });
@@ -4922,7 +4922,7 @@ let IECD = null, IECE = null, IEC_NOACC = false;
 const iecE = () => IECD ? (IECE || (IECE = iecEngine(IECD, RAW.progress || {}, RAW.activities || {}))) : null;
 const iecCanRead = () => LOCAL || isMgr() || me?.role === ROLE_IEC || ["view", "edit"].includes(me?.iec);
 /** הקבלן סיים (באתר הגבול) — וחח״י עוד לא ביצעה / חיברה */
-const pwTgt = f => f.type === "תט״ז" ? "exec" : "power";
+const pwTgt = f => ["תט״ז", "חדר טרפו"].includes(f.type) ? "exec" : "power";
 const pwItem = (E, f) => RAW.items?.[E.srcItemId(f)] || null;
 const pwReady = (E, f) => { const it = pwItem(E, f); return !!it && it.status === "הושלם" && !E.state(f).done[pwTgt(f)]; };
 function pwTrack(E, f) {
@@ -4943,7 +4943,7 @@ function pagePower(d) {
   const ready = A.filter(f => pwReady(E, f)), stuck = A.filter(f => st(f).stuck), pw = A.filter(f => st(f).done.power);
   const O = E.listO(), tot = O.reduce((t, o) => t + E.orderTotal(o), 0), paid = O.reduce((t, o) => t + E.orderPaid(o), 0);
   const tile = (k, l, v, c, s) => `<div class="ch-t ${F.only === k ? "on" : ""}" data-act="pwOnly" data-id="${k}" role="button" style="border-top:4px solid ${c}${F.only === k ? `;box-shadow:0 0 0 2px ${c} inset` : ""}"><span>${l}</span><b>${v}</b>${s ? `<small>${s}</small>` : ""}</div>`;
-  const tiles = `<div class="ch-tiles" style="grid-template-columns:repeat(6,minmax(0,1fr))">${tile("", "מתקנים פעילים", A.length, "#0b3a6e", `${A.filter(f => !isSite(f)).length} מכשול · ${A.filter(isSite).length} אתרי איסוף`)}${tile("ready", "🏗 מוכן לחח״י", ready.length, "#c77a12", "הקבלן סיים, חח״י עוד לא")}${tile("stuck", "⏱ תקועים", stuck.length, "#c0392b")}${tile("power", "⚡ חושמלו", pw.length, "#2b9a4d")}
+  const tiles = `<div class="ch-tiles" style="grid-template-columns:repeat(6,minmax(0,1fr))">${tile("", "מתקנים פעילים", A.length, "#0b3a6e", `${A.filter(f => !isSite(f)).length} מכשול · ${A.filter(isSite).length} אתרי איסוף`)}${tile("ready", "🏗 הקבלן סיים", ready.length, "#c77a12", "ועוד לא חושמל / בוצע")}${tile("stuck", "⏱ תקועים", stuck.length, "#c0392b")}${tile("power", "⚡ חושמלו", pw.length, "#2b9a4d")}
     <div class="ch-t" style="border-top:4px solid #0a6ec9"><span>הזמנות חח״י (כולל מע״מ)</span><b>${bgMM(tot * V)}</b><small>${O.length} הזמנות</small></div><div class="ch-t" style="border-top:4px solid #f39200"><span>שולם (כולל מע״מ)</span><b>${bgMM(paid * V)}</b><small>נשאר ${bgMM((tot - paid) * V)}</small></div></div>`;
   const sumT = (L, ttl) => { if (!L.length) return ""; const ds = [...E.DISTRICTS, ...(L.some(f => !E.DISTRICTS.includes(f.district)) ? [""] : [])], c = (a, s) => a.filter(f => s ? st(f).cur?.id === s.id : !st(f).cur).length || "";
     const row = (lbl, a, t) => `<tr class="${t ? "rq-sub" : ""}"><td><b>${esc(lbl)}</b></td><td class="c">${c(a, null)}</td>${ST.map(s => `<td class="c">${c(a, s)}</td>`).join("")}<td class="c"><b>${a.length}</b></td></tr>`;
@@ -4956,13 +4956,13 @@ function pagePower(d) {
     return `<tr class="${s.stuck ? "pw-stuck" : rd ? "pw-ready" : ""}"><td><b>${esc(f.name)}</b><div class="small muted">${esc(f.type || "")} · ק.ד. ${esc(f.kd || "—")}${f.district ? " · " + esc(f.district) : ""}</div></td><td class="small">${esc(RAW.contractors?.[f.contractorId]?.name || "")}</td>
       <td><b>${esc(s.cur?.name || "טרם התחיל")}</b>${s.stuck ? `<div class="small" style="color:#c0392b">${esc(s.flags.map(x => x.t).join(" · "))}</div>` : ""}</td><td class="nowrap">${pwTrack(E, f)}</td><td class="small">${s.next ? esc(s.next.name) + (f.stages?.[s.next.id]?.target ? ` · יעד ${fmtD(f.stages[s.next.id].target)}` : "") : "✓"}</td>
       <td class="small" dir="ltr">${os.map(o => esc(o.iec301)).join("<br>") || "—"}</td>
-      <td class="small">${it ? `${esc(it.status || "—")}${it.doneDate ? ` · ${fmtD(it.doneDate)}` : ""}${rd ? `<div style="color:#a4520c;font-weight:700">🏗 מוכן לחח״י${days !== null ? ` · ממתין ${days} ימים` : ""}</div>` : ""}` : `<span class="muted">—</span>`}</td>
+      <td class="small">${it ? `${esc(it.status || "—")}${it.doneDate ? ` · ${fmtD(it.doneDate)}` : ""}${rd ? `<div style="color:#a4520c;font-weight:700">🏗 הקבלן סיים · הבא: ${esc(s.next?.name || "")}${s.next?.who ? ` (אצל ${esc(s.next.who)})` : ""}${days !== null ? ` · ${days} ימים` : ""}</div>` : ""}` : `<span class="muted">—</span>`}</td>
       <td><a class="btn ghost sm" href="iec.html#fac=${encodeURIComponent(f.id)}" target="_blank" rel="noopener" title="פתיחת כרטיס המתקן באתר חח״י">↗</a></td></tr>`; };
   return head + tiles + `<div class="card"><h2 style="margin-top:0">איפה עומדים — לפי נפה ושלב</h2>${sumT(A.filter(f => !isSite(f)), "⚡ מתקני המכשול")}${sumT(A.filter(isSite), "📡 אתרי איסוף")}</div>
   <div class="card"><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input class="inp" data-pwq="1" value="${esc(F.q || "")}" placeholder="חיפוש: שם, ק.ד., מספר הזמנה…" style="max-width:260px">
     <select class="inp" data-pwf="type" style="max-width:170px"><option value="">כל הסוגים</option>${types.map(t => `<option ${F.type === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
     <select class="inp" data-pwf="dist" style="max-width:170px"><option value="">כל הנפות</option>${E.DISTRICTS.map(t => `<option ${F.dist === t ? "selected" : ""}>${esc(t)}</option>`).join("")}<option value="-" ${F.dist === "-" ? "selected" : ""}>לא שויך</option></select>
-    ${F.only ? `<button class="btn ghost sm" data-act="pwOnly" data-id="">✕ ${{ ready: "מוכן לחח״י", stuck: "תקועים", power: "חושמלו" }[F.only]}</button>` : ""}<span class="spacer"></span><span class="small muted">${L.length} מתקנים · ■ ריבוע = שלב של חח״י · ● עיגול = שלנו / משהב״ט</span></div>
+    ${F.only ? `<button class="btn ghost sm" data-act="pwOnly" data-id="">✕ ${{ ready: "הקבלן סיים", stuck: "תקועים", power: "חושמלו" }[F.only]}</button>` : ""}<span class="spacer"></span><span class="small muted">${L.length} מתקנים · ■ ריבוע = שלב של חח״י · ● עיגול = שלנו / משהב״ט</span></div>
     <div class="tablewrap"><table class="sheet pw-t"><thead><tr><th>מתקן</th><th>קבלן</th><th>שלב</th><th>מסלול השלבים</th><th>הבא / יעד</th><th>הזמנת חח״י</th><th>🏗 באתר הגבול</th><th></th></tr></thead><tbody>${L.map(row).join("") || `<tr><td colspan="8" class="c muted">אין מתקנים בסינון הזה</td></tr>`}</tbody></table></div></div>`;
 }
 async function pwClick(act, b) {
@@ -4993,7 +4993,8 @@ function iecEngine(RAW, BRD_PROG, BRD_ACTS) {
   const kdN = v => { const m = String(v ?? "").match(/\d+(\.\d+)?/); return m ? +m[0] : null; };
   const TYPES = [["ארון שקד", "🔌", "dot"], ["תט״ז", "⚡", "tri"], ["חדר טרפו", "🏠", "sq"], ["אתר איסוף", "📡", "dot"], ["העתקת עמוד", "🪧", "sq"], ["אחר", "•", "dot"]];
   const DISTRICTS = ["גליל גולן", "עמקים", "ירושלים"];
-  const NO_TTZ = TYPES.map(t => t[0]).filter(t => t !== "תט״ז");   // שלבי הזמנה ותשלום — לא לתט״ז (חח״י מספקת; משלמים על הכבילה בהזמנת הארון)
+  const FEEDER = new Set(["תט״ז", "חדר טרפו"]), isFeeder = f => FEEDER.has(f?.type);
+  const NO_TTZ = TYPES.map(t => t[0]).filter(t => !FEEDER.has(t));   // שלבי הזמנה ותשלום — לא לתט״ז (חח״י מספקת; משלמים על הכבילה בהזמנת הארון)
   const DEF_STAGES = [
     { id: "s880", name: "דרישה", color: "#7b8ba3", days: 14, auto: "req880", who: "אצלנו", types: NO_TTZ },
     { id: "s444", name: "הזמנת משהב״ט", color: "#5b6fb3", days: 21, auto: "ord444", who: "משהב״ט", types: NO_TTZ },
@@ -5011,7 +5012,7 @@ function iecEngine(RAW, BRD_PROG, BRD_ACTS) {
     noOrd: { on: true, days: 0, name: "מתקן בלי אף הזמנה (ימים מהקמה)" }, ttz: { on: true, name: "תט״ז בלי ארונות משויכים / מזין יותר מ־2" } };
   const S = () => RAW.settings || {};
   const OLD_NAMES = { "דרישה (880)": "דרישה", "הזמנת משהב״ט (444)": "הזמנת משהב״ט", "הזמנת חח״י (301)": "הזמנת חח״י" };
-  const stages = () => (Array.isArray(S().stages) && S().stages.length ? S().stages : DEF_STAGES).map(s => ({ ...(DEF_STAGES.find(d => d.id === s.id) || {}), ...s, name: OLD_NAMES[s.name] || s.name }));
+  const stages = () => (Array.isArray(S().stages) && S().stages.length ? S().stages : DEF_STAGES).map(s => { const d = DEF_STAGES.find(d => d.id === s.id) || {}; return { ...d, ...s, ...(d.types ? { types: d.types } : {}), name: OLD_NAMES[s.name] || s.name }; });
   const stagesFor = f => stages().filter(s => !Array.isArray(s.types) || !s.types.length || s.types.includes(f.type));
   const alertCfg = () => Object.fromEntries(Object.entries(DEF_ALERTS).map(([k, v]) => [k, { ...v, ...(S().alerts?.[k] || {}) }]));
   const VAT = () => (S().vat ?? 18) / 100;
@@ -5027,7 +5028,7 @@ function iecEngine(RAW, BRD_PROG, BRD_ACTS) {
   const has = (o, k) => !!ef(o, k);
   const orderTotal = o => N(o.amount), orderPaid = o => (has(o, "advanceDate") ? N(o.advance) : 0) + (has(o, "completionDate") ? N(o.completion) : 0);
   const live = f => (f.status || "פעיל") === "פעיל";
-  const REP_RULES = [[/הצבת.*תט/, "exec", ["תט״ז"]], [/חישמול.*טרפו/, "power", ["חדר טרפו"]], [/חישמול.*שקד/, "power", ["ארון שקד"]], [/חיבור.*(אתר|איסוף)/, "power", ["אתר איסוף"]]];
+  const REP_RULES = [[/הצבת.*תט/, "exec", ["תט״ז"]], [/הצבת.*(שנאי|טרפו)/, "exec", ["חדר טרפו"]], [/חישמול.*טרפו/, "power", ["חדר טרפו"]], [/חישמול.*שקד/, "power", ["ארון שקד"]], [/חיבור.*(אתר|איסוף)/, "power", ["אתר איסוף"]]];
   const repRule = a => REP_RULES.find(([re]) => re.test(a?.name || ""));
   const srcItemId = f => f.src?.startsWith("item:") ? f.src.slice(5) : f.src?.startsWith("site:") ? f.src.slice(5) : f.siteRef || "";
   const repMap = () => memo("rep", () => { const m = {}, pend = [], facOf = {}; list("facilities").forEach(f => { const k = srcItemId(f); if (k) facOf[k] = f.id; });
@@ -5062,12 +5063,12 @@ function iecEngine(RAW, BRD_PROG, BRD_ACTS) {
     if (!live(f)) return []; const A = alertCfg(), O = facOrders(f), M = mainOrders(f), out = [], today = todayStr();
     if (A.g444.on && M.some(o => o.iec301 && !ef(o, "ord444"))) out.push({ k: "g444", t: "חסרה הזמנת משהב״ט" });
     if (A.g880.on && M.some(o => ef(o, "ord444") && !ef(o, "req880"))) out.push({ k: "g880", t: "חסרה דרישה" });
-    if (A.noOrd.on && !O.length && f.type !== "תט״ז" && days((f.createdAt || today).slice(0, 10)) >= N(A.noOrd.days)) out.push({ k: "noOrd", t: "אין הזמנה" });
+    if (A.noOrd.on && !O.length && !isFeeder(f) && days((f.createdAt || today).slice(0, 10)) >= N(A.noOrd.days)) out.push({ k: "noOrd", t: "אין הזמנה" });
     if (A.voucher.on) for (const o of O) { if (o.validUntil && !has(o, "completionDate") && o.validUntil >= addDays(today, -365)) { const dl = days(today, o.validUntil); if (dl <= N(A.voucher.days)) out.push({ k: "voucher", t: dl < 0 ? `שובר ${o.iec301 || ""} פג לפני ${-dl} ימים` : `שובר ${o.iec301 || ""} פג בעוד ${dl} ימים` }); } }
     if (A.noUpd.on) { const lu = lastUpd(f); if (days(lu) > N(A.noUpd.days)) out.push({ k: "noUpd", t: `בלי עדכון ${days(lu)} ימים` }); }
     for (const o of O) if (o.chk) out.push({ k: "chk", t: `⚠ לבדיקה ${o.iec301 || ""}: ${String(o.chk).slice(0, 70)}${String(o.chk).length > 70 ? "…" : ""}` });
     if (f.srcGone) out.push({ k: "gone", t: `נמחק באתר הגבול (${fmtD(f.srcGone)})` });
-    if (A.ttz.on && f.type === "תט״ז") { const n = Object.keys(f.feeds || {}).length; if (!n) out.push({ k: "ttz", t: "לא שויכו ארונות" }); else if (n > 2) out.push({ k: "ttz", t: `מזין ${n} ארונות (מעל 2)` }); }
+    if (A.ttz.on && isFeeder(f)) { const n = Object.keys(f.feeds || {}).length; if (!n) out.push({ k: "ttz", t: "לא שויכו ארונות" }); else if (n > 2) out.push({ k: "ttz", t: `מזין ${n} ארונות (מעל 2)` }); }
     return out;
   }
   const lastUpd = f => { const L = Object.values(f.log || {}).map(x => x.date).sort(); return L.pop() || (f.updatedAt || f.createdAt || "").slice(0, 10); };
