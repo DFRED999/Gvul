@@ -856,16 +856,18 @@ const pickFile = (accept, cb) => { const i = document.createElement("input"); i.
 function pageReports() {
   const R = ui.rep || (ui.rep = { dist: "", kind: "brief", upTo: 30 });
   return `<div class="card"><h2>📄 דוחות ומצע לדיון</h2>
-    <div class="flt"><label class="f">סוג<select class="inp" data-rp="kind"><option value="marked" ${R.kind === "marked" ? "selected" : ""}>🖍 דוח סטטוס מסומן — מה השתנה בשבוע</option><option value="week" ${R.kind === "week" ? "selected" : ""}>📒 דוח שינויים שבועי (ראשון–שבת)</option><option value="brief" ${R.kind === "brief" ? "selected" : ""}>מצע לדיון — פערים מול הנהלת חח״י</option><option value="status" ${R.kind === "status" ? "selected" : ""}>דוח סטטוס מלא — כל המתקנים</option><option value="money" ${R.kind === "money" ? "selected" : ""}>דוח כספי — הזמנות ותשלומים</option></select></label>
+    <div class="flt"><label class="f">סוג<select class="inp" data-rp="kind"><option value="marked" ${R.kind === "marked" ? "selected" : ""}>🖍 דוח סטטוס מסומן — מה השתנה בשבוע</option><option value="week" ${R.kind === "week" ? "selected" : ""}>📒 דוח שינויים שבועי (ראשון–שבת)</option><option value="brief" ${R.kind === "brief" ? "selected" : ""}>מצע לדיון — פערים מול הנהלת חח״י</option><option value="status" ${R.kind === "status" ? "selected" : ""}>דוח סטטוס מלא — כל המתקנים</option><option value="money" ${R.kind === "money" ? "selected" : ""}>דוח כספי — הזמנות ותשלומים</option><option value="hold" ${R.kind === "hold" ? "selected" : ""}>📨 נושאים לטיפול — לפי גורם (לשליחה)</option></select></label>
+      ${R.kind === "hold" ? (() => { const to = R.to ?? holdTo(R.hold), C = list("contacts").filter(c => c.email).sort((a, b) => String(a.name).localeCompare(String(b.name), "he")); return `<label class="f">גורם<select class="inp" data-rp="hold"><option value="">כל הגורמים</option>${HOLD.map(h => `<option value="${h[0]}" ${R.hold === h[0] ? "selected" : ""}>${h[1]}</option>`).join("")}</select></label><label class="f">נפה<select class="inp" data-rp="dist"><option value="">כל הנפות</option>${DISTRICTS.map(d => `<option ${R.dist === d ? "selected" : ""}>${d}</option>`).join("")}</select></label><label class="f">למי לשלוח<select class="inp" data-rp="to"><option value="">— לבחור איש קשר —</option>${C.map(c => `<option value="${esc(c.email)}" ${c.email === to ? "selected" : ""}>${esc(c.name)}${c.org ? " · " + esc(c.org) : ""}</option>`).join("")}</select></label><span class="spacer"></span><button class="btn o" data-a="repMail">✉ מייל</button><button class="btn" data-a="repPrint">🖨 הדפסה / PDF</button><button class="btn gh" data-a="repWord">⬇ וורד</button><button class="btn gh" data-a="repCopy">העתקה</button></div><div class="note">רשימת כל הנושאים שממתינים לגורם שנבחר: שוברים — לפי השובר עצמו; שאר השלבים — לפי השלב שהמתקן ממתין לו. בכל שורה: ממתי ממתין, כמה ימים (אדום = עבר את הנורמה), יעד או תוקף השובר, ועמודה ריקה לתשובה. ״✉ מייל״ פותח מייל עם הרשימה בגוף ההודעה; מומלץ לצרף גם את ה־PDF.</div>`; })() : `
       ${R.kind === "week" || R.kind === "marked" ? wkCtl() + (R.kind === "marked" ? `<label class="row small"><input type="checkbox" data-rpc="onlyCh" ${R.onlyCh ? "checked" : ""}> רק מתקנים שהשתנו</label>` : "") : `<label class="f">נפה<select class="inp" data-rp="dist"><option value="">כל הנפות</option>${DISTRICTS.map(d => `<option ${R.dist === d ? "selected" : ""}>${d}</option>`).join("")}</select></label>
       <label class="f">יעדים קרובים — ימים קדימה<input class="inp" type="number" data-rp="upTo" value="${esc(R.upTo)}" style="width:90px"></label>
       ${R.kind === "brief" ? `<label class="row small"><input type="checkbox" data-rpc="internal" ${R.internal ? "checked" : ""}> כולל נושאים פנימיים (אצלנו / משהב״ט, מספרים חסרים)</label>` : ""}`}<span class="spacer"></span>
-      <button class="btn" data-a="repPrint">🖨 הדפסה / PDF</button><button class="btn gh" data-a="repWord">⬇ וורד</button><button class="btn gh" data-a="repCopy">העתקה</button></div>
-    ${R.kind === "marked" ? `<div class="note">דוח הסטטוס הרגיל, ובו כל מתקן שהשתנה בשבוע הנבחר צבוע ומפורט: צהוב — התקדם, כחול — סטטוס/הערה, אדום — נכנס למצב תקוע. בסוף — טבלת פירוט. אפשר לבחור שבוע, או ״📂 השוואה לגיבוי״.</div>` : R.kind === "week" ? `<div class="note">מה השתנה בשבוע (ראשון–שבת): מתקנים שעברו שלב, תשלומים ושוברים, דיווחי מפקחים, הזמנות ומתקנים חדשים, סטטוסים מהאקסל — ומי עדכן. כל שינוי באתר נרשם ביומן אוטומטית. ביום ראשון מופיע בתמונת המצב ״הדוח השבועי מוכן״.</div>` : `<div class="note">המצע בנוי לבד מהנתונים: מה תקוע ואצל מי, יעדים שעברו, חוסרים בתהליך, שוברים שפגים, יעדים בשבועות הקרובים, והעדכון האחרון בכל מתקן. ממלאים בישיבה — ומעדכנים יעדים חדשים בכרטיס המתקן.</div>`}
+      <button class="btn" data-a="repPrint">🖨 הדפסה / PDF</button><button class="btn gh" data-a="repWord">⬇ וורד</button><button class="btn gh" data-a="repCopy">העתקה</button></div>`}
+    ${R.kind === "hold" ? "" : R.kind === "marked" ? `<div class="note">דוח הסטטוס הרגיל, ובו כל מתקן שהשתנה בשבוע הנבחר צבוע ומפורט: צהוב — התקדם, כחול — סטטוס/הערה, אדום — נכנס למצב תקוע. בסוף — טבלת פירוט. אפשר לבחור שבוע, או ״📂 השוואה לגיבוי״.</div>` : R.kind === "week" ? `<div class="note">מה השתנה בשבוע (ראשון–שבת): מתקנים שעברו שלב, תשלומים ושוברים, דיווחי מפקחים, הזמנות ומתקנים חדשים, סטטוסים מהאקסל — ומי עדכן. כל שינוי באתר נרשם ביומן אוטומטית. ביום ראשון מופיע בתמונת המצב ״הדוח השבועי מוכן״.</div>` : `<div class="note">המצע בנוי לבד מהנתונים: מה תקוע ואצל מי, יעדים שעברו, חוסרים בתהליך, שוברים שפגים, יעדים בשבועות הקרובים, והעדכון האחרון בכל מתקן. ממלאים בישיבה — ומעדכנים יעדים חדשים בכרטיס המתקן.</div>`}
     <div style="border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff">${repHtml()}</div></div>`;
 }
 function repHtml() {
   if (ui.rep?.kind === "week") return weekHtml();
+  if (ui.rep?.kind === "hold") return holdHtml();
   const R = ui.rep, F = list("facilities").filter(f => live(f) && (!R.dist || f.district === R.dist)), V = 1 + VAT(), today = todayStr(), ST = stages();
   const th = t => `<th style="background:#0b3a6e;color:#fff;text-align:right;padding:5px 7px;border:1px solid #0b3a6e;font-size:10.5pt">${t}</th>`, td = (t, st = "") => `<td style="border:1px solid #cfd8e3;padding:4px 7px;vertical-align:top;font-size:10pt;${st}">${t}</td>`;
   const tbl = (h, rows) => rows.length ? `<table style="width:100%;border-collapse:collapse;margin:4px 0 12px"><thead><tr>${h.map(th).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>` : `<p style="color:#63708a;margin:2px 0 12px">אין</p>`;
@@ -895,7 +897,7 @@ function repHtml() {
     + h2("2. חוסרים בתהליך") + tbl(["מתקן", "חוסר", "סוכם בישיבה"], F.filter(f => gp(f).length).map(f => `<tr>${td(nm(f))}${td(gp(f).map(g => esc(g.t)).join("<br>"))}${td("&nbsp;", "width:30%")}</tr>`))
     + h2(`3. יעדים ב־${N(R.upTo) || 30} הימים הקרובים`) + tbl(["מתקן", "שלב", "יעד", "הערה"], up.map(([f, s]) => `<tr>${td(nm(f))}${td(esc(s.next.name))}${td(fmtD(f.stages[s.next.id].target))}${td(esc(f.stages[s.next.id].note || ""))}</tr>`));
 }
-const repText = () => { const d = document.createElement("div"); d.innerHTML = repHtml(); return d.innerText; };
+const repText = () => { if (ui.rep?.kind === "hold") return holdText(); const d = document.createElement("div"); d.innerHTML = repHtml(); return d.innerText; };
 
 /* ---------- הגדרות ---------- */
 function pageSettings() {
@@ -1414,6 +1416,45 @@ function ballOf(f) {
   return R;
 }
 const ballW = a => a.reduce((m, x) => Math.max(m, x.w), 0);
+/* ---------- אצל מי — כל נושא פתוח לפי הגורם שצריך לטפל בו ----------
+   שוברים — לפי השובר עצמו (להעביר למהנדס / אצל מהנדס החשמל / באמו״ן). שאר השלבים — לפי השלב שהמתקן ממתין לו ו"אצל מי" שהוגדר לשלב. */
+const HOLD = [["eng", "⚡ מהנדס החשמל", "#2e8fa8", /אלעוז|מהנדס/], ["amon", "🏛 אמו״ן", "#4f6f9e", /אמו["״]?ן/], ["iec", "🏢 חברת החשמל", "#0a6ec9", /חח["״]י|חברת החשמל/], ["mod", "🎖 משהב״ט", "#5b6fb3", /משהב["״]ט/], ["ours", "🙋 אצלנו", "#b07d00", null], ["ctr", "🏗 קבלן", "#8e5bc2", null]];
+const HOLD_L = k => (HOLD.find(h => h[0] === k) || [])[1] || "";
+function holdItems() { return memo("hold", () => {
+  const R = [], V = 1 + VAT(), FD = flowDays(), WK = { "אצלנו": "ours", "משהב״ט": "mod", "חח״י": "iec", "קבלן": "ctr" }, td = todayStr();
+  for (const f of list("facilities").filter(live)) { const s = state(f); let pay = false;
+    for (const o of facOrders(f)) { for (const st of vSteps(o)) { pay = true; const L = FLOW[st.w].l;
+        R.push({ h: st.k === "v" ? "ours" : st.k, f, o, grp: st.k === "v" ? `שובר ${L} התקבל — להעביר למהנדס החשמל` : st.k === "eng" ? `שובר ${L} — לבדיקה ואישור מהנדס החשמל` : `שובר ${L} — לתשלום באמו״ן`,
+          what: `שובר ${L}${st.amt ? " " + money(st.amt * V) : ""}${o.kind === "מרחק חריג" ? " (מרחק חריג)" : ""}`, since: st.since, d: st.d, late: st.late || (o.validUntil && o.validUntil < addDays(td, 14)), norm: FD[st.k], due: o.validUntil, dueL: "תוקף שובר" }); }
+      if (o.chk) R.push({ h: "ours", f, o, grp: "⚠ לבדיקה מול גילי", what: String(o.chk === true ? "" : o.chk), since: o.gAt || "", d: null, late: false }); }
+    if (paidNot(f)) { const dt = s.done.pFin?.date || ""; R.push({ h: "iec", f, grp: "שולם במלואו — ממתין לחיבור", what: s.next ? "ממתין ל" + s.next.name : "", since: dt, d: dt ? days(dt) : null, late: true, due: f.stages?.[s.next?.id]?.target, dueL: "יעד" }); continue; }
+    const n = s.next; if (!n) continue;
+    if (n.pay && n.pay !== 1 && n.pay !== 5 && pay) continue;   // העברה / אישור / תשלום — כבר מופיע לפי השובר
+    const tg = f.stages?.[n.id]?.target;
+    R.push({ h: WK[n.who] || "ours", f, grp: n.pay === 1 || n.pay === 5 ? `${n.name} — ממתין שחח״י תוציא` : n.name, what: readyF(f) ? "🏗 הקבלן סיים" : "", since: s.refDate || "", d: s.refDate ? days(s.refDate) : null, late: s.stuck, norm: N(n.days) || null, due: tg, dueL: "יעד" }); }
+  return R; }); }
+/** טבלת הנושאים של גורם אחד, מקובצת לפי סוג הנושא */
+function holdGroups(k, dist) { const G = {}; holdItems().filter(x => x.h === k && (!dist || x.f.district === dist)).sort((a, b) => (b.late - a.late) || ((b.d ?? -1) - (a.d ?? -1))).forEach(x => (G[x.grp] = G[x.grp] || []).push(x)); return Object.entries(G).sort((a, b) => b[1].length - a[1].length); }
+function holdList(k) {
+  const G = holdGroups(k), n = G.reduce((t, g) => t + g[1].length, 0);
+  return `<div class="row" style="margin:10px 0 4px"><b>${HOLD_L(k)} — ${n} נושאים</b><span class="spacer"></span><button class="btn o sm" data-a="holdRep" data-id="${k}">📄 דוח לשליחה / מייל</button></div>` + (G.length ? G.map(([g, a]) => `<div style="font-weight:700;color:var(--navy);margin:10px 0 4px">${esc(g)} <span class="muted small">(${a.length})</span></div><div class="lst">${a.map(x => `<button class="li" data-a="${x.o ? "ord" : "fac"}" data-id="${x.o ? x.o.id : x.f.id}"><span class="ic">${TICON[x.f.type] || "•"}</span><span><b>${esc(x.f.name)}</b><div class="sub">${esc(x.f.type)}${x.f.district ? " · " + esc(x.f.district) : ""}${x.o?.iec301 ? " · הזמנה " + esc(x.o.iec301) : ""}${x.what ? " · " + esc(x.what) : ""}</div></span><span class="end">${x.d !== null ? `<span class="tag ${x.late ? "r" : "gr"}">${x.d} ימים${x.norm ? ` / נורמה ${x.norm}` : ""}</span>` : ""}${x.due ? `<br><span class="small muted">${x.dueL} ${fmtD(x.due)}</span>` : ""}</span></button>`).join("")}</div>`).join("") : `<div class="empty">אין 👍</div>`);
+}
+/** דוח לשליחה לגורם — טבלאות לפי סוג הנושא, עם עמודה ריקה לתשובה */
+function holdHtml() {
+  const R = ui.rep, ks = R.hold ? [R.hold] : HOLD.map(h => h[0]);
+  const th = t => `<th style="background:#0b3a6e;color:#fff;text-align:right;padding:5px 7px;border:1px solid #0b3a6e;font-size:10pt">${t}</th>`, td = (t, st = "") => `<td style="border:1px solid #cfd8e3;padding:4px 7px;vertical-align:top;font-size:10pt;${st}">${t}</td>`;
+  const all = ks.flatMap(k => holdGroups(k, R.dist).flatMap(g => g[1])), lt = all.filter(x => x.late).length;
+  return `<h2 style="color:#0b3a6e;margin:0">נושאים לטיפול${R.hold ? " — " + HOLD_L(R.hold).replace(/^\S+\s/, "") : " — לפי גורם"}</h2><div style="color:#63708a;margin-bottom:8px">פרויקט המכשול — חיבורי חשמל · ${R.dist ? "נפת " + esc(R.dist) : "כל הנפות"} · נכון ל־${fmtD(todayStr())} · <b>${all.length}</b> נושאים${lt ? ` · <b style="color:#c0392b">${lt} באיחור</b>` : ""}</div>`
+    + ks.map(k => { const G = holdGroups(k, R.dist); if (!G.length) return R.hold ? `<p style="color:#63708a">אין נושאים פתוחים 👍</p>` : "";
+      return (R.hold ? "" : `<h3 style="color:#0b3a6e;border-bottom:3px solid #f39200;padding-bottom:3px;margin:16px 0 6px;font-size:13pt">${HOLD_L(k)}</h3>`) + G.map(([g, a]) => `<div style="font-weight:700;margin:10px 0 2px">${esc(g)} (${a.length})</div><table style="width:100%;border-collapse:collapse;margin:2px 0 10px"><thead><tr>${["#", "מתקן", "נפה", "הזמנת חח״י", "פירוט", "ממתין מ־", "ימים", "יעד / תוקף", "תשובה / הערה"].map(th).join("")}</tr></thead><tbody>${a.map((x, i) => `<tr>${td(i + 1)}${td(`<b>${esc(x.f.name)}</b><br><span style="color:#63708a;font-size:9pt">${esc(x.f.type)} · ק.ד. ${esc(x.f.kd || "—")}</span>`)}${td(esc(x.f.district || ""))}${td(esc(x.o ? x.o.iec301 || "—" : mainOrders(x.f).map(o => o.iec301).filter(Boolean).join(", ") || "—"))}${td(esc(x.what || ""))}${td(fmtD(x.since) || "—")}${td(x.d ?? "—", x.late ? "color:#c0392b;font-weight:700" : "")}${td(x.due ? fmtD(x.due) : "", x.due && x.due < todayStr() ? "color:#c0392b;font-weight:700" : "")}${td("&nbsp;", "width:20%")}</tr>`).join("")}</tbody></table>`).join(""); }).join("");
+}
+/** טקסט למייל */
+function holdText() {
+  const R = ui.rep, ks = R.hold ? [R.hold] : HOLD.map(h => h[0]), L = [`נושאים לטיפול${R.hold ? " — " + HOLD_L(R.hold).replace(/^\S+\s/, "") : ""} · פרויקט המכשול — חיבורי חשמל · נכון ל־${fmtD(todayStr())}${R.dist ? " · נפת " + R.dist : ""}`, ""];
+  ks.forEach(k => { const G = holdGroups(k, R.dist); if (!G.length) return; if (!R.hold) L.push("== " + HOLD_L(k).replace(/^\S+\s/, "") + " =="); G.forEach(([g, a]) => { L.push(`${g} (${a.length}):`); a.forEach((x, i) => L.push(`${i + 1}. ${x.f.name}${x.f.district ? " · " + x.f.district : ""}${x.o?.iec301 ? " · הזמנה " + x.o.iec301 : ""}${x.what ? " · " + x.what : ""}${x.since ? " · מ־" + fmtD(x.since) : ""}${x.d !== null ? ` (${x.d} ימים${x.late ? " — באיחור" : ""})` : ""}${x.due ? ` · ${x.dueL} ${fmtD(x.due)}` : ""}`)); L.push(""); }); });
+  return L.join("\n");
+}
+const holdTo = k => { const re = (HOLD.find(h => h[0] === k) || [])[3]; return re ? list("contacts").find(c => c.email && re.test([c.name, c.org, c.role].join(" ")))?.email || "" : ""; };
 /** מתקן ← כל הזמנות משהב״ט / חח״י (לספירה לפי נפה) */
 function ordersByDist(LV) {
   const O = listO(), dOf = o => RAW.facilities[o.facilityId]?.district || o.district || "", rows = {};
@@ -1452,7 +1493,8 @@ function pageDash() {
   const apr = PD.length ? `<div class="card" style="border:2px solid #f2c48a"><h2>📋 דיווחי מפקחים שממתינים לאישור <small>${PD.length} — אחרי האישור הם מסמנים את השלב במתקן, כאן ובאתר הגבול</small></h2><div class="lst">${PD.map(p => `<div class="li" style="cursor:default"><span class="ic">📋</span><span><b>${esc(AN(p))}</b><div class="sub">${esc(FN(p))}${p.secFrom !== "" && p.secFrom != null && p.secTo !== "" ? ` · חתכים ${esc(p.secFrom)}–${esc(p.secTo)}` : ""} · ${fmtD(p.date)} · ${esc(String(p.reportedBy || "").split("@")[0])}${p.note ? " · " + esc(p.note) : ""}</div></span>
     <span class="end">${canEdit() ? `<button class="btn sm" data-a="repOk" data-id="${p.pid}">✓ אישור</button> <button class="btn del sm" data-a="repNo" data-id="${p.pid}">✕ דחייה</button>` : `<span class="tag a">ממתין</span>`}</span></div>`).join("")}</div></div>` : "";
   const cab = cableM();
-  return weekBanner() + kp + apr + balls + ordT + pipe + weekMini() + (cab ? `<div class="card"><h2>🧵 השחלת כבלים <small>לפי דיווחי מפקחים מאושרים</small></h2><b style="font-size:24px;color:var(--navy)">${Math.round(cab).toLocaleString("he-IL")} מ׳</b></div>` : "")
+  const HI = holdItems(), holdC = `<div class="card"><h2>📨 אצל מי מה ממתין <small>כל נושא פתוח לפי מי שצריך לטפל בו — שוברים לפי השובר, שאר השלבים לפי השלב שהמתקן ממתין לו · לחיצה פותחת את הרשימה · אדום = עבר את הנורמה</small></h2><div class="kpis">${HOLD.map(([k, l, c]) => { const a = HI.filter(x => x.h === k), lt = a.filter(x => x.late).length; return a.length || k !== "ctr" ? `<button class="kpi ${ui.hold === k ? "hot" : ""}" style="--kc:${c}" data-a="hold" data-id="${k}"><span>${l}</span><b>${a.length}</b><small>${lt ? `<span style="color:#c0392b;font-weight:700">${lt} באיחור</span>` : a.length ? "בזמן" : "אין"}</small></button>` : ""; }).join("")}</div>${ui.hold ? holdList(ui.hold) : ""}</div>`;
+  return weekBanner() + kp + apr + holdC + balls + ordT + pipe + weekMini() + (cab ? `<div class="card"><h2>🧵 השחלת כבלים <small>לפי דיווחי מפקחים מאושרים</small></h2><b style="font-size:24px;color:var(--navy)">${Math.round(cab).toLocaleString("he-IL")} מ׳</b></div>` : "")
     + `<div class="card"><h2>לאורך הקו — מצפון לדרום <small>כל נקודה = מתקן בצבע השלב שלו · עיגול אדום = תקוע · קו = תט״ז שמזין ארון</small></h2>${strip(LV)}</div>`;
 }
 /** שלבי ההזמנה בפס: מספר ההזמנות עצמן (לא מתקנים) — לחיצה פותחת את לשונית ההזמנות ברמה המתאימה */
@@ -1496,6 +1538,11 @@ document.addEventListener("click", async e => {
   const fid = document.querySelector(".mdl[data-fid]")?.dataset.fid;
   if (a === "tab") { ui.tab = id; ui.gq = ""; ui.back = ""; closeModal(); render(); scrollTo(0, 0); }
   else if (a === "dgo") dashGo(id);
+  else if (a === "hold") { ui.hold = ui.hold === id ? "" : id; render(); }
+  else if (a === "holdRep") { try { history.pushState({ tab: ui.tab }, ""); } catch (e) {} ui.back = "dash"; ui.tab = "reports"; ui.rep = { upTo: 30, ...(ui.rep || {}), kind: "hold", hold: id, dist: "", to: undefined }; render(); scrollTo(0, 0); }
+  else if (a === "repMail") { const R = ui.rep, txt = holdText(), sub = `נושאים לטיפול${R.hold ? " — " + HOLD_L(R.hold).replace(/^\S+\s/, "") : ""} · ${fmtD(todayStr())}`, to = R.to ?? holdTo(R.hold);
+    let body = txt; if (encodeURIComponent(txt).length > 1800) { try { await navigator.clipboard.writeText(txt); } catch (e) {} body = "הרשימה המלאה הועתקה — להדביק כאן (Ctrl+V).\nמצורף גם קובץ PDF.\n"; toast("הרשימה ארוכה — הועתקה, להדביק בגוף המייל"); }
+    location.href = `mailto:${encodeURIComponent(to || "")}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`; }
   else if (a === "backDash") { if (history.state && history.state.tab) history.back(); else { ui.tab = "dash"; ui.back = ""; render(); scrollTo(0, 0); } }
   else if (a === "wlCur") { ui.tab = "reports"; ui.rep = { dist: "", upTo: 30, ...(ui.rep || {}), kind: "marked" }; wlState().wk = wkStart(todayStr()); wlState().base = null; render(); scrollTo(0, 0); }
   else if (a === "close") { closeModal(); endNav(); }
@@ -1583,7 +1630,7 @@ document.addEventListener("change", async e => {
   else if (t.dataset.se) { const [i, k] = t.dataset.se.split("|"), ST = stages().map(s => ({ ...s })); ST[+i][k] = k === "days" ? N(t.value) : t.value; await api.setSettings({ stages: ST }); }
   else if (t.dataset.al) { const [k, f] = t.dataset.al.split("|"), cur = { ...(S().alerts || {}) }; cur[k] = { ...(cur[k] || {}), [f]: f === "on" ? t.checked : N(t.value) }; await api.setSettings({ alerts: cur }); }
   else if (t.dataset.sv) await api.setSettings({ [t.dataset.sv]: t.dataset.sv === "vat" ? N(t.value) : t.value.trim() });
-  else if (t.dataset.rp) { ui.rep[t.dataset.rp] = t.value; render(); }
+  else if (t.dataset.rp) { ui.rep[t.dataset.rp] = t.value; if (t.dataset.rp === "hold") ui.rep.to = undefined; render(); }
   else if (t.dataset.rpc) { ui.rep[t.dataset.rpc] = t.checked; render(); }
   else if (t.dataset.up) { await fb.database().ref(`${BORDER}_access/${t.dataset.up}/iec`).set(t.value || null).catch(fail); toast("ההרשאה עודכנה ✓"); }
 });
