@@ -4953,7 +4953,8 @@ function pagePower(d) {
     && (!q || [f.name, f.kd, f.type, f.district, ...E.facOrders(f).map(o => o.iec301 + " " + (o.ord444 || ""))].join(" ").toLowerCase().includes(q)));
   const row = f => { const s = st(f), it = pwItem(E, f), rd = pwReady(E, f), os = E.mainOrders(f).filter(o => o.iec301);
     const days = it?.doneDate ? daysSince(it.doneDate) : null;
-    return `<tr class="${s.stuck ? "pw-stuck" : rd ? "pw-ready" : ""}"><td><b>${esc(f.name)}</b><div class="small muted">${esc(f.type || "")} · ק.ד. ${esc(f.kd || "—")}${f.district ? " · " + esc(f.district) : ""}</div></td><td class="small">${esc(RAW.contractors?.[f.contractorId]?.name || "")}</td>
+    const fd = iecFeedTxt(E, f);
+    return `<tr class="${s.stuck ? "pw-stuck" : rd ? "pw-ready" : ""}"><td><b>${esc(f.name)}</b><div class="small muted">${esc(f.type || "")} · ק.ד. ${esc(f.kd || "—")}${f.district ? " · " + esc(f.district) : ""}</div>${fd ? `<div class="small" style="color:${/^⚠/.test(fd) ? "#a4520c" : "#2d5a8a"}">⚡ ${esc(fd)}</div>` : ""}</td><td class="small">${esc(RAW.contractors?.[f.contractorId]?.name || "")}</td>
       <td><b>${esc(s.cur?.name || "טרם התחיל")}</b>${s.stuck ? `<div class="small" style="color:#c0392b">${esc(s.flags.map(x => x.t).join(" · "))}</div>` : ""}</td><td class="nowrap">${pwTrack(E, f)}</td><td class="small">${s.next ? esc(s.next.name) + (f.stages?.[s.next.id]?.target ? ` · יעד ${fmtD(f.stages[s.next.id].target)}` : "") : "✓"}</td>
       <td class="small" dir="ltr">${os.map(o => esc(o.iec301)).join("<br>") || "—"}</td>
       <td class="small">${it ? `${esc(it.status || "—")}${it.doneDate ? ` · ${fmtD(it.doneDate)}` : ""}${rd ? `<div style="color:#a4520c;font-weight:700">🏗 הקבלן סיים · הבא: ${esc(s.next?.name || "")}${s.next?.who ? ` (אצל ${esc(s.next.who)})` : ""}${days !== null ? ` · ${days} ימים` : ""}</div>` : ""}` : `<span class="muted">—</span>`}</td>
@@ -4978,6 +4979,16 @@ function iecModOrders() {
   return E.modList().filter(m => !mainNos.has(reqNorm(m.num))).map(m => { const os = E.modOrders(m.num), sumO = os.reduce((t, o) => t + E.orderTotal(o), 0) * V, amt = Math.round(bgN(m.amount) ? bgN(m.amount) * V : sumO);
     return { id: "iecmod:" + m.num, _iecMod: m.num, _nIec: os.length, _amtSrc: bgN(m.amount) ? "סכום הזמנת משהב״ט כולל מע״מ" : "סכום הזמנות חח״י תחתיה כולל מע״מ", name: `הזמנת משהב״ט לחח״י${m.note ? " — " + m.note : ""}`, contractorId: IEC_CID, x_reqNo: m.req880 || "", x_ordNo: String(m.num), x_amount: amt }; });
 }
+/** הזנה — מי מזין את הארון / את מי התט״ז או חדר הטרפו מזין. מתוחזק באתר חח״י, כאן לקריאה בלבד */
+function iecFeedTxt(E, f) {
+  if (!E || !f) return "";
+  const nm = id => IECD.facilities?.[id]?.name || "";
+  if (["תט״ז", "חדר טרפו"].includes(f.type)) { const L = Object.keys(f.feeds || {}).map(nm).filter(Boolean); return L.length ? "מזין: " + L.join(", ") : "⚠ לא שויכו ארונות"; }
+  const by = E.list("facilities").filter(t => ["תט״ז", "חדר טרפו"].includes(t.type) && t.feeds?.[f.id]).map(t => t.name);
+  return by.length ? "מוזן מ־" + by.join(", ") : "";
+}
+function iecFeedCell(i) { const E = iecE(); if (!E) return `<span class="muted">—</span>`; const f = E.list("facilities").find(f => E.srcItemId(f) === i.id), t = iecFeedTxt(E, f);
+  return t ? (/^⚠/.test(t) ? `<span style="color:#a4520c">${esc(t)}</span>` : esc(t)) : `<span class="muted">—</span>`; }
 /** תא "חיבור חח״י" בפריט: מאתר חח״י (שלב נוכחי של המתקן) — ואם אין גישה, מהטבלה הישנה */
 function iecItemCell(d, i) {
   const E = iecE();
@@ -7064,6 +7075,7 @@ const TABLE_DEFS = {
       if (!done && i.plannedDate && i.padDone === "" && i.padStatus !== "הושלם" && daysTo(i.plannedDate) <= 21 && daysTo(i.plannedDate) >= 0) L.push(`<span class="pill" style="background:#fdebd6;color:#a4520c">${ins} בעוד ${daysTo(i.plannedDate)} ימים — המשטח לא מוכן</span>`);
       return L.join(" ") || `<span class="muted">—</span>`; } },
     { key: "iec", label: "חיבור חח״י", cls: "small nowrap", cell: i => iecItemCell(d, i) },
+    { key: "feed", label: "הזנה (מאתר חח״י)", cls: "small", cell: i => iecFeedCell(i) },
     { key: "note", label: "הערה", cls: "w-place", cell: i => cellInput("items", i, "note") },
     { key: "issues", label: "⚠ נושאים", cls: "small", cell: i => wLinkCell("i:" + i.id) },
   ]; },
@@ -7105,7 +7117,7 @@ const TABLE_DEFS = {
     { key: "plannedDate", label: "תאריך מתוכנן", cell: i => `<input type="date" class="cell" id="f_items_${i.id}_plannedDate" value="${esc(i.plannedDate)}" data-edit="items|${i.id}|plannedDate">` },
     { key: "doneDate", label: "תאריך ביצוע", cell: i => `<input type="date" class="cell" id="f_items_${i.id}_doneDate" value="${esc(i.doneDate)}" data-edit="items|${i.id}|doneDate">` },
     { key: "note", label: "הערה", cls: "w-place", cell: i => cellInput("items", i, "note") },
-    ...(ui.page === "c:sp-iec" || ui.page === "culverts" || ["k:cab", "k:ttz", "k:trafo"].includes(ui.page) || (ui.page.startsWith("c:") && ui.ctab === "culverts") ? [{ key: "iec", label: "חיבור חח״י", cls: "small nowrap", cell: i => iecItemCell(d, i) }] : []),
+    ...(ui.page === "c:sp-iec" || ui.page === "culverts" || ["k:cab", "k:ttz", "k:trafo"].includes(ui.page) || (ui.page.startsWith("c:") && ui.ctab === "culverts") ? [{ key: "iec", label: "חיבור חח״י", cls: "small nowrap", cell: i => iecItemCell(d, i) }, ...(i => ["k:cab", "k:ttz", "k:trafo", "c:sp-iec"].includes(ui.page) ? [{ key: "feed", label: "הזנה (מאתר חח״י)", cls: "small", cell: iecFeedCell }] : [])()] : []),
   ]; },
   activities: () => [
     { key: "name", label: "מלאכה", cls: "w-place", cell: a => cellInput("activities", a, "name") },
