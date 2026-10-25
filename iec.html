@@ -358,6 +358,7 @@ const TABS = [["dash", "תמונת מצב"], ["facs", "מתקנים"], ["orders"
 function render() {
   CACHE = {}; if (!me && !LOCAL) return;
   if (!window.__snap && IEC_READY && BRD_PROG) setTimeout(ensureSnap, 2500);
+  const SCS = ".tw, .lst, .pipe, .tabs", scK = e => (e.closest(".card")?.querySelector("h2")?.textContent || "") + "|" + e.className, scr = [...$app.querySelectorAll(SCS)].map(e => [scK(e), e.scrollTop, e.scrollLeft]);
   const ae = document.activeElement, keep = ae && ae.id && ae.matches("input,textarea,select") ? { id: ae.id, s: ae.selectionStart } : null, sy = scrollY;
   const nStuck = list("facilities").filter(f => state(f).stuck).length;
   const L = S().logos || {};
@@ -371,6 +372,7 @@ function render() {
     <main>${({ dash: pageDash, facs: pageFacs, orders: pageOrders, contacts: pageContacts, reports: pageReports, settings: pageSettings }[ui.tab] || pageDash)()}</main>`;
   if (keep) { const e = document.getElementById(keep.id); if (e) { e.focus(); try { e.setSelectionRange(keep.s, keep.s); } catch {} } }
   scrollTo(0, sy);
+  { const used = new Set(), els = [...$app.querySelectorAll(SCS)]; scr.forEach(([k, t, l]) => { if (!t && !l) return; const e = els.find(x => !used.has(x) && scK(x) === k); if (e) { used.add(e); e.scrollTop = t; e.scrollLeft = l; } }); }
 }
 
 /* ---------- חיפוש כללי ---------- */
