@@ -781,6 +781,7 @@ a.btn { text-decoration: none; }
 .lg-ban { background: #eef1fb; border-color: #c9d1ef; }
 body.dark .lg-c, body.dark .lg-tab tr.on td, body.dark .lg-ban { background: #2a3150; color: #dfe4f7; }
 @media print { .noprint, .side, .mtop, nav { display: none !important; } }
+.rq-nono { color: #8a6d00; background: #fff4cc; border-radius: 6px; padding: 1px 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -4855,10 +4856,13 @@ function ordStatusTxt(o) { const ks = new Set(); for (const k of ["orders", "ord
   return [o.x_signer, ...[...ks].map(k => o[k])].filter(Boolean).join(" · "); }
 const ordIssued = o => !!reqNorm(o.x_ordNo) && !/עתיד/.test(ordStatusTxt(o));
 function reqTable(d) {
-  const M = new Map(), get = no => { const n = reqNorm(no); if (!n) return null; if (!M.has(n)) M.set(n, { no: n, rec: null, orders: [], iec: null }); return M.get(n); };
-  d.reqs.forEach(r => { const x = get(r.no); if (x) x.rec = r; });
+  const M = new Map(), get = no => { const n = reqNorm(no); if (!n) return null; if (!M.has(n)) M.set(n, { no: n, key: n, rec: null, orders: [], iec: null, pendOrd: [] }); return M.get(n); };
+  d.reqs.forEach(r => { const x = get(r.no) || (M.set("~" + r.id, { no: "", key: "~" + r.id, rec: null, orders: [], iec: null, pendOrd: [] }), M.get("~" + r.id)); x.rec = r; });
   (RAW.tableConfig?.iec?.budgetReqs || []).forEach(r => { const x = get(r.no); if (x) x.iec = r; });
   d.orders.forEach(o => { const x = get(o.x_reqNo); if (x) x.orders.push(o); });
+  // מספרי הזמנות שנרשמו בדרישה עצמה — לפעמים יש הזמנה לפני שיש מספר דרישה: מצרפים הזמנות שעוד אין להן מס׳ דרישה
+  d.reqs.forEach(r => { const nos = reqOrdNos(r); if (!nos.length) return; const x = M.get(reqNorm(r.no) || "~" + r.id); if (!x) return;
+    nos.forEach(n => { const os = d.orders.filter(o => reqNorm(o.x_ordNo) === n); os.filter(o => !reqNorm(o.x_reqNo) && !x.orders.includes(o)).forEach(o => x.orders.push(o)); if (!os.length) x.pendOrd.push(n); }); });
   return [...M.values()].map(x => {
     const amount = x.rec && x.rec.amount !== "" && x.rec.amount != null ? reqAmt(x.rec.amount) : x.iec ? reqAmt(x.iec.amount) : 0, hasAmt = !!amount;
     const iss = x.orders.filter(ordIssued), pl = x.orders.filter(o => !ordIssued(o)), sum = a => a.reduce((t, o) => t + bgOrdAmt(o), 0);
@@ -4870,6 +4874,10 @@ function reqTable(d) {
       title: x.rec?.title || (x.iec ? "חיבורי חח״י" : [...new Set(x.orders.map(o => o.name).filter(Boolean))].join(", ")), closed: x.rec?.status === "סגורה" };
   }).sort((a, b) => (a.cs[0] ? 0 : 1) - (b.cs[0] ? 0 : 1) || byNorth(d.contractors.find(c => c.id === a.cs[0]) || {}, d.contractors.find(c => c.id === b.cs[0]) || {}) || a.no.localeCompare(b.no));
 }
+const reqOrdNos = r => String(r?.ordNos || "").split(/[,;\s\/]+/).map(reqNorm).filter(n => n.length >= 5);
+/** מספרי ההזמנות שנרשמו בדרישה → ההזמנות בטבלה שעוד אין להן מס׳ דרישה מקבלות את מספר הדרישה (קישור קבוע) */
+async function reqLinkOrders(no, ordNos) { const n = reqNorm(no); if (!n) return 0; let k = 0;
+  for (const o of list("orders").filter(o => ordNos.includes(reqNorm(o.x_ordNo)) && !reqNorm(o.x_reqNo))) { await api.update("orders", o.id, { x_reqNo: n }); k++; } return k; }
 const reqOfOrder = (d, o) => { const n = reqNorm(o.x_reqNo); return n ? reqTable(d).find(r => r.no === n) : null; };
 function reqBar(r) { const T = Math.max(r.amount, r.issued + r.planned + r.alloc) || 1, w = v => (Math.max(0, v) / T * 100).toFixed(1);
   return `<div class="rq-bar" title="הוזמן ${bgM(r.issued)} · טרם יצא ${bgM(r.planned)} · שויך ${bgM(r.alloc)} · פנוי ${bgM(r.free)}"><i class="i" style="width:${w(r.issued)}%"></i><i class="p" style="width:${w(r.planned)}%"></i><i class="a" style="width:${w(r.alloc)}%"></i></div>`; }
@@ -5054,23 +5062,23 @@ $app.addEventListener("change", e => { const t = e.target; if (!t.dataset?.ctf) 
 $app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.ctq) return; ui.ct.q = t.value; clearTimeout(t._tm); t._tm = setTimeout(() => { const pos = t.selectionStart; render(); const n = document.querySelector("[data-ctq]"); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 250); });
 function pageReqs(d) {
   const L = reqTable(d), cn = id => d.contractors.find(c => c.id === id)?.name || "", F = ui.reqF || "all";
-  const P = { all: () => true, open: r => !r.closed, noamt: r => !r.hasAmt, over: r => r.hasAmt && r.free < -1, free: r => r.hasAmt && r.free > 1 && !r.closed };
+  const P = { nono: r => !r.no, all: () => true, open: r => !r.closed, noamt: r => !r.hasAmt, over: r => r.hasAmt && r.free < -1, free: r => r.hasAmt && r.free > 1 && !r.closed };
   const known = L.filter(r => r.hasAmt), tot = k => known.reduce((t, r) => t + r[k], 0);
   const tile = (k, l, v, col) => `<div class="ch-t ${F === k ? "on" : ""}" data-act="reqF" data-id="${k}" role="button" style="border-top:4px solid ${col}${F === k ? `;box-shadow:0 0 0 2px ${col} inset` : ""}"><span>${l}</span><b>${v}</b></div>`;
   const rows = L.filter(P[F] || P.all), ed = !isViewer();
   const reqRow = r => { const cc = r.cs[0] ? cColor(d, d.contractors.find(c => c.id === r.cs[0])) : "#9aa3ad";
       const ords = [...new Map(r.orders.map(o => [reqNorm(o.x_ordNo) || "—" + String(o.name || "").replace(/\s+/g, ""), o])).values()];
-      return `<tr class="rq-row ${r.closed ? "rq-closed" : ""}" style="--rc:${cc}"><td class="nowrap" dir="ltr"><b>${esc(r.no)}</b></td><td class="small nowrap"><b style="color:${cc}">${[...r.cs.map(cn), ...r.ext].map(esc).join(", ") || "—"}</b>${r.site ? `<div class="muted">📡 אתרי איסוף</div>` : ""}</td>
-      <td class="small">${ords.map(o => `<div class="nowrap">${esc(o.name || "הזמנה")} · ${o.x_ordNo ? `<span dir="ltr">${esc(o.x_ordNo)}</span>` : `<span class="muted">טרם יצא</span>`}</div>`).join("") || `<span class="muted">—</span>`}</td><td class="small">${esc(r.rec?.title || (r.iec ? "חיבורי חח״י" : ""))}</td>
-      <td>${ed ? `<input class="cell rq-amt ${r.hasAmt ? "" : "miss"}" data-req="${r.no}|amount" value="${r.hasAmt ? esc(num(Math.round(r.amount), 0)) : ""}" placeholder="סכום…" title="אפשר לכתוב גם 40 מ׳">` : r.hasAmt ? bgM(r.amount) : "—"}</td>
+      return `<tr class="rq-row ${r.closed ? "rq-closed" : ""}" style="--rc:${cc}"><td class="nowrap" dir="ltr">${r.no ? `<b>${esc(r.no)}</b>` : `<span class="rq-nono" dir="rtl">⚠ חסר מס׳ דרישה</span>`}</td><td class="small nowrap"><b style="color:${cc}">${[...r.cs.map(cn), ...r.ext].map(esc).join(", ") || "—"}</b>${r.site ? `<div class="muted">📡 אתרי איסוף</div>` : ""}</td>
+      <td class="small">${ords.map(o => `<div class="nowrap">${esc(o.name || "הזמנה")} · ${o.x_ordNo ? `<span dir="ltr">${esc(o.x_ordNo)}</span>` : `<span class="muted">טרם יצא</span>`}</div>`).join("")}${r.pendOrd.map(n => `<div class="nowrap">הזמנה <span dir="ltr">${esc(n)}</span> <span class="muted">· לא בטבלת ההזמנות</span></div>`).join("")}${ords.length || r.pendOrd.length ? "" : `<span class="muted">—</span>`}</td><td class="small">${esc(r.rec?.title || (r.iec ? "חיבורי חח״י" : ""))}</td>
+      <td>${ed ? `<input class="cell rq-amt ${r.hasAmt ? "" : "miss"}" data-req="${r.key}|amount" value="${r.hasAmt ? esc(num(Math.round(r.amount), 0)) : ""}" placeholder="סכום…" title="אפשר לכתוב גם 40 מ׳">` : r.hasAmt ? bgM(r.amount) : "—"}</td>
       <td class="nowrap">${r.issued ? bgM(r.issued) : "—"}${r.nOrd > 1 ? ` <span class="small muted">(${r.nOrd} הזמנות)</span>` : ""}</td><td class="nowrap">${r.planned ? bgM(r.planned) : "—"}</td><td class="nowrap">${r.alloc ? bgM(r.alloc) : "—"}</td>
       <td class="nowrap"><b class="${r.hasAmt ? (r.free < -1 ? "rq-neg" : "rq-pos") : "muted"}">${r.hasAmt ? bgM(r.free) : "חסר סכום"}</b></td><td>${r.hasAmt ? reqBar(r) : ""}</td>
-      <td><button class="btn ghost sm" data-act="reqOpen" data-id="${r.no}">פירוט</button></td></tr>`; };
+      <td><button class="btn ghost sm" data-act="reqOpen" data-id="${r.key}">פירוט</button></td></tr>`; };
   return `<div class="ch-banner" style="--cc:#5b4a8b"><div><h1>דרישות ויתרות</h1><span>סכום הדרישה ← מה הוזמן עליה ← כמה נשאר. את היתרה אפשר לשייך לעבודות נוספות. הזמנה משויכת לדרישה לפי "מס׳ דרישה" שבטבלת ההזמנות.</span></div>
     ${ed ? `<div class="row" style="gap:6px"><button class="btn" data-act="reqNew">+ דרישה חדשה</button><button class="btn ghost" data-act="reqPaste">📋 הדבקת סכומי דרישות מאקסל</button></div>` : ""}</div>
-  <div class="ch-tiles" style="--cc:#5b4a8b;grid-template-columns:repeat(5,minmax(0,1fr))">
+  <div class="ch-tiles" style="--cc:#5b4a8b;grid-template-columns:repeat(${L.some(r => !r.no) ? 6 : 5},minmax(0,1fr))">
     ${tile("all", `סכום הדרישות (${known.length} מתוך ${L.length})`, bgMM(tot("amount")), "#5b4a8b")}${tile("open", "הוזמן — כל הדרישות", bgMM(L.reduce((t, r) => t + r.issued, 0)), "#2f7d4f")}${tile("free", "יתרה פנויה", bgMM(known.reduce((t, r) => t + Math.max(0, r.free), 0)), "#1c7fb5")}
-    ${tile("over", "חריגה מהדרישה", L.filter(P.over).length, "#c0392b")}${tile("noamt", "חסר סכום דרישה", L.filter(P.noamt).length, "#b86b1d")}</div>
+    ${tile("over", "חריגה מהדרישה", L.filter(P.over).length, "#c0392b")}${tile("noamt", "חסר סכום דרישה", L.filter(P.noamt).length, "#b86b1d")}${L.some(P.nono) ? tile("nono", "חסר מס׳ דרישה", L.filter(P.nono).length, "#8a6d00") : ""}</div>
   <div class="card"><div class="tablewrap"><table class="sheet rq-t"><thead><tr><th>מס׳ דרישה</th><th>קבלן</th><th>הזמנה</th><th>תיאור</th><th>סכום הדרישה</th><th>הוזמן</th><th>טרם יצא</th><th>שויך ליתרה</th><th>יתרה פנויה</th><th style="min-width:90px">ניצול</th><th></th></tr></thead><tbody>
     ${(() => { const out = []; let curC = null, acc = null;
       const flush = () => { if (!acc) return; const c = d.contractors.find(x => x.id === curC); out.push(`<tr class="rq-sub" style="--rc:${acc.cc}"><td colspan="4"><b>סה״כ ${esc(c?.name || "ללא קבלן")}</b> <span class="small muted">· ${acc.n} דרישות${acc.miss ? ` · ${acc.miss} בלי סכום` : ""}</span></td><td class="nowrap"><b>${acc.amt ? bgM(acc.amt) : "—"}</b></td><td class="nowrap"><b>${bgM(acc.iss)}</b></td><td class="nowrap">${acc.pl ? bgM(acc.pl) : "—"}</td><td class="nowrap">${acc.al ? bgM(acc.al) : "—"}</td><td class="nowrap"><b class="${acc.free < -1 ? "rq-neg" : "rq-pos"}">${acc.amt ? bgM(acc.free) : "—"}</b></td><td colspan="2">${acc.amt ? reqBar({ amount: acc.amt, issued: acc.iss, planned: acc.pl, alloc: acc.al, free: acc.free }) : ""}</td></tr>`); };
@@ -5082,15 +5090,16 @@ function pageReqs(d) {
   <div class="bg-lg small" style="margin-top:8px"><span><i style="background:#2f7d4f"></i>הוזמן (יצא מס׳ הזמנה)</span><span><i style="background:#e0b44c"></i>טרם יצא / עתידי</span><span><i style="background:#8e7cc3"></i>שויך ליתרה</span><span><i style="background:#e6e9ee"></i>פנוי</span></div></div>`;
 }
 function reqModal(no) {
-  const d = D(), r = reqTable(d).find(x => x.no === no); if (!r) return;
+  const d = D(), r = reqTable(d).find(x => x.key === no || x.no === no); if (!r) return;
   const cn = id => d.contractors.find(c => c.id === id)?.name || "", ed = !isViewer();
   const lines = bgLines(d, bgData(d)).filter(l => l.x && (!r.cs.length || r.cs.includes(l.col) || r.cs.includes(l.area)) && l.est - l.cov > 1);
   const oRow = o => `<tr><td>${esc(o.name || "")}</td><td class="small">${esc(cn(o.contractorId))}</td><td dir="ltr" class="small">${esc(o.x_ordNo || "—")}</td><td class="small">${esc(ordStatusTxt(o) || "")}</td><td class="nowrap">${bgM(bgOrdAmt(o))}</td></tr>`;
-  modal(`<h2>דרישה <span dir="ltr">${esc(r.no)}</span>${r.cs.length ? ` · ${r.cs.map(cn).map(esc).join(", ")}` : ""}</h2>
+  modal(`<h2>דרישה ${r.no ? `<span dir="ltr">${esc(r.no)}</span>` : `<span class="rq-nono">⚠ עוד אין מספר דרישה</span>`}${r.cs.length ? ` · ${r.cs.map(cn).map(esc).join(", ")}` : ""}</h2>
     <div class="rq-sum"><div><span>סכום הדרישה</span><b>${r.hasAmt ? bgM(r.amount) : "חסר"}</b></div><div><span>הוזמן</span><b>${bgM(r.issued)}</b></div><div><span>טרם יצא</span><b>${bgM(r.planned)}</b></div><div><span>שויך ליתרה</span><b>${bgM(r.alloc)}</b></div><div><span>יתרה פנויה</span><b class="${r.free < -1 ? "rq-neg" : "rq-pos"}">${r.hasAmt ? bgM(r.free) : "—"}</b></div></div>
     ${r.hasAmt ? reqBar(r) : ""}
-    ${ed ? `<div class="row" style="gap:8px;margin-top:10px"><label class="field" style="flex:2">תיאור<input class="inp" id="rq_t" value="${esc(r.rec?.title || "")}" placeholder="${esc(r.title)}"></label><label class="field" style="flex:1">סכום<input class="inp" id="rq_a" value="${r.hasAmt ? esc(num(Math.round(r.amount), 0)) : ""}"></label><label class="field" style="flex:1">סטטוס<select class="inp" id="rq_s">${["פתוחה", "סגורה"].map(x => `<option ${x === (r.rec?.status || "פתוחה") ? "selected" : ""}>${x}</option>`).join("")}</select></label></div>` : ""}
+    ${ed ? `<div class="row" style="gap:8px;margin-top:10px"><label class="field" style="flex:2">תיאור<input class="inp" id="rq_t" value="${esc(r.rec?.title || "")}" placeholder="${esc(r.title)}"></label><label class="field" style="flex:1">סכום<input class="inp" id="rq_a" value="${r.hasAmt ? esc(num(Math.round(r.amount), 0)) : ""}"></label><label class="field" style="flex:1">מספר דרישה<input class="inp" id="rq_no" dir="ltr" value="${esc(r.no)}" ${r.no ? "disabled" : ""} placeholder="להשלים כשיגיע"></label><label class="field" style="flex:1.4">מספרי הזמנות<input class="inp" id="rq_on" dir="ltr" value="${esc(r.rec?.ordNos || "")}" placeholder="444…, 444…"></label><label class="field" style="flex:1">סטטוס<select class="inp" id="rq_s">${["פתוחה", "סגורה"].map(x => `<option ${x === (r.rec?.status || "פתוחה") ? "selected" : ""}>${x}</option>`).join("")}</select></label></div>` : ""}
     <h3 style="margin:12px 0 4px">הזמנות על הדרישה <span class="small muted">(${r.orders.length})</span></h3>
+    ${r.pendOrd.length ? `<p class="small" style="margin:2px 0">הזמנות שנרשמו בדרישה ועוד לא נמצאו בטבלת ההזמנות: ${r.pendOrd.map(n => `<b dir="ltr">${esc(n)}</b>`).join(", ")} — יצורפו לבד כשההזמנה תיפתח אצל הקבלן עם המספר הזה.</p>` : ""}
     ${r.orders.length ? `<div class="tablewrap" style="max-height:200px"><table class="sheet"><thead><tr><th>הזמנה</th><th>קבלן</th><th>מס׳ הזמנה</th><th>סטטוס</th><th>סכום</th></tr></thead><tbody>${[...r.iss, ...r.pl].map(oRow).join("")}</tbody></table></div>` : `<p class="small muted">עוד אין הזמנות עם מספר הדרישה הזה</p>`}
     <h3 style="margin:12px 0 4px">שויך ליתרה <span class="small muted">— עבודות שמתוכננות לצאת מהיתרה</span></h3>
     ${r.al.length ? r.al.map(a => `<div class="rq-al"><span>${esc(a.title || "")}${a.note ? ` <small class="muted">${esc(a.note)}</small>` : ""}</span><b>${bgM(reqAmt(a.amount))}</b>${ed ? `<button class="btn ghost sm" data-ral="${a.id}" title="הסרה">✕</button>` : ""}</div>`).join("") : `<p class="small muted">עוד לא שויכו עבודות</p>`}
@@ -5105,22 +5114,34 @@ function reqModal(no) {
     m.querySelector("#rq_add").onclick = async () => { const t = m.querySelector("#rq_at").value.trim(), a = reqAmt(m.querySelector("#rq_aa").value); if (!t || !a) return toast("צריך תיאור וסכום");
       const al = { ...(RAW.reqs?.[rec()]?.alloc || {}) }; al[newId()] = { title: t, amount: a, at: todayStr() }; await save({ alloc: al }); close(); reqModal(no); toast("שויך ליתרה ✓"); };
     m.querySelectorAll("[data-ral]").forEach(b => b.onclick = async () => { const al = { ...(RAW.reqs?.[rec()]?.alloc || {}) }; delete al[b.dataset.ral]; await save({ alloc: al }); close(); reqModal(no); });
-    m.querySelector("#mYes").onclick = async () => { await save({ title: m.querySelector("#rq_t").value.trim(), amount: reqAmt(m.querySelector("#rq_a").value) || "", status: m.querySelector("#rq_s").value }); close(); render(); toast("נשמר ✓"); };
+    m.querySelector("#mYes").onclick = async () => {
+      const nn = reqNorm(m.querySelector("#rq_no").value), on = m.querySelector("#rq_on").value.trim(), nos = reqOrdNos({ ordNos: on });
+      if (!nn && !nos.length) return toast("צריך מספר דרישה או מספר הזמנה");
+      const patch = { title: m.querySelector("#rq_t").value.trim(), amount: reqAmt(m.querySelector("#rq_a").value) || "", status: m.querySelector("#rq_s").value, ordNos: on };
+      const other = nn && nn !== r.no && list("reqs").find(x => reqNorm(x.no) === nn && x.id !== rec());
+      if (other) {   // כבר קיימת דרישה עם המספר הזה — מאחדים אליה ומוחקים את הזמנית
+        await api.update("reqs", other.id, { ordNos: [...new Set([...reqOrdNos(other), ...nos])].join(", "), ...(reqAmt(other.amount) ? {} : { amount: patch.amount }), ...(other.title ? {} : { title: patch.title }) });
+        if (rec()) await api.remove("reqs", rec());
+      } else await save({ ...patch, ...(nn ? { no: nn } : {}) });
+      const k = await reqLinkOrders(nn, nos); close(); render(); toast(other ? `אוחד עם הדרישה הקיימת ${nn} ✓` : `נשמר ✓${k ? ` · ${k} הזמנות קיבלו את מספר הדרישה` : ""}`); };
   });
 }
 function reqNewModal() {
   const cs = list("contractors");
-  modal(`<h2>דרישה חדשה</h2><p class="small muted" style="margin:0">אחרי השמירה הדרישה מופיעה בטבלה. הזמנה שתירשם עם אותו "מס׳ דרישה" תשויך אליה לבד, ואת היתרה אפשר לשייך לעבודות דרך "פירוט".</p>
-    <div class="row" style="gap:8px;margin-top:8px"><label class="field" style="flex:1">מספר דרישה<input class="inp" id="rn_no" dir="ltr" placeholder="88066xxx"></label><label class="field" style="flex:1">סכום<input class="inp" id="rn_a" placeholder="למשל 40 מ׳"></label><label class="field" style="flex:1">תאריך<input type="date" class="inp" id="rn_d" value="${todayStr()}"></label></div>
+  modal(`<h2>דרישה חדשה</h2><p class="small muted" style="margin:0">אחרי השמירה הדרישה מופיעה בטבלה. ההזמנות נקשרות אליה לפי מספר: הזמנה שרשום בה אותו "מס׳ דרישה", או הזמנה שהמספר שלה נרשם כאן. יש הזמנה ועוד אין דרישה? משאירים את מספר הדרישה ריק ומשלימים ב״פירוט״.</p>
+    <div class="row" style="gap:8px;margin-top:8px"><label class="field" style="flex:1">מספר דרישה<input class="inp" id="rn_no" dir="ltr" placeholder="88066xxx — או ריק אם עוד אין"></label><label class="field" style="flex:1.3">מספר הזמנה (אם כבר יש)<input class="inp" id="rn_on" dir="ltr" placeholder="444… · כמה — עם פסיק"></label><label class="field" style="flex:1">סכום<input class="inp" id="rn_a" placeholder="למשל 40 מ׳"></label><label class="field" style="flex:1">תאריך<input type="date" class="inp" id="rn_d" value="${todayStr()}"></label></div>
     <div class="row" style="gap:8px"><label class="field" style="flex:1">קבלן<select class="inp" id="rn_c"><option value="">— עוד לא נקבע —</option>${cs.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label><label class="field" style="flex:2">תיאור<input class="inp" id="rn_t" placeholder="למה הדרישה — למשל: הזמנה 5, שערים נוספים"></label></div>
     <p class="small" id="rn_m" style="color:#c0392b;min-height:1em;margin:4px 0"></p>
     <div class="row"><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
     m.querySelector("#mNo").onclick = close; m.querySelector("#rn_no").focus();
     m.querySelector("#mYes").onclick = async () => { const no = reqNorm(m.querySelector("#rn_no").value), a = reqAmt(m.querySelector("#rn_a").value), msg = t => m.querySelector("#rn_m").textContent = t;
-      if (no.length < 5) return msg("צריך מספר דרישה"); if (!a) return msg("צריך סכום");
-      const ex = list("reqs").find(r => reqNorm(r.no) === no), rec = { no, amount: a, date: m.querySelector("#rn_d").value, contractorId: m.querySelector("#rn_c").value, title: m.querySelector("#rn_t").value.trim(), status: "פתוחה" };
-      if (ex) await api.update("reqs", ex.id, rec); else await api.add("reqs", { ...rec, alloc: {} });
-      close(); ui.page = "reqs"; ui.reqF = "all"; render(); toast(ex ? "הדרישה עודכנה ✓" : "הדרישה נוספה ✓"); };
+      const on = m.querySelector("#rn_on").value.trim(), nos = reqOrdNos({ ordNos: on });
+      if (no.length < 5 && !nos.length) return msg("צריך מספר דרישה — או לפחות מספר הזמנה (את הדרישה משלימים אחר כך ב״פירוט״)"); if (!a && !nos.length) return msg("צריך סכום");
+      const fo = list("orders").find(o => nos.includes(reqNorm(o.x_ordNo))), cid = m.querySelector("#rn_c").value || fo?.contractorId || "";
+      const ex = no.length >= 5 && list("reqs").find(r => reqNorm(r.no) === no), rec = { no: no.length >= 5 ? no : "", amount: a || "", date: m.querySelector("#rn_d").value, contractorId: cid, title: m.querySelector("#rn_t").value.trim(), status: "פתוחה", ordNos: on };
+      if (ex) await api.update("reqs", ex.id, { ...rec, ordNos: [...new Set([...reqOrdNos(ex), ...nos])].join(", ") }); else await api.add("reqs", { ...rec, alloc: {} });
+      const k = await reqLinkOrders(rec.no, nos), miss = nos.filter(n => !list("orders").some(o => reqNorm(o.x_ordNo) === n));
+      close(); ui.page = "reqs"; ui.reqF = "all"; render(); toast(`${ex ? "הדרישה עודכנה" : "הדרישה נוספה"} ✓${k ? ` · ${k} הזמנות קושרו` : ""}${miss.length ? ` · ${miss.length} מספרי הזמנה עוד לא בטבלה` : ""}`); };
   });
 }
 function reqPasteModal() {
@@ -7459,7 +7480,7 @@ $app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?
   await api.put("tableConfig", "settings", { ...S, ovMetrics: defs.filter(x => next.includes(x)).length ? next.filter(x => defs.includes(x)) : ["fence"] }); });
 $app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?.zone) return; const [cid, zid, f] = t.dataset.zone.split("|"), c = RAW.contractors[cid]; if (!c) return;
   const Z = JSON.parse(JSON.stringify(c.zones || {})); Z[zid] = { ...(Z[zid] || {}), [f]: f === "name" ? t.value.trim() : (t.value.trim() === "" ? "" : Number(t.value)) }; await api.update("contractors", cid, { zones: Z }); });
-$app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?.req) return; const [no, k] = t.dataset.req.split("|"), r = list("reqs").find(x => reqNorm(x.no) === no), v = reqAmt(t.value);
+$app.addEventListener("change", async e => { const t = e.target; if (!t.dataset?.req) return; const [no, k] = t.dataset.req.split("|"), r = no.startsWith("~") ? { id: no.slice(1) } : list("reqs").find(x => reqNorm(x.no) === no), v = reqAmt(t.value);
   if (r) await api.update("reqs", r.id, { [k]: v || "" }); else if (v) await api.add("reqs", { no, amount: v, title: "", status: "פתוחה", alloc: {} }); render(); });
 $app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.alq) return; ui.alQ = t.value; alApplyQ(); });
 $app.addEventListener("input", e => { const t = e.target; if (!t.dataset?.gsearch) return; (ui.gsearch = ui.gsearch || {})[t.dataset.gsearch] = t.value; applyFilters(); applyGSearch(); });
