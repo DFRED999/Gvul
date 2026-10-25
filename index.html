@@ -5377,8 +5377,15 @@ function reqModal(no) {
     ${r.al.length ? r.al.map(a => `<div class="rq-al"><span>${esc(a.title || "")}${a.note ? ` <small class="muted">${esc(a.note)}</small>` : ""}</span><b>${bgM(reqAmt(a.amount))}</b>${ed ? `<button class="btn ghost sm" data-ral="${a.id}" title="הסרה">✕</button>` : ""}</div>`).join("") : `<p class="small muted">עוד לא שויכו עבודות</p>`}
     ${ed ? `<div class="rq-add"><select class="inp" id="rq_l"><option value="">— בחירה משורות האומדן שעוד לא הוזמנו —</option>${lines.map((l, i) => `<option value="${i}">${esc(l.title)} · ${bgMM(l.est - l.cov)}</option>`).join("")}</select>
       <input class="inp" id="rq_at" placeholder="או תיאור חופשי"><input class="inp" id="rq_aa" placeholder="סכום" style="max-width:140px"><button class="btn sm" id="rq_add">+ שיוך ליתרה</button></div>` : ""}
-    <div class="row" style="margin-top:12px">${ed ? `<button class="btn" id="mYes">שמירה</button>` : ""}<button class="btn ghost" id="mNo">סגירה</button></div>`, (m, close) => {
+    <p class="small muted" style="margin:10px 0 0">מאיפה הדרישה: ${[r.rec ? "נרשמה בדרישות ויתרות" : "", r.iec ? "רשומה כ״דרישת תקציב לחח״י״ (מהדף הישן של חיבורי חח״י)" : "", r.orders.length ? `${r.orders.length} הזמנות עם המספר הזה` : ""].filter(Boolean).join(" · ") || "—"}</p>
+    <div class="row" style="margin-top:12px">${ed ? `<button class="btn" id="mYes">שמירה</button>` : ""}<button class="btn ghost" id="mNo">סגירה</button><span class="spacer"></span>${ed && isMgr() ? `<button class="btn ghost" id="rq_del" style="color:#b3261e">מחיקת הדרישה</button>` : ""}</div>`, (m, close) => {
     m.querySelector("#mNo").onclick = close;
+    m.querySelector("#rq_del")?.addEventListener("click", async e => { const b = e.target;
+      if (b.dataset.s !== "1") { b.dataset.s = "1"; b.textContent = r.orders.length ? `ללחוץ שוב — ${r.orders.length} ההזמנות יישארו, אבל יאבדו את מספר הדרישה` : "ללחוץ שוב למחיקה"; return; }
+      if (r.rec) await api.remove("reqs", r.rec.id);
+      if (r.iec) { const L = (RAW.tableConfig?.iec?.budgetReqs || []).filter(x => reqNorm(x.no) !== r.no); await setCfg("iec", { budgetReqs: L }); }
+      for (const o of r.orders.filter(o => RAW.orders?.[o.id] && reqNorm(o.x_reqNo) === r.no)) await api.update("orders", o.id, { x_reqNo: "" });
+      close(); render(); toast("הדרישה נמחקה ✓"); });
     const rec = () => r.rec?.id;
     const save = async patch => { if (rec()) await api.update("reqs", rec(), patch); else { const id = await api.add("reqs", { no: r.no, title: "", amount: "", status: "פתוחה", alloc: {}, ...patch }); r.rec = { id }; } };
     if (!ed) return;
