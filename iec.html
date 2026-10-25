@@ -173,6 +173,7 @@ main { overflow-x: clip; }
 .flow > b { margin-inline-end: 6px; color: var(--navy); } .flow i { font-style: normal; color: #9aa3b2; }
 .flow .fl { display: inline-flex; flex-direction: column; gap: 2px; padding: 4px 8px; border-radius: 9px; border: 1.5px solid #d6dde8; background: #fff; } .flow .fl span { font-size: 11px; color: #63708a; }
 .flow .fl.d { border-color: #9fd3b0; background: #effaf2; } .flow .fl.on { border: 2.5px solid #e0a100; background: #fff8e6; } .flow .fl .inp { padding: 2px 4px; font-size: 12px; }
+.clr { all: unset; cursor: pointer; color: #b3261e; font-size: 12px; font-weight: 700; padding: 0 5px; margin-inline-start: 2px; border-radius: 6px; } .clr:hover { background: #fde3e1; }
 </style>
 </head>
 <body>
@@ -210,7 +211,9 @@ const DISTRICTS = ["גליל גולן", "עמקים", "ירושלים"];
 const ORDER_KINDS = ["הזמנה", "מרחק חריג", "הזמנה מרכזת", "אחר"];
 /** auto: השלב מסומן אוטומטית מתוך ההזמנה (מספר / תאריך). pay: שלבי תשלום — שלב מאוחר משלים את הקודמים */
 const WHO = ["אצלנו", "משהב״ט", "חח״י", "קבלן"];
-const NO_TTZ = TYPES.map(t => t[0]).filter(t => t !== "תט״ז");   // שלבי הזמנה ותשלום — לא לתט״ז (חח״י מספקת; משלמים על הכבילה בהזמנת הארון)
+/** מזינים: תט״ז וחדר טרפו — מזינים עד 2 ארונות, בלי שלבי הזמנה ותשלום משלהם (חדר טרפו מוזמן דרך קבלן החשמל; חח״י מבצעת את ההזנה). התשלומים לחח״י — בשורת תשלום נפרדת */
+const FEEDER = new Set(["תט״ז", "חדר טרפו"]), isFeeder = f => FEEDER.has(f?.type);
+const NO_TTZ = TYPES.map(t => t[0]).filter(t => !FEEDER.has(t));   // שלבי הזמנה ותשלום — לא לתט״ז (חח״י מספקת; משלמים על הכבילה בהזמנת הארון)
 const DEF_STAGES = [
   { id: "s880", name: "דרישה", color: "#7b8ba3", days: 14, auto: "req880", who: "אצלנו", types: NO_TTZ },
   { id: "s444", name: "הזמנת משהב״ט", color: "#5b6fb3", days: 21, auto: "ord444", who: "משהב״ט", types: NO_TTZ },
@@ -228,7 +231,7 @@ const DEF_ALERTS = { stuck: { on: true, name: "תקוע בשלב — לפי מס
   noOrd: { on: true, days: 0, name: "מתקן בלי אף הזמנה (ימים מהקמה)" }, ttz: { on: true, name: "תט״ז בלי ארונות משויכים / מזין יותר מ־2" } };
 const S = () => RAW.settings || {};
 const OLD_NAMES = { "דרישה (880)": "דרישה", "הזמנת משהב״ט (444)": "הזמנת משהב״ט", "הזמנת חח״י (301)": "הזמנת חח״י" };
-const stages = () => (Array.isArray(S().stages) && S().stages.length ? S().stages : DEF_STAGES).map(s => ({ ...(DEF_STAGES.find(d => d.id === s.id) || {}), ...s, name: OLD_NAMES[s.name] || s.name }));
+const stages = () => (Array.isArray(S().stages) && S().stages.length ? S().stages : DEF_STAGES).map(s => { const d = DEF_STAGES.find(d => d.id === s.id) || {}; return { ...d, ...s, ...(d.types ? { types: d.types } : {}), name: OLD_NAMES[s.name] || s.name }; });
 const stagesFor = f => stages().filter(s => !Array.isArray(s.types) || !s.types.length || s.types.includes(f.type));
 const alertCfg = () => Object.fromEntries(Object.entries(DEF_ALERTS).map(([k, v]) => [k, { ...v, ...(S().alerts?.[k] || {}) }]));
 const VAT = () => (S().vat ?? 18) / 100;
@@ -272,7 +275,7 @@ const live = f => (f.status || "פעיל") === "פעיל";
    מקור יחיד לשלבי "ביצוע" / "חישמול": הדיווח המאושר של המפקח. שינוי כאן — באישור — מעדכן את אותו דיווח (או יוצר דיווח מאושר "הוזן מאתר חח״י"). */
 const IEC_CID = "sp-iec", SECTION_M = 20;
 let BRD_PROG = null, BRD_ACTS = null;
-const REP_RULES = [[/הצבת.*תט/, "exec", ["תט״ז"]], [/חישמול.*טרפו/, "power", ["חדר טרפו"]], [/חישמול.*שקד/, "power", ["ארון שקד"]], [/חיבור.*(אתר|איסוף)/, "power", ["אתר איסוף"]]];
+const REP_RULES = [[/הצבת.*תט/, "exec", ["תט״ז"]], [/הצבת.*(שנאי|טרפו)/, "exec", ["חדר טרפו"]], [/חישמול.*טרפו/, "power", ["חדר טרפו"]], [/חישמול.*שקד/, "power", ["ארון שקד"]], [/חיבור.*(אתר|איסוף)/, "power", ["אתר איסוף"]]];
 const repRule = a => REP_RULES.find(([re]) => re.test(a?.name || ""));
 const repActFor = (type, stage) => { const r = REP_RULES.find(([, st, T]) => st === stage && T.includes(type)); return r && Object.entries(BRD_ACTS || {}).map(([id, a]) => ({ id, ...a })).find(a => a.contractorId === IEC_CID && r[0].test(a.name || "")); };
 const srcItemId = f => f.src?.startsWith("item:") ? f.src.slice(5) : f.src?.startsWith("site:") ? f.src.slice(5) : f.siteRef || "";
@@ -304,7 +307,7 @@ async function repSet(fid, stage, date) {
 }
 /** הקבלן סיים — לפי סטטוס הפריט באתר הגבול (״הושלם״, שמתאמי הקבלנים מעדכנים). מידע בלבד: לא משנה את שלבי חח״י */
 const ctrDone = f => { const it = BRD_ITEMS?.[srcItemId(f)]; return it && it.status === "הושלם" ? { date: it.doneDate || "", by: it.updatedBy || "" } : null; };
-const readyTgt = f => f.type === "תט״ז" ? "exec" : "power";
+const readyTgt = f => isFeeder(f) ? "exec" : "power";
 const readyF = f => live(f) && !!ctrDone(f) && !state(f).done[readyTgt(f)];
 /** מה עוצר עכשיו מתקן שהקבלן סיים: השלב הבא בפועל ואצל מי — לא רק החישמול */
 const readyNext = f => { const n = state(f).next; return n ? `הבא: ${n.name}${n.who ? ` · אצל ${n.who}` : ""}` : ""; };
@@ -338,17 +341,17 @@ function gaps0(f) {
   if (!live(f)) return []; const A = alertCfg(), O = facOrders(f), M = mainOrders(f), out = [], today = todayStr();
   if (A.g444.on && M.some(o => o.iec301 && !ef(o, "ord444"))) out.push({ k: "g444", t: "חסרה הזמנת משהב״ט" });
   if (A.g880.on && M.some(o => ef(o, "ord444") && !ef(o, "req880"))) out.push({ k: "g880", t: "חסרה דרישה" });
-  if (A.noOrd.on && !O.length && f.type !== "תט״ז" && days((f.createdAt || today).slice(0, 10)) >= N(A.noOrd.days)) out.push({ k: "noOrd", t: "אין הזמנה" });
+  if (A.noOrd.on && !O.length && !isFeeder(f) && days((f.createdAt || today).slice(0, 10)) >= N(A.noOrd.days)) out.push({ k: "noOrd", t: "אין הזמנה" });
   if (A.voucher.on) for (const o of O) { if (o.validUntil && !has(o, "completionDate") && o.validUntil >= addDays(today, -365)) { const dl = days(today, o.validUntil); if (dl <= N(A.voucher.days)) out.push({ k: "voucher", t: dl < 0 ? `שובר ${o.iec301 || ""} פג לפני ${-dl} ימים` : `שובר ${o.iec301 || ""} פג בעוד ${dl} ימים` }); } }
   if (A.noUpd.on) { const lu = lastUpd(f); if (days(lu) > N(A.noUpd.days)) out.push({ k: "noUpd", t: `בלי עדכון ${days(lu)} ימים` }); }
   for (const o of O) if (o.chk) out.push({ k: "chk", t: `⚠ לבדיקה ${o.iec301 || ""}: ${String(o.chk).slice(0, 70)}${String(o.chk).length > 70 ? "…" : ""}` });
   if (f.srcGone) out.push({ k: "gone", t: `נמחק באתר הגבול (${fmtD(f.srcGone)})` });
-  if (A.ttz.on && f.type === "תט״ז") { const n = Object.keys(f.feeds || {}).length; if (!n) out.push({ k: "ttz", t: "לא שויכו ארונות" }); else if (n > 2) out.push({ k: "ttz", t: `מזין ${n} ארונות (מעל 2)` }); }
+  if (A.ttz.on && isFeeder(f)) { const n = Object.keys(f.feeds || {}).length; if (!n) out.push({ k: "ttz", t: "לא שויכו ארונות" }); else if (n > 2) out.push({ k: "ttz", t: `מזין ${n} ארונות (מעל 2)` }); }
   return out;
 }
 const lastUpd = f => { const L = Object.values(f.log || {}).map(x => x.date).sort(); return L.pop() || (f.updatedAt || f.createdAt || "").slice(0, 10); };
 const lastLog = f => Object.values(f.log || {}).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.at || "").localeCompare(String(b.at || ""))).pop();
-const fedBy = f => list("facilities").filter(t => t.type === "תט״ז" && t.feeds?.[f.id]);
+const fedBy = f => list("facilities").filter(t => isFeeder(t) && t.feeds?.[f.id]);
 const allF = () => list("facilities").sort((a, b) => (kdN(b.kd) ?? -1) - (kdN(a.kd) ?? -1) || String(a.name).localeCompare(String(b.name), "he", { numeric: true }));
 
 /* ---------- סינון ---------- */
@@ -417,7 +420,7 @@ function strip(F) {
   const pos = f => ({ r: x(kdN(f.kd)), y: lanes[f.type] ?? 60 });
   const dots = P.map(f => { const s = state(f), c = s.cur ? s.cur.color : "#b6c2d3", p = pos(f);
     return `<span class="dot ${TSHAPE[f.type] || ""} ${s.stuck ? "st" : ""}" style="right:${p.r}%;top:${p.y}px;--dc:${c}" data-a="fac" data-id="${f.id}" title="${esc(`${f.name} · ק.ד. ${f.kd}\n${s.cur ? s.cur.name : "טרם התחיל"}${s.flags.map(x => "\n⏱ " + x.t).join("")}`)}"></span>`; }).join("");
-  const lines = P.filter(f => f.type === "תט״ז").flatMap(t => Object.keys(t.feeds || {}).map(id => RAW.facilities[id]).filter(c => c && kdN(c.kd) !== null).map(c => { const a = pos(t), b = pos({ ...c, id: "" });
+  const lines = P.filter(isFeeder).flatMap(t => Object.keys(t.feeds || {}).map(id => RAW.facilities[id]).filter(c => c && kdN(c.kd) !== null).map(c => { const a = pos(t), b = pos({ ...c, id: "" });
     return `<line x1="${100 - a.r}%" y1="${a.y}" x2="${100 - b.r}%" y2="${b.y}" stroke="#7c8fa8" stroke-width="1.4" stroke-dasharray="3 2"/>`; })).join("");
   const secs = C.map(c => { const a = x(kdN(c.kdFrom)), b = x(kdN(c.kdTo)), r = Math.min(a, b), w = Math.abs(b - a); return `<div class="sec" style="right:${r}%;width:${w}%;--cc:${c.color || "#0a6ec9"}"><b>${esc(c.name)}</b>ק.ד. ${esc(c.kdFrom)}–${esc(c.kdTo)}</div>`; }).join("");
   const ticks = [hi, ...[0.25, 0.5, 0.75].map(t => Math.round(hi - W * t)), lo].map(k => `<span class="kdl" style="right:${x(k)}%">${Math.round(k)}</span>`).join("");
@@ -442,7 +445,7 @@ function pageFacs() {
 const FG_CLR = ["#f39200", "#8e5bc2", "#0a6ec9", "#1f8a4c", "#c0392b", "#16808f", "#b07d00"];
 function feedOrder(L) {
   if (ui.feedGrp === false) return L.map(f => ({ f, role: "solo" }));
-  const inL = new Set(L.map(f => f.id)), T = L.filter(f => f.type === "תט״ז" && Object.keys(f.feeds || {}).some(id => inL.has(id))), fedIds = new Set(T.flatMap(t => Object.keys(t.feeds || {}).filter(id => inL.has(id)))), out = [];
+  const inL = new Set(L.map(f => f.id)), T = L.filter(f => isFeeder(f) && Object.keys(f.feeds || {}).some(id => inL.has(id))), fedIds = new Set(T.flatMap(t => Object.keys(t.feeds || {}).filter(id => inL.has(id)))), out = [];
   L.forEach(f => { if (fedIds.has(f.id)) return; const gi = T.indexOf(f);
     if (gi >= 0) { out.push({ f, role: "ttz", gi }); Object.keys(f.feeds).filter(id => inL.has(id)).map(id => L.find(x => x.id === id)).forEach(c => out.push({ f: c, role: "fed", gi, by: f })); }
     else out.push({ f, role: "solo" }); });
@@ -492,8 +495,8 @@ function fCard(f) {
     <div class="row small"><b style="color:${s.cur?.color || "#63708a"}">${live(f) ? (s.cur ? s.cur.name : "טרם התחיל") : esc(f.status)}</b>${s.next && live(f) ? `<span class="muted">← הבא: ${esc(s.next.name)}${f.stages?.[s.next.id]?.target ? ` (יעד ${fmtD(f.stages[s.next.id].target)})` : ""}</span>` : ""}<span class="spacer"></span>${esc(f.district || "")}</div>
     ${M.length ? M.map(o => `<div class="nums">${num(ef(o, "req880"), "דרישה")}${num(ef(o, "ord444"), "הזמנת משהב״ט")}${num(o.iec301, "הזמנת חח״י", o.id)}${N(o.amount) ? `<span>${money(N(o.amount))}</span>` : ""}</div>`).join("") : live(f) && f.type !== "תט״ז" ? `<div class="nums"><span class="miss">אין הזמנה</span></div>` : ""}
     ${excLines(f).map(x => `<div class="small" style="color:${x.paid ? "#1d7a46" : "#8a5a00"}">${esc(x.t)}</div>`).join("")}
-    ${M.flatMap(vSteps).map(st => `<div class="small" style="color:${st.late ? "#b3261e" : "#8a5a00"}">💳 ${esc(st.t)}${st.d !== null ? ` · ${st.d} ימים` : ""}</div>`).join("")}
-    ${f.type === "תט״ז" ? `<div class="small muted">מזין: ${Object.keys(f.feeds || {}).map(id => esc(RAW.facilities[id]?.name || "?")).join(", ") || "—"}</div>` : tt.length ? `<div class="small muted">מוזן מ־${tt.map(t => esc(t.name)).join(", ")}</div>` : ""}
+    ${(isFeeder(f) ? [] : M).flatMap(vSteps).map(st => `<div class="small" style="color:${st.late ? "#b3261e" : "#8a5a00"}">💳 ${esc(st.t)}${st.d !== null ? ` · ${st.d} ימים` : ""}</div>`).join("")}
+    ${isFeeder(f) ? `<div class="small muted">מזין: ${Object.keys(f.feeds || {}).map(id => esc(RAW.facilities[id]?.name || "?")).join(", ") || "—"}</div>` : tt.length ? `<div class="small muted">מוזן מ־${tt.map(t => esc(t.name)).join(", ")}</div>` : ""}
     ${s.flags.length || g.length ? `<div class="chips">${s.flags.map(x => `<span class="tag r">${esc(x.t)}</span>`).join("")}${g.map(x => `<span class="tag a">${esc(x.t)}</span>`).join("")}</div>` : ""}
     ${ll ? `<div class="last">📝 ${fmtD(ll.date)} — ${esc(ll.text)}</div>` : ""}</button>`;
 }
@@ -514,8 +517,8 @@ function facModal(id) {
       <input class="inp sm" data-fs="${x.id}|note" value="${esc(m.note || "")}" placeholder="הערה" ${dis}></div>`; };
   const oRow = o => `<tr><td><select class="ce" data-oe="${o.id}|kind" ${dis}>${ORDER_KINDS.map(k => `<option ${k === (o.kind || "הזמנה") ? "selected" : ""}>${k}</option>`).join("")}</select></td>
     ${["req880", "ord444", "iec301"].map(k => `<td><input class="ce ltr" data-oe="${o.id}|${k}" value="${esc(o[k] || "")}" ${dis}></td>`).join("")}
-    <td><input class="ce num" data-oe="${o.id}|amount|n" value="${esc(o.amount ?? "")}" ${dis}></td><td>${okT(o, "vAdvDate")}<input type="date" class="ce" data-oe="${o.id}|vAdvDate" value="${esc(o.vAdvDate || "")}" ${dis}></td><td>${okT(o, "advanceDate")}<input type="date" class="ce" data-oe="${o.id}|advanceDate" value="${esc(o.advanceDate || "")}" ${dis}></td>
-    <td>${okT(o, "vFinDate")}<input type="date" class="ce" data-oe="${o.id}|vFinDate" value="${esc(o.vFinDate || "")}" ${dis}></td><td>${okT(o, "completionDate")}<input type="date" class="ce" data-oe="${o.id}|completionDate" value="${esc(o.completionDate || "")}" ${dis}></td><td><input type="date" class="ce" data-oe="${o.id}|validUntil" value="${esc(o.validUntil || "")}" ${dis}></td>
+    <td><input class="ce num" data-oe="${o.id}|amount|n" value="${esc(o.amount ?? "")}" ${dis}></td><td>${okT(o, "vAdvDate")}<input type="date" class="ce" data-oe="${o.id}|vAdvDate" value="${esc(o.vAdvDate || "")}" ${dis}>${clrB(o, "vAdvDate")}</td><td>${okT(o, "advanceDate")}<input type="date" class="ce" data-oe="${o.id}|advanceDate" value="${esc(o.advanceDate || "")}" ${dis}>${clrB(o, "advanceDate")}</td>
+    <td>${okT(o, "vFinDate")}<input type="date" class="ce" data-oe="${o.id}|vFinDate" value="${esc(o.vFinDate || "")}" ${dis}>${clrB(o, "vFinDate")}</td><td>${okT(o, "completionDate")}<input type="date" class="ce" data-oe="${o.id}|completionDate" value="${esc(o.completionDate || "")}" ${dis}>${clrB(o, "completionDate")}</td><td><input type="date" class="ce" data-oe="${o.id}|validUntil" value="${esc(o.validUntil || "")}" ${dis}>${clrB(o, "validUntil")}</td>
     <td class="nowrap"><button class="btn gh sm" data-a="ordc" data-id="${o.id}" title="כל פרטי ההזמנה">פרטים</button>${ed && isAdmin() ? `<button class="btn del sm" data-a="delOrd" data-id="${o.id}">✕</button>` : ""}</td></tr>`;
   const L = Object.entries(f.log || {}).sort((a, b) => String(b[1].date).localeCompare(String(a[1].date)) || String(b[1].at || "").localeCompare(String(a[1].at || "")));
   const html = `<div class="row" data-fid-keep><h2>${TICON[f.type] || ""} ${esc(f.name)}</h2><span class="tag" style="--tc:${s.cur?.color || "#b6c2d3"};--tt:#fff">${live(f) ? (s.cur ? esc(s.cur.name) : "טרם התחיל") : esc(f.status)}</span><span class="spacer"></span>${backBtn()}<button class="btn gh" data-a="close">סגירה</button></div>
@@ -523,7 +526,7 @@ function facModal(id) {
     ${ctrDone(f) ? `<div class="note" style="margin-top:6px;${readyF(f) ? "border-color:#f2c48a;background:#fff7e6" : ""}">🏗 <b>באתר הגבול: הקבלן סיים</b>${ctrDone(f).date ? ` · ${fmtD(ctrDone(f).date)}` : ""}${readyF(f) ? ` — <b style="color:#a4520c">עוד לא ${f.type === "תט״ז" ? "בוצע" : "חושמל"} · ${esc(readyNext(f))}${readyDays(f) !== null ? ` · ${readyDays(f)} ימים מסיום הקבלן` : ""}</b>` : ""}</div>` : ""}
     ${f.src?.startsWith("item:") ? `<p class="small muted" style="margin:6px 0 0">🔄 מקושר לפריט באתר הגבול — שם, סוג, ק.ד., חתך, קבלן ונ.צ. מתעדכנים משם אוטומטית. כאן מנהלים הזמנות, שלבים ועדכונים.</p>` : ""}
     <div class="form">${fld("name", "שם")}${fld("type", "סוג", "", TYPES.map(t => t[0]))}${fld("kd", "ק.ד.")}${fld("sec", "חתך")}${fld("district", "נפה", "", DISTRICTS)}${fld("contractorId", "קבלן הגזרה", "", contractors().map(c => [c.id, c.name]))}${fld("place", "מקום / ישוב")}${fld("size", "גודל חיבור")}${fld("status", "מצב", "", ["פעיל", "מוקפא", "בוטל"])}${fld("contact", "איש קשר בחח״י", "", list("contacts").map(c => [c.id, c.name + (c.org ? " · " + c.org : "")]))}</div>
-    ${f.type === "תט״ז" ? `<div class="sec-h">⚡ ארונות שהתט״ז מזין <span class="muted small">(עד 2)</span></div><div class="row">${Object.keys(f.feeds || {}).map(cid => `<span class="tag">${esc(RAW.facilities[cid]?.name || "?")} ${ed ? `<a href="#" data-a="unfeed" data-id="${cid}">✕</a>` : ""}</span>`).join("")}
+    ${isFeeder(f) ? `<div class="sec-h">⚡ ארונות ש${f.type === "תט״ז" ? "התט״ז" : "חדר הטרפו"} מזין <span class="muted small">(עד 2)</span></div><div class="row">${Object.keys(f.feeds || {}).map(cid => `<span class="tag">${esc(RAW.facilities[cid]?.name || "?")} ${ed ? `<a href="#" data-a="unfeed" data-id="${cid}">✕</a>` : ""}</span>`).join("")}
       ${ed ? `<select class="inp sm" id="feedSel"><option value="">+ שיוך ארון…</option>${cabs.filter(c => !f.feeds?.[c.id]).map(c => `<option value="${c.id}">${esc(c.name)} · ק.ד. ${esc(c.kd || "")}</option>`).join("")}</select>` : ""}</div>` : fedBy(f).length ? `<p class="small muted">מוזן מתט״ז: ${fedBy(f).map(t => esc(t.name)).join(", ")}</p>` : ""}
     <div class="sec-h">שלבים <span class="muted small">— תאריך ביצוע, יעד שתואם מול חח״י בישיבת תכנון, והערה. שלבי ההזמנה והתשלום מתמלאים לבד מההזמנה</span></div>${ST.map(stRow).join("")}
     ${excLines(f).map(x => `<div class="note" style="margin-top:6px;${x.paid ? "border-color:#9fd3b0;background:#effaf2" : ""}">${esc(x.t)}</div>`).join("")}
@@ -539,12 +542,14 @@ function facModal(id) {
     m.querySelectorAll("[data-fs]").forEach(e => e.onchange = async () => { const [sid, k] = e.dataset.fs.split("|"), cur = { ...(RAW.facilities[id].stages || {}) };
       if (k === "date" && (repMap().m[id + "|" + sid] || (repActFor(f.type, sid) && srcItemId(f)))) { const r = await repSet(id, sid, e.value); if (r !== null) { CACHE = {}; return facModal(id); } } cur[sid] = { ...(cur[sid] || {}), [k]: e.value || null };
       Object.keys(cur[sid]).forEach(x => cur[sid][x] === null && delete cur[sid][x]); await api.update("facilities", id, { stages: cur }); facModal(id); });
-    m.querySelectorAll("[data-oe]").forEach(e => e.onchange = async () => { const [oid, k, t] = e.dataset.oe.split("|"); await api.update("orders", oid, { [k]: t === "n" ? (e.value === "" ? "" : N(e.value)) : e.value.trim() }); facModal(id); });
+    m.querySelectorAll("[data-oe]").forEach(e => e.onchange = async () => { const [oid, k, t] = e.dataset.oe.split("|"), v = t === "n" ? (e.value === "" ? "" : N(e.value)) : e.value.trim(); await api.update("orders", oid, { [k]: v, ...(v === "" && RAW.orders[oid]?.["ok_" + k] ? { ["ok_" + k]: null } : {}) }); facModal(id); });
     const fs = m.querySelector("#feedSel"); if (fs) fs.onchange = async () => { if (!fs.value) return; const cur = { ...(RAW.facilities[id].feeds || {}) }; if (Object.keys(cur).length >= 2 && !confirmBox("לתט״ז כבר משויכים 2 ארונות. להוסיף בכל זאת?")) return; cur[fs.value] = true; await api.update("facilities", id, { feeds: cur }); facModal(id); };
     m.querySelector("#lgT")?.addEventListener("keydown", e => { if (e.key === "Enter") m.querySelector('[data-a="addLog"]').click(); });
   });
 }
 const isAdmin = () => PERM === "admin" || LOCAL;
+/** כפתור ✕ למחיקת תאריך (ו״✓ בלי תאריך״) — בתאריכי שוברים ותשלומים */
+const clrB = (o, k) => canEdit() && (o[k] || o["ok_" + k]) ? `<button class="clr" data-a="clrDate" data-id="${o.id}|${k}" title="מחיקת התאריך">✕</button>` : "";
 const okT = (o, k) => !o[k] && o["ok_" + k] ? `<span class="tag g" title="הושלם — בלי תאריך">✓</span>` : "";
 function openModal(html, wire, sm) {
   const old = document.querySelector(".ov"), keepY = old && /data-(fid|oid)-keep/.test(html) ? old.scrollTop : 0;
@@ -669,9 +674,9 @@ function orderModal(oid) {
     <div><div class="sec-h">💰 כסף ותשלומים <span class="muted small">(הסכומים לפני מע״מ — בסוגריים כולל ${S().vat ?? 18}%)</span></div>
       <div class="money-box"><div><small>סכום ההזמנה</small><b>${money(orderTotal(o))}</b><span>${money(orderTotal(o) * V)}</span></div><div><small>שולם</small><b style="color:var(--ok)">${money(orderPaid(o))}</b><span>${money(orderPaid(o) * V)}</span></div><div><small>נשאר לשלם</small><b style="color:var(--org)">${money(orderTotal(o) - orderPaid(o))}</b><span>${money((orderTotal(o) - orderPaid(o)) * V)}</span></div></div>
       <div class="form">${inp("amount", "סכום ההזמנה", "num", "ltr")}${inp("advance", "מקדמה", "num", "ltr")}${inp("completion", "משלים", "num", "ltr")}</div>
-      <div class="paytl">${pay.map(([k, l, a]) => `<div class="${has(o, k) ? "d" : ""}"><i></i><b>${l}</b><span>${o[k] ? fmtD(o[k]) : has(o, k) ? "✓ בלי תאריך" : "—"}</span><small>${N(o[a]) ? money(N(o[a]) * V) : ""}</small>${ed ? `<input type="date" class="inp sm" data-oc="${k}" value="${esc(o[k] || "")}">` : ""}</div>`).join("")}</div>
+      <div class="paytl">${pay.map(([k, l, a]) => `<div class="${has(o, k) ? "d" : ""}"><i></i><b>${l}</b><span>${o[k] ? fmtD(o[k]) : has(o, k) ? "✓ בלי תאריך" : "—"}</span><small>${N(o[a]) ? money(N(o[a]) * V) : ""}</small>${ed ? `<input type="date" class="inp sm" data-oc="${k}" value="${esc(o[k] || "")}">${clrB(o, k)}` : ""}</div>`).join("")}</div>
       ${["adv", "fin"].map(w => { const F = FLOW[w], on = has(o, F.v) || o[F.eng] || o[F.amon]; if (!on || (has(o, F.p) && !o[F.eng] && !o[F.amon])) return ""; const st = vStep(o, w);
-        const step = (k, l, d) => `<label class="fl ${d ? "d" : ""} ${st?.k === k ? "on" : ""}"><span>${l}</span>${ed ? `<input type="date" class="inp sm" data-oc="${k}" value="${esc(o[k] || "")}">` : `<b>${d ? fmtD(d) : "—"}</b>`}</label>`;
+        const step = (k, l, d) => `<label class="fl ${d ? "d" : ""} ${st?.k === k ? "on" : ""}"><span>${l}</span>${ed ? `<input type="date" class="inp sm" data-oc="${k}" value="${esc(o[k] || "")}">${clrB(o, k)}` : `<b>${d ? fmtD(d) : "—"}</b>`}</label>`;
         return `<div class="flow"><b>אישור שובר ה${F.l}</b><span class="fl d"><span>שובר התקבל</span><b>${o[F.v] ? fmtD(o[F.v]) : "✓"}</b></span><i>←</i>${step(F.eng, "הועבר למהנדס החשמל (אלעוז)", o[F.eng])}<i>←</i>${step(F.amon, "הועבר לאמו״ן", o[F.amon])}<i>←</i><span class="fl ${has(o, F.p) ? "d" : ""}"><span>שולם</span><b>${o[F.p] ? fmtD(o[F.p]) : has(o, F.p) ? "✓" : "—"}</b></span>${st ? `<span class="tag ${st.late ? "r" : "a"}" style="margin-inline-start:6px">${esc(st.t)}${st.d !== null ? ` · ${st.d} ימים` : ""}</span>` : ""}</div>`; }).join("")}</div></div>
     ${K.length ? `<div class="sec-h">🌳 הזמנות שתחת ההזמנה הזו</div>${kidsT}` : ""}
     ${ed && o.kind === "הזמנה מרכזת" ? `<div class="row" style="margin-top:8px"><button class="btn o sm" data-a="parAddOrd">+ הזמנה חדשה תחת הזמנת האב</button><button class="btn gh sm" data-a="oAssign">+ שיוך הזמנות קיימות</button></div>` : ""}
@@ -679,7 +684,7 @@ function orderModal(oid) {
     <div class="log">${L.map(([k, x]) => `<div><b>${fmtD(x.date)}</b>${esc(x.text)} <span class="muted small">${esc(x.by || "")}</span>${ed && isAdmin() ? ` <a href="#" data-a="oLogDel" data-id="${k}" class="small">מחיקה</a>` : ""}</div>`).join("") || `<span class="muted small">אין עדכונים</span>`}</div>
     ${ed && isAdmin() ? `<div class="row" style="margin-top:14px"><span class="spacer"></span><button class="btn del" data-a="oDel">מחיקת ההזמנה</button></div>` : ""}`, m => {
     m.dataset.oid = oid;
-    m.querySelectorAll("[data-oc]").forEach(e => e.onchange = async () => { const [k, t] = e.dataset.oc.split("|"); await api.update("orders", oid, { [k]: t === "n" ? (e.value === "" ? "" : N(e.value)) : e.value.trim() }); orderModal(oid); });
+    m.querySelectorAll("[data-oc]").forEach(e => e.onchange = async () => { const [k, t] = e.dataset.oc.split("|"), v = t === "n" ? (e.value === "" ? "" : N(e.value)) : e.value.trim(); await api.update("orders", oid, { [k]: v, ...(v === "" && RAW.orders[oid]?.["ok_" + k] ? { ["ok_" + k]: null } : {}) }); orderModal(oid); });
     m.querySelector("#olT")?.addEventListener("keydown", e => { if (e.key === "Enter") m.querySelector('[data-a="oLog"]').click(); });
   });
 }
@@ -857,7 +862,7 @@ function repHtml() {
   const th = t => `<th style="background:#0b3a6e;color:#fff;text-align:right;padding:5px 7px;border:1px solid #0b3a6e;font-size:10.5pt">${t}</th>`, td = (t, st = "") => `<td style="border:1px solid #cfd8e3;padding:4px 7px;vertical-align:top;font-size:10pt;${st}">${t}</td>`;
   const tbl = (h, rows) => rows.length ? `<table style="width:100%;border-collapse:collapse;margin:4px 0 12px"><thead><tr>${h.map(th).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>` : `<p style="color:#63708a;margin:2px 0 12px">אין</p>`;
   const h2 = t => `<h3 style="color:#0b3a6e;border-bottom:3px solid #f39200;padding-bottom:3px;margin:16px 0 6px;font-size:13pt">${t}</h3>`;
-  const mods = f => [...new Set(facOrders(f).map(o => ef(o, "ord444")).filter(v => v && v !== true).map(String))].map(esc).join("<br>") || (f.type === "תט״ז" ? `<span style="color:#9aa3b2">לא נדרש</span>` : `<span style="color:#c0392b">חסר</span>`);
+  const mods = f => [...new Set(facOrders(f).map(o => ef(o, "ord444")).filter(v => v && v !== true).map(String))].map(esc).join("<br>") || (isFeeder(f) ? `<span style="color:#9aa3b2">לא נדרש</span>` : `<span style="color:#c0392b">חסר</span>`);
   const nm = f => `<b>${esc(f.name)}</b><br><span style="color:#63708a">${esc(f.type)} · ק.ד. ${esc(f.kd || "—")}</span>${readyF(f) ? `<br><span style="color:#a4520c;font-weight:700;font-size:9pt">🏗 הקבלן סיים · ${esc(readyNext(f))}</span>` : ""}`, nums = f => mainOrders(f).map(o => esc(o.iec301 || "—")).join(", ") || "—", ll = f => { const x = lastLog(f); return x ? `${fmtD(x.date)} — ${esc(x.text)}` : ""; };
   const title = `<h2 style="color:#0b3a6e;margin:0">${R.kind === "brief" ? "מצע לדיון — פערים מול חברת החשמל" : R.kind === "money" ? "דוח כספי — הזמנות חח״י" : "דוח סטטוס — חיבורי חשמל"}</h2><div style="color:#63708a;margin-bottom:8px">${R.dist ? "נפת " + esc(R.dist) : "כל הנפות"} · נכון ל־${fmtD(today)}</div>`;
   const sumTbl = (L, ttl) => { if (!L.length) return ""; const ds = [...(R.dist ? [R.dist] : DISTRICTS), ...(L.some(f => !DISTRICTS.includes(f.district)) && !R.dist ? [""] : [])], cnt = (a, s) => a.filter(f => s ? state(f).cur?.id === s.id : !state(f).cur).length || "";
@@ -1364,7 +1369,7 @@ function payLine(o) {
   else if (has(o, "advanceDate") && !has(o, "vFinDate") && !has(o, "completionDate") && !vStep(o, "fin")) p.push("ממתין לשובר משלים מחח״י");
   return p.join(" · ");
 }
-const excLines = f => facOrders(f).filter(o => o.kind === "מרחק חריג").map(o => ({ o, t: `⚡ מרחק חריג ${o.iec301 || ""}: ${payLine(o)}`, paid: has(o, "completionDate") }));
+const excLines = f => facOrders(f).filter(o => o.kind === "מרחק חריג" || (isFeeder(f) && o.kind !== "הזמנה מרכזת")).map(o => ({ o, t: `⚡ ${o.kind === "מרחק חריג" ? "מרחק חריג" : "הזמנת חח״י"} ${o.iec301 || ""}: ${payLine(o)}`, paid: has(o, "completionDate") }));
 /** ציר זמן למתקן: עדכונים ידניים + עדכוני ההזמנות שלו + הערות מגילי + תשלומים ושוברים + ״לבדיקה״ + דיווחי מפקחים */
 function facTimeline(f) {
   const T = [], add = (date, text, by, src, del) => date && T.push({ date: String(date).slice(0, 10), text, by: by || "", src, del });
@@ -1406,7 +1411,7 @@ function ordersByDist(LV) {
   const O = listO(), dOf = o => RAW.facilities[o.facilityId]?.district || o.district || "", rows = {};
   const get = d => rows[d] || (rows[d] = { mod: new Set(), iec: 0, par: 0, tot: 0, paid: 0, fac: 0, pw: 0, noOrd: 0 });
   O.forEach(o => { const r = get(dOf(o)), m = ef(o, "ord444"); if (m && m !== true) r.mod.add(String(m)); if (o.kind === "הזמנה מרכזת") r.par++; else if (o.iec301) r.iec++; r.tot += orderTotal(o); r.paid += orderPaid(o); });
-  LV.forEach(f => { const r = get(f.district || ""); r.fac++; if (state(f).done.power) r.pw++; if (f.type !== "תט״ז" && !facOrders(f).length) r.noOrd++; });
+  LV.forEach(f => { const r = get(f.district || ""); r.fac++; if (state(f).done.power) r.pw++; if (!isFeeder(f) && !facOrders(f).length) r.noOrd++; });
   return rows;
 }
 function pageDash() {
@@ -1537,6 +1542,7 @@ document.addEventListener("click", async e => {
   else if (a === "logoDel") { const L = { ...(S().logos || {}) }; delete L[id]; await api.setSettings({ logos: L }); }
   else if (a === "import") importModal();
   else if (a === "gili") giliImport();
+  else if (a === "clrDate") { const [oid, k] = id.split("|"); if (!RAW.orders[oid]) return; await api.update("orders", oid, { [k]: "", ["ok_" + k]: null }); const om = document.querySelector(".mdl[data-oid]"); if (om) orderModal(oid); else if (fid) facModal(fid); toast("התאריך נמחק"); }
   else if (a === "chkDone") { const oid = document.querySelector(".mdl[data-oid]")?.dataset.oid, o = RAW.orders[oid]; if (!o?.chk) return;
     await api.update("orders", oid, { chk: null, log: { ...(o.log || {}), [newId()]: { date: todayStr(), text: `✓ טופל: ${o.chk}`, by: who(), at: new Date().toISOString() } } }); orderModal(oid); }
   else if (a === "wlLater") { ui.wlLater = true; render(); }
