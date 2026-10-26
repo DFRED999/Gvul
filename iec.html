@@ -239,7 +239,8 @@ const stagesList = () => { const sv = Array.isArray(S().stages) && S().stages.le
   DEF_STAGES.forEach((d, i) => { if (sv.some(x => x.id === d.id)) return; const prev = DEF_STAGES.slice(0, i).reverse().find(p => sv.some(x => x.id === p.id)); sv.splice(prev ? sv.findIndex(x => x.id === prev.id) + 1 : 0, 0, d); });
   return sv; };
 const stages = () => stagesList().map(s => { const d = DEF_STAGES.find(d => d.id === s.id) || {}; return { ...d, ...s, ...(d.types ? { types: d.types } : {}), name: OLD_NAMES[s.name] || s.name }; });
-const stagesFor = f => stages().filter(s => !Array.isArray(s.types) || !s.types.length || s.types.includes(f.type));
+/** תט״ז / חדר טרפו עם הזמנה משלו (מרחק חריג / הזנה) — מקבל גם את שלבי ההזמנה והתשלום, כמו ארון שקד */
+const stagesFor = f => stages().filter(s => !Array.isArray(s.types) || !s.types.length || s.types.includes(f.type) || (s.auto && isFeeder(f) && payOrders(f).length > 0));
 const alertCfg = () => Object.fromEntries(Object.entries(DEF_ALERTS).map(([k, v]) => [k, { ...v, ...(S().alerts?.[k] || {}) }]));
 const VAT = () => (S().vat ?? 18) / 100;
 const contractors = () => (S().contractors || []).slice().sort((a, b) => (kdN(b.kdFrom) ?? 0) - (kdN(a.kdFrom) ?? 0));
@@ -273,6 +274,8 @@ const parentOf = o => o.parent301 ? listO().find(p => p.id !== o.id && p.iec301 
 const modRec = n => n ? memo("mr:" + n, () => list("mods").find(r => String(r.num) === String(n)) || null) : null;
 const ef = (o, k) => o[k] || o["ok_" + k] ? o[k] || true : k === "ord444" ? parentOf(o)?.ord444 || "" : k === "req880" ? parentOf(o)?.req880 || modRec(ef(o, "ord444"))?.req880 || "" : "";
 const mainOrders = f => facOrders(f).filter(o => o.kind !== "מרחק חריג");
+/** ההזמנות שקובעות את מסלול המתקן: ההזמנות הרגילות; ואם אין — הזמנות מרחק חריג / הזנה (תט״ז, חדר טרפו, חיבור חריג) */
+const payOrders = f => { const M = mainOrders(f); return M.length ? M : facOrders(f).filter(o => o.kind !== "הזמנה מרכזת"); };
 /** שלב בהזמנה: תאריך, או סימון "✓" (ok_<שדה>) כשידוע שהושלם אבל בלי תאריך */
 const has = (o, k) => !!ef(o, k);
 const orderTotal = o => N(o.amount), orderPaid = o => (has(o, "advanceDate") ? N(o.advance) : 0) + (has(o, "completionDate") ? N(o.completion) : 0);
@@ -322,7 +325,7 @@ const readyCls = f => ["אצלנו", "משהב״ט"].includes(state(f).next?.who
 const readyDays = f => { const c = ctrDone(f); return c?.date ? days(c.date) : null; };
 function state(f) { return memo("s:" + f.id, () => state0(f)); }
 function state0(f) {
-  const ST = stagesFor(f), M = mainOrders(f), done = {}, A = alertCfg(), today = todayStr();
+  const ST = stagesFor(f), M = payOrders(f), done = {}, A = alertCfg(), today = todayStr();
   const RM = repMap().m;
   for (const s of ST) { const m = f.stages?.[s.id] || {}, rp = RM[f.id + "|" + s.id];
     if (rp) { done[s.id] = { date: rp.date || "", rep: rp }; continue; }   // דיווח מפקח מאושר — המקור
@@ -345,7 +348,7 @@ function state0(f) {
 /** חוסרים בתהליך — לפי ההתראות שהוגדרו */
 function gaps(f) { return memo("g:" + f.id, () => gaps0(f)); }
 function gaps0(f) {
-  if (!live(f)) return []; const A = alertCfg(), O = facOrders(f), M = mainOrders(f), out = [], today = todayStr();
+  if (!live(f)) return []; const A = alertCfg(), O = facOrders(f), M = payOrders(f), out = [], today = todayStr();
   if (A.g444.on && M.some(o => o.iec301 && !ef(o, "ord444"))) out.push({ k: "g444", t: "חסרה הזמנת משהב״ט" });
   if (A.g880.on && M.some(o => ef(o, "ord444") && !ef(o, "req880"))) out.push({ k: "g880", t: "חסרה דרישה" });
   if (A.noOrd.on && !O.length && !isFeeder(f) && days((f.createdAt || today).slice(0, 10)) >= N(A.noOrd.days)) out.push({ k: "noOrd", t: "אין הזמנה" });
@@ -873,7 +876,7 @@ function repHtml() {
   const tbl = (h, rows) => rows.length ? `<table style="width:100%;border-collapse:collapse;margin:4px 0 12px"><thead><tr>${h.map(th).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>` : `<p style="color:#63708a;margin:2px 0 12px">אין</p>`;
   const h2 = t => `<h3 style="color:#0b3a6e;border-bottom:3px solid #f39200;padding-bottom:3px;margin:16px 0 6px;font-size:13pt">${t}</h3>`;
   const mods = f => [...new Set(facOrders(f).map(o => ef(o, "ord444")).filter(v => v && v !== true).map(String))].map(esc).join("<br>") || (isFeeder(f) ? `<span style="color:#9aa3b2">לא נדרש</span>` : `<span style="color:#c0392b">חסר</span>`);
-  const nm = f => `<b>${esc(f.name)}</b><br><span style="color:#63708a">${esc(f.type)} · ק.ד. ${esc(f.kd || "—")}</span>${readyF(f) ? `<br><span style="color:#a4520c;font-weight:700;font-size:9pt">🏗 הקבלן סיים · ${esc(readyNext(f))}</span>` : ""}`, nums = f => mainOrders(f).map(o => esc(o.iec301 || "—")).join(", ") || "—", ll = f => { const x = lastLog(f); return x ? `${fmtD(x.date)} — ${esc(x.text)}` : ""; };
+  const nm = f => `<b>${esc(f.name)}</b><br><span style="color:#63708a">${esc(f.type)} · ק.ד. ${esc(f.kd || "—")}</span>${readyF(f) ? `<br><span style="color:#a4520c;font-weight:700;font-size:9pt">🏗 הקבלן סיים · ${esc(readyNext(f))}</span>` : ""}`, nums = f => payOrders(f).map(o => esc(o.iec301 || "—")).join(", ") || "—", ll = f => { const x = lastLog(f); return x ? `${fmtD(x.date)} — ${esc(x.text)}` : ""; };
   const title = `<h2 style="color:#0b3a6e;margin:0">${R.kind === "brief" ? "מצע לדיון — פערים מול חברת החשמל" : R.kind === "money" ? "דוח כספי — הזמנות חח״י" : "דוח סטטוס — חיבורי חשמל"}</h2><div style="color:#63708a;margin-bottom:8px">${R.dist ? "נפת " + esc(R.dist) : "כל הנפות"} · נכון ל־${fmtD(today)}</div>`;
   const sumTbl = (L, ttl) => { if (!L.length) return ""; const ds = [...(R.dist ? [R.dist] : DISTRICTS), ...(L.some(f => !DISTRICTS.includes(f.district)) && !R.dist ? [""] : [])], cnt = (a, s) => a.filter(f => s ? state(f).cur?.id === s.id : !state(f).cur).length || "";
     const row = (lbl, a, tot) => `<tr>${td(`<b>${esc(lbl)}</b>`, tot ? "background:#eef2f8" : "")}${td(cnt(a, null), "text-align:center" + (tot ? ";background:#eef2f8;font-weight:700" : ""))}${ST.map(s => td(cnt(a, s), "text-align:center" + (tot ? ";background:#eef2f8;font-weight:700" : ""))).join("")}${td(`<b>${a.length}</b>`, "text-align:center" + (tot ? ";background:#eef2f8" : ""))}</tr>`;
@@ -1157,6 +1160,7 @@ function weekHtml() {
     + sec("📝 סטטוסים, הערות ורישומים", ntT, nt.length) + sec("✎ שינויים נוספים", tbl(["על מה", "שדה", "שינוי", "מי / מקור"], oth), oth.length) + (pT ? sec("👥 מי עדכן (מספר שינויים)", `<div>${pT}</div>`) : "");
 }
 /** מה השתנה בכל מתקן בשבוע הנבחר (או מאז גיבוי): שלב (צילום תחילת שבוע מול סוף), תשלומים, סטטוסים, דיווחי מפקחים, שינויים אחרים */
+const TRK_FIX = "2026-10-27";   // מהיום תט״ז / חדר טרפו עם הזמנה מקבלים מסלול תשלום מלא — שינוי חד־פעמי בהשוואות לשבוע הזה
 function wkChanges() {
   const W = wlState(), cur = wkStart(todayStr()), isCur = W.wk === cur, nx = addDays(W.wk, 7);
   if (!W.base && W.data[W.wk] === undefined) setTimeout(() => wlLoad(W.wk), 0);
@@ -1174,7 +1178,8 @@ function wkChanges() {
       else if (!/^(תאריך האקסל)$/.test(n)) x.other.push(`${n}: ${b0 || "ריק"} ← ${a0 || "ריק"}`); }); }
   if (s0) for (const f of allF()) { const k = fbKey(f.id), a = String(s0[k] || ""), b = String(s1[k] || ""); if (!b) continue; const [sa] = a.split("|"), [sb] = b.split("|");
     if (!a) { if (!W.base || !W.base.snap[k]) F(f.id).isNew = true; continue; }
-    if (sa !== sb) F(f.id).stage = [sa, sb, ord(sb) > ord(sa)];
+    if (sa !== sb) { const fx = isFeeder(f) && String(W.base ? W.base.at : W.wk).slice(0, 10) < TRK_FIX && stages().find(x => x.id === sb)?.auto && !stages().find(x => x.id === sa)?.auto;
+      if (fx) F(f.id).other.push("נוספו שלבי ההזמנה והתשלום למסלול (תיקון באתר 26/10) — לא שינוי בפועל"); else F(f.id).stage = [sa, sb, ord(sb) > ord(sa)]; }
     if (!a.includes("|!") && b.includes("|!")) F(f.id).stuckIn = true; if (a.includes("|!") && !b.includes("|!")) F(f.id).stuckOut = true; }
   if (!W.base) { const [ra, rb] = wkRange(W.wk), foi = {}; list("facilities").forEach(f => { const k = srcItemId(f); if (k) foi[k] = f.id; });
     Object.values(BRD_PROG || {}).filter(p => p.contractorId === IEC_CID && ((p.createdAt || "") >= ra && (p.createdAt || "") < rb || (p.reviewedAt || "") >= ra && (p.reviewedAt || "") < rb))
@@ -1446,7 +1451,7 @@ function holdHtml() {
   const all = ks.flatMap(k => holdGroups(k, R.dist).flatMap(g => g[1])), lt = all.filter(x => x.late).length;
   return `<h2 style="color:#0b3a6e;margin:0">נושאים לטיפול${R.hold ? " — " + HOLD_L(R.hold).replace(/^\S+\s/, "") : " — לפי גורם"}</h2><div style="color:#63708a;margin-bottom:8px">פרויקט המכשול — חיבורי חשמל · ${R.dist ? "נפת " + esc(R.dist) : "כל הנפות"} · נכון ל־${fmtD(todayStr())} · <b>${all.length}</b> נושאים${lt ? ` · <b style="color:#c0392b">${lt} באיחור</b>` : ""}</div>`
     + ks.map(k => { const G = holdGroups(k, R.dist); if (!G.length) return R.hold ? `<p style="color:#63708a">אין נושאים פתוחים 👍</p>` : "";
-      return (R.hold ? "" : `<h3 style="color:#0b3a6e;border-bottom:3px solid #f39200;padding-bottom:3px;margin:16px 0 6px;font-size:13pt">${HOLD_L(k)}</h3>`) + G.map(([g, a]) => `<div style="font-weight:700;margin:10px 0 2px">${esc(g)} (${a.length})</div><table style="width:100%;border-collapse:collapse;margin:2px 0 10px"><thead><tr>${["#", "מתקן", "נפה", "הזמנת חח״י", "פירוט", "ממתין מ־", "ימים", "יעד / תוקף", "תשובה / הערה"].map(th).join("")}</tr></thead><tbody>${a.map((x, i) => `<tr>${td(i + 1)}${td(`<b>${esc(x.f.name)}</b><br><span style="color:#63708a;font-size:9pt">${esc(x.f.type)} · ק.ד. ${esc(x.f.kd || "—")}</span>`)}${td(esc(x.f.district || ""))}${td(esc(x.o ? x.o.iec301 || "—" : mainOrders(x.f).map(o => o.iec301).filter(Boolean).join(", ") || "—"))}${td(esc(x.what || ""))}${td(fmtD(x.since) || "—")}${td(x.d ?? "—", x.late ? "color:#c0392b;font-weight:700" : "")}${td(x.due ? fmtD(x.due) : "", x.due && x.due < todayStr() ? "color:#c0392b;font-weight:700" : "")}${td("&nbsp;", "width:20%")}</tr>`).join("")}</tbody></table>`).join(""); }).join("");
+      return (R.hold ? "" : `<h3 style="color:#0b3a6e;border-bottom:3px solid #f39200;padding-bottom:3px;margin:16px 0 6px;font-size:13pt">${HOLD_L(k)}</h3>`) + G.map(([g, a]) => `<div style="font-weight:700;margin:10px 0 2px">${esc(g)} (${a.length})</div><table style="width:100%;border-collapse:collapse;margin:2px 0 10px"><thead><tr>${["#", "מתקן", "נפה", "הזמנת חח״י", "פירוט", "ממתין מ־", "ימים", "יעד / תוקף", "תשובה / הערה"].map(th).join("")}</tr></thead><tbody>${a.map((x, i) => `<tr>${td(i + 1)}${td(`<b>${esc(x.f.name)}</b><br><span style="color:#63708a;font-size:9pt">${esc(x.f.type)} · ק.ד. ${esc(x.f.kd || "—")}</span>`)}${td(esc(x.f.district || ""))}${td(esc(x.o ? x.o.iec301 || "—" : payOrders(x.f).map(o => o.iec301).filter(Boolean).join(", ") || "—"))}${td(esc(x.what || ""))}${td(fmtD(x.since) || "—")}${td(x.d ?? "—", x.late ? "color:#c0392b;font-weight:700" : "")}${td(x.due ? fmtD(x.due) : "", x.due && x.due < todayStr() ? "color:#c0392b;font-weight:700" : "")}${td("&nbsp;", "width:20%")}</tr>`).join("")}</tbody></table>`).join(""); }).join("");
 }
 /** טקסט למייל */
 function holdText() {
