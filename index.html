@@ -4951,7 +4951,7 @@ function pagePower(d) {
   const types = [...new Set(A.map(f => f.type))];
   const L = A.filter(f => (!F.type || f.type === F.type) && (!F.dist || (F.dist === "-" ? !E.DISTRICTS.includes(f.district) : f.district === F.dist)) && (!F.only || (F.only === "ready" ? pwReady(E, f) : F.only === "stuck" ? st(f).stuck : st(f).done.power))
     && (!q || [f.name, f.kd, f.type, f.district, ...E.facOrders(f).map(o => o.iec301 + " " + (o.ord444 || ""))].join(" ").toLowerCase().includes(q)));
-  const row = f => { const s = st(f), it = pwItem(E, f), rd = pwReady(E, f), os = E.mainOrders(f).filter(o => o.iec301);
+  const row = f => { const s = st(f), it = pwItem(E, f), rd = pwReady(E, f), os = E.payOrders(f).filter(o => o.iec301);
     const days = it?.doneDate ? daysSince(it.doneDate) : null;
     const fd = iecFeedTxt(E, f);
     return `<tr class="${s.stuck ? "pw-stuck" : rd ? "pw-ready" : ""}"><td><b>${esc(f.name)}</b><div class="small muted">${esc(f.type || "")} · ק.ד. ${esc(f.kd || "—")}${f.district ? " · " + esc(f.district) : ""}</div>${fd ? `<div class="small" style="color:${/^⚠/.test(fd) ? "#a4520c" : "#2d5a8a"}">⚡ ${esc(fd)}</div>` : ""}</td><td class="small">${esc(RAW.contractors?.[f.contractorId]?.name || "")}</td>
@@ -5031,7 +5031,7 @@ function iecEngine(RAW, BRD_PROG, BRD_ACTS) {
     DEF_STAGES.forEach((d, i) => { if (sv.some(x => x.id === d.id)) return; const prev = DEF_STAGES.slice(0, i).reverse().find(p => sv.some(x => x.id === p.id)); sv.splice(prev ? sv.findIndex(x => x.id === prev.id) + 1 : 0, 0, d); });
     return sv; };
   const stages = () => stagesList().map(s => { const d = DEF_STAGES.find(d => d.id === s.id) || {}; return { ...d, ...s, ...(d.types ? { types: d.types } : {}), name: OLD_NAMES[s.name] || s.name }; });
-  const stagesFor = f => stages().filter(s => !Array.isArray(s.types) || !s.types.length || s.types.includes(f.type));
+  const stagesFor = f => stages().filter(s => !Array.isArray(s.types) || !s.types.length || s.types.includes(f.type) || (s.auto && isFeeder(f) && payOrders(f).length > 0));
   const alertCfg = () => Object.fromEntries(Object.entries(DEF_ALERTS).map(([k, v]) => [k, { ...v, ...(S().alerts?.[k] || {}) }]));
   const VAT = () => (S().vat ?? 18) / 100;
   const contractors = () => (S().contractors || []).slice().sort((a, b) => (kdN(b.kdFrom) ?? 0) - (kdN(a.kdFrom) ?? 0));
@@ -5043,6 +5043,7 @@ function iecEngine(RAW, BRD_PROG, BRD_ACTS) {
   const modRec = n => n ? memo("mr:" + n, () => list("mods").find(r => String(r.num) === String(n)) || null) : null;
   const ef = (o, k) => o[k] || o["ok_" + k] ? o[k] || true : k === "ord444" ? parentOf(o)?.ord444 || "" : k === "req880" ? parentOf(o)?.req880 || modRec(ef(o, "ord444"))?.req880 || "" : "";
   const mainOrders = f => facOrders(f).filter(o => o.kind !== "מרחק חריג");
+  const payOrders = f => { const M = mainOrders(f); return M.length ? M : facOrders(f).filter(o => o.kind !== "הזמנה מרכזת"); };
   const has = (o, k) => !!ef(o, k);
   const orderTotal = o => N(o.amount), orderPaid = o => (has(o, "advanceDate") ? N(o.advance) : 0) + (has(o, "completionDate") ? N(o.completion) : 0);
   const live = f => (f.status || "פעיל") === "פעיל";
@@ -5056,7 +5057,7 @@ function iecEngine(RAW, BRD_PROG, BRD_ACTS) {
     return { m, pend: pend.sort((a, b) => String(b.date).localeCompare(String(a.date))), facOf }; });
   function state(f) { return memo("s:" + f.id, () => state0(f)); }
   function state0(f) {
-    const ST = stagesFor(f), M = mainOrders(f), done = {}, A = alertCfg(), today = todayStr();
+    const ST = stagesFor(f), M = payOrders(f), done = {}, A = alertCfg(), today = todayStr();
     const RM = repMap().m;
     for (const s of ST) { const m = f.stages?.[s.id] || {}, rp = RM[f.id + "|" + s.id];
       if (rp) { done[s.id] = { date: rp.date || "", rep: rp }; continue; }   // דיווח מפקח מאושר — המקור
@@ -5078,7 +5079,7 @@ function iecEngine(RAW, BRD_PROG, BRD_ACTS) {
   }
   function gaps(f) { return memo("g:" + f.id, () => gaps0(f)); }
   function gaps0(f) {
-    if (!live(f)) return []; const A = alertCfg(), O = facOrders(f), M = mainOrders(f), out = [], today = todayStr();
+    if (!live(f)) return []; const A = alertCfg(), O = facOrders(f), M = payOrders(f), out = [], today = todayStr();
     if (A.g444.on && M.some(o => o.iec301 && !ef(o, "ord444"))) out.push({ k: "g444", t: "חסרה הזמנת משהב״ט" });
     if (A.g880.on && M.some(o => ef(o, "ord444") && !ef(o, "req880"))) out.push({ k: "g880", t: "חסרה דרישה" });
     if (A.noOrd.on && !O.length && !isFeeder(f) && days((f.createdAt || today).slice(0, 10)) >= N(A.noOrd.days)) out.push({ k: "noOrd", t: "אין הזמנה" });
@@ -5095,7 +5096,7 @@ function iecEngine(RAW, BRD_PROG, BRD_ACTS) {
   const modList = () => memo("mods", () => { const m = {}; list("mods").forEach(r => { if (r.num) m[r.num] = { ...r, rid: r.id }; });
     listO().forEach(o => { const n = ef(o, "ord444"); if (n && n !== true && !m[n]) m[n] = { num: String(n), virt: true }; }); return Object.values(m).sort((a, b) => String(a.num).localeCompare(String(b.num))); });
   const modOrders = num => listO().filter(o => String(ef(o, "ord444")) === String(num));
-  return { state, gaps, stages, stagesFor, listO, facOrders, mainOrders, orderTotal, orderPaid, has, ef, live, VAT, allF, modList, modOrders, srcItemId, list, lastLog, DISTRICTS, TYPES };
+  return { state, gaps, stages, stagesFor, listO, facOrders, mainOrders, payOrders, orderTotal, orderPaid, has, ef, live, VAT, allF, modList, modOrders, srcItemId, list, lastLog, DISTRICTS, TYPES };
 }
 /* IEC-ENGINE-END */
 /* =====================================================================
