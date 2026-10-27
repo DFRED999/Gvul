@@ -5061,7 +5061,7 @@ function iecEngine(RAW, BRD_PROG, BRD_ACTS) {
     const RM = repMap().m;
     for (const s of ST) { const m = f.stages?.[s.id] || {}, rp = RM[f.id + "|" + s.id];
       if (rp) { done[s.id] = { date: rp.date || "", rep: rp }; continue; }   // דיווח מפקח מאושר — המקור
-      if (m.date || m.done) { done[s.id] = { date: m.date || "", man: true }; continue; }
+      if (!s.auto && (m.date || m.done)) { done[s.id] = { date: m.date || "", man: true }; continue; }   // שלבי הזמנה / תשלום — רק מההזמנה
       if (s.auto && M.length && M.every(o => has(o, s.auto))) { const v = M.map(o => o[s.auto] || "").sort().pop(); done[s.id] = { date: /^\d{4}-\d\d-\d\d$/.test(v) ? v : "", auto: true }; } }
     // שלבי תשלום: שולם משלים ← גם השובר והמקדמה הושלמו
     const pays = ST.filter(s => s.pay).sort((a, b) => b.pay - a.pay); let after = false;
