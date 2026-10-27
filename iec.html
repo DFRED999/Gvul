@@ -173,7 +173,7 @@ main { overflow-x: clip; }
 .flow > b { margin-inline-end: 6px; color: var(--navy); } .flow i { font-style: normal; color: #9aa3b2; }
 .flow .fl { display: inline-flex; flex-direction: column; gap: 2px; padding: 4px 8px; border-radius: 9px; border: 1.5px solid #d6dde8; background: #fff; } .flow .fl span { font-size: 11px; color: #63708a; }
 .flow .fl.d { border-color: #9fd3b0; background: #effaf2; } .flow .fl.on { border: 2.5px solid #e0a100; background: #fff8e6; } .flow .fl .inp { padding: 2px 4px; font-size: 12px; }
-.clr { all: unset; cursor: pointer; color: #b3261e; font-size: 12px; font-weight: 700; padding: 0 5px; margin-inline-start: 2px; border-radius: 6px; } .clr:hover { background: #fde3e1; }
+.fl .clr, .paytl .clr { align-self: center; } .clr { all: unset; cursor: pointer; color: #b3261e; font-size: 12px; font-weight: 700; padding: 0 5px; margin-inline-start: 2px; border-radius: 6px; } .clr:hover { background: #fde3e1; }
 </style>
 </head>
 <body>
@@ -329,7 +329,7 @@ function state0(f) {
   const RM = repMap().m;
   for (const s of ST) { const m = f.stages?.[s.id] || {}, rp = RM[f.id + "|" + s.id];
     if (rp) { done[s.id] = { date: rp.date || "", rep: rp }; continue; }   // דיווח מפקח מאושר — המקור
-    if (m.date || m.done) { done[s.id] = { date: m.date || "", man: true }; continue; }
+    if (!s.auto && (m.date || m.done)) { done[s.id] = { date: m.date || "", man: true }; continue; }   // שלבי הזמנה / תשלום — רק מההזמנה
     if (s.auto && M.length && M.every(o => has(o, s.auto))) { const v = M.map(o => o[s.auto] || "").sort().pop(); done[s.id] = { date: /^\d{4}-\d\d-\d\d$/.test(v) ? v : "", auto: true }; } }
   // שלבי תשלום: שולם משלים ← גם השובר והמקדמה הושלמו
   const pays = ST.filter(s => s.pay).sort((a, b) => b.pay - a.pay); let after = false;
@@ -516,14 +516,15 @@ function fCard(f) {
 function facModal(id) {
   CACHE = {}; DCUR = { t: "fac", id };
   const f = RAW.facilities[id] ? { id, ...RAW.facilities[id] } : null; if (!f) return;
-  const ed = canEdit(), dis = ed ? "" : "disabled", s = state(f), O = facOrders(f), ST = s.ST;
+  const ed = canEdit(), dis = ed ? "" : "disabled", s = state(f), O = facOrders(f), ST = s.ST, PO = payOrders(f);
   const lk = k => f.src?.startsWith("item:") && SYNCED.includes(k) ? `disabled title="מתעדכן מאתר הגבול — לשנות שם"` : "";
   const fld = (k, l, t = "text", opts) => `<label>${l}${opts ? `<select class="inp" data-fe="${k}" ${dis} ${lk(k)}><option value=""></option>${opts.map(o => { const [v, lb] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}" ${String(f[k] ?? "") === v ? "selected" : ""}>${esc(lb)}</option>`; }).join("")}</select>` : `<input class="inp" type="${t}" data-fe="${k}" value="${esc(f[k] ?? "")}" ${dis} ${lk(k)}>`}</label>`;
   const cabs = list("facilities").filter(c => c.type === "ארון שקד" || c.type === "אתר איסוף" || c.type === "חדר טרפו").sort((a, b) => (kdN(b.kd) ?? 0) - (kdN(a.kd) ?? 0));
   const stRow = (x, i) => { const m = f.stages?.[x.id] || {}, dn = s.done[x.id];
     return `<div class="stg ${dn ? "d" : ""} ${s.next?.id === x.id && live(f) ? "nx" : ""}" style="--sc:${x.color}"><span class="n">${dn ? "✓" : i + 1}</span>
       <span><b>${esc(x.name)}</b>${dn?.auto ? `<div class="au">${dn.inf ? "✓ לפי שלב מאוחר יותר" : "✓ אוטומטי מההזמנה"}</div>` : ""}${dn?.rep ? `<div class="au" title="${esc(`דיווח מאתר הדיווח${dn.rep.note ? " · " + dn.rep.note : ""}`)}">📋 דיווח: ${esc(String(dn.rep.reportedBy || "").split("@")[0])}${dn.rep.reviewedBy ? ` · אושר: ${esc(String(dn.rep.reviewedBy).split("@")[0])}` : ""}${dn.rep.editedFrom ? " · תוקן מאתר חח״י" : ""}</div>` : repActFor(f.type, x.id) && srcItemId(f) ? `<div class="small muted">📋 מתעדכן מדיווח מפקח</div>` : ""}${x.days ? `<div class="small muted">נורמה: ${x.days} ימים</div>` : ""}</span>
-      <label class="small muted">בוצע<input type="date" class="inp sm" data-fs="${x.id}|date" value="${esc(dn?.rep ? dn.date : m.date || (dn?.auto ? dn.date : ""))}" ${dis}></label>
+      ${x.auto ? `<label class="small muted">בוצע — מההזמנה<span class="inp sm" style="display:flex;align-items:center;justify-content:space-between;gap:6px;background:#f4f7fb;cursor:default;white-space:nowrap">${dn ? (dn.date ? fmtD(dn.date) : "✓ בלי תאריך") : "—"}${PO.length ? `<button class="clr" style="color:var(--blue,#0a6ec9)" data-a="ordd" data-id="${PO[0].id}" title="השלב מתמלא מההזמנה — לעדכון פותחים את ההזמנה">✎ בהזמנה${PO.length > 1 ? ` (${PO.length})` : ""}</button>` : `<span class="muted">אין הזמנה</span>`}</span></label>`
+        : `<label class="small muted">בוצע<input type="date" class="inp sm" data-fs="${x.id}|date" value="${esc(dn?.rep ? dn.date : m.date || (dn?.auto ? dn.date : ""))}" ${dis}></label>`}
       <label class="small muted">יעד מתואם<input type="date" class="inp sm" data-fs="${x.id}|target" value="${esc(m.target || "")}" ${dis}></label>
       <input class="inp sm" data-fs="${x.id}|note" value="${esc(m.note || "")}" placeholder="הערה" ${dis}></div>`; };
   const oRow = o => `<tr><td><select class="ce" data-oe="${o.id}|kind" ${dis}>${ORDER_KINDS.map(k => `<option ${k === (o.kind || "הזמנה") ? "selected" : ""}>${k}</option>`).join("")}</select></td>
@@ -561,6 +562,8 @@ function facModal(id) {
 const isAdmin = () => PERM === "admin" || LOCAL;
 /** כפתור ✕ למחיקת תאריך (ו״✓ בלי תאריך״) — בתאריכי שוברים ותשלומים */
 const clrB = (o, k) => canEdit() && (o[k] || o["ok_" + k]) ? `<button class="clr" data-a="clrDate" data-id="${o.id}|${k}" title="מחיקת התאריך">✕</button>` : "";
+/** סימון "בוצע — בלי תאריך" (ok_<שדה>) כשיודעים שזה קרה אבל לא מתי; את התאריך אפשר להשלים אחר כך */
+const okB = (o, k) => canEdit() && !o[k] && !o["ok_" + k] ? `<button class="clr" style="color:#1d7a46" data-a="okMark" data-id="${o.id}|${k}" title="בוצע — התאריך לא ידוע (אפשר להשלים אחר כך)">✓ בלי תאריך</button>` : "";
 const okT = (o, k) => !o[k] && o["ok_" + k] ? `<span class="tag g" title="הושלם — בלי תאריך">✓</span>` : "";
 function openModal(html, wire, sm) {
   const old = document.querySelector(".ov"), keepY = old && /data-(fid|oid)-keep/.test(html) ? old.scrollTop : 0;
@@ -685,10 +688,10 @@ function orderModal(oid) {
     <div><div class="sec-h">💰 כסף ותשלומים <span class="muted small">(הסכומים לפני מע״מ — בסוגריים כולל ${S().vat ?? 18}%)</span></div>
       <div class="money-box"><div><small>סכום ההזמנה</small><b>${money(orderTotal(o))}</b><span>${money(orderTotal(o) * V)}</span></div><div><small>שולם</small><b style="color:var(--ok)">${money(orderPaid(o))}</b><span>${money(orderPaid(o) * V)}</span></div><div><small>נשאר לשלם</small><b style="color:var(--org)">${money(orderTotal(o) - orderPaid(o))}</b><span>${money((orderTotal(o) - orderPaid(o)) * V)}</span></div></div>
       <div class="form">${inp("amount", "סכום ההזמנה", "num", "ltr")}${inp("advance", "מקדמה", "num", "ltr")}${inp("completion", "משלים", "num", "ltr")}</div>
-      <div class="paytl">${pay.map(([k, l, a]) => `<div class="${has(o, k) ? "d" : ""}"><i></i><b>${l}</b><span>${o[k] ? fmtD(o[k]) : has(o, k) ? "✓ בלי תאריך" : "—"}</span><small>${N(o[a]) ? money(N(o[a]) * V) : ""}</small>${ed ? `<input type="date" class="inp sm" data-oc="${k}" value="${esc(o[k] || "")}">${clrB(o, k)}` : ""}</div>`).join("")}</div>
-      ${["adv", "fin"].map(w => { const F = FLOW[w], on = has(o, F.v) || o[F.eng] || o[F.amon]; if (!on || (has(o, F.p) && !o[F.eng] && !o[F.amon])) return ""; const st = vStep(o, w);
-        const step = (k, l, d) => `<label class="fl ${d ? "d" : ""} ${st?.k === k ? "on" : ""}"><span>${l}</span>${ed ? `<input type="date" class="inp sm" data-oc="${k}" value="${esc(o[k] || "")}">${clrB(o, k)}` : `<b>${d ? fmtD(d) : "—"}</b>`}</label>`;
-        return `<div class="flow"><b>אישור שובר ה${F.l}</b><span class="fl d"><span>שובר התקבל</span><b>${o[F.v] ? fmtD(o[F.v]) : "✓"}</b></span><i>←</i>${step(F.eng, "הועבר למהנדס החשמל (אלעוז)", o[F.eng])}<i>←</i>${step(F.amon, "הועבר לאמו״ן", o[F.amon])}<i>←</i><span class="fl ${has(o, F.p) ? "d" : ""}"><span>שולם</span><b>${o[F.p] ? fmtD(o[F.p]) : has(o, F.p) ? "✓" : "—"}</b></span>${st ? `<span class="tag ${st.late ? "r" : "a"}" style="margin-inline-start:6px">${esc(st.t)}${st.d !== null ? ` · ${st.d} ימים` : ""}</span>` : ""}</div>`; }).join("")}</div></div>
+      <div class="paytl">${pay.map(([k, l, a]) => `<div class="${has(o, k) ? "d" : ""}"><i></i><b>${l}</b><span>${o[k] ? fmtD(o[k]) : has(o, k) ? "✓ בלי תאריך" : "—"}</span><small>${N(o[a]) ? money(N(o[a]) * V) : ""}</small>${ed ? `<input type="date" class="inp sm" data-oc="${k}" value="${esc(o[k] || "")}">${clrB(o, k)}${okB(o, k)}` : ""}</div>`).join("")}</div>
+      ${["adv", "fin"].map(w => { const F = FLOW[w], on = has(o, F.v) || has(o, F.eng) || has(o, F.amon); if (!on || (has(o, F.p) && !has(o, F.eng) && !has(o, F.amon))) return ""; const st = vStep(o, w);
+        const step = (k, l, d) => `<label class="fl ${d ? "d" : ""} ${st?.k === k ? "on" : ""}"><span>${l}${okT(o, k)}</span>${ed ? `<input type="date" class="inp sm" data-oc="${k}" value="${esc(o[k] || "")}">${clrB(o, k)}${okB(o, k)}` : `<b>${d ? fmtD(d) : has(o, k) ? "✓" : "—"}</b>`}</label>`;
+        return `<div class="flow"><b>אישור שובר ה${F.l}</b><span class="fl ${has(o, F.v) ? "d" : ""}"><span>שובר התקבל</span><b>${o[F.v] ? fmtD(o[F.v]) : has(o, F.v) ? "✓" : "—"}</b></span><i>←</i>${step(F.eng, "הועבר למהנדס החשמל (אלעוז)", has(o, F.eng))}<i>←</i>${step(F.amon, "הועבר לאמו״ן", has(o, F.amon))}<i>←</i><span class="fl ${has(o, F.p) ? "d" : ""}"><span>שולם</span><b>${o[F.p] ? fmtD(o[F.p]) : has(o, F.p) ? "✓" : "—"}</b></span>${st ? `<span class="tag ${st.late ? "r" : "a"}" style="margin-inline-start:6px">${esc(st.t)}${st.d !== null ? ` · ${st.d} ימים` : ""}</span>` : ""}</div>`; }).join("")}</div></div>
     ${K.length ? `<div class="sec-h">🌳 הזמנות שתחת ההזמנה הזו</div>${kidsT}` : ""}
     ${ed && o.kind === "הזמנה מרכזת" ? `<div class="row" style="margin-top:8px"><button class="btn o sm" data-a="parAddOrd">+ הזמנה חדשה תחת הזמנת האב</button><button class="btn gh sm" data-a="oAssign">+ שיוך הזמנות קיימות</button></div>` : ""}
     <div class="sec-h">📝 עדכונים על ההזמנה</div>${ed ? `<div class="row" style="margin-bottom:8px"><input type="date" class="inp sm" id="olD" value="${todayStr()}"><input class="inp" id="olT" placeholder="מה התחדש — שובר הגיע, תשלום, תיאום עם חח״י…" style="flex:1;min-width:220px"><button class="btn" data-a="oLog">הוספה</button></div>` : ""}
@@ -1369,8 +1372,8 @@ const flowDays = () => ({ v: 7, eng: 10, amon: 14, ...(S().flowDays || {}) });  
 /** איפה נמצא השובר: null = אין שובר / כבר שולם */
 function vStep(o, w) {
   const F = FLOW[w]; if (has(o, F.p) || (w === "adv" && has(o, "completionDate"))) return null;
-  if (!has(o, F.v) && !o[F.eng] && !o[F.amon]) return null;
-  const st = o[F.amon] ? ["amon", "אצל אמו״ן", o[F.amon], "משהב״ט"] : o[F.eng] ? ["eng", "אצל מהנדס החשמל", o[F.eng], "אצלנו"] : ["v", "שובר התקבל — להעביר למהנדס", /^\d{4}/.test(String(o[F.v] || "")) ? o[F.v] : "", "אצלנו"];
+  if (!has(o, F.v) && !has(o, F.eng) && !has(o, F.amon)) return null;
+  const st = has(o, F.amon) ? ["amon", "אצל אמו״ן", o[F.amon] || "", "משהב״ט"] : has(o, F.eng) ? ["eng", "אצל מהנדס החשמל", o[F.eng] || "", "אצלנו"] : ["v", "שובר התקבל — להעביר למהנדס", /^\d{4}/.test(String(o[F.v] || "")) ? o[F.v] : "", "אצלנו"];
   const d = st[2] ? days(st[2]) : null, late = d !== null && d > flowDays()[st[0]];
   return { w, k: st[0], t: `שובר ${F.l} ${st[1]}`, since: st[2], d, late, who: st[3], amt: N(o[F.amt]) };
 }
@@ -1569,6 +1572,8 @@ document.addEventListener("click", async e => {
   else if (a === "modLog") { const n = document.querySelector(".mdl[data-mod]")?.dataset.mod, t = document.getElementById("mlT").value.trim(); if (!t) return; const m = modList().find(x => String(x.num) === String(n));
     await modSave(m, { log: { ...(m.log || {}), [newId()]: { date: document.getElementById("mlD").value || todayStr(), text: t, by: who(), at: new Date().toISOString() } } }); modModal(n); }
   else if (a === "ordc") { ui.gq = ""; render(); openDet("ord", id); }
+  else if (a === "ordd") openDet("ord", id);
+  else if (a === "okMark") { const [oid, k] = id.split("|"); if (!RAW.orders[oid]) return; await api.update("orders", oid, { ["ok_" + k]: true }); const om = document.querySelector(".mdl[data-oid]"); if (om) orderModal(oid); else if (fid) facModal(fid); toast("סומן ✓ — את התאריך אפשר להשלים אחר כך"); }
   else if (a === "mod") { openDet("mod", id); }
   else if (a === "oAssign") assignModal(document.querySelector(".mdl[data-oid]")?.dataset.oid);
   else if (a === "oLog") { const oid = document.querySelector(".mdl[data-oid]")?.dataset.oid, t = document.getElementById("olT").value.trim(); if (!t || !oid) return;
