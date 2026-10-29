@@ -321,7 +321,7 @@ body.dark .mt { filter: invert(1) hue-rotate(180deg); }
 .ov-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -14px rgba(0,0,0,.45); } .ov-card:focus-visible { outline: 3px solid var(--cc); }
 .ov-ch { background: linear-gradient(150deg, color-mix(in srgb, var(--cc) 80%, #fff), var(--cc)); color: #fff; padding: 12px 16px; display: flex; flex-direction: column; } .ov-ch b { font-size: 19px; } .ov-ch span { font-size: 12.5px; opacity: .9; }
 .ov-cb { display: flex; align-items: center; gap: 12px; padding: 14px 14px 6px; }
-.ov-ring { position: relative; flex: none; width: 92px; height: 92px; } .ov-ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: var(--cc); }
+.ov-ring b.m { font-size: 16px; } .ov-ring { position: relative; flex: none; width: 92px; height: 92px; } .ov-ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: var(--cc); }
 .ov-nums { display: flex; flex-direction: column; gap: 3px; font-size: 13px; } .ov-nums > div:first-child b { font-size: 20px; } .ov-nums small { color: var(--muted); }
 .ov-wk { font-weight: 800; color: #c25e00; font-size: 14.5px; } .ov-wk.zero { color: var(--muted); font-weight: 600; font-size: 13px; } .ov-mo { color: #2f7d4f; font-weight: 700; } .ov-mo.zero { color: var(--muted); font-weight: 600; } .ov-iss { color: var(--muted); font-size: 12.5px; } .ov-iss .hold { color: #b5541c; font-weight: 700; }
 .ov-ms { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 8px 12px 12px; }
@@ -530,7 +530,15 @@ tr.mk > td:first-child { box-shadow: inset -4px 0 0 #1f7a8c; } tr.mk-bad > td:fi
 .ch-graphs > summary::-webkit-details-marker { display: none; } .ch-graphs > summary::before { content: "▸"; color: var(--muted); } .ch-graphs[open] > summary::before { content: "▾"; }
 .ch-graphs > summary em { font-style: normal; font-weight: 400; font-size: 12px; color: var(--muted); margin-inline-start: auto; } .ch-graphs[open] > summary em { display: none; }
 .ch-graphs[open] > summary { margin-bottom: 10px; } .sm-rib u { position: absolute; top: 0; height: 4px; background: #f39c12; }
-.sm-il { min-height: 44px; border-bottom: 1px solid #eef0eb; } .sm-il.nolab { min-height: 30px; }
+.sm-il { min-height: 44px; border-bottom: 1px solid #eef0eb; } .sm-il.nolab { min-height: 30px; } .sm-il.dense { min-height: 70px; }
+.sm-dot b.up2 { bottom: 23px; } .sm-dot b.dn3 { top: 23px; } .sm-dot b.sm { font-size: 9.5px; }
+.sm-fzt { position: absolute; left: 0; right: 0; top: 50%; height: 16px; margin-top: -8px; background: #f1f3ef; border-radius: 4px; }
+.sm-fz { position: absolute; top: 0; bottom: 0; border-radius: 3px; } .sm-fz.f { background: color-mix(in srgb, var(--cc) 25%, #fff); } .sm-fz.s { background: var(--cc); top: 2px; bottom: 2px; } .sm-fz.d { background: color-mix(in srgb, var(--cc) 60%, #000); top: 5px; bottom: 5px; }
+.sm-fzl { position: absolute; top: -14px; text-align: center; font-size: 10px; font-weight: 800; color: color-mix(in srgb, var(--cc) 70%, #000); white-space: nowrap; overflow: hidden; }
+.sm-fzl-l { min-height: 46px; border-bottom: 1px solid #eef0eb; }
+.fz-list { margin: 10px 0 2px; padding: 8px 10px; border: 1px solid #e3e7e0; border-radius: 10px; background: #fbfcfa; } .fz-list > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.fz-c { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--cc) 12%, #fff); border: 1px solid color-mix(in srgb, var(--cc) 35%, #fff); }
+.fz-list i.k { display: inline-block; width: 14px; height: 9px; border-radius: 2px; margin: 0 6px 0 2px; vertical-align: middle; } .fz-list i.k.f { background: color-mix(in srgb, var(--cc) 25%, #fff); } .fz-list i.k.s { background: var(--cc); } .fz-list i.k.d { background: color-mix(in srgb, var(--cc) 60%, #000); }
 .sm-il .sm-tr { background: color-mix(in srgb, var(--lc) 6%, transparent); } .sm-il:nth-child(even) .sm-tr { background: color-mix(in srgb, var(--lc) 11%, transparent); }
 .sm-il .sm-tr::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1.5px dashed color-mix(in srgb, var(--lc) 55%, #fff); pointer-events: none; }
 .sm-dot { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px -6px 0 0; border-radius: 50%; background: var(--dc); border: 1.5px solid #8a9088; box-sizing: border-box; cursor: help; } .sm-dot.dn { border-color: #1f5e3a; }
@@ -1343,16 +1351,24 @@ function sectorMap(d, c) {
     segs += runs.filter(x => x.m >= 15).map(x => { const wPct = (x.b - x.a) / W * 100, t = num(Math.round(x.m / 10) * 10, 0);
       return `<span class="sm-rn ${wPct < 3.2 ? "sm" : ""}" style="${span(x.a, x.b)}" title="ק.ד. ${kdTxt({ lo: x.a, hi: x.b })} · ≈${t} מ׳ שווה-ערך">${wPct >= 1.6 ? t : ""}</span>`; }).join("");
     return lane(G.name, `≈${num(Math.round(totM / 10) * 10, 0)} מ׳ · ${pct}%`, `<div class="sm-rib" style="--g:${G.color};--gt:${G.tint}" title="${esc(G.name)}: ${ga.map(a => svShort(a.name)).join(" · ")}">${segs}</div>`, "sm-rl", "", G.color); }).join("");
+  // גדר לפי ק.ד. — יסוד (בהיר) · עומדת (צבע הקבלן) · גמורה (כהה); מתחת למפה — רשימת הקטעים במטרים
+  const FZ = fenceState(d, c), cc = cColor(d, c), fseg = (L, cls) => mergeIvs(L || []).map(([a, b]) => `<i class="sm-fz ${cls}" style="${span(a, b)}" title="ק.ד. ${kd1(b)}–${kd1(a)}"></i>`).join("");
+  const runs = mergeRuns(FZ.runs);
+  const fenceLane = FZ.found > 0 || FZ.stand > 0 ? lane("🧱 גדר — לפי ק.ד.", `עומדת ${num(Math.round(FZ.stand), 0)} מ׳ · יסוד ${num(Math.round(FZ.found), 0)} · גמורה ${num(Math.round(FZ.done), 0)}`,
+    `<div class="sm-fzt" style="--cc:${cc}">${fseg(FZ.kd.found, "f")}${fseg(FZ.kd.stand, "s")}${fseg(FZ.kd.done, "d")}${runs.filter(x => (x.hi - x.lo) / W > 0.045).map(x => `<span class="sm-fzl" style="${span(x.lo, x.hi)}">${num(Math.round(x.m), 0)} מ׳</span>`).join("")}</div>`, "sm-fzl-l", "", cc) : "";
+  const fenceList = runs.length ? `<div class="fz-list" style="--cc:${cc}"><b>🧱 קטעי גדר עומדת (${runs.length}) · סה״כ ${num(Math.round(FZ.stand), 0)} מ׳</b> <span class="small muted">— מצפון לדרום · <i class="k f"></i>יסוד <i class="k s"></i>עומדת <i class="k d"></i>גמורה (עם תלתליות)</span>
+    <div>${[...runs].sort((a, b) => b.hi - a.hi).map(x => `<span class="fz-c">ק.ד. ${kd1(x.hi)}–${kd1(x.lo)} · <b>${num(Math.round(x.m), 0)} מ׳</b></span>`).join("")}</div></div>` : "";
   // פריטים לפי סוג — נקודה + מספר / ק.ד.
   const its = d.items.filter(i => i.status !== "מבוטל" && mainAt(d, i)?.id === c.id && kdNum(i.kdFrom) !== null);
   const kinds = [...new Set(its.map(i => i.kind || "אחר"))];
-  const NOLAB = new Set(["מעבירי מים", "מעביר אירי"]);
+  const DENSE = new Set(["מעבירי מים", "מעביר אירי"]);   // הרבה פריטים צפופים — המספרים בארבע שורות מתחלפות כדי שלא יעלו זה על זה
+  const labRows = ii => { const last = [-1e9, -1e9, -1e9, -1e9], gap = Math.max(0.6, W * 0.022); return ii.map(i => { const k0 = kdNum(i.kdFrom); let r = [0, 1, 2, 3].find(j => k0 - last[j] >= gap); if (r === undefined) r = last.indexOf(Math.min(...last)); last[r] = k0; return ["up", "dn2", "up2", "dn3"][r]; }); };
   const stCol = i => i.status === "הושלם" ? (i.doneDate && i.doneDate > wkD ? "#f39c12" : "#2f7d4f") : i.status === "בביצוע" ? "#f2c94c" : i.status === "HOLD" ? "#c0392b" : "#fff";
-  const itemLanes = kinds.map(k => { const ii = its.filter(i => (i.kind || "אחר") === k).sort((p, q) => kdNum(p.kdFrom) - kdNum(q.kdFrom)), I = KIND_ICON[k], lab = !NOLAB.has(k);
-    const dots = ii.map((i, n) => { const k0 = kdNum(i.kdFrom), num = Math.round(k0);   // ק.ד. — גם לארונות שקד
-      return `<span class="sm-dot ${i.status === "הושלם" ? "dn" : ""}" style="${at(k0)};--dc:${stCol(i)}" title="${esc(i.name || k)} · ק.ד. ${esc(itemTxt(i))} · ${esc(i.status || "")}${i.doneDate ? " · " + fmtD(i.doneDate) : ""}">${lab ? `<b class="${n % 2 ? "dn2" : "up"}">${num}</b>` : ""}</span>`; }).join("");
+  const itemLanes = kinds.map(k => { const ii = its.filter(i => (i.kind || "אחר") === k).sort((p, q) => kdNum(p.kdFrom) - kdNum(q.kdFrom)), I = KIND_ICON[k], lab = true, dense = DENSE.has(k), LR = dense ? labRows(ii) : null;
+    const dots = ii.map((i, n) => { const k0 = kdNum(i.kdFrom), num = Math.round(k0);   // ק.ד. — גם לארונות שקד, מעבירי מים ומעברים איריים
+      return `<span class="sm-dot ${i.status === "הושלם" ? "dn" : ""}" style="${at(k0)};--dc:${stCol(i)}" title="${esc(i.name || k)} · ק.ד. ${esc(itemTxt(i))} · ${esc(i.status || "")}${i.doneDate ? " · " + fmtD(i.doneDate) : ""}"><b class="${dense ? LR[n] + " sm" : n % 2 ? "dn2" : "up"}">${num}</b></span>`; }).join("");
     const dn = ii.filter(i => i.status === "הושלם").length;
-    const main = lane(KIND_PLURAL[k] || k, `${dn} מתוך ${ii.length} ${k === "תט״ז" ? "הוצבו" : "הושלמו"}`, dots, lab ? "sm-il" : "sm-il nolab", I ? matSvg(I.i) : "", I?.c || "#6b7280");
+    const main = lane(KIND_PLURAL[k] || k, `${dn} מתוך ${ii.length} ${k === "תט״ז" ? "הוצבו" : "הושלמו"}`, dots, dense ? "sm-il dense" : "sm-il", I ? matSvg(I.i) : "", I?.c || "#6b7280");
     if (!PAD_KINDS.includes(k)) return main;   // תט״ז / חדר טרפו — שורה נוספת להכנת המשטח (קבלן הגזרה)
     const P = ii.map(i => ({ ...i, status: i.padStatus || "טרם", doneDate: i.padDone || "" })), pdn = P.filter(i => i.status === "הושלם").length;
     const pdots = P.map((i, n) => { const k0 = kdNum(i.kdFrom); return `<span class="sm-dot ${i.status === "הושלם" ? "dn" : ""}" style="${at(k0)};--dc:${stCol(i)}" title="משטח · ${esc(i.name || k)} · ק.ד. ${esc(itemTxt(i))} · ${esc(i.status)}${i.doneDate ? " · " + fmtD(i.doneDate) : ""}">${lab ? `<b class="${n % 2 ? "dn2" : "up"}">${Math.round(k0)}</b>` : ""}</span>`; }).join("");
@@ -1370,11 +1386,12 @@ function sectorMap(d, c) {
     <div class="sm-body">${grid}
       ${lane("הזמנות", `${ords.length} הזמנות`, bands(ords, x => `${x.o.name} · ${kdTxt(kdRange(x.o))}`, (x, i) => ["#a8d1b4", "#cfe4d5"][i % 2], x => `${x.o.name}\nק.ד. ${kdTxt(kdRange(x.o))}`), "sm-bl")}
       ${lane("קטעי תכנון", `${ds.length} קטעים`, bands(ds.map(x => ({ ...x, q: x.ov })), x => `${x.office?.name || ""} ${x.s.num}`, x => x.office?.color || "#eef0eb", x => `${x.office?.name || ""} קטע ${x.s.num} · ק.ד. ${kdTxt(x.r)}`), "sm-bl")}
+      ${fenceLane}
       <div class="sm-sep">התקדמות לפי אבני דרך — כהה = בוצע יותר · <u></u> כתום = עבודה השבוע</div>
       ${ribbons}
       ${itemLanes ? `<div class="sm-sep">פריטים — <span class="sm-k" style="--dc:#2f7d4f"></span>הושלם <span class="sm-k" style="--dc:#f39c12"></span>הושלם השבוע <span class="sm-k" style="--dc:#f2c94c"></span>בביצוע <span class="sm-k" style="--dc:#c0392b"></span>HOLD <span class="sm-k" style="--dc:#fff"></span>טרם · המספר = ק.ד.</div>${itemLanes}` : ""}
       ${issLane || dlLane ? `<div class="sm-sep">נושאים ותוכניות — מעבר עם העכבר מציג פרטים</div>` : ""}${issLane}${dlLane}
-    </div>${axis}</div>`;
+    </div>${axis}</div>${fenceList}`;
 }
 function pageMreport(d) {
   const asOf = ui.repDate || todayStr(), from = addDays(asOf, -7), mains = d.contractors.filter(isMain), sp = d.contractors.filter(c => !isMain(c));
@@ -1616,7 +1633,7 @@ function gratesBlock(d) {
 }
 /** רכיבי הפרויקט — דף לכל סוג פריט, מכל הגזרות ומכל הקבלנים. רכיבים נוספים נשמרים בהגדרות (tableConfig/settings/components) */
 const COMPS_BASE = [["trafo", "חדרי טרפו", "חדר טרפו"], ["cab", "ארונות שקד", "ארון שקד"], ["culv", "מעבירי מים", "מעבירי מים"], ["air", "מעבירים איריים", "מעביר אירי"], ["grate", "סבכות", "סבכות למעבירי מים"],
-  ["@power", "חיבורי חח״י"], ["@sites", "אתרי איסוף"], ["gate", "שערים ומחסומים", "שערים"], ["ttz", "תט״זים", "תט״ז"], ["mine", "פינוי מוקשים", "פינוי מוקשים"]];
+  ["@power", "חיבורי חח״י"], ["@sites", "אתרי איסוף"], ["gate", "שערים וניצבים", "שערים"], ["ttz", "תט״זים", "תט״ז"], ["mine", "פינוי מוקשים", "פינוי מוקשים"]];
 const comps = () => [...COMPS_BASE.map(([k, name, kind]) => ({ k, name, kind })), ...Object.entries(RAW.tableConfig?.settings?.components || {}).map(([k, x]) => ({ k: "x" + k, name: x.name, kind: x.kind || x.name, custom: true }))];
 const compOf = kind => comps().find(x => x.kind === kind);
 function pageComp(d, key) {
@@ -2409,9 +2426,9 @@ function contractorHero(d, c, { ords, cov }) {
   const FZ = fenceState(d, c);
   const tile = (cls, label, big, sub, act = "") => `<div class="ch-t ${cls} ${act.includes(`data-id="${ui.ctab}"`) && !/t1|t2|t3/.test(cls) ? "on" : ""}" ${act}><span>${label}</span><b>${big}</b><small>${sub}</small></div>`;
   return `<div class="ch-banner" style="--cc:${col}">${cLogo(c, "ban")}<div><h1>${esc(c.name)}</h1><span>${esc(c.sector || "")} · ק.ד. ${kdTxt(kdRange(c))}${c.method ? ` · ${esc(c.method)}` : ""}${c.inspector ? ` · מפקח: ${esc(c.inspector)}` : ""}</span></div>
-      <div class="ov-ring ch-ring" title="גדר עומדת · כל המלאכות: ${now.overall === null ? "—" : Math.round(now.overall * 100) + "%"}">${ring(FZ.len ? FZ.stand / FZ.len : null, "#fff", 84).replace('stroke="#e9ece6"', 'stroke="rgba(255,255,255,.28)"')}<b>${FZ.len ? Math.round(FZ.stand / FZ.len * 100) + "%" : "—"}</b><em class="ov-rl" style="color:#fff;opacity:.85">גדר</em></div></div>
+      <div class="ov-ring ch-ring" title="גדר עומדת · כל המלאכות: ${now.overall === null ? "—" : Math.round(now.overall * 100) + "%"}">${ring(FZ.len ? FZ.stand / FZ.len : null, "#fff", 84).replace('stroke="#e9ece6"', 'stroke="rgba(255,255,255,.28)"')}<b class="m">${num(Math.round(FZ.stand), 0)}</b><em class="ov-rl" style="color:#fff;opacity:.85">מ׳ גדר</em></div></div>
     <div class="ch-tiles" style="--cc:${col}">
-      ${tile("t1", "🧱 גדר עומדת", num(Math.round(FZ.stand), 0), `מתוך ${m(now.km)} מ׳ · יסוד ${num(Math.round(FZ.found), 0)} · גמורה ${num(Math.round(FZ.done), 0)} · כל המלאכות ${now.overall === null ? "—" : Math.round(now.overall * 100) + "%"}`, `data-act="ctab" data-id="progress" role="button"`)}
+      ${tile("t1", "🧱 גדר עומדת", `${num(Math.round(FZ.stand), 0)} <small>מ׳</small>`, `מתוך ${num(Math.round(FZ.len), 0)} מ׳ · יסוד ${num(Math.round(FZ.found), 0)} · גמורה ${num(Math.round(FZ.done), 0)} מ׳`, `data-act="ctab" data-id="progress" role="button"`)}
       ${tile("t2", "השבוע", w > 0.0005 ? `+${m(w)}` : "—", w > 0.0005 ? "מ׳ מיום ראשון " + fmtD(weekStart(today)) : "ללא ביצוע השבוע", `data-act="ctab" data-id="progress" role="button"`)}
       ${tile("t3", "החודש", mm > 0.0005 ? `+${m(mm)}` : "—", mm > 0.0005 ? "מ׳ ב-30 הימים האחרונים" : "ללא ביצוע החודש", `data-act="ctab" data-id="progress" role="button"`)}
       ${tile(`t4 iss-hot ${open.some(i => priN(i.priority) === "דחוף") ? "urg" : ""}`, "⚠ נושאים פתוחים <em>לחיצה ←</em>", open.length, `${(u => u ? `🔴 ${u} דחופים · ` : "")(open.filter(i => priN(i.priority) === "דחוף").length)}${hold ? `HOLD: ${hold}` : "אין HOLD"}${mg ? ` · ${mg} להנהלה` : ""}`, `data-act="ctab" data-id="issues" role="button"`)}
@@ -2434,6 +2451,9 @@ function contractorHero(d, c, { ords, cov }) {
    יסוד = כלונסאות · גדר עומדת = מודולים (שיטת מודולים) או רשת תחתונה + עליונה יחד (שיטת מוסרות) · גמורה = עומדת + תלתליות על הגדר.
    מחושב לפי החתכים: חיתוך של הטווחים שבוצעו בכל קטע תכנון. מלאכות שאינן חלק מהגדר (למשל גדר הגנה לקווי מים) — לא נספרות. */
 const FENCE_STAND = a => a.stage === "רשתות / מודולים" && /מודול|רשת/.test(a.name || "") && !/קלמר|ריתוך|סכינ/.test(a.name || "");
+/** איחוד קטעי גדר צמודים / חופפים (לפי ק.ד.), עם סכום המטרים */
+function mergeRuns(R) { const s = [...R].sort((a, b) => a.lo - b.lo), out = []; for (const x of s) { const L = out[out.length - 1]; if (L && x.lo <= L.hi + 0.005) { L.hi = Math.max(L.hi, x.hi); L.m += x.m; } else out.push({ ...x }); } return out; }
+const kd1 = v => (Math.round(v * 10) / 10).toLocaleString("he-IL", { maximumFractionDigits: 1 });
 function ivInter(A, B) { const out = []; let i = 0, j = 0; while (i < A.length && j < B.length) { const lo = Math.max(A[i][0], B[j][0]), hi = Math.min(A[i][1], B[j][1]); if (hi > lo) out.push([lo, hi]); A[i][1] < B[j][1] ? i++ : j++; } return out; }
 function fenceState(d, c, asOf = null) {
   const ds = designOfC(d, c), acts = d.activities.filter(a => a.contractorId === c.id && !isUnitAct(a));
@@ -2443,11 +2463,12 @@ function fenceState(d, c, asOf = null) {
   const uni = (as, sid) => mergeIvs(as.flatMap(a => iv(a.id, sid)));
   const inter = (as, sid) => as.length ? as.map(a => iv(a.id, sid)).reduce((x, y) => ivInter(x, y)) : [];
   const len = L => L.reduce((t, [a, b]) => t + b - a, 0) * SECTION_M;
-  const out = { found: 0, stand: 0, done: 0, kd: { found: [], stand: [], done: [] } };
+  const out = { found: 0, stand: 0, done: 0, kd: { found: [], stand: [], done: [] }, runs: [] };   // runs — קטעי גדר עומדת: ק.ד. + מטרים
   ds.forEach(x => { const sid = x.s.id, f = uni(found, sid), st = inter(stand, sid), w = ivInter(st, uni(wire, sid));
     out.found += len(f); out.stand += len(st); out.done += len(w);
     const toKd = L => L.map(([a, b]) => [sec2kd(x.s, a), sec2kd(x.s, b)]).filter(([a, b]) => a !== null && b !== null).map(([a, b]) => [Math.min(a, b), Math.max(a, b)]);
-    out.kd.found.push(...toKd(f)); out.kd.stand.push(...toKd(st)); out.kd.done.push(...toKd(w)); });
+    out.kd.found.push(...toKd(f)); out.kd.stand.push(...toKd(st)); out.kd.done.push(...toKd(w));
+    st.forEach(([a, b]) => { const k1 = sec2kd(x.s, a), k2 = sec2kd(x.s, b); if (k1 !== null && k2 !== null) out.runs.push({ lo: Math.min(k1, k2), hi: Math.max(k1, k2), m: (b - a) * SECTION_M }); }); });
   const ex = execState(d, c.id, asOf); out.len = ex.rows.find(r => r.plan)?.plan || (lenOfC(d, c)?.km || 0) * 1000;
   out.has = stand.length > 0; return out;
 }
@@ -2482,11 +2503,11 @@ function metricTile(d, M) {
   const seg = (r, W, L2, cls, bg) => mergeIvs(L2 || []).map(([a, b]) => `<i class="${cls}" style="${bg ? `background:${bg};` : ""}right:${((r.hi - Math.min(r.hi, b)) / W * 100).toFixed(2)}%;width:${Math.max(0.6, (Math.min(r.hi, b) - Math.max(r.lo, a)) / W * 100).toFixed(2)}%"></i>`).join("");
   const strip = F.map(x => { const r = kdRange(x.c); if (!r) return ""; const W = r.hi - r.lo || 1;
     return `<div class="mt-b" style="flex:${x.now.len || 1};--cc:${x.col}" title="${esc(x.c.name)}: ${km(x.now.done)} מתוך ${km(x.now.len)} ק״מ"><div class="mt-tr">${fence ? seg(r, W, x.now.kdF, "f") + seg(r, W, x.now.kd, "s") + seg(r, W, x.now.kdD, "d") : seg(r, W, x.now.kd, "s", M.color)}</div>
-      <small>${x.now.len ? Math.round(x.now.done / x.now.len * 100) : 0}%</small></div>`; }).join("");
-  const sub = fence ? `יסוד ${km(F.reduce((t, x) => t + x.now.found, 0))} · גמורה ${km(F.reduce((t, x) => t + x.now.fin, 0))} ק״מ` : `מתוך ${km(L)} ק״מ`;
+      <small>${fence ? num(Math.round(x.now.done), 0) + " מ׳" : (x.now.len ? Math.round(x.now.done / x.now.len * 100) : 0) + "%"}</small></div>`; }).join("");
+  const sub = fence ? `יסוד ${num(Math.round(F.reduce((t, x) => t + x.now.found, 0)), 0)} · גמורה ${num(Math.round(F.reduce((t, x) => t + x.now.fin, 0)), 0)} מ׳` : `מתוך ${km(L)} ק״מ`;
   return `<div class="mt" style="--mc:${M.color}" title="${esc(F.map(x => `${x.c.name}: ${km(x.now.done)} מתוך ${km(x.now.len)}`).join(" · "))}">
-    <span class="mt-h">${fence ? "🧱 גדר עומדת" : esc(M.name)}</span><div class="mt-n"><b>${km(dn)}</b><span>ק״מ</span><em>${pc}%</em></div>
-    <small class="mt-s">${sub}${fence ? ` · מתוך ${km(L)}` : ""}</small><small class="mt-w ${wk > 0.5 ? "" : "z"}">${wk > 0.5 ? `השבוע +${num(Math.round(wk), 0)} מ׳` : "ללא התקדמות השבוע"}</small>
+    <span class="mt-h">${fence ? "🧱 גדר עומדת" : esc(M.name)}</span><div class="mt-n">${fence ? `<b>${num(Math.round(dn), 0)}</b><span>מ׳</span>` : `<b>${km(dn)}</b><span>ק״מ</span><em>${pc}%</em>`}</div>
+    <small class="mt-s">${sub}${fence ? ` · מתוך ${num(Math.round(L), 0)} מ׳` : ""}</small><small class="mt-w ${wk > 0.5 ? "" : "z"}">${wk > 0.5 ? `השבוע +${num(Math.round(wk), 0)} מ׳` : "ללא התקדמות השבוע"}</small>
     <div class="mt-strip">${strip}</div></div>`;
 }
 function ovMetricsBlock(d) {
@@ -2504,16 +2525,20 @@ function overviewHero(d) {
   const km = mains.reduce((t, s) => t + s.now.km, 0), done = mains.reduce((t, s) => t + dn(s.now), 0), dW = done - mains.reduce((t, s) => t + dn(s.wk), 0), dM = done - mains.reduce((t, s) => t + dn(s.mo), 0);
   const open = d.issues.filter(i => i.status !== "סגור"), mgmt = open.filter(i => i.mgmt), pend = d.progress.filter(p => p.review === "לבדיקה").length;
   const m = v => Math.round(v * 1000).toLocaleString("he-IL");
+  // גדר עומדת — המדד שההנהלה רוצה לראות: מטרים, לכל קבלן ולכל הפרויקט
+  const FZ = mains.map(s => ({ now: fenceState(d, s.c), wk: fenceState(d, s.c, wkD), mo: fenceState(d, s.c, moD) }));
+  const fS = k => FZ.reduce((t, x) => t + x.now[k], 0), fLen = FZ.reduce((t, x) => t + x.now.len, 0), fW = fS("stand") - FZ.reduce((t, x) => t + x.wk.stand, 0), fM = fS("stand") - FZ.reduce((t, x) => t + x.mo.stand, 0);
+  const M0 = v => num(Math.round(v), 0);
   const kpi = (cls, label, big, sub, act = "") => `<div class="ov-kpi ${cls}" ${act}><span>${label}</span><b>${big}</b><small>${sub}</small></div>`;
   const msBar = s => `<div class="ov-ms">${STAGE_GROUPS.map(G => { const vs = G.stages.map(g => s.now.st[g]).filter(v => v !== null && v !== undefined); const v = vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null;
     return `<div class="ov-msi" title="${esc(G.name)}: ${v === null ? "לא רלוונטי" : Math.round(v * 100) + "%"}"><i style="--c:${G.color}"><em style="height:${v === null ? 0 : Math.max(4, Math.round(v * 100))}%;background:${G.color}"></em></i><span>${esc(G.name)}</span></div>`; }).join("")}</div>`;
   const card = s => { const w = dn(s.now) - dn(s.wk), mo = dn(s.now) - dn(s.mo), o = open.filter(i => i.contractorId === s.c.id), fz = fenceState(d, s.c), fzw = fenceState(d, s.c, wkD), fp = fz.len ? fz.stand / fz.len : null, fw = fz.stand - fzw.stand;
     return `<button class="ov-card" data-act="nav" data-id="c:${s.c.id}" style="--cc:${s.col}">
       <div class="ov-ch">${cLogo(s.c, "card")}<b>${esc(s.c.name)}</b><span>${esc(s.c.sector || "")} · ק.ד. ${kdTxt(kdRange(s.c))}</span></div>
-      <div class="ov-cb"><div class="ov-ring">${ring(fp, s.col)}<b>${fp === null ? "—" : Math.round(fp * 100) + "%"}</b><em class="ov-rl">גדר</em></div>
-        <div class="ov-nums"><div><b>${num(Math.round(fz.stand), 0)}</b> <small>מ׳ גדר עומדת מתוך ${m(s.now.km)}</small></div>
+      <div class="ov-cb"><div class="ov-ring">${ring(fp, s.col)}<b class="m">${num(Math.round(fz.stand), 0)}</b><em class="ov-rl">מ׳ גדר</em></div>
+        <div class="ov-nums"><div><b>${num(Math.round(fz.stand), 0)}</b> <small>מ׳ גדר עומדת מתוך ${num(Math.round(fz.len), 0)} מ׳</small></div>
           <div class="ov-wk ${fw > 0.5 ? "" : "zero"}">${fw > 0.5 ? `גדר השבוע +${num(Math.round(fw), 0)} מ׳` : "ללא גדר חדשה השבוע"}</div>
-          <div class="ov-mo small">יסוד ${num(Math.round(fz.found), 0)} מ׳ · כל המלאכות ${s.now.overall === null ? "—" : Math.round(s.now.overall * 100) + "%"}</div>
+          <div class="ov-mo small">יסוד ${num(Math.round(fz.found), 0)} מ׳ · גמורה ${num(Math.round(fz.done), 0)} מ׳</div>
           ${(f => f.eta ? `<div class="ov-fc ${f.lateDays > 14 ? "bad" : f.lateDays > 0 ? "warn" : ""}">סיום צפוי ${fmtMY(f.eta)}${f.target ? ` · יעד ${fmtMY(f.target)}` : ""}</div>` : "")(forecast(d, s.c))}
           <div class="ov-iss">${o.length} נושאים פתוחים${(u => u ? ` · <span class="hold">🔴 ${u} דחופים</span>` : "")(o.filter(i => priN(i.priority) === "דחוף").length)}${o.filter(i => i.status === "HOLD").length ? ` · <span class="hold">${o.filter(i => i.status === "HOLD").length} HOLD</span>` : ""}</div></div></div>
       ${msBar(s)}</button>`; };
@@ -2540,8 +2565,8 @@ function overviewHero(d) {
         <span class="ov-spn"><b>${dn2}</b>/${ii.length} הושלמו${ip ? ` · ${ip} בביצוע` : ""}</span>${wk ? `<span class="ov-wk">השבוע +${wk}</span>` : ""}</div>
         <div class="ov-spbar"><em style="width:${ii.length ? Math.round(dn2 / ii.length * 100) : 0}%"></em></div></button>`; }); });
   return `${ovMetricsBlock(d)}<div class="ov-kpis">
-      ${kpi("k1", "כל המלאכות — ממוצע (מטר שווה-ערך)", `${km ? Math.round(done / km * 100) : 0}%`, `${m(done)} מתוך ${m(km)} מ׳`)}
-      ${kpi("k2", "התקדמות", `<span class="ov-wkb">+${m(Math.max(0, dW))}</span> <small>מ׳ השבוע</small>`, `החודש +${m(Math.max(0, dM))} מ׳`)}
+      ${kpi("k1", "🧱 גדר עומדת — כל הפרויקט", `${M0(fS("stand"))} <small>מ׳ מתוך ${M0(fLen)}</small>`, mains.map((x, i) => `<span style="white-space:nowrap">${esc(x.c.name)} <span style="font-weight:800">${M0(FZ[i].now.stand)}</span></span>`).join(" · ") + ` מ׳`)}
+      ${kpi("k2", "גדר — התקדמות", `<span class="ov-wkb">+${M0(Math.max(0, fW))}</span> <small>מ׳ השבוע</small>`, `החודש +${M0(Math.max(0, fM))} מ׳`)}
       ${kpi("k3", "נושאים פתוחים", open.length, `HOLD: ${open.filter(i => i.status === "HOLD").length}${pend ? ` · ${pend} דיווחים ממתינים לאישור` : ""}`)}
       ${kpi("k4", "להחלטת הנהלה", mgmt.length, mgmt.length ? "לחיצה — לוח התראות" : "אין נושאים מסומנים", `data-act="nav" data-id="alerts" role="button" tabindex="0"`)}
     </div>
@@ -2811,12 +2836,13 @@ const ofT = (a, b) => `${a}<span class="ofT"> מתוך ${b}</span>`;
 const statRow = (label, st, extra = "") => `<tr><td><b>${label}</b>${extra}</td><td class="c">${st.total}</td><td class="c">${st.done}</td><td class="c">${st.prog}</td><td class="c">${st.plan}</td><td class="c">${st.notyet}</td><td class="c">${st.hold}</td>
   <td class="c" style="${heatBg(st.total ? st.done / st.total : null)}"><b>${st.total ? ofT(st.done, st.total) : "—"}</b><div class="small">${st.total ? Math.round(st.done / st.total * 100) + "%" : ""}</div></td><td class="c small">${st.km ? `<b>${ofT(num(Math.round(st.kmDone * 1000), 0), MTR(st.km))}</b><div class="small">${Math.round(st.kmDone / st.km * 100)}%</div>` : "—"}</td></tr>`;
 const statHead = first => `<thead><tr><th>${first}</th><th>סה״כ</th><th>הושלמו</th><th>בביצוע</th><th>מתוכננים</th><th>טרם</th><th>HOLD</th><th>הושלמו מתוך</th><th>אורך (טווחים)</th></tr></thead>`;
-/* ---------- סוגי שערים: שער / מחסום / פשפש + סוגים שמגדירים (הגדרות: settings.gateTypes). פריט "שערים" בלי סוג = שער ---------- */
-const GATE_T0 = ["שער", "מחסום", "פשפש"];
-const gateTypes = () => [...new Set([...GATE_T0, ...(RAW.tableConfig?.settings?.gateTypes || []), ...list("items").filter(i => i.kind === "שערים" && i.gateType).map(i => i.gateType)])];
-const gateT = i => i.gateType || "שער";
+/* ---------- סוגי שערים: שער / ניצב (לשעבר "מחסום") / פשפש + סוגים שמגדירים (הגדרות: settings.gateTypes). פריט "שערים" בלי סוג = שער ---------- */
+const GATE_T0 = ["שער", "ניצב", "פשפש"];
+const gtName = t => String(t || "").replace(/מחסומים/g, "ניצבים").replace(/מחסום/g, "ניצב");   // המונח הוחלף: "מחסום" נשמר בנתונים ישנים — מוצג תמיד "ניצב"
+const gateTypes = () => [...new Set([...GATE_T0, ...(RAW.tableConfig?.settings?.gateTypes || []).map(gtName), ...list("items").filter(i => i.kind === "שערים" && i.gateType).map(i => gtName(i.gateType))])];
+const gateT = i => gtName(i.gateType) || "שער";
 function gateTypeModal(done) {
-  modal(`<h2>סוג חדש</h2><label class="field">שם הסוג<input class="inp" id="gt_n" placeholder="למשל: שער כפול, מחסום הידראולי, מעבר הולכי רגל"></label><p class="small muted" id="gt_m"></p>
+  modal(`<h2>סוג חדש</h2><label class="field">שם הסוג<input class="inp" id="gt_n" placeholder="למשל: שער כפול, ניצב הידראולי, מעבר הולכי רגל"></label><p class="small muted" id="gt_m"></p>
     <div class="row"><button class="btn" id="mYes">הוספה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
     const q = m.querySelector("#gt_n"); q.focus(); m.querySelector("#mNo").onclick = () => { close(); done(null); };
     const go = async () => { const n = q.value.trim(); if (!n) return; if (!gateTypes().includes(n)) { const S = { ...(RAW.tableConfig?.settings || {}) }; delete S.updatedAt; delete S.updatedBy; S.gateTypes = [...(S.gateTypes || []), n]; await api.put("tableConfig", "settings", S); } close(); done(n); };
@@ -3727,7 +3753,7 @@ const QN_W = "(?:^|[^\\u05D0-\\u05EAA-Za-z0-9])", QN_E = "(?=$|[^\\u05D0-\\u05EA
 const QN_STOP = new Set(["חשמל", "פינוי", "מוקשים", "משה", "קבלן"]);
 const qnCKeys = c => { const k = qnNorm(String(c.name || "").replace(/\(.*?\)/g, "")).split(" ").filter(w => w.length >= 3 && !QN_STOP.has(w)); return [...new Set([...k, ...k.filter(w => w.startsWith("ה") && w.length > 3).map(w => w.slice(1))])]; };
 const QN_DOW = [["ראשון", "א"], ["שני", "ב"], ["שלישי", "ג"], ["רביעי", "ד"], ["חמישי", "ה"], ["שישי", "ו"]];
-const W_KINDS = [[/שער|מחסום|פשפש/, "שערים"], [/מעביר\s*אירי/, "מעביר אירי"], [/ארון/, "ארון שקד"], [/תט["״']?ז/, "תט״ז"], [/טרפו/, "חדר טרפו"], [/מעביר/, "מעבירי מים"]];
+const W_KINDS = [[/שער|מחסום|ניצב|פשפש/, "שערים"], [/מעביר\s*אירי/, "מעביר אירי"], [/ארון/, "ארון שקד"], [/תט["״']?ז/, "תט״ז"], [/טרפו/, "חדר טרפו"], [/מעביר/, "מעבירי מים"]];
 function qnOwner(w, d) {   // "המתכנן" / "רשות העתיקות" / "נועם" / "בראשי" → מי מטפל (+ קבלן)
   const n = qnNorm(w), n2 = n.replace(/^ה/, "");
   const t = teamNames().find(o => qnNorm(o) === n || qnNorm(o).split(" ")[0] === n); if (t) return { owner: t };
