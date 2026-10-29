@@ -321,7 +321,7 @@ body.dark .mt { filter: invert(1) hue-rotate(180deg); }
 .ov-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -14px rgba(0,0,0,.45); } .ov-card:focus-visible { outline: 3px solid var(--cc); }
 .ov-ch { background: linear-gradient(150deg, color-mix(in srgb, var(--cc) 80%, #fff), var(--cc)); color: #fff; padding: 12px 16px; display: flex; flex-direction: column; } .ov-ch b { font-size: 19px; } .ov-ch span { font-size: 12.5px; opacity: .9; }
 .ov-cb { display: flex; align-items: center; gap: 12px; padding: 14px 14px 6px; }
-.ov-ring b.m { font-size: 16px; } .ov-ring { position: relative; flex: none; width: 92px; height: 92px; } .ov-ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: var(--cc); }
+.ov-ring { position: relative; flex: none; width: 92px; height: 92px; } .ov-ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: var(--cc); }
 .ov-nums { display: flex; flex-direction: column; gap: 3px; font-size: 13px; } .ov-nums > div:first-child b { font-size: 20px; } .ov-nums small { color: var(--muted); }
 .ov-wk { font-weight: 800; color: #c25e00; font-size: 14.5px; } .ov-wk.zero { color: var(--muted); font-weight: 600; font-size: 13px; } .ov-mo { color: #2f7d4f; font-weight: 700; } .ov-mo.zero { color: var(--muted); font-weight: 600; } .ov-iss { color: var(--muted); font-size: 12.5px; } .ov-iss .hold { color: #b5541c; font-weight: 700; }
 .ov-ms { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 8px 12px 12px; }
@@ -530,15 +530,7 @@ tr.mk > td:first-child { box-shadow: inset -4px 0 0 #1f7a8c; } tr.mk-bad > td:fi
 .ch-graphs > summary::-webkit-details-marker { display: none; } .ch-graphs > summary::before { content: "▸"; color: var(--muted); } .ch-graphs[open] > summary::before { content: "▾"; }
 .ch-graphs > summary em { font-style: normal; font-weight: 400; font-size: 12px; color: var(--muted); margin-inline-start: auto; } .ch-graphs[open] > summary em { display: none; }
 .ch-graphs[open] > summary { margin-bottom: 10px; } .sm-rib u { position: absolute; top: 0; height: 4px; background: #f39c12; }
-.sm-il { min-height: 44px; border-bottom: 1px solid #eef0eb; } .sm-il.nolab { min-height: 30px; } .sm-il.dense { min-height: 70px; }
-.sm-dot b.up2 { bottom: 23px; } .sm-dot b.dn3 { top: 23px; } .sm-dot b.sm { font-size: 9.5px; }
-.sm-fzt { position: absolute; left: 0; right: 0; top: 50%; height: 16px; margin-top: -8px; background: #f1f3ef; border-radius: 4px; }
-.sm-fz { position: absolute; top: 0; bottom: 0; border-radius: 3px; } .sm-fz.f { background: color-mix(in srgb, var(--cc) 25%, #fff); } .sm-fz.s { background: var(--cc); top: 2px; bottom: 2px; } .sm-fz.d { background: color-mix(in srgb, var(--cc) 60%, #000); top: 5px; bottom: 5px; }
-.sm-fzl { position: absolute; top: -14px; text-align: center; font-size: 10px; font-weight: 800; color: color-mix(in srgb, var(--cc) 70%, #000); white-space: nowrap; overflow: hidden; }
-.sm-fzl-l { min-height: 46px; border-bottom: 1px solid #eef0eb; }
-.fz-list { margin: 10px 0 2px; padding: 8px 10px; border: 1px solid #e3e7e0; border-radius: 10px; background: #fbfcfa; } .fz-list > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.fz-c { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--cc) 12%, #fff); border: 1px solid color-mix(in srgb, var(--cc) 35%, #fff); }
-.fz-list i.k { display: inline-block; width: 14px; height: 9px; border-radius: 2px; margin: 0 6px 0 2px; vertical-align: middle; } .fz-list i.k.f { background: color-mix(in srgb, var(--cc) 25%, #fff); } .fz-list i.k.s { background: var(--cc); } .fz-list i.k.d { background: color-mix(in srgb, var(--cc) 60%, #000); }
+.sm-il { min-height: 44px; border-bottom: 1px solid #eef0eb; } .sm-il.nolab { min-height: 30px; }
 .sm-il .sm-tr { background: color-mix(in srgb, var(--lc) 6%, transparent); } .sm-il:nth-child(even) .sm-tr { background: color-mix(in srgb, var(--lc) 11%, transparent); }
 .sm-il .sm-tr::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1.5px dashed color-mix(in srgb, var(--lc) 55%, #fff); pointer-events: none; }
 .sm-dot { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px -6px 0 0; border-radius: 50%; background: var(--dc); border: 1.5px solid #8a9088; box-sizing: border-box; cursor: help; } .sm-dot.dn { border-color: #1f5e3a; }
@@ -1351,24 +1343,16 @@ function sectorMap(d, c) {
     segs += runs.filter(x => x.m >= 15).map(x => { const wPct = (x.b - x.a) / W * 100, t = num(Math.round(x.m / 10) * 10, 0);
       return `<span class="sm-rn ${wPct < 3.2 ? "sm" : ""}" style="${span(x.a, x.b)}" title="ק.ד. ${kdTxt({ lo: x.a, hi: x.b })} · ≈${t} מ׳ שווה-ערך">${wPct >= 1.6 ? t : ""}</span>`; }).join("");
     return lane(G.name, `≈${num(Math.round(totM / 10) * 10, 0)} מ׳ · ${pct}%`, `<div class="sm-rib" style="--g:${G.color};--gt:${G.tint}" title="${esc(G.name)}: ${ga.map(a => svShort(a.name)).join(" · ")}">${segs}</div>`, "sm-rl", "", G.color); }).join("");
-  // גדר לפי ק.ד. — יסוד (בהיר) · עומדת (צבע הקבלן) · גמורה (כהה); מתחת למפה — רשימת הקטעים במטרים
-  const FZ = fenceState(d, c), cc = cColor(d, c), fseg = (L, cls) => mergeIvs(L || []).map(([a, b]) => `<i class="sm-fz ${cls}" style="${span(a, b)}" title="ק.ד. ${kd1(b)}–${kd1(a)}"></i>`).join("");
-  const runs = mergeRuns(FZ.runs);
-  const fenceLane = FZ.found > 0 || FZ.stand > 0 ? lane("🧱 גדר — לפי ק.ד.", `עומדת ${num(Math.round(FZ.stand), 0)} מ׳ · יסוד ${num(Math.round(FZ.found), 0)} · גמורה ${num(Math.round(FZ.done), 0)}`,
-    `<div class="sm-fzt" style="--cc:${cc}">${fseg(FZ.kd.found, "f")}${fseg(FZ.kd.stand, "s")}${fseg(FZ.kd.done, "d")}${runs.filter(x => (x.hi - x.lo) / W > 0.045).map(x => `<span class="sm-fzl" style="${span(x.lo, x.hi)}">${num(Math.round(x.m), 0)} מ׳</span>`).join("")}</div>`, "sm-fzl-l", "", cc) : "";
-  const fenceList = runs.length ? `<div class="fz-list" style="--cc:${cc}"><b>🧱 קטעי גדר עומדת (${runs.length}) · סה״כ ${num(Math.round(FZ.stand), 0)} מ׳</b> <span class="small muted">— מצפון לדרום · <i class="k f"></i>יסוד <i class="k s"></i>עומדת <i class="k d"></i>גמורה (עם תלתליות)</span>
-    <div>${[...runs].sort((a, b) => b.hi - a.hi).map(x => `<span class="fz-c">ק.ד. ${kd1(x.hi)}–${kd1(x.lo)} · <b>${num(Math.round(x.m), 0)} מ׳</b></span>`).join("")}</div></div>` : "";
   // פריטים לפי סוג — נקודה + מספר / ק.ד.
   const its = d.items.filter(i => i.status !== "מבוטל" && mainAt(d, i)?.id === c.id && kdNum(i.kdFrom) !== null);
   const kinds = [...new Set(its.map(i => i.kind || "אחר"))];
-  const DENSE = new Set(["מעבירי מים", "מעביר אירי"]);   // הרבה פריטים צפופים — המספרים בארבע שורות מתחלפות כדי שלא יעלו זה על זה
-  const labRows = ii => { const last = [-1e9, -1e9, -1e9, -1e9], gap = Math.max(0.6, W * 0.022); return ii.map(i => { const k0 = kdNum(i.kdFrom); let r = [0, 1, 2, 3].find(j => k0 - last[j] >= gap); if (r === undefined) r = last.indexOf(Math.min(...last)); last[r] = k0; return ["up", "dn2", "up2", "dn3"][r]; }); };
+  const NOLAB = new Set(["מעבירי מים", "מעביר אירי"]);
   const stCol = i => i.status === "הושלם" ? (i.doneDate && i.doneDate > wkD ? "#f39c12" : "#2f7d4f") : i.status === "בביצוע" ? "#f2c94c" : i.status === "HOLD" ? "#c0392b" : "#fff";
-  const itemLanes = kinds.map(k => { const ii = its.filter(i => (i.kind || "אחר") === k).sort((p, q) => kdNum(p.kdFrom) - kdNum(q.kdFrom)), I = KIND_ICON[k], lab = true, dense = DENSE.has(k), LR = dense ? labRows(ii) : null;
-    const dots = ii.map((i, n) => { const k0 = kdNum(i.kdFrom), num = Math.round(k0);   // ק.ד. — גם לארונות שקד, מעבירי מים ומעברים איריים
-      return `<span class="sm-dot ${i.status === "הושלם" ? "dn" : ""}" style="${at(k0)};--dc:${stCol(i)}" title="${esc(i.name || k)} · ק.ד. ${esc(itemTxt(i))} · ${esc(i.status || "")}${i.doneDate ? " · " + fmtD(i.doneDate) : ""}"><b class="${dense ? LR[n] + " sm" : n % 2 ? "dn2" : "up"}">${num}</b></span>`; }).join("");
+  const itemLanes = kinds.map(k => { const ii = its.filter(i => (i.kind || "אחר") === k).sort((p, q) => kdNum(p.kdFrom) - kdNum(q.kdFrom)), I = KIND_ICON[k], lab = !NOLAB.has(k);
+    const dots = ii.map((i, n) => { const k0 = kdNum(i.kdFrom), num = Math.round(k0);   // ק.ד. — גם לארונות שקד
+      return `<span class="sm-dot ${i.status === "הושלם" ? "dn" : ""}" style="${at(k0)};--dc:${stCol(i)}" title="${esc(i.name || k)} · ק.ד. ${esc(itemTxt(i))} · ${esc(i.status || "")}${i.doneDate ? " · " + fmtD(i.doneDate) : ""}">${lab ? `<b class="${n % 2 ? "dn2" : "up"}">${num}</b>` : ""}</span>`; }).join("");
     const dn = ii.filter(i => i.status === "הושלם").length;
-    const main = lane(KIND_PLURAL[k] || k, `${dn} מתוך ${ii.length} ${k === "תט״ז" ? "הוצבו" : "הושלמו"}`, dots, dense ? "sm-il dense" : "sm-il", I ? matSvg(I.i) : "", I?.c || "#6b7280");
+    const main = lane(KIND_PLURAL[k] || k, `${dn} מתוך ${ii.length} ${k === "תט״ז" ? "הוצבו" : "הושלמו"}`, dots, lab ? "sm-il" : "sm-il nolab", I ? matSvg(I.i) : "", I?.c || "#6b7280");
     if (!PAD_KINDS.includes(k)) return main;   // תט״ז / חדר טרפו — שורה נוספת להכנת המשטח (קבלן הגזרה)
     const P = ii.map(i => ({ ...i, status: i.padStatus || "טרם", doneDate: i.padDone || "" })), pdn = P.filter(i => i.status === "הושלם").length;
     const pdots = P.map((i, n) => { const k0 = kdNum(i.kdFrom); return `<span class="sm-dot ${i.status === "הושלם" ? "dn" : ""}" style="${at(k0)};--dc:${stCol(i)}" title="משטח · ${esc(i.name || k)} · ק.ד. ${esc(itemTxt(i))} · ${esc(i.status)}${i.doneDate ? " · " + fmtD(i.doneDate) : ""}">${lab ? `<b class="${n % 2 ? "dn2" : "up"}">${Math.round(k0)}</b>` : ""}</span>`; }).join("");
@@ -1386,12 +1370,11 @@ function sectorMap(d, c) {
     <div class="sm-body">${grid}
       ${lane("הזמנות", `${ords.length} הזמנות`, bands(ords, x => `${x.o.name} · ${kdTxt(kdRange(x.o))}`, (x, i) => ["#a8d1b4", "#cfe4d5"][i % 2], x => `${x.o.name}\nק.ד. ${kdTxt(kdRange(x.o))}`), "sm-bl")}
       ${lane("קטעי תכנון", `${ds.length} קטעים`, bands(ds.map(x => ({ ...x, q: x.ov })), x => `${x.office?.name || ""} ${x.s.num}`, x => x.office?.color || "#eef0eb", x => `${x.office?.name || ""} קטע ${x.s.num} · ק.ד. ${kdTxt(x.r)}`), "sm-bl")}
-      ${fenceLane}
       <div class="sm-sep">התקדמות לפי אבני דרך — כהה = בוצע יותר · <u></u> כתום = עבודה השבוע</div>
       ${ribbons}
       ${itemLanes ? `<div class="sm-sep">פריטים — <span class="sm-k" style="--dc:#2f7d4f"></span>הושלם <span class="sm-k" style="--dc:#f39c12"></span>הושלם השבוע <span class="sm-k" style="--dc:#f2c94c"></span>בביצוע <span class="sm-k" style="--dc:#c0392b"></span>HOLD <span class="sm-k" style="--dc:#fff"></span>טרם · המספר = ק.ד.</div>${itemLanes}` : ""}
       ${issLane || dlLane ? `<div class="sm-sep">נושאים ותוכניות — מעבר עם העכבר מציג פרטים</div>` : ""}${issLane}${dlLane}
-    </div>${axis}</div>${fenceList}`;
+    </div>${axis}</div>`;
 }
 function pageMreport(d) {
   const asOf = ui.repDate || todayStr(), from = addDays(asOf, -7), mains = d.contractors.filter(isMain), sp = d.contractors.filter(c => !isMain(c));
@@ -1633,7 +1616,7 @@ function gratesBlock(d) {
 }
 /** רכיבי הפרויקט — דף לכל סוג פריט, מכל הגזרות ומכל הקבלנים. רכיבים נוספים נשמרים בהגדרות (tableConfig/settings/components) */
 const COMPS_BASE = [["trafo", "חדרי טרפו", "חדר טרפו"], ["cab", "ארונות שקד", "ארון שקד"], ["culv", "מעבירי מים", "מעבירי מים"], ["air", "מעבירים איריים", "מעביר אירי"], ["grate", "סבכות", "סבכות למעבירי מים"],
-  ["@power", "חיבורי חח״י"], ["@sites", "אתרי איסוף"], ["gate", "שערים וניצבים", "שערים"], ["ttz", "תט״זים", "תט״ז"], ["mine", "פינוי מוקשים", "פינוי מוקשים"]];
+  ["@power", "חיבורי חח״י"], ["@sites", "אתרי איסוף"], ["gate", "שערים ומחסומים", "שערים"], ["ttz", "תט״זים", "תט״ז"], ["mine", "פינוי מוקשים", "פינוי מוקשים"]];
 const comps = () => [...COMPS_BASE.map(([k, name, kind]) => ({ k, name, kind })), ...Object.entries(RAW.tableConfig?.settings?.components || {}).map(([k, x]) => ({ k: "x" + k, name: x.name, kind: x.kind || x.name, custom: true }))];
 const compOf = kind => comps().find(x => x.kind === kind);
 function pageComp(d, key) {
@@ -2426,9 +2409,9 @@ function contractorHero(d, c, { ords, cov }) {
   const FZ = fenceState(d, c);
   const tile = (cls, label, big, sub, act = "") => `<div class="ch-t ${cls} ${act.includes(`data-id="${ui.ctab}"`) && !/t1|t2|t3/.test(cls) ? "on" : ""}" ${act}><span>${label}</span><b>${big}</b><small>${sub}</small></div>`;
   return `<div class="ch-banner" style="--cc:${col}">${cLogo(c, "ban")}<div><h1>${esc(c.name)}</h1><span>${esc(c.sector || "")} · ק.ד. ${kdTxt(kdRange(c))}${c.method ? ` · ${esc(c.method)}` : ""}${c.inspector ? ` · מפקח: ${esc(c.inspector)}` : ""}</span></div>
-      <div class="ov-ring ch-ring" title="גדר עומדת · כל המלאכות: ${now.overall === null ? "—" : Math.round(now.overall * 100) + "%"}">${ring(FZ.len ? FZ.stand / FZ.len : null, "#fff", 84).replace('stroke="#e9ece6"', 'stroke="rgba(255,255,255,.28)"')}<b class="m">${num(Math.round(FZ.stand), 0)}</b><em class="ov-rl" style="color:#fff;opacity:.85">מ׳ גדר</em></div></div>
+      <div class="ov-ring ch-ring" title="גדר עומדת · כל המלאכות: ${now.overall === null ? "—" : Math.round(now.overall * 100) + "%"}">${ring(FZ.len ? FZ.stand / FZ.len : null, "#fff", 84).replace('stroke="#e9ece6"', 'stroke="rgba(255,255,255,.28)"')}<b>${FZ.len ? Math.round(FZ.stand / FZ.len * 100) + "%" : "—"}</b><em class="ov-rl" style="color:#fff;opacity:.85">גדר</em></div></div>
     <div class="ch-tiles" style="--cc:${col}">
-      ${tile("t1", "🧱 גדר עומדת", `${num(Math.round(FZ.stand), 0)} <small>מ׳</small>`, `מתוך ${num(Math.round(FZ.len), 0)} מ׳ · יסוד ${num(Math.round(FZ.found), 0)} · גמורה ${num(Math.round(FZ.done), 0)} מ׳`, `data-act="ctab" data-id="progress" role="button"`)}
+      ${tile("t1", "🧱 גדר עומדת", num(Math.round(FZ.stand), 0), `מתוך ${m(now.km)} מ׳ · יסוד ${num(Math.round(FZ.found), 0)} · גמורה ${num(Math.round(FZ.done), 0)} · כל המלאכות ${now.overall === null ? "—" : Math.round(now.overall * 100) + "%"}`, `data-act="ctab" data-id="progress" role="button"`)}
       ${tile("t2", "השבוע", w > 0.0005 ? `+${m(w)}` : "—", w > 0.0005 ? "מ׳ מיום ראשון " + fmtD(weekStart(today)) : "ללא ביצוע השבוע", `data-act="ctab" data-id="progress" role="button"`)}
       ${tile("t3", "החודש", mm > 0.0005 ? `+${m(mm)}` : "—", mm > 0.0005 ? "מ׳ ב-30 הימים האחרונים" : "ללא ביצוע החודש", `data-act="ctab" data-id="progress" role="button"`)}
       ${tile(`t4 iss-hot ${open.some(i => priN(i.priority) === "דחוף") ? "urg" : ""}`, "⚠ נושאים פתוחים <em>לחיצה ←</em>", open.length, `${(u => u ? `🔴 ${u} דחופים · ` : "")(open.filter(i => priN(i.priority) === "דחוף").length)}${hold ? `HOLD: ${hold}` : "אין HOLD"}${mg ? ` · ${mg} להנהלה` : ""}`, `data-act="ctab" data-id="issues" role="button"`)}
@@ -2451,9 +2434,6 @@ function contractorHero(d, c, { ords, cov }) {
    יסוד = כלונסאות · גדר עומדת = מודולים (שיטת מודולים) או רשת תחתונה + עליונה יחד (שיטת מוסרות) · גמורה = עומדת + תלתליות על הגדר.
    מחושב לפי החתכים: חיתוך של הטווחים שבוצעו בכל קטע תכנון. מלאכות שאינן חלק מהגדר (למשל גדר הגנה לקווי מים) — לא נספרות. */
 const FENCE_STAND = a => a.stage === "רשתות / מודולים" && /מודול|רשת/.test(a.name || "") && !/קלמר|ריתוך|סכינ/.test(a.name || "");
-/** איחוד קטעי גדר צמודים / חופפים (לפי ק.ד.), עם סכום המטרים */
-function mergeRuns(R) { const s = [...R].sort((a, b) => a.lo - b.lo), out = []; for (const x of s) { const L = out[out.length - 1]; if (L && x.lo <= L.hi + 0.005) { L.hi = Math.max(L.hi, x.hi); L.m += x.m; } else out.push({ ...x }); } return out; }
-const kd1 = v => (Math.round(v * 10) / 10).toLocaleString("he-IL", { maximumFractionDigits: 1 });
 function ivInter(A, B) { const out = []; let i = 0, j = 0; while (i < A.length && j < B.length) { const lo = Math.max(A[i][0], B[j][0]), hi = Math.min(A[i][1], B[j][1]); if (hi > lo) out.push([lo, hi]); A[i][1] < B[j][1] ? i++ : j++; } return out; }
 function fenceState(d, c, asOf = null) {
   const ds = designOfC(d, c), acts = d.activities.filter(a => a.contractorId === c.id && !isUnitAct(a));
@@ -2463,12 +2443,14 @@ function fenceState(d, c, asOf = null) {
   const uni = (as, sid) => mergeIvs(as.flatMap(a => iv(a.id, sid)));
   const inter = (as, sid) => as.length ? as.map(a => iv(a.id, sid)).reduce((x, y) => ivInter(x, y)) : [];
   const len = L => L.reduce((t, [a, b]) => t + b - a, 0) * SECTION_M;
-  const out = { found: 0, stand: 0, done: 0, kd: { found: [], stand: [], done: [] }, runs: [] };   // runs — קטעי גדר עומדת: ק.ד. + מטרים
+  const out = { found: 0, stand: 0, done: 0, kd: { found: [], stand: [], done: [] }, runs: [], segs: [] };   // segs — לכל קטע תכנון: טווח החתכים בגזרה + גדר עומדת + יסוד (בחתכים)   // runs — קטעי גדר עומדת: ק.ד. + מטרים (למצגת)
   ds.forEach(x => { const sid = x.s.id, f = uni(found, sid), st = inter(stand, sid), w = ivInter(st, uni(wire, sid));
     out.found += len(f); out.stand += len(st); out.done += len(w);
     const toKd = L => L.map(([a, b]) => [sec2kd(x.s, a), sec2kd(x.s, b)]).filter(([a, b]) => a !== null && b !== null).map(([a, b]) => [Math.min(a, b), Math.max(a, b)]);
     out.kd.found.push(...toKd(f)); out.kd.stand.push(...toKd(st)); out.kd.done.push(...toKd(w));
-    st.forEach(([a, b]) => { const k1 = sec2kd(x.s, a), k2 = sec2kd(x.s, b); if (k1 !== null && k2 !== null) out.runs.push({ lo: Math.min(k1, k2), hi: Math.max(k1, k2), m: (b - a) * SECTION_M }); }); });
+    st.forEach(([a, b]) => { const k1 = sec2kd(x.s, a), k2 = sec2kd(x.s, b); if (k1 !== null && k2 !== null) out.runs.push({ lo: Math.min(k1, k2), hi: Math.max(k1, k2), m: (b - a) * SECTION_M }); });
+    const rg = x.asg ? [Math.min(x.asg[0], x.asg[1]), Math.max(x.asg[0], x.asg[1])] : x.ov ? (([a, b]) => a === null || b === null ? null : [Math.min(a, b), Math.max(a, b)])([kd2sec(x.s, x.ov.lo), kd2sec(x.s, x.ov.hi)]) : null;
+    if (rg && rg[1] > rg[0]) out.segs.push({ s: x.s, rg, st, f }); });
   const ex = execState(d, c.id, asOf); out.len = ex.rows.find(r => r.plan)?.plan || (lenOfC(d, c)?.km || 0) * 1000;
   out.has = stand.length > 0; return out;
 }
@@ -2503,11 +2485,11 @@ function metricTile(d, M) {
   const seg = (r, W, L2, cls, bg) => mergeIvs(L2 || []).map(([a, b]) => `<i class="${cls}" style="${bg ? `background:${bg};` : ""}right:${((r.hi - Math.min(r.hi, b)) / W * 100).toFixed(2)}%;width:${Math.max(0.6, (Math.min(r.hi, b) - Math.max(r.lo, a)) / W * 100).toFixed(2)}%"></i>`).join("");
   const strip = F.map(x => { const r = kdRange(x.c); if (!r) return ""; const W = r.hi - r.lo || 1;
     return `<div class="mt-b" style="flex:${x.now.len || 1};--cc:${x.col}" title="${esc(x.c.name)}: ${km(x.now.done)} מתוך ${km(x.now.len)} ק״מ"><div class="mt-tr">${fence ? seg(r, W, x.now.kdF, "f") + seg(r, W, x.now.kd, "s") + seg(r, W, x.now.kdD, "d") : seg(r, W, x.now.kd, "s", M.color)}</div>
-      <small>${fence ? num(Math.round(x.now.done), 0) + " מ׳" : (x.now.len ? Math.round(x.now.done / x.now.len * 100) : 0) + "%"}</small></div>`; }).join("");
-  const sub = fence ? `יסוד ${num(Math.round(F.reduce((t, x) => t + x.now.found, 0)), 0)} · גמורה ${num(Math.round(F.reduce((t, x) => t + x.now.fin, 0)), 0)} מ׳` : `מתוך ${km(L)} ק״מ`;
+      <small>${x.now.len ? Math.round(x.now.done / x.now.len * 100) : 0}%</small></div>`; }).join("");
+  const sub = fence ? `יסוד ${km(F.reduce((t, x) => t + x.now.found, 0))} · גמורה ${km(F.reduce((t, x) => t + x.now.fin, 0))} ק״מ` : `מתוך ${km(L)} ק״מ`;
   return `<div class="mt" style="--mc:${M.color}" title="${esc(F.map(x => `${x.c.name}: ${km(x.now.done)} מתוך ${km(x.now.len)}`).join(" · "))}">
-    <span class="mt-h">${fence ? "🧱 גדר עומדת" : esc(M.name)}</span><div class="mt-n">${fence ? `<b>${num(Math.round(dn), 0)}</b><span>מ׳</span>` : `<b>${km(dn)}</b><span>ק״מ</span><em>${pc}%</em>`}</div>
-    <small class="mt-s">${sub}${fence ? ` · מתוך ${num(Math.round(L), 0)} מ׳` : ""}</small><small class="mt-w ${wk > 0.5 ? "" : "z"}">${wk > 0.5 ? `השבוע +${num(Math.round(wk), 0)} מ׳` : "ללא התקדמות השבוע"}</small>
+    <span class="mt-h">${fence ? "🧱 גדר עומדת" : esc(M.name)}</span><div class="mt-n"><b>${km(dn)}</b><span>ק״מ</span><em>${pc}%</em></div>
+    <small class="mt-s">${sub}${fence ? ` · מתוך ${km(L)}` : ""}</small><small class="mt-w ${wk > 0.5 ? "" : "z"}">${wk > 0.5 ? `השבוע +${num(Math.round(wk), 0)} מ׳` : "ללא התקדמות השבוע"}</small>
     <div class="mt-strip">${strip}</div></div>`;
 }
 function ovMetricsBlock(d) {
@@ -2525,20 +2507,16 @@ function overviewHero(d) {
   const km = mains.reduce((t, s) => t + s.now.km, 0), done = mains.reduce((t, s) => t + dn(s.now), 0), dW = done - mains.reduce((t, s) => t + dn(s.wk), 0), dM = done - mains.reduce((t, s) => t + dn(s.mo), 0);
   const open = d.issues.filter(i => i.status !== "סגור"), mgmt = open.filter(i => i.mgmt), pend = d.progress.filter(p => p.review === "לבדיקה").length;
   const m = v => Math.round(v * 1000).toLocaleString("he-IL");
-  // גדר עומדת — המדד שההנהלה רוצה לראות: מטרים, לכל קבלן ולכל הפרויקט
-  const FZ = mains.map(s => ({ now: fenceState(d, s.c), wk: fenceState(d, s.c, wkD), mo: fenceState(d, s.c, moD) }));
-  const fS = k => FZ.reduce((t, x) => t + x.now[k], 0), fLen = FZ.reduce((t, x) => t + x.now.len, 0), fW = fS("stand") - FZ.reduce((t, x) => t + x.wk.stand, 0), fM = fS("stand") - FZ.reduce((t, x) => t + x.mo.stand, 0);
-  const M0 = v => num(Math.round(v), 0);
   const kpi = (cls, label, big, sub, act = "") => `<div class="ov-kpi ${cls}" ${act}><span>${label}</span><b>${big}</b><small>${sub}</small></div>`;
   const msBar = s => `<div class="ov-ms">${STAGE_GROUPS.map(G => { const vs = G.stages.map(g => s.now.st[g]).filter(v => v !== null && v !== undefined); const v = vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null;
     return `<div class="ov-msi" title="${esc(G.name)}: ${v === null ? "לא רלוונטי" : Math.round(v * 100) + "%"}"><i style="--c:${G.color}"><em style="height:${v === null ? 0 : Math.max(4, Math.round(v * 100))}%;background:${G.color}"></em></i><span>${esc(G.name)}</span></div>`; }).join("")}</div>`;
   const card = s => { const w = dn(s.now) - dn(s.wk), mo = dn(s.now) - dn(s.mo), o = open.filter(i => i.contractorId === s.c.id), fz = fenceState(d, s.c), fzw = fenceState(d, s.c, wkD), fp = fz.len ? fz.stand / fz.len : null, fw = fz.stand - fzw.stand;
     return `<button class="ov-card" data-act="nav" data-id="c:${s.c.id}" style="--cc:${s.col}">
       <div class="ov-ch">${cLogo(s.c, "card")}<b>${esc(s.c.name)}</b><span>${esc(s.c.sector || "")} · ק.ד. ${kdTxt(kdRange(s.c))}</span></div>
-      <div class="ov-cb"><div class="ov-ring">${ring(fp, s.col)}<b class="m">${num(Math.round(fz.stand), 0)}</b><em class="ov-rl">מ׳ גדר</em></div>
-        <div class="ov-nums"><div><b>${num(Math.round(fz.stand), 0)}</b> <small>מ׳ גדר עומדת מתוך ${num(Math.round(fz.len), 0)} מ׳</small></div>
+      <div class="ov-cb"><div class="ov-ring">${ring(fp, s.col)}<b>${fp === null ? "—" : Math.round(fp * 100) + "%"}</b><em class="ov-rl">גדר</em></div>
+        <div class="ov-nums"><div><b>${num(Math.round(fz.stand), 0)}</b> <small>מ׳ גדר עומדת מתוך ${m(s.now.km)}</small></div>
           <div class="ov-wk ${fw > 0.5 ? "" : "zero"}">${fw > 0.5 ? `גדר השבוע +${num(Math.round(fw), 0)} מ׳` : "ללא גדר חדשה השבוע"}</div>
-          <div class="ov-mo small">יסוד ${num(Math.round(fz.found), 0)} מ׳ · גמורה ${num(Math.round(fz.done), 0)} מ׳</div>
+          <div class="ov-mo small">יסוד ${num(Math.round(fz.found), 0)} מ׳ · כל המלאכות ${s.now.overall === null ? "—" : Math.round(s.now.overall * 100) + "%"}</div>
           ${(f => f.eta ? `<div class="ov-fc ${f.lateDays > 14 ? "bad" : f.lateDays > 0 ? "warn" : ""}">סיום צפוי ${fmtMY(f.eta)}${f.target ? ` · יעד ${fmtMY(f.target)}` : ""}</div>` : "")(forecast(d, s.c))}
           <div class="ov-iss">${o.length} נושאים פתוחים${(u => u ? ` · <span class="hold">🔴 ${u} דחופים</span>` : "")(o.filter(i => priN(i.priority) === "דחוף").length)}${o.filter(i => i.status === "HOLD").length ? ` · <span class="hold">${o.filter(i => i.status === "HOLD").length} HOLD</span>` : ""}</div></div></div>
       ${msBar(s)}</button>`; };
@@ -2565,8 +2543,8 @@ function overviewHero(d) {
         <span class="ov-spn"><b>${dn2}</b>/${ii.length} הושלמו${ip ? ` · ${ip} בביצוע` : ""}</span>${wk ? `<span class="ov-wk">השבוע +${wk}</span>` : ""}</div>
         <div class="ov-spbar"><em style="width:${ii.length ? Math.round(dn2 / ii.length * 100) : 0}%"></em></div></button>`; }); });
   return `${ovMetricsBlock(d)}<div class="ov-kpis">
-      ${kpi("k1", "🧱 גדר עומדת — כל הפרויקט", `${M0(fS("stand"))} <small>מ׳ מתוך ${M0(fLen)}</small>`, mains.map((x, i) => `<span style="white-space:nowrap">${esc(x.c.name)} <span style="font-weight:800">${M0(FZ[i].now.stand)}</span></span>`).join(" · ") + ` מ׳`)}
-      ${kpi("k2", "גדר — התקדמות", `<span class="ov-wkb">+${M0(Math.max(0, fW))}</span> <small>מ׳ השבוע</small>`, `החודש +${M0(Math.max(0, fM))} מ׳`)}
+      ${kpi("k1", "כל המלאכות — ממוצע (מטר שווה-ערך)", `${km ? Math.round(done / km * 100) : 0}%`, `${m(done)} מתוך ${m(km)} מ׳`)}
+      ${kpi("k2", "התקדמות", `<span class="ov-wkb">+${m(Math.max(0, dW))}</span> <small>מ׳ השבוע</small>`, `החודש +${m(Math.max(0, dM))} מ׳`)}
       ${kpi("k3", "נושאים פתוחים", open.length, `HOLD: ${open.filter(i => i.status === "HOLD").length}${pend ? ` · ${pend} דיווחים ממתינים לאישור` : ""}`)}
       ${kpi("k4", "להחלטת הנהלה", mgmt.length, mgmt.length ? "לחיצה — לוח התראות" : "אין נושאים מסומנים", `data-act="nav" data-id="alerts" role="button" tabindex="0"`)}
     </div>
@@ -2836,13 +2814,12 @@ const ofT = (a, b) => `${a}<span class="ofT"> מתוך ${b}</span>`;
 const statRow = (label, st, extra = "") => `<tr><td><b>${label}</b>${extra}</td><td class="c">${st.total}</td><td class="c">${st.done}</td><td class="c">${st.prog}</td><td class="c">${st.plan}</td><td class="c">${st.notyet}</td><td class="c">${st.hold}</td>
   <td class="c" style="${heatBg(st.total ? st.done / st.total : null)}"><b>${st.total ? ofT(st.done, st.total) : "—"}</b><div class="small">${st.total ? Math.round(st.done / st.total * 100) + "%" : ""}</div></td><td class="c small">${st.km ? `<b>${ofT(num(Math.round(st.kmDone * 1000), 0), MTR(st.km))}</b><div class="small">${Math.round(st.kmDone / st.km * 100)}%</div>` : "—"}</td></tr>`;
 const statHead = first => `<thead><tr><th>${first}</th><th>סה״כ</th><th>הושלמו</th><th>בביצוע</th><th>מתוכננים</th><th>טרם</th><th>HOLD</th><th>הושלמו מתוך</th><th>אורך (טווחים)</th></tr></thead>`;
-/* ---------- סוגי שערים: שער / ניצב (לשעבר "מחסום") / פשפש + סוגים שמגדירים (הגדרות: settings.gateTypes). פריט "שערים" בלי סוג = שער ---------- */
-const GATE_T0 = ["שער", "ניצב", "פשפש"];
-const gtName = t => String(t || "").replace(/מחסומים/g, "ניצבים").replace(/מחסום/g, "ניצב");   // המונח הוחלף: "מחסום" נשמר בנתונים ישנים — מוצג תמיד "ניצב"
-const gateTypes = () => [...new Set([...GATE_T0, ...(RAW.tableConfig?.settings?.gateTypes || []).map(gtName), ...list("items").filter(i => i.kind === "שערים" && i.gateType).map(i => gtName(i.gateType))])];
-const gateT = i => gtName(i.gateType) || "שער";
+/* ---------- סוגי שערים: שער / מחסום / פשפש + סוגים שמגדירים (הגדרות: settings.gateTypes). פריט "שערים" בלי סוג = שער ---------- */
+const GATE_T0 = ["שער", "מחסום", "פשפש"];
+const gateTypes = () => [...new Set([...GATE_T0, ...(RAW.tableConfig?.settings?.gateTypes || []), ...list("items").filter(i => i.kind === "שערים" && i.gateType).map(i => i.gateType)])];
+const gateT = i => i.gateType || "שער";
 function gateTypeModal(done) {
-  modal(`<h2>סוג חדש</h2><label class="field">שם הסוג<input class="inp" id="gt_n" placeholder="למשל: שער כפול, ניצב הידראולי, מעבר הולכי רגל"></label><p class="small muted" id="gt_m"></p>
+  modal(`<h2>סוג חדש</h2><label class="field">שם הסוג<input class="inp" id="gt_n" placeholder="למשל: שער כפול, מחסום הידראולי, מעבר הולכי רגל"></label><p class="small muted" id="gt_m"></p>
     <div class="row"><button class="btn" id="mYes">הוספה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
     const q = m.querySelector("#gt_n"); q.focus(); m.querySelector("#mNo").onclick = () => { close(); done(null); };
     const go = async () => { const n = q.value.trim(); if (!n) return; if (!gateTypes().includes(n)) { const S = { ...(RAW.tableConfig?.settings || {}) }; delete S.updatedAt; delete S.updatedBy; S.gateTypes = [...(S.gateTypes || []), n]; await api.put("tableConfig", "settings", S); } close(); done(n); };
@@ -3753,7 +3730,7 @@ const QN_W = "(?:^|[^\\u05D0-\\u05EAA-Za-z0-9])", QN_E = "(?=$|[^\\u05D0-\\u05EA
 const QN_STOP = new Set(["חשמל", "פינוי", "מוקשים", "משה", "קבלן"]);
 const qnCKeys = c => { const k = qnNorm(String(c.name || "").replace(/\(.*?\)/g, "")).split(" ").filter(w => w.length >= 3 && !QN_STOP.has(w)); return [...new Set([...k, ...k.filter(w => w.startsWith("ה") && w.length > 3).map(w => w.slice(1))])]; };
 const QN_DOW = [["ראשון", "א"], ["שני", "ב"], ["שלישי", "ג"], ["רביעי", "ד"], ["חמישי", "ה"], ["שישי", "ו"]];
-const W_KINDS = [[/שער|מחסום|ניצב|פשפש/, "שערים"], [/מעביר\s*אירי/, "מעביר אירי"], [/ארון/, "ארון שקד"], [/תט["״']?ז/, "תט״ז"], [/טרפו/, "חדר טרפו"], [/מעביר/, "מעבירי מים"]];
+const W_KINDS = [[/שער|מחסום|פשפש/, "שערים"], [/מעביר\s*אירי/, "מעביר אירי"], [/ארון/, "ארון שקד"], [/תט["״']?ז/, "תט״ז"], [/טרפו/, "חדר טרפו"], [/מעביר/, "מעבירי מים"]];
 function qnOwner(w, d) {   // "המתכנן" / "רשות העתיקות" / "נועם" / "בראשי" → מי מטפל (+ קבלן)
   const n = qnNorm(w), n2 = n.replace(/^ה/, "");
   const t = teamNames().find(o => qnNorm(o) === n || qnNorm(o).split(" ")[0] === n); if (t) return { owner: t };
@@ -6222,7 +6199,8 @@ async function mgmtDeck(asOf, theme = "color") {
   const wk = v => v > 0.0005 ? `השבוע +${m0(v)}${RLM} מ׳` : "ללא שינוי השבוע";
   const wkmo = (w, m) => `${wk(w)} · ${m > 0.0005 ? `החודש +${m0(m)}${RLM} מ׳` : "ללא שינוי החודש"}`;
   const kd1 = k => String(Math.round(k));   // ק.ד. תמיד מספר שלם
-  const T = (sl, text, o) => sl.addText(Array.isArray(text) ? text.map(r => ({ ...r, options: { rtlMode: true, lang: LANG, align: o?.align || "right", ...(r.options || {}) } })) : text,
+  const NZ = t => typeof t === "string" ? t.replace(/מחסומים/g, "ניצבים").replace(/מחסום/g, "ניצב") : t;   // במצגת: "ניצבים" במקום "מחסומים"
+  const T = (sl, text, o) => sl.addText(Array.isArray(text) ? text.map(r => ({ ...r, text: NZ(r.text), options: { rtlMode: true, lang: LANG, align: o?.align || "right", ...(r.options || {}) } })) : NZ(text),
     { fontFace: F, color: INK, rtlMode: true, lang: LANG, align: "right", valign: "top", isTextBox: true, ...o });
   // ---- עיצוב בסגנון האתר: באנר צבעוני, אריחים, טבעת התקדמות, פסים ----
   const hx = c => String(c || "").replace("#", "").slice(0, 6).toUpperCase();
@@ -6237,13 +6215,13 @@ async function mgmtDeck(asOf, theme = "color") {
     const pad = 0.06, k = Math.min((w - 2 * pad) / dm.w, (h - 2 * pad) / dm.h), iw = dm.w * k, ih = dm.h * k;
     sl.addImage({ data: c.logo.replace(/^data:/, ""), x: x + (w - iw) / 2, y: y + (h - ih) / 2, w: iw, h: ih }); return true; };
   /** טבעת התקדמות (כמו באתר) */
-  const ringAt = (sl, cx, cy, r, v, col, track, txtCol, fs) => {
+  const ringAt = (sl, cx, cy, r, v, col, track, txtCol, fs, txt) => {
     sl.addShape(P.ShapeType.blockArc, { x: cx - r, y: cy - r, w: 2 * r, h: 2 * r, fill: { color: track }, line: { color: track, width: 0 }, angleRange: [0, 359.9], arcThicknessRatio: 0.2 });
     if (v > 0.004) sl.addShape(P.ShapeType.blockArc, { x: cx - r, y: cy - r, w: 2 * r, h: 2 * r, fill: { color: col }, line: { color: col, width: 0 }, angleRange: [270, 270 + Math.min(359.9, v * 360)], arcThicknessRatio: 0.2 });
-    T(sl, v === null || v === undefined ? "—" : Math.round(v * 100) + "%", { x: cx - r, y: cy - r, w: 2 * r, h: 2 * r, fontSize: fs, bold: true, color: txtCol, align: "center", valign: "middle", margin: 0 }); };
+    T(sl, txt !== undefined ? txt : v === null || v === undefined ? "—" : Math.round(v * 100) + "%", { x: cx - r, y: cy - r, w: 2 * r, h: 2 * r, fontSize: fs, bold: true, color: txtCol, align: "center", valign: "middle", margin: 0, fit: "shrink" }); };
   const header = (sl, title, sub, o = {}) => { sl.background = { color: BG }; const col = hx(o.col || "24573C");
     if (FM) { let left = 0.4;
-      if (o.ring !== undefined) { ringAt(sl, left + 0.36, 0.6, 0.36, o.ring, NAVY, "E3E7EC", NAVY, 11); left += 0.9; }
+      if (o.ring !== undefined) { ringAt(sl, left + 0.36, 0.6, 0.36, o.ring, NAVY, "E3E7EC", NAVY, o.ringT ? 8.5 : 11, o.ringT); left += 0.9; }
       if (o.c && putLogo(sl, o.c, left, 0.28, 1.75, 0.64)) left += 1.9;
       T(sl, title, { x: left, y: 0.18, w: W - 0.4 - left, h: 0.52, fontSize: 24, bold: true, color: NAVY, valign: "middle", fit: "shrink" });
       T(sl, sub, { x: left, y: 0.66, w: W - 0.4 - left, h: 0.32, fontSize: 12, color: "5A6472", fit: "shrink" });
@@ -6253,7 +6231,7 @@ async function mgmtDeck(asOf, theme = "color") {
     sl.addShape(P.ShapeType.roundRect, { x: 0.3, y: 0.18, w: W - 0.6, h: 0.86, fill: { color: col }, line: { color: col }, rectRadius: 0.12, shadow: SHo() });
     sl.addShape(P.ShapeType.roundRect, { x: W - 4.6, y: 0.18, w: 4.3, h: 0.86, fill: { color: "FFFFFF", transparency: 88 }, line: { color: col, transparency: 100 }, rectRadius: 0.12 });
     let left = 0.5;
-    if (o.ring !== undefined) { ringAt(sl, left + 0.36, 0.61, 0.36, o.ring, "FFFFFF", mix(col, "FFFFFF", 0.35), "FFFFFF", 11); left += 0.9; }
+    if (o.ring !== undefined) { ringAt(sl, left + 0.36, 0.61, 0.36, o.ring, "FFFFFF", mix(col, "FFFFFF", 0.35), "FFFFFF", o.ringT ? 8.5 : 11, o.ringT); left += 0.9; }
     if (o.c && putLogo(sl, o.c, left, 0.29, 1.75, 0.64)) left += 1.9;
     T(sl, title, { x: left, y: 0.2, w: W - 0.5 - left, h: 0.5, fontSize: 24, bold: true, color: "FFFFFF", valign: "middle", fit: "shrink" });
     T(sl, sub, { x: left, y: 0.66, w: W - 0.5 - left, h: 0.32, fontSize: 12, color: mix(col, "FFFFFF", 0.85), fit: "shrink" });
@@ -6274,7 +6252,7 @@ async function mgmtDeck(asOf, theme = "color") {
   /** טבלה: עמודה ראשונה מימין (הופכים סדר עמודות). rowH מתאים את עצמו לגובה הפנוי כדי שהטבלה לא תצא מהשקף */
   const table = (sl, head, rows, o) => {
     const n = rows.length + 1, rh = o.maxH ? Math.min(o.rh || 0.36, o.maxH / n) : (o.rh || 0.36), fs = o.fs ? Math.min(o.fs, Math.max(7.5, rh * 34)) : Math.min(12, Math.max(7.5, rh * 34));
-    const cell = (t, hd) => ({ text: String(t ?? ""), options: { fontFace: F, fontSize: fs, color: INK, bold: !!hd, fill: { color: hd ? HEAD : "FFFFFF" }, align: "right", valign: "middle", rtlMode: true, lang: LANG } });
+    const cell = (t, hd) => ({ text: NZ(String(t ?? "")), options: { fontFace: F, fontSize: fs, color: INK, bold: !!hd, fill: { color: hd ? HEAD : "FFFFFF" }, align: "right", valign: "middle", rtlMode: true, lang: LANG } });
     const R = [head.map(x => cell(x, 1)).reverse(), ...rows.map(r => r.map(t => t && t.runs ? { text: t.runs.map(u => ({ text: u.text, options: { fontFace: F, fontSize: fs, color: INK, rtlMode: true, lang: LANG, ...u.options } })), options: cell("").options }
       : typeof t === "object" && t !== null ? { text: String(t.text), options: { ...cell("").options, ...t.o } } : cell(t)).reverse())];
     sl.addTable(R, { x: o.x, y: o.y, w: o.w, colW: o.colW ? [...o.colW].reverse() : undefined, rowH: rh, border: { type: "solid", color: "C9CFC4", pt: 0.75 }, autoPage: false });
@@ -6284,17 +6262,21 @@ async function mgmtDeck(asOf, theme = "color") {
   const mains = d.contractors.filter(isMain), snaps = mains.map(c => ({ c, now: snapshot(d, c, asOf), prev: snapshot(d, c, from), mon: snapshot(d, c, mFrom) }));
   const dnOf = x => (x.overall || 0) * x.km;
   const urgent = d.issues.filter(i => i.mgmt && i.status !== "סגור");
+  // גדר עומדת — המדד שההנהלה רוצה לראות: מטרים בפועל, לכל קבלן ולכל הפרויקט (לא אחוזים)
+  snaps.forEach(s => { s.fz = fenceState(d, s.c, asOf); s.fzW = fenceState(d, s.c, from); s.fzM = fenceState(d, s.c, mFrom); });
+  const M0 = v => Math.round(v).toLocaleString("he-IL");
 
   // 1. סיכום — אריחים + כרטיס לכל קבלן (כמו מסך הסקירה באתר)
   { const sl = P.addSlide(); header(sl, "מכשול מזרחי — סטטוס שבועי", `נכון לתאריך ${fmtD(asOf)}`);
     const kmAll = snaps.reduce((t, s) => t + s.now.km, 0), done = snaps.reduce((t, s) => t + dnOf(s.now), 0), donePrev = snaps.reduce((t, s) => t + dnOf(s.prev), 0), doneMon = snaps.reduce((t, s) => t + dnOf(s.mon), 0);
     const openAll = d.issues.filter(i => i.status !== "סגור"), gap = 0.18, kw = (W - 0.6 - 3 * gap) / 4, kx = i => W - 0.3 - (i + 1) * kw - i * gap;
-    tile(sl, kx(0), 1.22, kw, 1.2, "ביצוע כולל — מטר שווה-ערך", `${pc(kmAll ? done / kmAll : null)}`, `${of(n1(done), n1(kmAll))} מ׳`, "green");
-    tile(sl, kx(1), 1.22, kw, 1.2, "התקדמות השבוע", done - donePrev > 0.0005 ? `+${m0(done - donePrev)}${RLM} מ׳` : "—", doneMon > 0 && done - doneMon > 0.0005 ? `החודש +${m0(done - doneMon)}${RLM} מ׳` : "ללא שינוי החודש", "orange");
+    const fSt = snaps.reduce((t, s) => t + s.fz.stand, 0), fLen = snaps.reduce((t, s) => t + s.fz.len, 0), fWk = fSt - snaps.reduce((t, s) => t + s.fzW.stand, 0), fMo = fSt - snaps.reduce((t, s) => t + s.fzM.stand, 0);
+    tile(sl, kx(0), 1.22, kw, 1.2, "גדר עומדת — כל הפרויקט", `${M0(fSt)}${RLM} מ׳`, `מתוך ${M0(fLen)}${RLM} מ׳ · יסוד ${M0(snaps.reduce((t, s) => t + s.fz.found, 0))} · גמורה ${M0(snaps.reduce((t, s) => t + s.fz.done, 0))}`, "green");
+    tile(sl, kx(1), 1.22, kw, 1.2, "גדר — התקדמות השבוע", fWk > 0.5 ? `+${M0(fWk)}${RLM} מ׳` : "—", fMo > 0.5 ? `החודש +${M0(fMo)}${RLM} מ׳` : "ללא גדר חדשה החודש", "orange");
     tile(sl, kx(2), 1.22, kw, 1.2, "נושאים פתוחים", String(openAll.length), `HOLD: ${openAll.filter(i => i.status === "HOLD").length} · עודכנו השבוע: ${openAll.filter(i => inWeek(i.updated)).length}`, "blue");
     tile(sl, kx(3), 1.22, kw, 1.2, "נושאים להחלטת הנהלה", String(urgent.length), urgent.length ? "פירוט בשקפים האחרונים" : "אין נושאים מסומנים", "red");
     const n = snaps.length, cw = (W - 0.6 - (n - 1) * gap) / n, cy = 2.62, ch = 4.3;
-    snaps.forEach((s, i) => { const c = s.c, col = CC(c), x = W - 0.3 - (i + 1) * cw - i * gap, dn = dnOf(s.now), w = dn - dnOf(s.prev), mo = dn - dnOf(s.mon);
+    snaps.forEach((s, i) => { const c = s.c, col = CC(c), x = W - 0.3 - (i + 1) * cw - i * gap, dn = s.fz.stand, w = dn - s.fzW.stand, mo = dn - s.fzM.stand;
       const o = d.issues.filter(q => q.contractorId === c.id && q.status !== "סגור"), hold = o.filter(q => q.status === "HOLD").length;
       sl.addShape(P.ShapeType.roundRect, { x, y: cy, w: cw, h: ch, fill: { color: "FFFFFF" }, line: { color: LINE }, rectRadius: 0.12, shadow: SHo() });
       sl.addShape(P.ShapeType.roundRect, { x, y: cy, w: cw, h: 0.82, fill: { color: col }, line: { color: col }, rectRadius: 0.12 });
@@ -6302,12 +6284,12 @@ async function mgmtDeck(asOf, theme = "color") {
       const hasLogo = putLogo(sl, c, x + 0.12, cy + 0.14, 0.95, 0.54);
       T(sl, c.name, { x: x + (hasLogo ? 1.12 : 0.12), y: cy + 0.06, w: cw - (hasLogo ? 1.24 : 0.24), h: 0.42, fontSize: 15, bold: true, color: "FFFFFF", margin: 0, valign: "middle", fit: "shrink" });
       T(sl, `${c.sector || ""} · ק.ד. ${kd1(kdRange(c)?.lo ?? 0)}–${kd1(kdRange(c)?.hi ?? 0)}`, { x: x + (hasLogo ? 1.12 : 0.12), y: cy + 0.46, w: cw - (hasLogo ? 1.24 : 0.24), h: 0.28, fontSize: 9.5, color: mix(col, "FFFFFF", 0.85), margin: 0 });
-      ringAt(sl, x + cw - 0.72, cy + 1.48, 0.52, s.now.overall, col, "E9ECE6", col, 14);
+      ringAt(sl, x + cw - 0.72, cy + 1.48, 0.52, s.fz.len ? s.fz.stand / s.fz.len : null, col, "E9ECE6", col, 11, `${M0(dn)}\nמ׳ גדר`);
       const tx = x + 0.12, tw = cw - 1.42;
-      T(sl, [{ text: m0(dn), options: { fontSize: 22, bold: true, color: col } }, { text: `${RLM} מ׳`, options: { fontSize: 10, color: MUT } }], { x: tx, y: cy + 0.94, w: tw, h: 0.42, margin: 0, valign: "middle", fit: "shrink" });
-      T(sl, `מתוך ${m0(s.now.km)}${RLM} מ׳`, { x: tx, y: cy + 1.34, w: tw, h: 0.24, fontSize: 9.5, color: MUT, margin: 0 });
-      T(sl, w > 0.0005 ? `השבוע +${m0(w)}${RLM} מ׳` : "ללא ביצוע השבוע", { x: tx, y: cy + 1.6, w: tw, h: 0.26, fontSize: w > 0.0005 ? 12 : 9.5, bold: w > 0.0005, color: w > 0.0005 ? ORG : MUT, margin: 0 });
-      T(sl, mo > 0.0005 ? `החודש +${m0(mo)}${RLM} מ׳` : "ללא ביצוע החודש", { x: tx, y: cy + 1.86, w: tw, h: 0.24, fontSize: 9.5, color: mo > 0.0005 ? GRN : MUT, margin: 0 });
+      T(sl, [{ text: M0(dn), options: { fontSize: 22, bold: true, color: col } }, { text: `${RLM} מ׳ גדר עומדת`, options: { fontSize: 10, color: MUT } }], { x: tx, y: cy + 0.94, w: tw, h: 0.42, margin: 0, valign: "middle", fit: "shrink" });
+      T(sl, `מתוך ${M0(s.fz.len)}${RLM} מ׳ · יסוד ${M0(s.fz.found)}`, { x: tx, y: cy + 1.34, w: tw, h: 0.24, fontSize: 9.5, color: MUT, margin: 0, fit: "shrink" });
+      T(sl, w > 0.5 ? `השבוע +${M0(w)}${RLM} מ׳` : "ללא גדר חדשה השבוע", { x: tx, y: cy + 1.6, w: tw, h: 0.26, fontSize: w > 0.5 ? 12 : 9.5, bold: w > 0.5, color: w > 0.5 ? ORG : MUT, margin: 0 });
+      T(sl, mo > 0.5 ? `החודש +${M0(mo)}${RLM} מ׳` : "ללא גדר חדשה החודש", { x: tx, y: cy + 1.86, w: tw, h: 0.24, fontSize: 9.5, color: mo > 0.5 ? GRN : MUT, margin: 0 });
       T(sl, [{ text: `${o.length} נושאים פתוחים`, options: { fontSize: 9.5, color: INK } }, ...(hold ? [{ text: ` · ${hold} HOLD`, options: { fontSize: 9.5, bold: true, color: "B5541C" } }] : [])], { x: x + 0.12, y: cy + 2.16, w: cw - 0.24, h: 0.24, margin: 0 });
       // אבני דרך — עמודות קטנות
       sl.addShape(P.ShapeType.line, { x: x + 0.12, y: cy + 2.47, w: cw - 0.24, h: 0, line: { color: LINE, width: 0.75 } });
@@ -6318,19 +6300,20 @@ async function mgmtDeck(asOf, theme = "color") {
         if (v > 0.004) { const fh = Math.max(0.06, bh * v); sl.addShape(P.ShapeType.roundRect, { x: bx, y: by + bh - fh, w: 0.24, h: fh, fill: { color: gc }, line: { color: gc }, rectRadius: 0.06 }); }
         T(sl, G.name, { x: gx - 0.02, y: by + bh + 0.04, w: bw + 0.04, h: 0.4, fontSize: 7, color: MUT, align: "center", valign: "top", margin: 0, fit: "shrink" }); }); });
     const secs = [...new Set(mains.map(c => c.sector).filter(Boolean))];
-    T(sl, secs.map(sec => { const ss = snaps.filter(s => s.c.sector === sec), km = ss.reduce((t, s) => t + s.now.km, 0), dn = ss.reduce((t, s) => t + dnOf(s.now), 0), dp = ss.reduce((t, s) => t + dnOf(s.prev), 0);
-      return `${sec}: ${m0(dn)}${RLM} מתוך${RLM} ${m0(km)}${RLM} מ׳ (${pc(km ? dn / km : null)})${dn - dp > 0.0005 ? ` · השבוע +${m0(dn - dp)}` : ""}`; }).join("     |     "), { x: 5.4, y: 7.06, w: W - 5.7, h: 0.3, fontSize: 10, color: INK, bold: true });
+    T(sl, secs.map(sec => { const ss = snaps.filter(s => s.c.sector === sec), km = ss.reduce((t, s) => t + s.fz.len, 0), dn = ss.reduce((t, s) => t + s.fz.stand, 0), dp = ss.reduce((t, s) => t + s.fzW.stand, 0);
+      return `${sec} — גדר: ${M0(dn)}${RLM} מתוך${RLM} ${M0(km)}${RLM} מ׳${dn - dp > 0.5 ? ` · השבוע +${M0(dn - dp)}` : ""}`; }).join("     |     "), { x: 5.4, y: 7.06, w: W - 5.7, h: 0.3, fontSize: 10, color: INK, bold: true });
   }
   // 2. לכל קבלן ראשי: שקף סטטוס + שקף פריסה לפי ק.ד.
   for (const s of snaps) { const c = s.c;
     { const sl = P.addSlide(), col = CC(c);
-      header(sl, c.name, `${c.sector || ""} · ק.ד. ${kd1(kdRange(c)?.lo ?? 0)}–${kd1(kdRange(c)?.hi ?? 0)} · ${c.method || ""}${c.inspector ? " · מפקח: " + c.inspector : ""}${(f => f.eta ? ` · סיום צפוי ${fmtMY(f.eta)}${f.target ? ` (יעד ${fmtMY(f.target)})` : ""}` : "")(forecast(d, c, asOf))}`, { col, c, ring: s.now.overall });
+      header(sl, c.name, `${c.sector || ""} · ק.ד. ${kd1(kdRange(c)?.lo ?? 0)}–${kd1(kdRange(c)?.hi ?? 0)} · ${c.method || ""}${c.inspector ? " · מפקח: " + c.inspector : ""}${(f => f.eta ? ` · סיום צפוי ${fmtMY(f.eta)}${f.target ? ` (יעד ${fmtMY(f.target)})` : ""}` : "")(forecast(d, c, asOf))}`, { col, c, ring: s.fz.len ? s.fz.stand / s.fz.len : null, ringT: `${M0(s.fz.stand)}\nמ׳` });
       const dn = dnOf(s.now), dp = dnOf(s.prev), dm = dnOf(s.mon), iss = d.issues.filter(i => i.contractorId === c.id), open = iss.filter(i => i.status !== "סגור");
       const dl = d.deliveries.filter(x => x.contractorId === c.id && inWeek(x.date)), hold = open.filter(i => i.status === "HOLD").length, mg = open.filter(i => i.mgmt).length;
       const gap = 0.15, tw = (W - 0.6 - 5 * gap) / 6, tx = k => W - 0.3 - (k + 1) * tw - k * gap, ty = 1.2, th = 1.0;
-      tile(sl, tx(0), ty, tw, th, "בוצע — מטר שווה-ערך", `${m0(dn)}`, `מתוך ${m0(s.now.km)}${RLM} מ׳ · ${pc(s.now.overall)}`, "white", col);
-      tile(sl, tx(1), ty, tw, th, "השבוע", dn - dp > 0.0005 ? `+${m0(dn - dp)}` : "—", dn - dp > 0.0005 ? "מ׳ ב-7 הימים האחרונים" : "ללא ביצוע השבוע", "orange");
-      tile(sl, tx(2), ty, tw, th, "החודש", dn - dm > 0.0005 ? `+${m0(dn - dm)}` : "—", dn - dm > 0.0005 ? "מ׳ ב-30 הימים האחרונים" : "ללא ביצוע החודש", "white", GRN);
+      const fw = s.fz.stand - s.fzW.stand, fm = s.fz.stand - s.fzM.stand;
+      tile(sl, tx(0), ty, tw, th, "גדר עומדת", `${M0(s.fz.stand)}${RLM} מ׳`, `מתוך ${M0(s.fz.len)}${RLM} מ׳ · יסוד ${M0(s.fz.found)} · גמורה ${M0(s.fz.done)}`, "white", col);
+      tile(sl, tx(1), ty, tw, th, "גדר — השבוע", fw > 0.5 ? `+${M0(fw)}${RLM} מ׳` : "—", fw > 0.5 ? "ב-7 הימים האחרונים" : "ללא גדר חדשה השבוע", "orange");
+      tile(sl, tx(2), ty, tw, th, "גדר — החודש", fm > 0.5 ? `+${M0(fm)}${RLM} מ׳` : "—", fm > 0.5 ? "ב-30 הימים האחרונים" : "ללא גדר חדשה החודש", "white", GRN);
       tile(sl, tx(3), ty, tw, th, "נושאים פתוחים", String(open.length), `HOLD: ${hold} · נסגרו השבוע: ${iss.filter(i => i.status === "סגור" && inWeek(i.updated)).length}`, "blue");
       tile(sl, tx(4), ty, tw, th, "להחלטת הנהלה", String(mg), mg ? "פירוט בשקפים האחרונים" : "אין נושאים מסומנים", mg ? "red" : "white");
       tile(sl, tx(5), ty, tw, th, "תוכניות שנמסרו השבוע", String(dl.length), dl.slice(0, 2).map(x => `${x.kind || ""} ${kd1(kdNum(x.kdFrom) ?? 0)}–${kd1(kdNum(x.kdTo) ?? 0)}`).join(" · ") || "—");
@@ -6386,20 +6369,34 @@ async function mgmtDeck(asOf, theme = "color") {
       const rowsA = acts.map(a => ({ a, iv: (done[a.id] || []).map(clip).filter(([x, y]) => y > x) })).filter(x => x.iv.length);
       const kinds = [...new Set(d.items.filter(i => i.status !== "מבוטל" && mainAt(d, i)?.id === c.id && kdNum(i.kdFrom) !== null).map(i => i.kind || "אחר"))];
       const rowsI = kinds.map(k => ({ k, its: d.items.filter(i => (i.kind || "אחר") === k && i.status !== "מבוטל" && mainAt(d, i)?.id === c.id && kdNum(i.kdFrom) !== null) }));
-      const N = rowsA.length + rowsI.length;
+      const FZ = s.fz, hasF = FZ.found > 0 || FZ.stand > 0;
+      const DENSE = new Set(["מעבירי מים", "מעביר אירי"]), IKk = k => DENSE.has(k) ? 2.3 : 1.55;   // מעבירי מים / איריים — מספרי ק.ד. בארבע שורות מתחלפות
+      const N = rowsA.length + rowsI.length + (hasF ? 1 : 0);
       // מקטעי תכנון + סרגל ק.ד.
       for (const x of designInRange(d, r)) { const q = kdRange(x.s); if (!q) continue; const lo = Math.max(r.lo, q.lo), hi = Math.min(r.hi, q.hi); if (hi <= lo) continue;
         const x1 = Math.min(xOf(lo), xOf(hi)), x2 = Math.max(xOf(lo), xOf(hi));
         sl.addShape(P.ShapeType.rect, { x: x1, y: 1.08, w: x2 - x1, h: 0.3, fill: { color: FM ? "EEF1F5" : x.office?.color ? x.office.color.replace("#", "").slice(0, 6) : "EEF0EB" }, line: { color: "FFFFFF", width: 1 } });
         T(sl, `${x.office?.name || ""} ${x.s.num}`, { x: x1, y: 1.08, w: x2 - x1, h: 0.3, fontSize: 9, align: "center", valign: "middle", margin: 0, fit: "shrink" }); }
       T(sl, "קטע תכנון", { x: barR + 0.12, y: 1.08, w: LAB, h: 0.3, fontSize: 9, color: MUT, valign: "middle", margin: 0 });
-      const span = Math.abs(kB - kA), step = span > 120 ? 20 : span > 60 ? 10 : 5, top = 1.95, bot = 6.72, IK = 1.55, rh = N ? Math.min(0.42, (bot - top) / (rowsA.length + rowsI.length * IK)) : 0.4, rhI = rh * IK;
+      const FK = 1.5, span = Math.abs(kB - kA), step = span > 120 ? 20 : span > 60 ? 10 : 5, top0 = 1.95, bot = 6.72, units = rowsA.length + rowsI.reduce((t, x) => t + IKk(x.k), 0) + (hasF ? FK : 0), rh = N ? Math.min(0.42, (bot - top0) / Math.max(1, units)) : 0.4, rhF = hasF ? rh * FK : 0, top = top0 + rhF;
+      const yI = j => top + rowsA.length * rh + rowsI.slice(0, j).reduce((t, x) => t + IKk(x.k) * rh, 0), totH = rhF + rh * rowsA.length + rowsI.reduce((t, x) => t + IKk(x.k) * rh, 0);
       for (let k = Math.ceil(r.lo / step) * step; k <= r.hi + 1e-9; k += step) { const xx = xOf(k);
-        sl.addShape(P.ShapeType.line, { x: xx, y: 1.75, w: 0, h: rh * rowsA.length + rhI * rowsI.length + 0.2, line: { color: "E3E6DF", width: 0.75 } });
+        sl.addShape(P.ShapeType.line, { x: xx, y: 1.75, w: 0, h: totH + 0.2, line: { color: "E3E6DF", width: 0.75 } });
         T(sl, String(k), { x: xx - 0.3, y: 1.45, w: 0.6, h: 0.25, fontSize: 9, color: MUT, align: "center", margin: 0 }); }
       T(sl, "ק.ד.", { x: barR + 0.12, y: 1.45, w: LAB, h: 0.25, fontSize: 9, color: MUT, margin: 0 });
       if (!N) T(sl, "עוד לא נרשם ביצוע מאושר בגזרה הזו", { x: barL, y: 3.5, w: barW, h: 0.5, fontSize: 14, color: MUT, align: "center" });
       const fs = Math.min(11, Math.max(7.5, rh * 26));
+      // 🧱 גדר עומדת לפי ק.ד. — שורה ראשונה: יסוד (בהיר) · עומדת · גמורה (כהה) · השבוע בכתום; משמאל — מטרים וקטעי ק.ד.
+      if (hasF) { const y = top0, bh = rhF * 0.5, by = y + (rhF - bh) / 2, cc = CC(c), xs = ([lo, hi]) => { const x1 = Math.min(xOf(lo), xOf(hi)), x2 = Math.max(xOf(lo), xOf(hi)); return [x1, Math.max(0.025, x2 - x1)]; };
+        const box = (arr, col, inset) => mergeIvs((arr || []).map(clip).filter(([x, y2]) => y2 > x)).forEach(q => { const [x1, w1] = xs(q); sl.addShape(P.ShapeType.rect, { x: x1, y: by + inset, w: w1, h: bh - 2 * inset, fill: { color: col }, line: { color: col, width: 0.25 } }); });
+        T(sl, [{ text: "גדר עומדת", options: { bold: true, fontSize: fs + 1, color: cc } }], { x: barR + 0.12, y, w: LAB, h: rhF, valign: "middle", margin: 0, fit: "shrink" });
+        sl.addShape(P.ShapeType.rect, { x: barL, y: by, w: barW, h: bh, fill: { color: "EEF0EB" }, line: { color: "EEF0EB" } });
+        box(FZ.kd.found, mix(cc, "FFFFFF", 0.7), 0); box(FZ.kd.stand, cc, bh * 0.12); box(ivMinus(mergeIvs(FZ.kd.stand), mergeIvs(s.fzW.kd.stand)), C_WK, bh * 0.12); box(FZ.kd.done, mix(cc, "000000", 0.4), bh * 0.32);
+        const runs = [...FZ.runs].sort((a, b) => a.lo - b.lo).reduce((o, x) => { const L = o[o.length - 1]; if (L && x.lo <= L.hi + 0.005) { L.hi = Math.max(L.hi, x.hi); L.m += x.m; } else o.push({ ...x }); return o; }, []).sort((a, b) => kA > kB ? b.hi - a.hi : a.lo - b.lo);
+        const k1d = v => String(Math.round(v * 10) / 10), fw = FZ.stand - s.fzW.stand, tf = Math.max(7, fs - 1.5);
+        T(sl, [{ text: `${M0(FZ.stand)}${RLM} מ׳`, options: { bold: true, fontSize: tf + 2, color: cc } }, ...(fw > 0.5 ? [{ text: " · ", options: { fontSize: tf } }, { text: `השבוע +${M0(fw)}`, options: { bold: true, color: "C25E00", fontSize: tf + 1 } }] : []),
+          { text: ` · ${runs.map(x => `${kA > kB ? `${k1d(x.hi)}–${k1d(x.lo)}` : `${k1d(x.lo)}–${k1d(x.hi)}`} (${M0(x.m)})`).join(" · ")}`, options: { fontSize: tf } }], { x: 0.4, y, w: TXT, h: rhF, valign: "middle", margin: 0, fit: "shrink", color: "333B35" });
+        sl.addShape(P.ShapeType.line, { x: barL, y: y + rhF - 0.02, w: barW, h: 0, line: { color: "C9CFC4", width: 0.75 } }); }
       rowsA.forEach(({ a, iv }, i) => { const y = top + i * rh, bh = rh * 0.56, by = y + (rh - bh) / 2;
         T(sl, svShort(a.name), { x: barR + 0.12, y, w: LAB, h: rh, fontSize: fs, valign: "middle", margin: 0, fit: "shrink" });
         sl.addShape(P.ShapeType.rect, { x: barL, y: by, w: barW, h: bh, fill: { color: "EEF0EB" }, line: { color: "EEF0EB" } });
@@ -6412,24 +6409,71 @@ async function mgmtDeck(asOf, theme = "color") {
         T(sl, [{ text: m ? m.toLocaleString("he-IL") + RLM + " מ׳" : "", options: { fontSize: tf } },
           ...(mw > 0 ? [{ text: " · ", options: { fontSize: tf } }, wkRun(`השבוע +${mw.toLocaleString("he-IL")}`, tf + 2)] : []),
           { text: `${mm > 0 ? ` · החודש +${mm.toLocaleString("he-IL")}` : ""} · ${ord.join(" · ")}`, options: { fontSize: tf } }], { x: 0.4, y, w: TXT, h: rh, fontSize: Math.max(7, fs - 1.5), valign: "middle", margin: 0, fit: "shrink", color: "333B35" }); });
-      const NOLAB = new Set(["מעבירי מים", "מעביר אירי"]);
-      rowsI.forEach(({ k, its }, j) => { const y = top + rowsA.length * rh + j * rhI, dot = Math.min(0.13, rhI * 0.3), cy = y + rhI / 2;
+      rowsI.forEach(({ k, its }, j) => { const rhI = rh * IKk(k), y = yI(j), dense = DENSE.has(k), dot = Math.min(0.13, rh * 1.55 * 0.3), cy = y + rhI / 2;
         T(sl, KIND_PLURAL[k] || k, { x: barR + 0.12, y, w: LAB, h: rhI, fontSize: fs, valign: "middle", margin: 0, color: FM ? NAVY : "2D6CB8", fit: "shrink" });
         sl.addShape(P.ShapeType.line, { x: barL, y: cy, w: barW, h: 0, line: { color: "D5DAD0", width: 0.75, dashType: "dash" } });
-        const lab = !NOLAB.has(k), sorted = [...its].sort((p, q) => kdNum(p.kdFrom) - kdNum(q.kdFrom));
+        const sorted = [...its].sort((p, q) => kdNum(p.kdFrom) - kdNum(q.kdFrom)), last = [-1e9, -1e9, -1e9, -1e9];
         sorted.forEach((it, n) => { const k0 = kdNum(it.kdFrom); if (k0 < r.lo - 0.5 || k0 > r.hi + 0.5) return; const st = it.status, xx = xOf(Math.max(r.lo, Math.min(r.hi, k0)));
           const fill = st === "הושלם" ? (inWeek(it.doneDate) ? C_WK : inMonth(it.doneDate) ? C_MON : C_OLD) : st === "בביצוע" ? C_IP : st === "HOLD" ? C_HOLD : "FFFFFF";
           sl.addShape(P.ShapeType.ellipse, { x: xx - dot / 2, y: cy - dot / 2, w: dot, h: dot, fill: { color: fill }, line: { color: st === "הושלם" ? "1F5E3A" : "8A9088", width: 0.75 } });
-          if (lab) { const num = kd1(k0), up = n % 2 === 0;
-            T(sl, String(num), { x: xx - 0.25, y: up ? cy - dot / 2 - 0.17 : cy + dot / 2 + 0.005, w: 0.5, h: 0.16, fontSize: 6.5, align: "center", valign: up ? "bottom" : "top", margin: 0, color: st === "הושלם" ? "1F5E3A" : "555B55", bold: st === "הושלם" }); } });
+          { const num = kd1(k0); let row = n % 2;   // 0 מעל · 1 מתחת · 2 מעל (גבוה) · 3 מתחת (נמוך)
+            if (dense) { row = [0, 1, 2, 3].find(q => Math.abs(xx - last[q]) >= 0.3); if (row === undefined) { const dd = last.map(v => Math.abs(xx - v)); row = dd.indexOf(Math.max(...dd)); } last[row] = xx; }
+            const up = row % 2 === 0, far = row >= 2 ? 0.15 : 0;
+            T(sl, String(num), { x: xx - 0.25, y: up ? cy - dot / 2 - 0.17 - far : cy + dot / 2 + 0.005 + far, w: 0.5, h: 0.16, fontSize: dense ? 6 : 6.5, align: "center", valign: up ? "bottom" : "top", margin: 0, color: st === "הושלם" ? "1F5E3A" : "555B55", bold: st === "הושלם" }); } });
         const dn = its.filter(x => x.status === "הושלם").length, ip = its.filter(x => x.status === "בביצוע").length, dw = its.filter(x => x.status === "הושלם" && inWeek(x.doneDate)).length, dmn = its.filter(x => x.status === "הושלם" && inMonth(x.doneDate)).length;
         const tf2 = Math.max(7, fs - 1.5);
-        T(sl, [{ text: `${of(dn, its.length)} הושלמו`, options: { fontSize: tf2 } }, ...(dw ? [{ text: " · ", options: { fontSize: tf2 } }, { text: `השבוע +${dw}`, options: { bold: true, color: "C25E00", fontSize: tf2 + 2 } }] : []), { text: `${dmn ? ` · החודש +${dmn}` : ""}${ip ? ` · ${ip} בביצוע` : ""}${k === "ארון שקד" ? (its.every(x => /^ארון שקד\s+\d+\s*$/.test(x.name || "")) ? " · המספר = מס׳ ארון" : its.some(x => /^ארון שקד\s+\d+\s*$/.test(x.name || "")) ? " · המספר = מס׳ ארון או ק.ד." : " · המספר = ק.ד.") : lab ? " · המספר = ק.ד." : ""}`, options: { fontSize: tf2 } }], { x: 0.4, y, w: TXT, h: rhI, fontSize: tf2, valign: "middle", margin: 0, color: "333B35", fit: "shrink" }); });
+        T(sl, [{ text: `${of(dn, its.length)} הושלמו`, options: { fontSize: tf2 } }, ...(dw ? [{ text: " · ", options: { fontSize: tf2 } }, { text: `השבוע +${dw}`, options: { bold: true, color: "C25E00", fontSize: tf2 + 2 } }] : []), { text: `${dmn ? ` · החודש +${dmn}` : ""}${ip ? ` · ${ip} בביצוע` : ""}${k === "ארון שקד" ? (its.every(x => /^ארון שקד\s+\d+\s*$/.test(x.name || "")) ? " · המספר = מס׳ ארון" : its.some(x => /^ארון שקד\s+\d+\s*$/.test(x.name || "")) ? " · המספר = מס׳ ארון או ק.ד." : " · המספר = ק.ד.") : " · המספר = ק.ד."}`, options: { fontSize: tf2 } }], { x: 0.4, y, w: TXT, h: rhI, fontSize: tf2, valign: "middle", margin: 0, color: "333B35", fit: "shrink" }); });
       // מקרא צבעים
       [[C_WK, "בוצע בשבוע האחרון"], [C_MON, "בחודש האחרון"], [C_OLD, "לפני כן"], [C_IP, "פריט בביצוע"], [C_HOLD, "HOLD"], ["FFFFFF", "פריט טרם"]].forEach(([col, t], i) => { const x = W - 0.4 - (i + 1) * 1.75;
         sl.addShape(P.ShapeType.rect, { x: x + 1.48, y: 6.86, w: 0.2, h: 0.14, fill: { color: col }, line: { color: "8A9088", width: 0.5 } });
         T(sl, t, { x, y: 6.82, w: 1.44, h: 0.22, fontSize: 8.5, color: MUT, margin: 0, valign: "middle" }); });
       T(sl, "ק.ד. מחושב מהחתכים", { x: 0.4, y: 6.82, w: 1.9, h: 0.22, fontSize: 7.5, color: MUT, margin: 0, valign: "middle" });
+    }
+    // גדר — איפה עומדת ואיפה לא: ציר מק.ד. עד ק.ד. + טבלת קטעים במטרים (פערים קצרים מ־100 מ׳ לא מוצגים בנפרד)
+    { const r = kdRange(c), kA = kdNum(c.kdFrom), kB = kdNum(c.kdTo), FZ = s.fz; if (!r || kA === null || kB === null || !FZ.segs.length) continue;
+      const GAPMIN = 100 / SECTION_M, P0 = [];   // חלקים בחתכים לכל קטע תכנון → ק.ד.
+      for (const g of FZ.segs) { const [lo, hi] = g.rg, st = ivInter(mergeIvs(g.st.map(q => q.slice())), [[lo, hi]]), gp = gapsOf(lo, hi, st);
+        const big = gp.filter(([a, b]) => b - a >= GAPMIN), cuts = [lo, ...big.flat(), hi], toK = v => sec2kd(g.s, v);
+        for (let i = 0; i < cuts.length - 1; i++) { const a = cuts[i], b = cuts[i + 1]; if (b - a <= 0) continue; const isGap = big.some(([p, q]) => p === a && q === b);
+          const sm = ivInter(st, [[a, b]]).reduce((t, [u, v]) => t + v - u, 0) * SECTION_M, fm = isGap ? ivInter(mergeIvs(g.f.map(q => q.slice())), [[a, b]]).reduce((t, [u, v]) => t + v - u, 0) * SECTION_M : 0;
+          if (!isGap && sm <= 0) continue;
+          const k1 = toK(a), k2 = toK(b); if (k1 === null || k2 === null) continue;
+          P0.push({ gap: isGap, lo: Math.min(k1, k2), hi: Math.max(k1, k2), m: isGap ? (b - a) * SECTION_M : sm, len: (b - a) * SECTION_M, fm }); } }
+      // חיבור חלקים צמודים מאותו סוג (גם מעבר לגבול קטע תכנון)
+      const PC = P0.sort((a, b) => a.lo - b.lo).reduce((o, x) => { const L = o[o.length - 1]; if (L && L.gap === x.gap && x.lo <= L.hi + 0.5) { L.hi = Math.max(L.hi, x.hi); L.m += x.m; L.len += x.len; L.fm += x.fm; } else o.push({ ...x }); return o; }, []);
+      // חלק עומד שכולו קצר מ־100 מ׳ בין שני פערים — נשאר, אבל בלי תווית על הציר
+      const ord = [...PC].sort((a, b) => kA > kB ? b.hi - a.hi : a.lo - b.lo), stM = PC.filter(x => !x.gap).reduce((t, x) => t + x.m, 0), gM = PC.filter(x => x.gap).reduce((t, x) => t + x.m, 0), totL = PC.reduce((t, x) => t + x.len, 0);
+      const fw = FZ.stand - s.fzW.stand, cc = CC(c), k1d = v => (Math.round(v * 10) / 10).toLocaleString("he-IL", { maximumFractionDigits: 1 }), kTx = x => kA > kB ? `${k1d(x.hi)}–${k1d(x.lo)}` : `${k1d(x.lo)}–${k1d(x.hi)}`;
+      const sl = P.addSlide(); header(sl, `${c.name} — גדר: איפה עומדת ואיפה לא`, `ק.ד. ${kd1(kA)} עד ${kd1(kB)} · גדר עומדת לפי דיווחים מאושרים עד ${fmtD(asOf)} · פערים קצרים מ־100 מ׳ לא מוצגים בנפרד`, { col: cc, c });
+      const gap = 0.18, tw = (W - 0.6 - 3 * gap) / 4, tx = k => W - 0.3 - (k + 1) * tw - k * gap;
+      tile(sl, tx(0), 1.2, tw, 1.0, "🧱 גדר עומדת", `${M0(stM)}${RLM} מ׳`, `${PC.filter(x => !x.gap).length} קטעים · גמורה ${M0(FZ.done)} מ׳`, "green");
+      tile(sl, tx(1), 1.2, tw, 1.0, "אין גדר עדיין", `${M0(gM)}${RLM} מ׳`, `${PC.filter(x => x.gap).length} קטעים · מתוכם יסוד ${M0(PC.reduce((t, x) => t + x.fm, 0))} מ׳`, "white", FM ? "8B2E2E" : "A6412A");
+      tile(sl, tx(2), 1.2, tw, 1.0, "אורך הגזרה (לפי חתכים)", `${M0(totL)}${RLM} מ׳`, `עומדת ${totL ? Math.round(stM / totL * 100) : 0}% מהאורך`, "white");
+      tile(sl, tx(3), 1.2, tw, 1.0, "גדר — השבוע", fw > 0.5 ? `+${M0(fw)}${RLM} מ׳` : "—", fw > 0.5 ? "בכתום על הציר" : "ללא גדר חדשה השבוע", "orange");
+      // הציר
+      const L0 = 0.5, R0 = W - 0.5, BW = R0 - L0, xOf = k => R0 - (k - kA) / (kB - kA) * BW, by = 2.95, bh = 0.5, GRY = "DADFD6", STC = FM ? NAVY : hx(C_OLD);
+      const span = Math.abs(kB - kA), step = span > 120 ? 20 : span > 60 ? 10 : 5;
+      for (let k = Math.ceil(r.lo / step) * step; k <= r.hi + 1e-9; k += step) { const xx = xOf(k); sl.addShape(P.ShapeType.line, { x: xx, y: by - 0.12, w: 0, h: bh + 0.24, line: { color: "C9CFC4", width: 0.75, dashType: "dash" } });
+        T(sl, String(k), { x: xx - 0.3, y: by + bh + 0.12, w: 0.6, h: 0.22, fontSize: 9, color: MUT, align: "center", margin: 0 }); }
+      T(sl, "ק.ד.", { x: R0 - 0.6, y: by + bh + 0.32, w: 0.6, h: 0.2, fontSize: 8, color: MUT, align: "right", margin: 0 });
+      sl.addShape(P.ShapeType.rect, { x: L0, y: by, w: BW, h: bh, fill: { color: "F1F3EF" }, line: { color: "C9CFC4", width: 0.5 } });
+      const xs = (lo, hi) => { const x1 = Math.min(xOf(lo), xOf(hi)), x2 = Math.max(xOf(lo), xOf(hi)); return [x1, Math.max(0.02, x2 - x1)]; };
+      for (const x of PC) { const [x1, w1] = xs(x.lo, x.hi); sl.addShape(P.ShapeType.rect, { x: x1, y: by, w: w1, h: bh, fill: { color: x.gap ? GRY : STC }, line: { color: "FFFFFF", width: 0.5 } }); }
+      // יסוד בתוך פערים — פס דק בהיר; גדר חדשה השבוע — כתום
+      for (const g of FZ.segs) { const toK = v => sec2kd(g.s, v);
+        mergeIvs(g.f.map(q => q.slice())).forEach(([a, b]) => { const k1 = toK(a), k2 = toK(b); if (k1 === null || k2 === null) return; const lo = Math.min(k1, k2), hi = Math.max(k1, k2); PC.filter(x => x.gap && x.hi > lo && x.lo < hi).forEach(x => { const [x1, w1] = xs(Math.max(lo, x.lo), Math.min(hi, x.hi)); sl.addShape(P.ShapeType.rect, { x: x1, y: by + bh - 0.12, w: w1, h: 0.12, fill: { color: FM ? "9DB0C8" : "B9A27A" }, line: { color: FM ? "9DB0C8" : "B9A27A", width: 0 } }); }); }); }
+      ivMinus(mergeIvs(FZ.kd.stand.map(q => q.slice())), mergeIvs(s.fzW.kd.stand.map(q => q.slice()))).forEach(([lo, hi]) => { const [x1, w1] = xs(lo, hi); sl.addShape(P.ShapeType.rect, { x: x1, y: by, w: w1, h: bh, fill: { color: C_WK }, line: { color: C_WK, width: 0.25 } }); });
+      // תוויות מטרים: עומדת — מעל הציר, אין גדר — מתחת
+      PC.forEach(x => { const [x1, w1] = xs(x.lo, x.hi); if (w1 < 0.5) return; T(sl, `${M0(x.m)}${RLM} מ׳`, { x: x1, y: x.gap ? by + bh + 0.36 : by - 0.3, w: w1, h: 0.24, fontSize: w1 > 1 ? 10 : 8, bold: !x.gap, color: x.gap ? (FM ? "8B2E2E" : "A6412A") : STC, align: "center", margin: 0, fit: "shrink" }); });
+      // טבלת קטעים — מצפון לדרום; עד 2 עמודות של 14
+      const PER = 14, cols = Math.min(2, Math.max(1, Math.ceil(ord.length / PER))), shown = ord.slice(0, PER * cols), cw = (W - 0.6 - (cols - 1) * 0.3) / cols;
+      for (let k = 0; k < cols; k++) { const part = shown.slice(k * PER, k * PER + PER); if (!part.length) continue;
+        table(sl, ["#", "ק.ד. מ–עד", "מצב", "מטרים"], part.map((x, i) => [String(k * PER + i + 1), kTx(x), x.gap ? { text: x.fm > 0.5 ? `אין גדר · יסוד ${M0(x.fm)} מ׳` : "אין גדר", o: { color: FM ? "8B2E2E" : "A6412A", bold: true } } : { text: "גדר עומדת", o: { color: STC, bold: true } }, { text: `${M0(x.m)} מ׳`, o: { bold: true } }]),
+          { x: W - 0.3 - (k + 1) * cw - k * 0.3, y: 4.42, w: cw, colW: [0.4, cw * 0.32, cw - 0.4 - cw * 0.32 - cw * 0.2, cw * 0.2], maxH: 2.4, fs: 10 }); }
+      if (ord.length > shown.length) T(sl, `+ עוד ${ord.length - shown.length} קטעים`, { x: 0.4, y: 6.82, w: 3, h: 0.22, fontSize: 8.5, color: MUT, margin: 0 });
+      [[STC, "גדר עומדת"], [C_WK, "נוספה השבוע"], [GRY, "אין גדר"], [FM ? "9DB0C8" : "B9A27A", "יסוד (בלי גדר)"]].forEach(([col, t], i) => { const x = W - 0.4 - (i + 1) * 1.75;
+        sl.addShape(P.ShapeType.rect, { x: x + 1.48, y: 4.12, w: 0.2, h: 0.14, fill: { color: col }, line: { color: "8A9088", width: 0.5 } });
+        T(sl, t, { x, y: 4.08, w: 1.44, h: 0.22, fontSize: 8.5, color: MUT, margin: 0, valign: "middle" }); });
     }
   }
   // 3. קבלנים ייעודיים — ביחידות, כל נתון בעמודה משלו
