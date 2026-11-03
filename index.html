@@ -1887,6 +1887,10 @@ function autoAlerts(d) {
   // חח״י — תקוע באותו שלב
   const stuck = IO.filter(o => !IEC_DONE.has(o.stage) && !IEC_PAY.has(o.stage) && o.stage !== "משלים שולם" && o.stageDate && daysSince(o.stageDate) > 45);
   if (stuck.length) add({ key: `iecstuck:${stuck.length}`, cat: "מעקב", sev: "orange", title: `${stuck.length} הזמנות חח״י באותו שלב יותר מ־45 יום`, lines: stuck.map(o => `${o.orderNo} · ${o.name} · ${o.stage} מאז ${fmtD(o.stageDate)}`), go: { page: "power" } });
+  // תקציב תפעולי — הזמנה מול ספק שמסתיימת בתוך 30 יום / שהסתיימה (מנהלים בלבד, כמו החוצץ)
+  if (isMgr()) list("opex").forEach(x => { const s = oxEndState(x); if (!s) return; const n = daysTo(x.end);
+    add({ key: `oxend:${x.id}:${x.end}`, cat: "תאריך", sev: s, date: x.end, title: `${x.name}: ההזמנה ${n < 0 ? `הסתיימה ב־${fmtD(x.end)}` : n === 0 ? "מסתיימת היום" : `מסתיימת ב־${fmtD(x.end)} (בעוד ${n} ימים)`}`,
+      lines: [[x.field, x.subject].filter(Boolean).join(" · "), x.ordNo ? `הזמנה ${x.ordNo}` : ""].filter(Boolean), hint: "להאריך את ההזמנה ולעדכן תאריך סיום, או לסמן ״הסתיים״ בחלון הספק — ההתראה תיעלם לבד.", go: { page: "opex" } }); });
   // עמודות תאריך שנקראות "תוקף…" / "סיום…" (בכל טבלה, כולל עמודות שתוסיף בעצמך)
   const seen = new Set();
   Object.entries(RAW.tableConfig || {}).forEach(([doc, cfg]) => { const table = doc.split("__")[0], cid = doc.split("__")[1];
@@ -4884,10 +4888,11 @@ function reqTable(d) {
   const M = new Map(), get = no => { const n = reqNorm(no); if (!n) return null; if (!M.has(n)) M.set(n, { no: n, key: n, rec: null, orders: [], iec: null, pendOrd: [] }); return M.get(n); };
   d.reqs.forEach(r => { const x = get(r.no) || (M.set("~" + r.id, { no: "", key: "~" + r.id, rec: null, orders: [], iec: null, pendOrd: [] }), M.get("~" + r.id)); x.rec = r; });
   (RAW.tableConfig?.iec?.budgetReqs || []).forEach(r => { const x = get(r.no); if (x) x.iec = r; });
-  [...d.orders, ...oxAsOrders(), ...iecModOrders()].forEach(o => { const x = get(o.x_reqNo); if (x) x.orders.push(o); else if (o._iecMod) M.set("~iec:" + o._iecMod, { no: "", key: "~iec:" + o._iecMod, rec: null, orders: [o], iec: null, pendOrd: [], iecMod: o._iecMod }); });
+  const OX = oxAsOrders(), claimed = new Set(d.reqs.flatMap(reqOrdNos));   // התקשרות תפעולית בלי מס׳ דרישה — שורה משלה, אלא אם דרישה כבר רושמת את מס׳ ההזמנה שלה
+  [...d.orders, ...OX, ...iecModOrders()].forEach(o => { const x = get(o.x_reqNo); if (x) x.orders.push(o); else if (o._opex && !claimed.has(reqNorm(o.x_ordNo))) M.set("~opex:" + o._opex, { no: "", key: "~opex:" + o._opex, rec: null, orders: [o], iec: null, pendOrd: [], opexRow: o._opex }); else if (o._iecMod) M.set("~iec:" + o._iecMod, { no: "", key: "~iec:" + o._iecMod, rec: null, orders: [o], iec: null, pendOrd: [], iecMod: o._iecMod }); });
   // מספרי הזמנות שנרשמו בדרישה עצמה — לפעמים יש הזמנה לפני שיש מספר דרישה: מצרפים הזמנות שעוד אין להן מס׳ דרישה
   d.reqs.forEach(r => { const nos = reqOrdNos(r); if (!nos.length) return; const x = M.get(reqNorm(r.no) || "~" + r.id); if (!x) return;
-    nos.forEach(n => { const os = d.orders.filter(o => reqNorm(o.x_ordNo) === n); os.filter(o => !reqNorm(o.x_reqNo) && !x.orders.includes(o)).forEach(o => x.orders.push(o)); if (!os.length) x.pendOrd.push(n); }); });
+    nos.forEach(n => { const os = [...d.orders, ...OX].filter(o => reqNorm(o.x_ordNo) === n); os.filter(o => !reqNorm(o.x_reqNo) && !x.orders.includes(o)).forEach(o => x.orders.push(o)); if (!os.length) x.pendOrd.push(n); }); });
   return [...M.values()].map(x => {
     const amount = x.rec && x.rec.amount !== "" && x.rec.amount != null ? reqAmt(x.rec.amount) : x.iec ? reqAmt(x.iec.amount) : 0, hasAmt = !!amount;
     const iss = x.orders.filter(ordIssued), pl = x.orders.filter(o => !ordIssued(o)), sum = a => a.reduce((t, o) => t + bgOrdAmt(o), 0);
@@ -5114,15 +5119,26 @@ const oxPays = x => Object.entries(x.pays || {}).map(([id, p]) => ({ id, ...p })
 const oxPaid = x => oxPays(x).filter(p => p.status === "שולם").reduce((t, p) => t + bgN(p.amount), 0);
 const oxPend = x => oxPays(x).filter(p => p.status !== "שולם").reduce((t, p) => t + bgN(p.amount), 0);
 const oxBudgets = () => tcfg("opex").budgets || {};
+/** הגדלות / הקטנות: changes = { id: { date, ord, req, note, by } } — ord משנה את היקף ההזמנה, req את סכום הדרישה (בטבלת הדרישות) */
+const oxChanges = x => Object.entries(x.changes || {}).map(([id, c]) => ({ id, ...c })).sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.at || "").localeCompare(String(b.at || "")));
+const oxAmt = x => bgN(x.amount) + oxChanges(x).reduce((t, c) => t + bgN(c.ord), 0);   // היקף ההזמנה בפועל = מקורי + הגדלות − הקטנות
+const oxUpds = x => Object.entries(x.upd || {}).map(([id, u]) => ({ id, ...u })).sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.at || "").localeCompare(String(a.at || "")));
+const oxReqRec = x => reqNorm(x.reqNo) ? list("reqs").find(r => reqNorm(r.no) === reqNorm(x.reqNo)) : null;
+const sgnM = v => (v > 0 ? "+" : v < 0 ? "−" : "") + bgM(Math.abs(v));
 const oxFields = () => [...new Set([...OX_FIELDS, ...list("opex").map(x => x.field).filter(Boolean), ...Object.keys(oxBudgets())])];
 /** סיכום לכל תחום: תקציב מתוכנן, התקשרויות, שולם — ולאומדן הכולל: הגדול מבין התקציב לתחום וסכום ההתקשרויות */
 function oxByField() {
   const B = oxBudgets(), L = oxList();
-  return oxFields().map(f => { const a = L.filter(x => (x.field || "אחר") === f), com = a.reduce((t, x) => t + bgN(x.amount), 0), paid = a.reduce((t, x) => t + oxPaid(x), 0), plan = bgN(B[f]);
+  return oxFields().map(f => { const a = L.filter(x => (x.field || "אחר") === f), com = a.reduce((t, x) => t + oxAmt(x), 0), paid = a.reduce((t, x) => t + oxPaid(x), 0), plan = bgN(B[f]);
     return { f, a, com, paid, pend: a.reduce((t, x) => t + oxPend(x), 0), plan, est: Math.max(plan, com) }; }).filter(r => r.a.length || r.plan);
 }
 /** התקשרויות עם מספר דרישה — נספרות בטבלת הדרישות כמו הזמנה (בלי קבלן; שם הספק מוצג) */
-const oxAsOrders = () => list("opex").filter(x => reqNorm(x.reqNo)).map(x => ({ id: "opex:" + x.id, _opex: x.id, name: `${x.field || "תפעולי"}: ${x.name}${x.subject ? " — " + x.subject : ""}`, contractorId: "", x_cname: x.name, x_reqNo: x.reqNo, x_ordNo: x.ordNo || "", x_amount: x.amount }));
+const oxAsOrders = () => list("opex").filter(x => reqNorm(x.reqNo) || reqNorm(x.ordNo) || oxAmt(x)).map(x => ({ id: "opex:" + x.id, _opex: x.id, name: `${x.field || "תפעולי"}: ${x.name}${x.subject ? " — " + x.subject : ""}`, contractorId: "", x_cname: x.name, x_reqNo: x.reqNo, x_ordNo: x.ordNo || "", x_amount: oxAmt(x) }));
+/** תקופת ההזמנה + סימון כשמתקרב הסיום (30 יום) או שעבר — רק להתקשרות פעילה */
+const OX_SOON = 30;
+const oxEndState = x => !x.end || x.status === "הסתיים" ? null : daysTo(x.end) < 0 ? "red" : daysTo(x.end) <= OX_SOON ? "orange" : null;
+const oxPeriod = x => { if (!x.start && !x.end) return `<span class="muted">—</span>`; const st = oxEndState(x), n = x.end ? daysTo(x.end) : null;
+  return `${x.start ? fmtD(x.start) : "?"} – ${x.end ? fmtD(x.end) : "?"}${st ? `<div><span class="pill" style="background:${st === "red" ? "#fde3e1;color:#b3261e" : "#fff1dc;color:#9a5b00"}">${n < 0 ? `הסתיימה לפני ${-n} ימים` : n === 0 ? "מסתיימת היום" : `מסתיימת בעוד ${n} ימים`}</span></div>` : ""}`; };
 function pageOpex(d) {
   if (!isMgr()) return `<div class="card"><p>החוצץ הזה למנהלים בלבד.</p></div>`;
   const F = ui.ox || (ui.ox = { f: "", q: "" }), ed = !isViewer(), R = oxByField(), L = oxList(), q = String(F.q || "").trim().toLowerCase();
@@ -5135,10 +5151,10 @@ function pageOpex(d) {
       <td class="nowrap">${r.plan ? `<b class="${r.plan - r.com < 0 ? "rq-neg" : "rq-pos"}">${bgM(r.plan - r.com)}</b>` : "—"}</td><td style="min-width:120px">${bar(r.paid, r.com, r.plan)}</td></tr>`).join("");
   const rows = L.filter(x => (!F.f || (x.field || "אחר") === F.f) && (!q || [x.name, x.subject, x.field, x.reqNo, x.ordNo, x.note].join(" ").toLowerCase().includes(q)));
   const last = x => { const p = oxPays(x).pop(); return p ? `${fmtD(p.date)} · ${bgM(bgN(p.amount))} · ${esc(p.status || "")}` : `<span class="muted">—</span>`; };
-  const eRow = x => { const pd = oxPaid(x), pe = oxPend(x), am = bgN(x.amount);
+  const eRow = x => { const pd = oxPaid(x), pe = oxPend(x), am = oxAmt(x), ch = oxChanges(x), U = oxUpds(x);
     return `<tr class="${x.status === "הסתיים" ? "rq-closed" : ""}"><td><a href="#" data-act="oxOpen" data-id="${x.id}"><b>${esc(x.name)}</b></a><div class="small muted">${esc(x.field || "")}${x.subject ? " · " + esc(x.subject) : ""}</div></td>
-      <td class="small nowrap" dir="ltr">${esc(x.reqNo || "—")}<br>${esc(x.ordNo || "—")}</td><td class="nowrap">${am ? bgM(am) : `<span class="muted">חסר</span>`}</td><td class="nowrap"><b style="color:#2f7d4f">${bgM(pd)}</b>${pe ? `<div class="small" style="color:#b86b1d">ממתין ${bgM(pe)}</div>` : ""}</td>
-      <td class="nowrap">${am ? `<b class="${am - pd < 0 ? "rq-neg" : ""}">${bgM(am - pd)}</b>` : "—"}</td><td style="min-width:100px">${am ? bar(pd, am, 0) : ""}</td><td class="small">${last(x)}</td><td><button class="btn ghost sm" data-act="oxOpen" data-id="${x.id}">פירוט</button></td></tr>`; };
+      <td class="small nowrap" dir="ltr">${esc(x.reqNo || "—")}<br>${esc(x.ordNo || "—")}</td><td class="small nowrap">${oxPeriod(x)}</td><td class="nowrap">${am ? bgM(am) : `<span class="muted">חסר</span>`}${ch.length ? `<div class="small muted" title="${esc(ch.map(c => `${fmtD(c.date)} הזמנה ${sgnM(bgN(c.ord))}${bgN(c.req) ? ` · דרישה ${sgnM(bgN(c.req))}` : ""}${c.note ? " — " + c.note : ""}`).join("\n"))}">מקורי ${bgM(bgN(x.amount))} · ${ch.length} שינויים</div>` : ""}</td><td class="nowrap"><b style="color:#2f7d4f">${bgM(pd)}</b>${pe ? `<div class="small" style="color:#b86b1d">ממתין ${bgM(pe)}</div>` : ""}</td>
+      <td class="nowrap">${am ? `<b class="${am - pd < 0 ? "rq-neg" : ""}">${bgM(am - pd)}</b>` : "—"}</td><td style="min-width:100px">${am ? bar(pd, am, 0) : ""}</td><td class="small">${last(x)}</td><td class="small" style="min-width:170px">${U.length ? `<div>${fmtD(U[0].date)} — ${esc(String(U[0].text).slice(0, 70))}${String(U[0].text).length > 70 ? "…" : ""}</div>` : ""}<button class="btn ghost sm" data-act="oxUpd" data-id="${x.id}" title="כל העדכונים לפי תאריך">${U.length ? `${U.length} עדכונים` : ed ? "+ עדכון" : "—"}</button></td><td><button class="btn ghost sm" data-act="oxOpen" data-id="${x.id}">פירוט</button></td></tr>`; };
   const grp = [...new Set(rows.map(x => x.field || "אחר"))];
   return `<div class="ch-banner" style="--cc:#6b5a3a"><div><h1>🗂 תקציב תפעולי</h1><span>מתכננים, מתאמים מול רשויות, יועצים ועוד — התקשרות, חשבונות ותשלומים. נכנס לאומדן הכולל ול״דרישות ויתרות״ לפי מספר הדרישה.</span></div>
     ${ed ? `<button class="btn" data-act="oxOpen" data-id="">+ ספק / התקשרות</button>` : ""}</div>
@@ -5148,32 +5164,46 @@ function pageOpex(d) {
     ${R.length > 1 ? `<tr class="rq-sub"><td><b>סה״כ</b></td><td><b>${plan ? bgM(plan) : "—"}</b></td><td><b>${bgM(com)}</b></td><td><b>${bgM(paid)}</b></td><td><b>${bgM(com - paid)}</b></td><td>${plan ? `<b>${bgM(plan - com)}</b>` : ""}</td><td>${bar(paid, com, plan)}</td></tr>` : ""}</tbody></table></div>
     <p class="small muted" style="margin:6px 0 0">באומדן הכולל של הפרויקט נספר לכל תחום הגדול מבין התקציב המתוכנן וסכום ההתקשרויות. התקציב לתחום — לא חובה.</p></div>
   <div class="card"><div class="row" style="gap:8px;margin-bottom:8px"><h2 style="margin:0">ספקים והתקשרויות${F.f ? ` — ${esc(F.f)}` : ""}</h2>${F.f ? `<button class="btn ghost sm" data-act="oxF" data-id="">✕ כל התחומים</button>` : ""}<span class="spacer"></span><input class="inp" data-oxq="1" value="${esc(F.q || "")}" placeholder="חיפוש ספק, נושא, מספר…" style="max-width:240px"></div>
-    <div class="tablewrap"><table class="sheet rq-t"><thead><tr><th>ספק</th><th>דרישה / הזמנה</th><th>היקף התקשרות</th><th>שולם</th><th>נשאר</th><th>ניצול</th><th>חשבון אחרון</th><th></th></tr></thead><tbody>
-    ${grp.map(g => `<tr class="rq-gh" style="--rc:#6b5a3a"><td colspan="8">${esc(g)}</td></tr>${rows.filter(x => (x.field || "אחר") === g).map(eRow).join("")}`).join("") || `<tr><td colspan="8" class="c muted">אין</td></tr>`}</tbody></table></div></div>`;
+    <div class="tablewrap"><table class="sheet rq-t"><thead><tr><th>ספק</th><th>דרישה / הזמנה</th><th>תקופה</th><th>היקף התקשרות</th><th>שולם</th><th>נשאר</th><th>ניצול</th><th>חשבון אחרון</th><th>עדכונים</th><th></th></tr></thead><tbody>
+    ${grp.map(g => `<tr class="rq-gh" style="--rc:#6b5a3a"><td colspan="10">${esc(g)}</td></tr>${rows.filter(x => (x.field || "אחר") === g).map(eRow).join("")}`).join("") || `<tr><td colspan="10" class="c muted">אין</td></tr>`}</tbody></table></div></div>`;
 }
 function oxModal(id) {
   const x = id ? { id, ...(RAW.opex?.[id] || {}) } : { field: ui.ox?.f || "", status: "פעיל", pays: {} }, ed = !isViewer(), dis = ed ? "" : "disabled";
   const names = [...new Set([...list("contacts").map(c => c.org || c.name), ...list("opex").map(o => o.name)].filter(Boolean))];
-  const P = oxPays(x), am = bgN(x.amount), pd = oxPaid(x);
+  const P = oxPays(x), am = oxAmt(x), pd = oxPaid(x), CH = oxChanges(x), RR = oxReqRec(x), rAm = RR ? reqAmt(RR.amount) : 0;
   const inp = (k, l, more = "") => `<label class="field" style="flex:1">${l}<input class="inp" id="ox_${k}" value="${esc(x[k] ?? "")}" ${more} ${dis}></label>`;
   modal(`<h2 style="margin-top:0">${id ? esc(x.name) : "ספק / התקשרות חדשה"}</h2>
     <div class="row" style="gap:8px">${inp("name", "ספק / משרד", 'list="ox_names"')}<label class="field" style="flex:1">תחום<input class="inp" id="ox_field" list="ox_fields" value="${esc(x.field || "")}" ${dis}></label><label class="field" style="flex:.7">סטטוס<select class="inp" id="ox_status" ${dis}>${["פעיל", "הסתיים"].map(s => `<option ${s === (x.status || "פעיל") ? "selected" : ""}>${s}</option>`).join("")}</select></label></div>
-    <div class="row" style="gap:8px">${inp("subject", "נושא ההתקשרות", 'placeholder="למשל: תכנון מפורט קטע 4, ליווי רט״ג"')}${inp("amount", "היקף התקשרות (₪)", 'inputmode="decimal"')}</div>
-    <div class="row" style="gap:8px">${inp("reqNo", "מספר דרישה", 'dir="ltr" placeholder="880…"')}${inp("ordNo", "מספר הזמנה", 'dir="ltr" placeholder="444…"')}${inp("note", "הערה")}</div>
+    <div class="row" style="gap:8px">${inp("subject", "נושא ההתקשרות", 'placeholder="למשל: תכנון מפורט קטע 4, ליווי רט״ג"')}${inp("amount", CH.length ? "היקף מקורי (₪)" : "היקף התקשרות (₪)", 'inputmode="decimal"')}</div>
+    <div class="row" style="gap:8px">${inp("reqNo", "מספר דרישה", 'dir="ltr" placeholder="880…"')}${inp("ordNo", "מספר הזמנה", 'dir="ltr" placeholder="444…"')}${inp("start", "תחילת ההזמנה", 'type="date"')}${inp("end", "סיום ההזמנה", 'type="date"')}</div>
+    <div class="row" style="gap:8px">${inp("note", "הערה")}</div>
     <datalist id="ox_names">${names.map(n => `<option value="${esc(n)}">`).join("")}</datalist><datalist id="ox_fields">${oxFields().map(n => `<option value="${esc(n)}">`).join("")}</datalist>
-    ${id ? `<h3 style="margin:12px 0 4px">חשבונות ותשלומים <span class="small muted">שולם ${bgM(pd)}${am ? ` מתוך ${bgM(am)} · נשאר ${bgM(am - pd)}` : ""}</span></h3>
+    ${id ? `<h3 style="margin:12px 0 4px">הגדלות / הקטנות <span class="small muted">הזמנה עכשיו ${bgM(am)}${CH.length ? ` (מקורי ${bgM(bgN(x.amount))})` : ""}${reqNorm(x.reqNo) ? ` · דרישה ${esc(x.reqNo)}: ${rAm ? bgM(rAm) : "בלי סכום"}${rAm ? ` · פנוי בדרישה לפי ההזמנה הזו ${bgM(rAm - am)}` : ""}` : ""}</span></h3>
+    ${CH.length ? `<div class="tablewrap" style="max-height:180px"><table class="sheet"><thead><tr><th>תאריך</th><th>הזמנה</th><th>דרישה</th><th>הערה</th><th>מי</th></tr></thead><tbody>${CH.map(c => `<tr><td class="nowrap">${fmtD(c.date)}</td><td class="nowrap"><b style="color:${bgN(c.ord) < 0 ? "#b3261e" : "#2f7d4f"}">${bgN(c.ord) ? sgnM(bgN(c.ord)) : "—"}</b></td><td class="nowrap">${bgN(c.req) ? sgnM(bgN(c.req)) : "—"}</td><td class="small">${esc(c.note || "")}</td><td class="small muted">${esc(c.by || "")}</td></tr>`).join("")}</tbody></table></div>` : `<p class="small muted" style="margin:2px 0">עוד אין שינויים בהיקף</p>`}
+    ${ed ? `<div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap"><input type="date" class="inp" id="oc_d" value="${todayStr()}" style="max-width:150px"><input class="inp" id="oc_o" placeholder="הזמנה: +50,000 / −20,000" style="max-width:190px" dir="ltr"><input class="inp" id="oc_r" placeholder="דרישה: +100,000 (לא חובה)" style="max-width:200px" dir="ltr" ${reqNorm(x.reqNo) ? "" : 'disabled title="אין מספר דרישה"'}><input class="inp" id="oc_n" placeholder="הערה / אסמכתא" style="flex:1;min-width:120px"><button class="btn sm" id="oc_add">+ שינוי</button></div>
+      <p class="small muted" style="margin:3px 0 0">הקטנת ההזמנה מחזירה את הכסף ליתרה הפנויה בדרישה. הגדלה / הקטנה של הדרישה מעדכנת את סכום הדרישה בטבלת ״דרישות ויתרות״.</p>` : ""}
+    <h3 style="margin:12px 0 4px">חשבונות ותשלומים <span class="small muted">שולם ${bgM(pd)}${am ? ` מתוך ${bgM(am)} · נשאר ${bgM(am - pd)}` : ""}</span></h3>
     ${P.length ? `<div class="tablewrap" style="max-height:220px"><table class="sheet"><thead><tr><th>תאריך</th><th>מס׳ חשבון</th><th>סכום</th><th>סטטוס</th><th>הערה</th><th></th></tr></thead><tbody>${P.map(p => `<tr><td class="nowrap">${fmtD(p.date)}</td><td dir="ltr">${esc(p.inv || "")}</td><td class="nowrap">${bgM(bgN(p.amount))}</td>
       <td>${ed ? `<select class="inp" data-oxps="${p.id}" style="min-width:12ch">${OX_PST.map(s => `<option ${s === p.status ? "selected" : ""}>${s}</option>`).join("")}</select>` : esc(p.status || "")}</td><td class="small">${esc(p.note || "")}</td><td>${ed ? `<button class="btn ghost sm" data-oxpd="${p.id}" title="מחיקה">✕</button>` : ""}</td></tr>`).join("")}</tbody></table></div>` : `<p class="small muted">עוד אין חשבונות</p>`}
     ${ed ? `<div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap"><input type="date" class="inp" id="op_d" value="${todayStr()}" style="max-width:150px"><input class="inp" id="op_i" placeholder="מס׳ חשבון" dir="ltr" style="max-width:120px"><input class="inp" id="op_a" placeholder="סכום" style="max-width:120px" inputmode="decimal">
       <select class="inp" id="op_s" style="max-width:150px">${OX_PST.map(s => `<option>${s}</option>`).join("")}</select><input class="inp" id="op_n" placeholder="הערה" style="flex:1;min-width:120px"><button class="btn sm" id="op_add">+ חשבון</button></div>` : ""}` : `<p class="small muted">אחרי השמירה אפשר להוסיף חשבונות ותשלומים.</p>`}
+    ${id ? `<h3 style="margin:12px 0 4px">עדכונים <span class="small muted">${oxUpds(x).length || "אין"}</span></h3>${oxUpdHtml(x, ed)}` : ""}
     <p class="small" id="ox_m" style="color:#c0392b;min-height:1em;margin:6px 0"></p>
     <div class="row">${ed ? `<button class="btn" id="mYes">שמירה</button>` : ""}<button class="btn ghost" id="mNo">סגירה</button><span class="spacer"></span>${ed && id ? `<button class="btn ghost" id="ox_del" style="color:#b3261e">מחיקה</button>` : ""}</div>`, (m, close) => {
     m.querySelector("#mNo").onclick = close; if (!ed) return;
     const g = k => m.querySelector("#ox_" + k).value.trim();
     m.querySelector("#mYes").onclick = async () => { if (!g("name")) return m.querySelector("#ox_m").textContent = "צריך שם ספק";
-      const rec = { name: g("name"), field: g("field") || "אחר", status: m.querySelector("#ox_status").value, subject: g("subject"), amount: reqAmt(g("amount")) || "", reqNo: reqNorm(g("reqNo")), ordNo: g("ordNo"), note: g("note") };
+      const rec = { name: g("name"), field: g("field") || "אחר", status: m.querySelector("#ox_status").value, subject: g("subject"), amount: reqAmt(g("amount")) || "", reqNo: reqNorm(g("reqNo")), ordNo: g("ordNo"), start: g("start"), end: g("end"), note: g("note") };
       if (id) await api.update("opex", id, rec); else { const nid = await api.add("opex", { ...rec, pays: {} }); close(); return oxModal(nid); }
       close(); render(); toast("נשמר ✓"); };
+    m.querySelector("#oc_add")?.addEventListener("click", async () => { const sv = v => { const t = String(v || "").trim().replace(/[−–]/g, "-"); if (!t) return 0; const neg = /^-/.test(t), a = reqAmt(t.replace(/^[+-]/, "")); return neg ? -a : a; };
+      const o = sv(m.querySelector("#oc_o").value), r = sv(m.querySelector("#oc_r")?.value), msg = m.querySelector("#ox_m"); if (!o && !r) return msg.textContent = "צריך סכום שינוי — בהזמנה ו/או בדרישה (עם + או −)";
+      const R = oxReqRec(RAW.opex[id]); if (r && !(R && reqAmt(R.amount))) return msg.textContent = "לדרישה עוד אין סכום בטבלת ״דרישות ויתרות״ — קודם להזין אותו שם";
+      const newOrd = oxAmt(RAW.opex[id]) + o; if (newOrd < 0) return msg.textContent = "ההזמנה לא יכולה לרדת מתחת לאפס";
+      await api.update("opex", id, { changes: { ...(RAW.opex[id].changes || {}), [newId()]: { date: m.querySelector("#oc_d").value || todayStr(), ord: o, req: r, note: m.querySelector("#oc_n").value.trim(), by: tkWho(), at: new Date().toISOString() } } });
+      if (r) await api.update("reqs", R.id, { amount: reqAmt(R.amount) + r });
+      const R2 = oxReqRec(RAW.opex[id]); close(); oxModal(id); if (R2 && reqAmt(R2.amount) && newOrd > reqAmt(R2.amount)) toast("שים לב: ההזמנה גדולה מסכום הדרישה"); else toast("השינוי נשמר ✓"); });
+    oxUpdBind(m, id, () => { close(); oxModal(id); });
     m.querySelector("#op_add")?.addEventListener("click", async () => { const a = reqAmt(m.querySelector("#op_a").value); if (!a) return m.querySelector("#ox_m").textContent = "צריך סכום";
       await api.update("opex", id, { pays: { ...(RAW.opex[id].pays || {}), [newId()]: { date: m.querySelector("#op_d").value, inv: m.querySelector("#op_i").value.trim(), amount: a, status: m.querySelector("#op_s").value, note: m.querySelector("#op_n").value.trim() } } }); close(); oxModal(id); });
     m.querySelectorAll("[data-oxps]").forEach(s => s.onchange = async () => { const P = { ...(RAW.opex[id].pays || {}) }; P[s.dataset.oxps] = { ...P[s.dataset.oxps], status: s.value, ...(s.value === "שולם" ? { paidAt: todayStr() } : {}) }; await api.update("opex", id, { pays: P }); close(); oxModal(id); });
@@ -5181,9 +5211,25 @@ function oxModal(id) {
     m.querySelector("#ox_del")?.addEventListener("click", async e => { const b = e.target; if (b.dataset.s !== "1") { b.dataset.s = "1"; b.textContent = "ללחוץ שוב — כולל כל החשבונות"; return; } await api.remove("opex", id); close(); render(); });
   });
 }
+/** עדכונים לספק — היסטוריה מהחדש לישן, הוספה ומחיקה (כמו בנושאים / משימות) */
+function oxUpdHtml(x, ed) { const U = oxUpds(x);
+  return `${ed ? `<div class="row" style="gap:6px;margin-bottom:6px"><input type="date" class="inp" id="ou_d" value="${todayStr()}" style="max-width:150px"><input class="inp" id="ou_t" placeholder="מה התחדש — שיחה, מייל, הצעת מחיר, הארכה…" style="flex:1"><button class="btn sm" id="ou_add">+ עדכון</button></div>` : ""}
+    ${U.length ? `<div class="tablewrap" style="max-height:260px"><table class="sheet"><tbody>${U.map(u => `<tr><td class="nowrap" style="width:80px"><b>${fmtD(u.date)}</b></td><td>${esc(u.text)}</td><td class="small muted nowrap">${esc(u.by || "")}</td>${ed ? `<td style="width:30px"><button class="btn ghost sm" data-oud="${u.id}" title="מחיקה">✕</button></td>` : ""}</tr>`).join("")}</tbody></table></div>` : `<p class="small muted" style="margin:2px 0">עוד אין עדכונים</p>`}`; }
+function oxUpdBind(m, id, after) {
+  m.querySelector("#ou_add")?.addEventListener("click", async () => { const t = m.querySelector("#ou_t").value.trim(); if (!t) return;
+    await api.update("opex", id, { upd: { ...(RAW.opex[id].upd || {}), [newId()]: { date: m.querySelector("#ou_d").value || todayStr(), text: t, by: tkWho(), at: new Date().toISOString() } } }); after(); });
+  m.querySelector("#ou_t")?.addEventListener("keydown", e => { if (e.key === "Enter") m.querySelector("#ou_add").click(); });
+  m.querySelectorAll("[data-oud]").forEach(b => b.onclick = async () => { if (b.dataset.s !== "1") { b.dataset.s = "1"; b.textContent = "בטוח?"; return; } const U = { ...(RAW.opex[id].upd || {}) }; delete U[b.dataset.oud]; await api.update("opex", id, { upd: U }); after(); });
+}
+function oxUpdModal(id) { const x = { id, ...(RAW.opex?.[id] || {}) }, ed = !isViewer();
+  modal(`<h2 style="margin-top:0">עדכונים — ${esc(x.name || "")}</h2><div class="small muted" style="margin:-6px 0 10px">${esc([x.field, x.subject].filter(Boolean).join(" · "))}</div>${oxUpdHtml(x, ed)}<div class="row" style="margin-top:10px"><button class="btn ghost" id="mNo">סגירה</button><span class="spacer"></span><button class="btn ghost sm" id="ou_full">לחלון הספק</button></div>`, (m, close) => {
+    m.querySelector("#mNo").onclick = () => { close(); render(); }; m.querySelector("#ou_full").onclick = () => { close(); oxModal(id); };
+    oxUpdBind(m, id, () => { close(); oxUpdModal(id); }); setTimeout(() => m.querySelector("#ou_t")?.focus(), 30); });
+}
 async function oxClick(act, b) {
   const F = ui.ox || (ui.ox = { f: "", q: "" });
   if (act === "oxOpen") return oxModal(b.dataset.id || "");
+  if (act === "oxUpd") return oxUpdModal(b.dataset.id);
   if (act === "oxF") { F.f = F.f === b.dataset.id ? "" : b.dataset.id; render(); }
 }
 
@@ -5363,11 +5409,11 @@ function pageReqs(d) {
   const rows = L.filter(P[F] || P.all), ed = !isViewer();
   const reqRow = r => { const cc = r.cs[0] ? cColor(d, d.contractors.find(c => c.id === r.cs[0])) : "#9aa3ad";
       const ords = [...new Map(r.orders.map(o => [reqNorm(o.x_ordNo) || "—" + String(o.name || "").replace(/\s+/g, ""), o])).values()];
-      return `<tr class="rq-row ${r.closed ? "rq-closed" : ""}" style="--rc:${cc}"><td class="nowrap" dir="ltr">${r.no ? `<b>${esc(r.no)}</b>` : `<span class="rq-nono" dir="rtl">⚠ חסר מס׳ דרישה</span>${r.iecMod ? `<div class="small muted" dir="rtl">להשלים באתר חח״י</div>` : ""}`}</td><td class="small rq-on">${ords.map(o => `<div class="rq-o">${o.x_ordNo ? `<b dir="ltr">${esc(o.x_ordNo)}</b>` : `<b class="muted">טרם יצא</b>`}<small>${esc(o.name || "הזמנה")}</small></div>`).join("")}${r.pendOrd.map(n => `<div class="rq-o"><b dir="ltr">${esc(n)}</b><small>לא בטבלת ההזמנות</small></div>`).join("")}${ords.length || r.pendOrd.length ? "" : `<span class="muted">—</span>`}</td><td class="small nowrap"><b style="color:${cc}">${[...r.cs.map(cn), ...r.ext].map(esc).join(", ") || "—"}</b>${r.site ? `<div class="muted">📡 אתרי איסוף</div>` : ""}</td>
+      return `<tr class="rq-row ${r.closed ? "rq-closed" : ""}" style="--rc:${cc}"><td class="nowrap" dir="ltr">${r.no ? `<b>${esc(r.no)}</b>` : `<span class="rq-nono" dir="rtl">⚠ חסר מס׳ דרישה</span>${r.iecMod ? `<div class="small muted" dir="rtl">להשלים באתר חח״י</div>` : r.opexRow ? `<div class="small muted" dir="rtl">להשלים בתקציב תפעולי</div>` : ""}`}</td><td class="small rq-on">${ords.map(o => `<div class="rq-o">${o.x_ordNo ? `<b dir="ltr">${esc(o.x_ordNo)}</b>` : `<b class="muted">טרם יצא</b>`}<small>${esc(o.name || "הזמנה")}</small></div>`).join("")}${r.pendOrd.map(n => `<div class="rq-o"><b dir="ltr">${esc(n)}</b><small>לא בטבלת ההזמנות</small></div>`).join("")}${ords.length || r.pendOrd.length ? "" : `<span class="muted">—</span>`}</td><td class="small nowrap"><b style="color:${cc}">${[...r.cs.map(cn), ...r.ext].map(esc).join(", ") || "—"}</b>${r.site ? `<div class="muted">📡 אתרי איסוף</div>` : ""}</td>
 <td class="small">${esc(r.rec?.title || (r.iec ? "חיבורי חח״י" : ""))}</td>
-      <td>${r.iecMod ? `<span class="muted small">—</span>` : ed ? `<input class="cell rq-amt ${r.hasAmt ? "" : "miss"}" data-req="${r.key}|amount" value="${r.hasAmt ? esc(num(Math.round(r.amount), 0)) : ""}" placeholder="סכום…" title="אפשר לכתוב גם 40 מ׳">` : r.hasAmt ? bgM(r.amount) : "—"}</td>
+      <td>${r.iecMod || r.opexRow ? `<span class="muted small">—</span>` : ed ? `<input class="cell rq-amt ${r.hasAmt ? "" : "miss"}" data-req="${r.key}|amount" value="${r.hasAmt ? esc(num(Math.round(r.amount), 0)) : ""}" placeholder="סכום…" title="אפשר לכתוב גם 40 מ׳">` : r.hasAmt ? bgM(r.amount) : "—"}</td>
       <td class="nowrap">${r.issued ? bgM(r.issued) : "—"}${r.nOrd > 1 ? ` <span class="small muted">(${r.nOrd} הזמנות)</span>` : ""}</td><td class="nowrap">${r.planned ? bgM(r.planned) : "—"}</td><td class="nowrap">${r.alloc ? bgM(r.alloc) : "—"}</td>
-      <td class="nowrap"><b class="${r.hasAmt ? (r.free < -1 ? "rq-neg" : "rq-pos") : "muted"}">${r.hasAmt ? bgM(r.free) : "חסר סכום"}</b></td><td>${r.hasAmt ? reqBar(r) : ""}</td>
+      <td class="nowrap"><b class="${r.hasAmt ? (r.free < -1 ? "rq-neg" : "rq-pos") : "muted"}">${r.hasAmt ? bgM(r.free) : r.opexRow ? "—" : "חסר סכום"}</b></td><td>${r.hasAmt ? reqBar(r) : ""}</td>
       <td><button class="btn ghost sm" data-act="reqOpen" data-id="${r.key}">פירוט</button></td></tr>`; };
   return `<div class="ch-banner" style="--cc:#5b4a8b"><div><h1>דרישות ויתרות</h1><span>סכום הדרישה ← מה הוזמן עליה ← כמה נשאר. את היתרה אפשר לשייך לעבודות נוספות. הזמנה משויכת לדרישה לפי "מס׳ דרישה" שבטבלת ההזמנות.</span></div>
     ${ed ? `<div class="row" style="gap:6px"><button class="btn" data-act="reqNew">+ דרישה חדשה</button><button class="btn ghost" data-act="reqPaste">📋 הדבקת סכומי דרישות מאקסל</button></div>` : ""}</div>
@@ -5388,6 +5434,7 @@ function pageReqs(d) {
 }
 function reqModal(no) {
   const d = D(), r = reqTable(d).find(x => x.key === no || x.no === no); if (!r) return;
+  if (r.opexRow) return oxModal(r.opexRow);   // התקשרות תפעולית בלי דרישה — נפתחת ישר בחלון הספק
   if (r.iecMod) { const o = r.orders[0]; return modal(`<h2 style="margin-top:0">הזמנת משהב״ט לחברת החשמל <span dir="ltr">${esc(r.iecMod)}</span></h2>
     <p>מגיעה מאתר חח״י: ${o._nIec} הזמנות חח״י תחתיה · ${bgM(o.x_amount)} (${esc(o._amtSrc)}).</p>
     <p class="rq-nono" style="display:block;white-space:normal;padding:8px 10px">⚠ עוד אין לה מספר דרישה, ולכן היא לא נספרת באף דרישה. את מספר הדרישה רושמים באתר חח״י: הזמנות ← הזמנות משהב״ט ← ${esc(r.iecMod)} ← ״דרישה״. מיד אחרי השמירה היא תעבור כאן לשורה של הדרישה.</p>
