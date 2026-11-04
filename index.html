@@ -451,10 +451,18 @@ tr.w-dsc > td { background: #eef7f0 !important; } tr.w-dsc .w-t { color: #4b6b55
 .sb-chip.mk { outline: 2px solid #1f7a8c; outline-offset: 1px; background: #e9f6f8; } .sb-chip.mk-ok { outline-color: #2e7d4f; background: #e8f5ec; } .sb-chip.mk-bad { outline-color: #c0392b; background: #fdecea; }
 .sb-chip.mk-dim, tr.mk-dim { opacity: .28; } .sb-chip .mk-t { font-style: normal; font-weight: 700; color: #155e6c; } .sb-chip.mk-bad .mk-t { color: #b3261e; } .sb-chip.mk-ok .mk-t { color: #2e7d4f; }
 tr.mk > td:first-child { box-shadow: inset -4px 0 0 #1f7a8c; } tr.mk-bad > td:first-child { box-shadow: inset -4px 0 0 #c0392b; } tr.mk-ok > td:first-child { box-shadow: inset -4px 0 0 #2e7d4f; }
-.ch-tiles.st-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); } .ch-t.t-red b { color: #b3261e; } .ch-t.t-red { border-top: 4px solid #c0392b; }
+.ch-tiles.st-tiles { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.ch-tiles.si-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: -4px; } .si-tiles .ch-t { padding-top: 8px; padding-bottom: 8px; } .si-tiles .ch-t b { font-size: 22px; }
+.si-lab { font-size: 12px; font-weight: 700; color: #0a6ec9; margin: 2px 2px 4px; }
+.st-seg6 { display: flex; gap: 2px; max-width: 210px; margin-bottom: 3px; } .st-seg6 i { flex: 1; height: 9px; border-radius: 3px; background: #e7eae4; } .st-seg6 i.d { background: #4a6d93; } .st-seg6 i.c { background: #a9bfd8; }
+.si-iec .pill { font-size: 12px; } .si-iec .small { line-height: 1.35; } tr.st-row.si-stk td:first-child { box-shadow: inset -4px 0 0 #c0392b; }
+.st-tab th[data-act] { cursor: pointer; user-select: none; white-space: nowrap; } .st-tab th[data-act]:hover { text-decoration: underline; }
+.sif { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 8px; } .sif.stk { border-color: #e3a49d; background: #fff8f7; } .sif.off { opacity: .6; }
+.sif .row { align-items: center; gap: 8px; } .sif-g { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px 14px; margin-top: 8px; font-size: 13px; } .sif-g > div > span:first-child { color: var(--muted); font-size: 12px; display: block; }
+.sif-note { margin-top: 8px; font-size: 13px; background: #f6f8fb; border-radius: 8px; padding: 6px 9px; } .ch-t.t-red b { color: #b3261e; } .ch-t.t-red { border-top: 4px solid #c0392b; }
 .ch-t.ord-hot { background: linear-gradient(160deg, #e9f6f8, #cfeaf0); border: 2px solid #1f7a8c !important; cursor: pointer; box-shadow: 0 3px 12px rgba(31,122,140,.22); } .ch-t.ord-hot > span { color: #155e6c; font-weight: 800; } .ch-t.ord-hot b { color: #155e6c; }
 .ch-t.ord-hot em { font-style: normal; font-size: 11px; font-weight: 700; background: #1f7a8c; color: #fff; border-radius: 999px; padding: 1px 7px; margin-inline-start: 4px; } .ch-t.ord-hot.on { background: #1f7a8c; } .ch-t.ord-hot.on > span, .ch-t.ord-hot.on b, .ch-t.ord-hot.on small { color: #fff; }
-@media (max-width: 1240px) { .ch-tiles.st-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } } @media (max-width: 600px) { .ch-tiles.st-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1240px) { .ch-tiles.st-tiles, .ch-tiles.si-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } } @media (max-width: 600px) { .ch-tiles.st-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 1560px) { .ch-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 1560px) { .ch-tiles.gr-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .ov-sp.on { outline: 3px solid var(--ink); outline-offset: 2px; } .ch-t.on { outline: 3px solid var(--cc); outline-offset: 1px; }
@@ -4283,7 +4291,6 @@ function sitePhase(s, T = siteTpl()) {
 const PHASE_CLR = { "בתכנון": "#4a6d93", "בביצוע": "#c96a12", "הושלם": "#2f6b4f", "מוקפא": "#8a8f94", "בוטל": "#b0b4b8" };
 const siteLast = s => [s.updatedAt?.slice(0, 10), ...Object.values(s.plan || {}).map(x => x.date), ...siteBuilds(s).flatMap(b => Object.values(b.steps || {}).map(x => x.date))].filter(Boolean).sort().pop() || "";
 const siteBar = (p, clr) => `<div class="st-bar" title="${p.done}/${p.total}"><i style="width:${Math.round(p.pct * 100)}%;background:${clr}"></i></div>`;
-const siteIec = s => Object.keys(s.iec || {}).map(id => RAW.iecOrders?.[id] ? { id, ...RAW.iecOrders[id] } : null).filter(Boolean);
 const siteBudget = s => { const b = s.budget && RAW.budget?.[s.budget]; return b ? bgN(b.mast) + bgN(b.build) : null; };
 /** נושאים שמזכירים את האתר בטקסט ("אתר 913", "אתר איסוף ק.ד. 913") אבל עוד לא מקושרים */
 const siteRe = s => new RegExp("(?:אתר(?: איסוף)?|איסוף) (?:קד )?" + qnNorm(s.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?=$|[^\\u05D0-\\u05EA0-9])");
@@ -4307,11 +4314,82 @@ function siteCol(s, T) {
 /** אחראי על האתר — רשימת שמות להשלמה: הצוות + מי שכבר אחראי על אתר */
 const siteOwnerList = () => `<datalist id="site_owners">${[...new Set([...teamNames(), ...list("sites").map(x => x.owner).filter(Boolean)])].map(n => `<option value="${esc(n)}">`).join("")}</datalist>`;
 const siteOwnOk = (s, own) => !own || (own === "—" ? !s.owner : s.owner === own);
-/* ---------- דף אתרי איסוף: לוח / מטריצה / טבלה ---------- */
+/* ---------- אתרי איסוף ↔ חח״י: חי מאתר חח״י (לקריאה בלבד). קישור: לפי השיוך באתר חח״י, לפי שם, או ידני (iecFac באתר) ---------- */
+const iecNm = x => qnNorm(String(x || "").split(/\s+[-–—]\s*|\s*—\s*/)[0]);
+const IEC_HOLD = { eng: ["⚡ מהנדס החשמל", "#2e8fa8"], amon: ["🏛 אמו״ן", "#4f6f9e"], iec: ["🏢 חח״י", "#0a6ec9"], mod: ["🎖 משהב״ט", "#5b6fb3"], ours: ["🙋 אצלנו", "#b07d00"] };
+const iecHoldK = n => !n ? "" : /Eng$/.test(n.id) ? "eng" : /Amon$/.test(n.id) ? "amon" : n.who === "חח״י" ? "iec" : n.who === "משהב״ט" ? "mod" : "ours";
+const IEC_SITE_REG = dist => dist === "ירושלים" ? "בקעה" : "עמקים";
+/** { by: {siteId: [מתקנים]}, orph: מתקני "אתר איסוף" באתר חח״י שלא שייכים לאף אתר } */
+function siteIecMap(E) {
+  const S = list("sites"), by = {}, orph = []; S.forEach(s => by[s.id] = []);
+  for (const f of E.list("facilities").filter(f => f.type === "אתר איסוף")) {
+    const no = s => s.iecFac?.[f.id] === false, ref = E.srcItemId(f) || f.siteRef || "";
+    let s = S.find(s => s.iecFac?.[f.id] === true) || S.find(s => s.id === ref && !no(s));
+    if (!s && !RAW.sites?.[ref]) { const m = S.filter(s => !no(s) && iecNm(s.name) && iecNm(s.name) === iecNm(f.name)); if (m.length === 1) s = m[0]; }
+    if (s) by[s.id].push(f); else if ((f.status || "פעיל") !== "בוטל") orph.push(f);
+  }
+  return { by, orph };
+}
+const iecStr = v => typeof v === "string" || typeof v === "number" ? String(v) : "";
+/** מצב חח״י של אתר (המתקן הראשי: פעיל ועם הזמנה) */
+function siteIecInfo(E, fs) {
+  if (!E || !fs?.length) return null;
+  const rk = f => (E.live(f) ? 0 : 2) + (E.payOrders(f).some(o => o.iec301) ? 0 : 1), A = fs.slice().sort((a, b) => rk(a) - rk(b)), f = A[0], st = E.state(f), live = E.live(f);
+  const os = E.payOrders(f).filter(o => o.iec301), vo = E.facOrders(f).filter(o => o.validUntil && !E.has(o, "completionDate")).map(o => o.validUntil).sort()[0] || "";
+  const gn = E.facOrders(f).filter(o => o.gNote).sort((a, b) => String(a.gAt || "").localeCompare(String(b.gAt || ""))).pop(), lg = E.lastLog(f);
+  const note = gn && (!lg || String(gn.gAt || "") >= String(lg.date || "")) ? { t: gn.gNote, d: gn.gAt, k: "סטטוס מהאקסל (גילי)" } : lg ? { t: lg.text, d: lg.date, k: "עדכון אחרון" + (lg.by ? " · " + lg.by : "") } : null;
+  return { f, A, st, os, live, hk: live ? iecHoldK(st.next) : "", wait: live && st.next && st.refDate ? daysSince(st.refDate) : null, vo, voD: vo ? -daysSince(vo) : null, note, power: !!st.done.power, noOrd: !os.length };
+}
+const iecStk = I => !!(I && I.live && !I.noOrd && I.st.stuck);
+function siteIecAll() { const E = iecE(); if (!E) return null; const M = siteIecMap(E), I = {}; for (const id in M.by) I[id] = siteIecInfo(E, M.by[id]); return { E, M, I }; }
+/** תא חח״י בטבלת האתרים */
+function siteIecCell(X, s) {
+  if (!X) return `<span class="muted small">${IEC_NOACC || !iecCanRead() ? "אין הרשאה" : "טוען…"}</span>`;
+  const I = X.I[s.id]; if (!I) return `<span class="small" style="color:#a4520c">אין מתקן באתר חח״י</span>`;
+  const st = I.st, H = IEC_HOLD[I.hk];
+  return `<div class="si-iec"><span class="pill" style="background:${st.cur?.color || "#e6e9ee"};color:${st.cur ? "#fff" : "inherit"}">${esc(st.cur?.name || "טרם התחיל")}</span>${I.A.length > 1 ? ` <small class="muted" title="${esc(I.A.map(f => f.name).join(" · "))}">+${I.A.length - 1}</small>` : ""}${I.os.length ? ` <small class="muted" dir="ltr">${esc(I.os.map(o => o.iec301).join(", "))}</small>` : ""}
+    ${!I.live ? `<div class="small muted">${esc(I.f.status || "")} באתר חח״י</div>` : I.noOrd ? "" : !st.next ? `<div class="small" style="color:#2b9a4d">✓ כל השלבים הושלמו</div>`
+      : `<div class="small">הבא: ${esc(st.next.name)}${H ? ` · <b style="color:${H[1]}">${H[0]}</b>` : ""}${I.wait != null ? ` · <b class="${iecStk(I) ? "w-late" : ""}">${I.wait} ימים</b>` : ""}</div>`}
+    ${I.noOrd && I.live ? `<div class="small" style="color:#a4520c">אין הזמנת חח״י (301)</div>` : ""}${I.vo ? `<div class="small ${I.voD < 14 ? "w-late" : "muted"}">שובר ${I.voD < 0 ? "פג ב־" : "בתוקף עד "}${fmtD(I.vo)}</div>` : ""}</div>`;
+}
+/** פס 6 קבוצות של התכנון */
+const siteSegBar = (steps, map, G) => `<span class="st-seg6">${G.filter(g => steps.some(x => x.g === g)).map(g => { const st = steps.filter(x => x.g === g).map(x => map?.[x.id]?.st || "טרם").filter(x => x !== "לא נדרש"), dn = st.filter(x => x === "הושלם").length, ip = st.some(x => x === "בתהליך");
+  return `<i class="${!st.length || dn === st.length ? "d" : dn || ip ? "c" : ""}" title="${esc(g)}: ${dn}/${st.length}"></i>`; }).join("")}</span>`;
+/** מתקני איסוף באתר חח״י שאין להם אתר כאן */
+function siteOrphBlock(X) {
+  if (!X || !X.M.orph.length || isViewer()) return "";
+  const S = list("sites").sort(siteOrd);
+  return `<div class="card"><h2 style="margin-top:0">📡 באתר חח״י — אתרי איסוף שאינם ברשימה כאן <span class="muted small">(${X.M.orph.length})</span></h2>
+    <p class="small muted" style="margin:0 0 8px">מתקן מסוג "אתר איסוף" באתר חח״י שלא נמצא לו אתר מתאים. אם זה אתר חדש — "+ הוספה כאתר" (השם והאזור ימולאו). אם זה אתר קיים בשם אחר — "קישור לאתר".</p>
+    <div class="tablewrap" style="max-height:none"><table class="sheet"><thead><tr><th>מתקן באתר חח״י</th><th>נפה</th><th>שלב</th><th>הזמנת חח״י</th><th></th></tr></thead><tbody>${X.M.orph.map(f => { const st = X.E.state(f);
+      return `<tr><td><b>${esc(f.name)}</b>${(f.status || "פעיל") !== "פעיל" ? ` <span class="pill">${esc(f.status)}</span>` : ""}</td><td class="small">${esc(f.district || "—")}</td><td class="small">${esc(st.cur?.name || "טרם התחיל")}</td><td class="small" dir="ltr">${esc(X.E.payOrders(f).map(o => o.iec301).filter(Boolean).join(", ") || "—")}</td>
+        <td class="nowrap"><button class="btn sm" data-act="siteFromIec" data-id="${f.id}">+ הוספה כאתר</button> <select class="inp sm" data-siecl="${f.id}" style="max-width:150px"><option value="">קישור לאתר…</option>${S.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join("")}</select></td></tr>`; }).join("")}</tbody></table></div></div>`;
+}
+/** כרטיס חח״י בדף האתר */
+function siteIecCard(s, ed) {
+  const E = iecE(), sid = s.id;
+  if (!E) return `<div class="card"><h2 style="margin-top:0">⚡ חח״י</h2><p class="small muted" style="margin:0">${IEC_NOACC || !iecCanRead() ? "אין הרשאת צפייה בנתוני חח״י (מנהל נותן באתר חח״י: הגדרות ← הרשאות ← ״צפייה״)." : "טוען את הנתונים מאתר חח״י…"}</p></div>`;
+  const M = siteIecMap(E), fs = M.by[sid] || [], other = E.list("facilities").filter(f => f.type === "אתר איסוף" && !fs.includes(f)).sort((a, b) => M.orph.includes(b) - M.orph.includes(a) || String(a.name).localeCompare(String(b.name), "he"));
+  const box = f => { const I = siteIecInfo(E, [f]), st = I.st, H = IEC_HOLD[I.hk];
+    const ords = E.facOrders(f).map(o => `<div><b dir="ltr">${esc(o.iec301 || "—")}</b>${o.kind && o.kind !== "הזמנה" ? ` <small class="muted">${esc(o.kind)}</small>` : ""}<small class="muted"> · הזמנת משהב״ט <span dir="ltr">${esc(iecStr(E.ef(o, "ord444")) || (E.has(o, "ord444") ? "✓" : "—"))}</span> · דרישה <span dir="ltr">${esc(iecStr(E.ef(o, "req880")) || (E.has(o, "req880") ? "✓" : "—"))}</span></small></div>`).join("");
+    return `<div class="sif ${st.stuck ? "stk" : ""} ${I.live ? "" : "off"}"><div class="row"><b>⚡ ${esc(f.name)}</b>${I.live ? "" : ` <span class="pill">${esc(f.status || "")}</span>`}<span class="spacer"></span>${ed ? `<button class="btn ghost sm" data-act="siteIecUn" data-id="${sid}|${f.id}" title="ניתוק המתקן מהאתר הזה (באתר הגבול בלבד)">ניתוק</button>` : ""}<a class="btn ghost sm" href="iec.html#fac=${encodeURIComponent(f.id)}" target="_blank" rel="noopener">פתיחה באתר חח״י ↗</a></div>
+      <div style="margin-top:6px">${pwTrack(E, f)}</div>
+      <div class="sif-g"><div><span>שלב נוכחי</span><b>${esc(st.cur?.name || "טרם התחיל")}</b>${st.cur && st.done[st.cur.id]?.date ? ` <small class="muted">${fmtD(st.done[st.cur.id].date)}</small>` : ""}</div>
+        <div><span>השלב הבא · אצל מי</span>${st.next ? `<b>${esc(st.next.name)}</b>${H ? ` · <b style="color:${H[1]}">${H[0]}</b>` : ""}` : `<b style="color:#2b9a4d">✓ הושלם</b>`}</div>
+        <div><span>ממתין</span>${I.wait != null ? `<b class="${st.stuck ? "w-late" : ""}">${I.wait} ימים</b>${st.next?.days ? ` <small class="muted">(נורמה ${st.next.days})</small>` : ""}` : "—"}${st.flags.filter(x => x.k === "target").map(x => `<div class="small w-late">${esc(x.t)}</div>`).join("")}</div>
+        <div><span>תוקף שובר</span>${I.vo ? `<b class="${I.voD < 14 ? "w-late" : ""}">${fmtD(I.vo)}</b> <small class="muted">${I.voD < 0 ? `פג לפני ${-I.voD} ימים` : `עוד ${I.voD} ימים`}</small>` : "—"}</div>
+        <div style="grid-column:1/-1"><span>הזמנות</span>${ords || `<b style="color:#a4520c">אין הזמנת חח״י</b>`}</div></div>
+      ${I.note ? `<div class="sif-note">📝 <b>${esc(I.note.k)}${I.note.d ? ` (${fmtD(I.note.d)})` : ""}:</b> ${esc(I.note.t)}</div>` : ""}</div>`; };
+  return `<div class="card"><div class="row" style="align-items:center"><h2 style="margin:0">⚡ חח״י <span class="muted small">— חי מאתר חח״י, לקריאה בלבד</span></h2><span class="spacer"></span>
+    ${ed ? `<select class="inp sm" data-siecf="${sid}" style="max-width:240px"><option value="">+ קישור מתקן מאתר חח״י…</option>${other.map(f => `<option value="${f.id}">${M.orph.includes(f) ? "● " : ""}${esc(f.name)}${f.district ? " · " + esc(f.district) : ""}</option>`).join("")}</select>` : ""}</div>
+    ${fs.length ? fs.slice().sort((a, b) => E.live(b) - E.live(a)).map(box).join("") : `<p class="small" style="color:#a4520c;margin:8px 0 0">לא נמצא מתקן לאתר הזה באתר חח״י. אם הוא קיים שם בשם אחר — לקשר מהרשימה למעלה.</p>`}</div>`;
+}
+/* ---------- דף אתרי איסוף: טבלה / לוח ---------- */
 function pageSites(d) {
-  const T = siteTpl(), S = list("sites"), F = ui.sf || (ui.sf = { view: "board", tab: "all", reg: "", ph: "", q: "", box: "" });
+  const T = siteTpl(), S = list("sites"), F = ui.sf || (ui.sf = { view: "table", tab: "all", reg: "", ph: "", q: "", box: "" }), X = siteIecAll();
   const ph = s => sitePhase(s, T), blk = s => issuesOfLink("s:" + s.id), dead = s => ["מוקפא", "בוטל"].includes(ph(s)), live = s => !["מוקפא", "בוטל", "הושלם"].includes(ph(s));
   const L = S.filter(s => siteInTab(s, F.tab) && (!F.reg || s.region === F.reg) && (!F.ph || ph(s) === F.ph) && siteOwnOk(s, F.own) && (!F.q || qnNorm([s.name, s.line, s.note, s.owner].join(" ")).includes(qnNorm(F.q)))).sort(siteOrd);
+  if (F.view !== "board") F.view = "table";
   const vb = (k, l) => `<button class="btn ${F.view === k ? "" : "ghost"} sm" data-act="siteF" data-id="view|${k}">${l}</button>`;
   const tb = k => `<button class="w-tb ${F.tab === k ? "on" : ""}" data-act="siteF" data-id="tab|${k}">${SITE_TABS[k][0]} <small>${S.filter(SITE_TABS[k][1]).length}</small></button>`;
   const MK = siteMark(d, S, T), mk = s => !MK ? "" : MK.ids.has(s.id) ? (MK.k === "permit" ? (/✓/.test(MK.tag(s)) ? "mk mk-ok" : "mk mk-bad") : MK.k === "bud" ? "mk mk-bad" : "mk") : "mk-dim";
@@ -4325,43 +4403,35 @@ function pageSites(d) {
     body = `<div class="card"><h2 style="margin-top:0">איפה כל אתר עומד <span class="muted small">— כל אתר בעמודה של השלב הבא שלו · לחיצה פותחת את האתר${isMgr() ? ` · העמודות נערכות ב"⚙ שלבים ועמודות"` : ""}</span></h2>
       <div class="sb-board">${cols.map(([c, a], k) => `<div class="sb-col ${k >= nP ? "ex" : k === nP - 1 ? "wt" : ""}" style="flex:${Math.max(1, Math.ceil(a.length / 9))}"><h4>${esc(c)}</h4><span class="n">${a.length}</span><div class="sb-chips" style="--cols:${Math.max(1, Math.ceil(a.length / 9))}">${a.map(chip).join("")}</div></div>`).join("")}</div>
       ${fz.length ? `<div class="sb-fz"><span class="muted small">מוקפאים / בוטלו:</span>${fz.map(chip).join("")}</div>` : ""}${leg}</div>`;
-  } else if (F.view === "matrix") {
-    const cell = (steps, map, g, sid, dim) => { const a = steps.filter(x => x.g === g); if (!a.length) return `<td class="mx-na"></td>`;
-      const st = a.map(x => map?.[x.id]?.st || "טרם").filter(x => x !== "לא נדרש"), dn = st.filter(x => x === "הושלם").length, ip = st.some(x => x === "בתהליך");
-      const cls = !st.length ? "mx-skip" : dn === st.length ? "mx-d" : dn || ip ? "mx-c" : "";
-      return `<td class="${cls}${dim ? " mx-dim" : ""}" data-act="siteOpen" data-id="${sid}" data-g="${esc(g)}" title="${esc(a.map(x => `${x.t}: ${map?.[x.id]?.st || "טרם"}`).join("\n"))}">${st.length ? (a.length > 1 ? `${dn}/${st.length}` : dn ? "✓" : ip ? "●" : "") : "—"}</td>`; };
-    const grp = SITE_TYPES.map(t => [t, L.filter(s => sType(s) === t)]).filter(([, a]) => a.length);
-    body = `<div class="card"><div class="tablewrap"><table class="mx"><thead><tr><th rowspan="2">אתר</th><th colspan="${SITE_PG.length}" class="mx-p1">שלב 1 — תכנון וסטטוטוריקה</th><th colspan="${SITE_EG.length}" class="mx-p2">שלב 2 — ביצוע (קבוע)</th><th rowspan="2">השלב הבא</th><th rowspan="2">הזמנה / דרישה</th></tr>
-      <tr>${SITE_PG.map(g => `<th class="mx-g">${esc(g)}</th>`).join("")}${SITE_EG.map(g => `<th class="mx-g mx-e">${esc(g)}</th>`).join("")}</tr></thead><tbody>
-      ${grp.map(([t, a]) => `<tr class="mx-gh"><td colspan="${SITE_PG.length + SITE_EG.length + 3}" style="--c:${SITE_TYPE_CLR[t]}">${t} · ${a.length}</td></tr>${a.map(s => { const perm = siteBuilds(s).find(b => b.kind !== "זמני") || { steps: {} }, N = siteNow(s, T), os = siteOrders(s), tmp = siteBuilds(s).find(b => b.kind === "זמני");
-        return `<tr class="${dead(s) ? "mx-fz" : ""} ${mk(s)}"><td class="mx-nm" data-act="siteOpen" data-id="${s.id}" role="button"><i style="background:${sClr(s)}"></i><b>${esc(s.name)}</b>${sSub(s) ? " 💧" : ""}${blk(s).length ? ` <span class="w-late">⚠</span>` : ""}<small>${esc(s.region || "")}${tmp ? " · +זמני" : ""}${s.owner ? " · " + esc(s.owner) : ""}</small></td>
-          ${SITE_PG.map(g => cell(sitePlanSteps(s, T), s.plan, g, s.id)).join("")}${SITE_EG.map(g => cell(siteExecSteps(s, perm, T), perm.steps, g, s.id, !buildOrdered(perm))).join("")}
-          <td class="mx-nx">${dead(s) ? ph(s) : N.next ? esc(N.next.t) : "✓ הושלם"}</td><td class="mx-nx small">${os.map(o => `${esc(o.x_reqNo || "—")} / ${esc(o.x_ordNo || "—")}`).join("<br>") || `<span class="muted">—</span>`}</td></tr>`; }).join("")}`).join("")}</tbody></table></div>
-      <div class="sb-leg"><span><i style="background:#3f9a63"></i>הושלם</span><span><i style="background:#f1c75b"></i>בתהליך / חלקי</span><span><i style="background:#eceee9"></i>טרם</span><span><i class="mx-na-i"></i>לא רלוונטי לסוג</span><span>לחיצה על תא — פתיחת האתר</span></div></div>`;
   } else {
-    const row = s => { const P = stepProg(sitePlanSteps(s, T), s.plan), B = siteBuilds(s), iec = siteIec(s), est = siteBudget(s), p = ph(s);
-      return `<tr class="st-row ${mk(s)}" data-act="siteOpen" data-id="${s.id}" role="button"><td><b class="st-name">${esc(s.name)}</b><div class="small"><span class="st-type ${sType(s) === "גדול" ? "dk" : ""}" style="--tc:${sClr(s)}">${esc(sTypeL(s))}</span> <span class="muted">${esc(s.region || "")}${s.line ? " · שורה " + esc(s.line) : ""}</span></div></td>
-        <td class="small">${s.owner ? esc(s.owner) : `<span class="muted">—</span>`}</td><td><span class="pill" style="background:${PHASE_CLR[p]};color:#fff">${p}</span></td>
-        <td style="min-width:190px">${siteBar(P, "#4a6d93")}<div class="small"><b>${P.done}/${P.total}</b> ${P.next ? `· הבא: ${esc(P.next.t)}` : "· ✓"}</div></td>
-        <td style="min-width:200px">${B.filter(b => buildOrdered(b) || b.kind === "זמני").map(b => { const E = stepProg(siteExecSteps(s, b, T), b.steps), o = buildOrder(b); return `<div class="st-b"><span class="small"><b>${b.kind}</b> · ${esc(RAW.contractors?.[buildCid(b)]?.name || b.contractor || "—")}${o?.x_ordNo ? " · " + esc(o.x_ordNo) : ""}</span>${siteBar(E, b.kind === "זמני" ? "#c96a12" : "#2f6b4f")}</div>`; }).join("") || `<span class="muted small">טרם הוזמן</span>`}</td>
-        <td class="small">${iec.map(o => `<button class="pill" style="border:0;cursor:pointer;background:${IEC_COLORS[o.stage] || "#eee"}" data-act="wGoLink" data-id="o:${o.id}">${esc(o.stage || "")}</button>`).join(" ") || `<span class="muted">—</span>`}</td>
-        <td class="small nowrap">${est ? bgMM(est) : `<span class="muted">—</span>`}</td><td>${wLinkCell("s:" + s.id)}</td>
+    const iI = s => X?.I[s.id], iR = s => { const I = iI(s); return !I ? 99 : !I.live ? 98 : I.st.curI; };
+    const SK = { name: (a, b) => siteOrd(a, b), own: (a, b) => String(a.owner || "ת").localeCompare(String(b.owner || "ת"), "he"), ph: (a, b) => Object.keys(PHASE_CLR).indexOf(ph(a)) - Object.keys(PHASE_CLR).indexOf(ph(b)),
+      plan: (a, b) => stepProg(sitePlanSteps(b, T), b.plan).pct - stepProg(sitePlanSteps(a, T), a.plan).pct, iec: (a, b) => iR(b) - iR(a), wait: (a, b) => (iI(b)?.wait ?? -1) - (iI(a)?.wait ?? -1), last: (a, b) => String(siteLast(b)).localeCompare(String(siteLast(a))) };
+    const sk = String(F.sort || ""), dir = sk.startsWith("-") ? -1 : 1, kf = SK[sk.replace(/^-/, "")];
+    const stk = s => live(s) && iecStk(iI(s)) ? 0 : 1;
+    const L2 = (MK ? L.filter(s => MK.ids.has(s.id)) : L).slice().sort((a, b) => kf ? dir * kf(a, b) || siteOrd(a, b) : stk(a) - stk(b) || siteOrd(a, b));
+    const th = (k, l) => `<th data-act="siteF" data-id="sort|${k}" title="מיון">${l}${sk.replace(/^-/, "") === k ? (dir > 0 ? " ▾" : " ▴") : ""}</th>`;
+    const row = s => { const PS = sitePlanSteps(s, T), P = stepProg(PS, s.plan), B = siteBuilds(s), p = ph(s), I = iI(s);
+      return `<tr class="st-row ${iecStk(I) && live(s) ? "si-stk" : ""}" data-act="siteOpen" data-id="${s.id}" role="button"><td><b class="st-name">${esc(s.name)}</b>${sSub(s) ? " 💧" : ""}<div class="small"><span class="st-type ${sType(s) === "גדול" ? "dk" : ""}" style="--tc:${sClr(s)}">${esc(sTypeL(s))}</span> <span class="muted">${esc(s.region || "")}${s.line ? " · שורה " + esc(s.line) : ""}</span></div></td>
+        <td class="small">${s.owner ? esc(s.owner) : `<span class="muted">—</span>`}</td><td><span class="pill" style="background:${PHASE_CLR[p]};color:#fff">${p}</span>${MK && MK.tag(s) && !["plan", "exec"].includes(MK.k) ? `<div class="small muted">${esc(MK.tag(s))}</div>` : ""}</td>
+        <td style="min-width:180px">${siteSegBar(PS, s.plan, SITE_PG)}<div class="small"><b>${P.done}/${P.total}</b> ${P.next ? `· הבא: ${esc(P.next.t)}` : "· ✓ הושלם"}</div></td>
+        <td style="min-width:170px">${B.filter(b => buildOrdered(b) || b.kind === "זמני").map(b => { const E = stepProg(siteExecSteps(s, b, T), b.steps), o = buildOrder(b); return `<div class="st-b"><span class="small"><b>${b.kind}</b> · ${esc(RAW.contractors?.[buildCid(b)]?.name || b.contractor || "—")}${o?.x_ordNo ? " · " + esc(o.x_ordNo) : ""}</span>${siteBar(E, b.kind === "זמני" ? "#c96a12" : "#2f6b4f")}${E.next ? `<div class="small muted">הבא: ${esc(E.next.t)}</div>` : ""}</div>`; }).join("") || `<span class="muted small">טרם הוזמן</span>`}</td>
+        <td style="min-width:200px">${siteIecCell(X, s)}</td><td>${wLinkCell("s:" + s.id)}</td>
         <td class="small nowrap ${daysSince(siteLast(s)) > 30 && live(s) ? "w-late" : ""}">${fmtD(siteLast(s)) || "—"}</td></tr>`; };
-    body = `<div class="card">${L.length ? `<div class="tablewrap"><table class="sheet st-tab"><thead><tr><th>אתר</th><th>אחראי</th><th>שלב</th><th>תכנון</th><th>ביצוע</th><th>חח״י</th><th>אומדן</th><th>⚠ נושאים</th><th>עדכון</th></tr></thead><tbody>${L.map(row).join("")}</tbody></table></div>` : `<p class="muted">אין אתרים בסינון הזה</p>`}</div>`;
+    body = `<div class="card">${L2.length ? `<div class="tablewrap" style="max-height:none"><table class="sheet st-tab"><thead><tr>${th("name", "אתר")}${th("own", "אחראי")}${th("ph", "שלב")}${th("plan", "תכנון")}<th>ביצוע</th>${th("iec", "⚡ חח״י")}<th>⚠ נושאים</th>${th("last", "עדכון")}</tr></thead><tbody>${L2.map(row).join("")}</tbody></table></div>
+      <p class="small muted" style="margin:6px 0 0">${L2.length} אתרים · ${kf ? "ממוין לפי העמודה שנבחרה (לחיצה נוספת הופכת)" : "תקועים בחח״י למעלה (פס אדום)"} · עמודת חח״י — חיה מאתר חח״י: השלב, הבא ואצל מי, כמה ימים ממתין, תוקף שובר</p>` : `<p class="muted">אין אתרים בסינון הזה</p>`}</div>`;
   }
   const old = S.filter(sOldType), sugg = S.flatMap(s => siteSuggest(s).map(i => ({ s, i })));
   return `<div class="ch-banner" style="--cc:#1f7a8c"><div><h1>📡 אתרי איסוף</h1><span>${S.length} אתרים · ${SITE_TYPES.map(t => `${S.filter(s => sType(s) === t).length} ${t}`).join(" · ")} · אחראי צוות: ${esc(leadCfg().sites || "—")}</span></div>
-    <div class="row" style="gap:6px"><span class="sb-views">${vb("board", "לוח")}${vb("matrix", "מטריצה")}${vb("table", "טבלה")}</span><button class="btn ghost" data-act="siteRep">📄 דוח סטטוס</button>${isViewer() ? "" : `<button class="btn" data-act="siteNew">+ אתר</button>`}${isMgr() ? `<button class="btn ghost" data-act="siteTplEd">⚙ שלבים ועמודות</button>` : ""}</div></div>
+    <div class="row" style="gap:6px"><span class="sb-views">${vb("table", "טבלה")}${vb("board", "לוח")}</span><button class="btn ghost" data-act="siteRep">📄 דוח סטטוס</button>${isViewer() ? "" : `<button class="btn" data-act="siteNew">+ אתר</button>`}${isMgr() ? `<button class="btn ghost" data-act="siteTplEd">⚙ שלבים ועמודות</button>` : ""}</div></div>
     ${S.length ? "" : `<div class="banner"><b>עוד אין אתרים ברשימה.</b><span>מוסיפים ב״+ אתר״, או מקובץ (הגדרות ← נתונים וגיבוי).</span></div>`}
-    ${old.length && !isViewer() ? `<div class="banner"><b>${old.length} אתרים בסיווג הישן</b><span>(קטן שהופך לגדול / קטן / קו מים) — מוצגים כרגע כ: ${esc(old.slice(0, 4).map(s => `${s.name} ← ${sTypeL(s)}`).join(" · "))}${old.length > 4 ? "…" : ""}</span><button class="btn sm" data-act="siteTypeFix">לבדוק ולסווג</button></div>` : ""}
-    ${sugg.length && !isViewer() ? `<div class="banner"><b>${sugg.length} נושאים מזכירים אתר איסוף אבל עוד לא מקושרים אליו</b><span>${esc(sugg.slice(0, 3).map(x => `${x.i.code} → ${x.s.name}`).join(" · "))}${sugg.length > 3 ? "…" : ""}</span><button class="btn sm" data-act="siteLinkAll">לבדוק ולקשר</button></div>` : ""}
+    ${!isViewer() && (old.length || sugg.length) ? `<div class="banner si-ban">${old.length ? `<span><b>${old.length} אתרים בסיווג הישן</b> <button class="btn sm" data-act="siteTypeFix">לבדוק ולסווג</button></span>` : ""}${old.length && sugg.length ? `<span class="muted">·</span>` : ""}${sugg.length ? `<span><b>${sugg.length} נושאים מזכירים אתר ואינם מקושרים</b> <span class="muted small">(${esc(sugg.slice(0, 2).map(x => `${x.i.code} → ${x.s.name}`).join(" · "))}${sugg.length > 2 ? "…" : ""})</span> <button class="btn sm" data-act="siteLinkAll">לבדוק ולקשר</button></span>` : ""}</div>` : ""}
     ${siteSummary(d, S, T)}
     <div class="w-tabs">${Object.keys(SITE_TABS).map(tb).join("")}<span class="spacer"></span>
       <input class="inp sm" data-sf="q" value="${esc(F.q || "")}" placeholder="חיפוש אתר…" style="max-width:150px"><select class="inp sm" data-sf="reg"><option value="">כל האזורים</option>${SITE_REG.map(r => `<option ${r === F.reg ? "selected" : ""}>${r}</option>`).join("")}</select><select class="inp sm" data-sf="ph"><option value="">כל השלבים</option>${Object.keys(PHASE_CLR).map(r => `<option ${r === F.ph ? "selected" : ""}>${r}</option>`).join("")}</select><select class="inp sm" data-sf="own"><option value="">כל האחראים</option>${[...new Set(S.map(s => s.owner).filter(Boolean))].sort().map(r => `<option ${r === F.own ? "selected" : ""}>${esc(r)}</option>`).join("")}<option value="—" ${F.own === "—" ? "selected" : ""}>בלי אחראי (${S.filter(s => !s.owner).length})</option></select></div>
-    ${body}${siteOrdersBlock(d)}`;
+    ${body}${siteOrphBlock(X)}${siteOrdersBlock(d)}`;
 }
 /** הזמנות של אתרי איסוף — הזמנות רגילות (אוסף orders) עם siteId. נספרות ב"דרישות ויתרות" לפי מס׳ דרישה; הקבלן — מהרשימה או חיצוני (x_cname) */
-const siteOrders = s => list("orders").filter(o => o.siteId === s.id);
 const SITE_CTYPES = ["קבלן ראשי", "קבלן ייעודי", "קבלן חיצוני", "ספק", "קבלן תורנים", "קבלן בינוי", "קבלן תקשוב"];
 const SITE_OFOR = ["ביצוע קבוע", "אתר זמני", "תכנון", "אחר"];
 /** תמונת מצב: בתכנון · נושאים פתוחים · הזמנות · היתרי בנייה · בביצוע · חוסר תקציב לתרנים. לחיצה על תא — פירוט */
@@ -4378,6 +4448,13 @@ function siteBoxDefs(d, S, T) {
     ord: ["🧾 הזמנות", S.filter(s => ords.some(o => o.siteId === s.id)), s => ords.filter(o => o.siteId === s.id).map(o => o.x_ordNo || (o.x_reqNo ? "דרישה " + o.x_reqNo : "טרם")).join(" · ")],
     permit: ["📜 היתרי בנייה", S.filter(s => live(s) && permit(s).length), s => hasPermit(s) ? "✓ יש היתר" : "אין היתר"],
     exec: ["🏗 בביצוע", S.filter(s => ph(s) === "בביצוע"), s => { const N = siteNow(s, T); return N.next ? N.next.g : ""; }],
+    wait: ["⏳ ממתינים להזמנה", S.filter(s => ph(s) === "בתכנון" && !siteNow(s, T).next), () => "התכנון הושלם — ממתין להזמנת ביצוע"],
+    ...(X => { if (!X) return {}; const I = s => X.I[s.id], L = S.filter(s => live(s) && !["הושלם"].includes(ph(s))), on = s => I(s)?.live, H = s => IEC_HOLD[I(s)?.hk]?.[0] || "", W = s => I(s)?.wait != null ? ` · ${I(s).wait} ימים` : "";
+      return { iStuck: ["⏱ תקועים בחח״י", L.filter(s => iecStk(I(s))), s => (I(s).st.flags[0]?.t || "") ],
+        iOurs: ["🙋 הכדור אצלנו", L.filter(s => on(s) && !I(s).noOrd && ["ours", "eng", "amon", "mod"].includes(I(s).hk)), s => `${I(s).st.next?.name || ""} · ${H(s)}${W(s)}`],
+        iIec: ["🏢 הכדור אצל חח״י", L.filter(s => on(s) && I(s).hk === "iec" && !I(s).power), s => `${I(s).st.next?.name || ""}${W(s)}`],
+        iNo: ["∅ בלי הזמנת חח״י", L.filter(s => !I(s) || (on(s) && I(s).noOrd)), s => I(s) ? "יש מתקן, אין הזמנה" : "אין מתקן באתר חח״י"],
+        iPow: ["⚡ חושמלו", S.filter(s => I(s)?.power), () => "חושמל"] }; })(siteIecAll()),
     bud: ["💰 חוסר תקציב לתרנים", S.filter(s => live(s) && sType(s) === "גדול" && !mastAmt(s)), () => "אין תקציב לתורן"] };
 }
 /** סימון בלוח לפי הקובייה שנבחרה: { ids, tag } או null */
@@ -4394,11 +4471,14 @@ function siteSummary(d, S, T) {
     + tile("iss", `iss-hot ${urg ? "urg" : ""}`, "⚠ נושאים פתוחים <em>לחיצה ←</em>", iss.length, `${urg ? `🔴 ${urg} דחופים · ` : ""}${hold ? `HOLD: ${hold}` : "אין HOLD"}`)
     + tile("ord", "ord-hot", "🧾 הזמנות <em>לחיצה ←</em>", ords.length, `${issued} עם מס׳ הזמנה · ${ords.length - issued} רק דרישה / טרם`)
     + tile("permit", "", B.permit[0], `${nP}/${B.permit[1].length}`, "אתרים עם היתר בנייה")
+    + tile("wait", "", B.wait[0], B.wait[1].length, "תכנון הושלם, אין הזמנה")
     + tile("exec", "t3", B.exec[0], B.exec[1].length, "יש הזמנת ביצוע")
     + tile("bud", B.bud[1].length ? "t-red" : "", B.bud[0], B.bud[1].length, "אתרים גדולים בלי תקציב לתורן");
   const M = siteMark(d, S, T);
-  const bar = M ? `<div class="sm-bar"><b>${M.title}:</b> ${M.n} אתרים מסומנים בלוח למטה${M.k === "permit" ? " (ירוק = יש היתר, אדום = אין)" : ""}${M.k === "ord" ? ` · <a href="#" data-act="siteGoOrd">טבלת ההזמנות בתחתית העמוד ↓</a>` : ""}${M.k === "bud" ? ` · מוסיפים תקציב בכרטיס האתר ← "שורת אומדן", או ב־💰 תקציב ואומדן` : ""}<span class="spacer"></span><button class="btn ghost sm" data-act="siteF" data-id="box|${M.k}">✕ ביטול הסימון</button></div>` : "";
-  return `<div class="ch-tiles st-tiles" style="--cc:#1f7a8c">${tiles}</div>${bar}${F.box === "iss" ? `<div class="card sm-det2">${siteIssuesBlock(d)}</div>` : ""}`;
+  const bar = M ? `<div class="sm-bar"><b>${M.title}:</b> ${M.n} אתרים ${ui.sf.view === "board" ? "מסומנים בלוח למטה" : "מוצגים בטבלה למטה"}${M.k === "permit" ? " (ירוק = יש היתר, אדום = אין)" : ""}${M.k === "ord" ? ` · <a href="#" data-act="siteGoOrd">טבלת ההזמנות בתחתית העמוד ↓</a>` : ""}${M.k === "bud" ? ` · מוסיפים תקציב בכרטיס האתר ← "שורת אומדן", או ב־💰 תקציב ואומדן` : ""}<span class="spacer"></span><button class="btn ghost sm" data-act="siteF" data-id="box|${M.k}">✕ ביטול הסימון</button></div>` : "";
+  const it = (k, c, sub) => B[k] ? `<div class="ch-t ${F.box === k ? "on" : ""}" data-act="siteF" data-id="box|${k}" role="button" style="border-top:4px solid ${c}${F.box === k ? `;box-shadow:0 0 0 2px ${c} inset` : ""}"><span>${B[k][0]}</span><b>${B[k][1].length}</b><small>${sub}</small></div>` : "";
+  const iecT = B.iStuck ? `<div class="si-lab">⚡ חח״י — חי מאתר חח״י</div><div class="ch-tiles si-tiles">${it("iStuck", "#c0392b", "עברו את הנורמה לשלב")}${it("iOurs", "#b07d00", "מהנדס · אמו״ן · משהב״ט · אנחנו")}${it("iIec", "#0a6ec9", "שובר / ביצוע / חישמול")}${it("iNo", "#a4520c", "אין 301 / אין מתקן")}${it("iPow", "#2b9a4d", "מתוך " + S.length + " אתרים")}</div>` : "";
+  return `<div class="ch-tiles st-tiles" style="--cc:#1f7a8c">${tiles}</div>${iecT}${bar}${F.box === "iss" ? `<div class="card sm-det2">${siteIssuesBlock(d)}</div>` : ""}`;
 }
 /** נושאים פתוחים של אתרי איסוף — בדיוק כמו "נושאים פתוחים" של קבלן גזרה. נושא חדש נפתח מכאן */
 function siteIssuesBlock(d) {
@@ -4470,7 +4550,7 @@ function pageSite(d, sid) {
   const T = siteTpl(), ed = !isViewer(), ph = sitePhase(s, T), PS = sitePlanSteps(s, T), P = stepProg(PS, s.plan), B = siteBuilds(s), N = siteNow(s, T), last = siteLast(s);
   const fld = (k, l, w = 1) => `<label class="field" style="flex:${w}">${l}<input class="inp" value="${esc(s[k] || "")}" ${ed ? `data-sef="${sid}|${k}"` : "disabled"}></label>`;
   const sel = (k, l, opts) => `<label class="field">${l}<select class="inp" ${ed ? `data-sef="${sid}|${k}"` : "disabled"}>${opts.map(o => `<option ${o === (s[k] || opts[0]) ? "selected" : ""}>${o}</option>`).join("")}</select></label>`;
-  const iecAll = d.iecOrders.filter(o => o.kind === "אתר איסוף"), iec = siteIec(s), bud = d.budget.filter(x => x.kind === "site"), est = siteBudget(s), sugg = siteSuggest(s);
+  const bud = d.budget.filter(x => x.kind === "site"), est = siteBudget(s), sugg = siteSuggest(s);
   const nx = N.next, nv = nx ? N.map[nx.id] || {} : {}, after = nx ? N.steps.slice(N.steps.indexOf(nx) + 1).filter(x => (N.map[x.id]?.st || "טרם") !== "הושלם" && N.map[x.id]?.st !== "לא נדרש").slice(0, 2) : [];
   const buildBox = b => { const E = stepProg(siteExecSteps(s, b, T), b.steps), o = buildOrder(b), cid = buildCid(b), ords = d.orders.filter(x => x.contractorId === cid);
     return `<div class="sk-build ${b.kind === "זמני" ? "tmp" : ""}"><div class="row" style="align-items:center;gap:8px"><b>ביצוע ${b.kind === "זמני" ? "אתר זמני (ביניים)" : "אתר קבוע"}</b><span class="spacer"></span>${ed && b.kind === "זמני" ? `<button class="btn ghost sm" data-act="siteBuildDel" data-id="${sid}|${b.bid}" style="color:var(--warn)">הסרה</button>` : ""}</div>
@@ -4487,16 +4567,15 @@ function pageSite(d, sid) {
         ${nx.subs?.length ? `<div class="sk-subs">${nx.subs.map(u => { const sv = nv.subs?.[u] || "טרם"; return `<button class="st-sub" style="--sc:${SITE_ST_CLR[sv]}" ${ed ? `data-act="siteSub" data-id="${sid}|${N.where}|${esc(nx.id)}|${esc(u)}"` : ""}>${esc(u)}: ${sv}</button>`; }).join("")}</div>` : ""}${nv.note ? `<div class="small muted">${esc(nv.note)}</div>` : ""}</div><span class="spacer"></span>
         ${ed ? `${(nv.st || "טרם") === "טרם" ? `<button class="btn ghost" data-act="siteSt" data-id="${sid}|${N.where}|${esc(nx.id)}|בתהליך">בתהליך</button>` : ""}<button class="btn sk-ok" data-act="siteSt" data-id="${sid}|${N.where}|${esc(nx.id)}|הושלם">✓ הושלם</button>` : ""}</div>` : `<div class="sk-now ok"><div class="t">${N.phase === "plan" ? "✓ התכנון הושלם — ממתין להזמנת ביצוע" : "✓ הביצוע הושלם"}</div></div>`}
       <div class="small muted" style="margin-top:6px">${after.length ? `הבא בתור: <b style="color:var(--ink)">${after.map(x => esc(x.t)).join(" ← ")}</b> · ` : ""}${N.phase === "exec" && P.next ? `בתכנון עוד פתוח: <b style="color:var(--ink)">${esc(P.next.t)}</b> (${P.done}/${P.total}) · ` : ""}עדכון אחרון ${last ? fmtD(last) + (daysSince(last) > 30 ? ` — <b class="w-late">${daysSince(last)} יום</b>` : "") : "—"}</div></div></div></div>
-    <div class="card"><h2 style="margin-top:0">שלב 1 — תכנון וסטטוטוריקה <span class="muted small">(${P.done}/${P.total})</span></h2>${stepTrack(PS, s.plan, SITE_PG)}
-      <h2 style="margin:18px 0 6px">שלב 2 — ביצוע</h2>${B.map(buildBox).join("") || `<p class="muted small">אין ביצוע</p>`}
-      ${ed ? `<div class="row" style="gap:6px;margin-top:8px">${B.some(b => b.kind !== "זמני") ? "" : `<button class="btn ghost sm" data-act="siteBuildAdd" data-id="${sid}|קבוע">+ ביצוע אתר קבוע</button>`}<button class="btn ghost sm" data-act="siteBuildAdd" data-id="${sid}|זמני">+ אתר זמני (ביניים)</button></div>` : ""}</div>
+    ${siteIecCard(s, ed)}
     <div class="sb-two"><div class="card"><h2 style="margin-top:0">⚠ נושאים וחסמים</h2>${wLinkCell("s:" + sid)}
       ${sugg.length ? `<div class="sk-sugg"><b class="small">נושאים שמזכירים את האתר ועוד לא מקושרים:</b>${sugg.map(i => `<div class="row" style="gap:6px;align-items:center"><a href="#" data-act="wEdit" data-id="${i.id}"><b dir="ltr">${esc(i.code || "")}</b> ${esc(i.title || "")}</a>${ed ? `<button class="btn sm" data-act="siteLinkIss" data-id="${sid}|${i.id}">קשר לאתר</button>` : ""}</div>`).join("")}</div>` : ""}
       ${s.note ? `<p class="small" style="margin:8px 0 0"><b>הערות:</b> ${esc(s.note)}</p>` : ""}</div>
-      <div class="card"><h2 style="margin-top:0">חח״י ותקציב</h2>${iec.map(o => `<div class="small"><a href="#" data-act="wGoLink" data-id="o:${o.id}" title="מעבר להזמנה בחיבורי חח״י">⚡ ${esc(o.name || "")} · ${esc(o.orderNo || "—")} · <span class="pill" style="background:${IEC_COLORS[o.stage] || "#eee"}">${esc(o.stage || "")}</span> ↗</a>${ed ? ` <b data-act="siteIecDel" data-id="${sid}|${o.id}" role="button" class="w-x">✕</b>` : ""}</div>`).join("") || `<div class="small muted">אין הזמנת חח״י מקושרת</div>`}
-        ${ed ? `<select class="inp sm" data-siec="${sid}" style="margin-top:4px"><option value="">+ קישור הזמנת חח״י…</option>${iecAll.filter(o => !s.iec?.[o.id]).map(o => `<option value="${o.id}">${esc(o.name || "")} · ${esc(o.orderNo || "—")}</option>`).join("")}</select>` : ""}
-        <div class="small" style="margin-top:8px">💰 <a href="#" data-act="nav" data-id="budget" title="מעבר לתקציב ואומדן">אומדן ↗</a>: <b>${est ? bgMM(est) : "—"}</b>${(o => o.length && o.reduce((t, x) => t + bgOrdAmt(x), 0) ? ` · הוזמן: <b>${bgMM(o.reduce((t, x) => t + bgOrdAmt(x), 0))}</b>` : "")(B.map(buildOrder).filter(Boolean))}</div>
+      <div class="card"><h2 style="margin-top:0">💰 תקציב</h2><div class="small">💰 <a href="#" data-act="nav" data-id="budget" title="מעבר לתקציב ואומדן">אומדן ↗</a>: <b>${est ? bgMM(est) : "—"}</b>${(o => o.length && o.reduce((t, x) => t + bgOrdAmt(x), 0) ? ` · הוזמן: <b>${bgMM(o.reduce((t, x) => t + bgOrdAmt(x), 0))}</b>` : "")(B.map(buildOrder).filter(Boolean))}</div>
         <label class="field" style="margin-top:4px">שורת אומדן<select class="inp sm" ${ed ? `data-sef="${sid}|budget"` : "disabled"}><option value="">—</option>${bud.map(x => `<option value="${x.id}" ${x.id === s.budget ? "selected" : ""}>${esc(x.title || "")} · ${bgMM(bgN(x.mast) + bgN(x.build))}</option>`).join("")}</select></label></div></div>
+    <details class="card sk-det" data-trk="1" ${ui.siteTrk ? "open" : ""}><summary><b>▸ מסלול השלבים</b> <span class="muted small">— שלב 1 תכנון (${P.done}/${P.total}) · שלב 2 ביצוע: קבלן, הזמנה ושלבי הביצוע</span></summary><h3 class="sk-h3">שלב 1 — תכנון וסטטוטוריקה</h3>${stepTrack(PS, s.plan, SITE_PG)}
+      <h3 class="sk-h3">שלב 2 — ביצוע</h3>${B.map(buildBox).join("") || `<p class="muted small">אין ביצוע</p>`}
+      ${ed ? `<div class="row" style="gap:6px;margin-top:8px">${B.some(b => b.kind !== "זמני") ? "" : `<button class="btn ghost sm" data-act="siteBuildAdd" data-id="${sid}|קבוע">+ ביצוע אתר קבוע</button>`}<button class="btn ghost sm" data-act="siteBuildAdd" data-id="${sid}|זמני">+ אתר זמני (ביניים)</button></div>` : ""}</details>
     <details class="card sk-det" ${s.owner ? "" : "open"}><summary><b>✎ פרטי האתר</b> <span class="muted small">— שם, אחראי, סוג, אזור, מצב, מיקום, תורן, מבנה</span></summary><div class="w-df" style="margin-top:8px">${fld("name", "שם", 2)}<label class="field" style="flex:1.4">אחראי על האתר<input class="inp" list="site_owners" value="${esc(s.owner || "")}" placeholder="שם האחראי" ${ed ? `data-sef="${sid}|owner"` : "disabled"}></label>${siteOwnerList()}<label class="field">סוג<select class="inp" ${ed ? `data-sef="${sid}|type"` : "disabled"}>${SITE_TYPES.map(o => `<option ${o === sType(s) ? "selected" : ""}>${o}</option>`).join("")}</select></label>${sType(s) === "קטן קבוע" ? `<label class="field">תת־קטגוריה<select class="inp" ${ed ? `data-sef="${sid}|sub"` : "disabled"}><option value="">—</option>${SITE_SUBS_T["קטן קבוע"].map(o => `<option ${o === sSub(s) ? "selected" : ""}>${o}</option>`).join("")}</select></label>` : ""}${sel("region", "אזור", SITE_REG)}${sel("status", "מצב", SITE_STATUS)}
       ${fld("line", "שורת דוח")}${fld("kd", "ק.ד.")}${fld("coord", "נ.צ. (ITM)", 1.5)}${fld("tower", "גובה תורן")}${fld("building", "גודל מבנה")}${fld("azimuth", "אזימוט")}
       <label class="field" style="flex:.6">מתחבר לגדר<select class="inp" ${ed ? `data-sef="${sid}|connects"` : "disabled"}><option value="">לא</option><option value="1" ${s.connects ? "selected" : ""}>כן</option></select></label>${fld("note", "הערה", 3)}</div>
@@ -4512,12 +4591,12 @@ async function siteStepSet(sid, where, n, patch) {
   if (where === "plan") { const P = { ...(s.plan || {}) }; P[n] = { ...(P[n] || {}), ...patch }; return siteUpd(sid, { plan: P }); }
   const bid = where.slice(2), B = { ...(s.builds || {}) }, b = { ...(B[bid] || {}) }; b.steps = { ...(b.steps || {}), [n]: { ...(b.steps?.[n] || {}), ...patch } }; B[bid] = b; return siteUpd(sid, { builds: B });
 }
-function siteNewModal() {
-  modal(`<h2>אתר איסוף חדש</h2><label class="field">שם<input class="inp" id="sn_n"></label><label class="field">אחראי על האתר<input class="inp" id="sn_o" list="site_owners" placeholder="שם האחראי"></label>${siteOwnerList()}
-    <div class="row" style="gap:8px"><label class="field" style="flex:1">סוג<select class="inp" id="sn_t">${SITE_TYPES.map(t => `<option>${t}</option>`).join("")}</select></label><label class="field" style="flex:.6">קו מים<select class="inp" id="sn_w"><option value="">לא</option><option value="קו מים">כן (קטן קבוע)</option></select></label><label class="field" style="flex:1">אזור<select class="inp" id="sn_r">${SITE_REG.map(t => `<option>${t}</option>`).join("")}</select></label></div>
+function siteNewModal(pre = {}) {
+  modal(`<h2>אתר איסוף חדש</h2>${pre.fid ? `<p class="small muted" style="margin-top:-6px">מתוך אתר חח״י — המתקן יקושר לאתר. לבדוק סוג ואזור.</p>` : ""}<label class="field">שם<input class="inp" id="sn_n" value="${esc(pre.name || "")}"></label><label class="field">אחראי על האתר<input class="inp" id="sn_o" list="site_owners" placeholder="שם האחראי"></label>${siteOwnerList()}
+    <div class="row" style="gap:8px"><label class="field" style="flex:1">סוג<select class="inp" id="sn_t">${SITE_TYPES.map(t => `<option>${t}</option>`).join("")}</select></label><label class="field" style="flex:.6">קו מים<select class="inp" id="sn_w"><option value="">לא</option><option value="קו מים">כן (קטן קבוע)</option></select></label><label class="field" style="flex:1">אזור<select class="inp" id="sn_r">${SITE_REG.map(t => `<option ${t === pre.region ? "selected" : ""}>${t}</option>`).join("")}</select></label></div>
     <div class="row"><button class="btn" id="mYes">הוספה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
     const q = x => m.querySelector(x); q("#mNo").onclick = close; q("#sn_n").focus();
-    q("#mYes").onclick = async () => { const n = q("#sn_n").value.trim(); if (!n) return; const id = await api.add("sites", { name: n, owner: q("#sn_o").value.trim(), type: q("#sn_t").value, sub: q("#sn_t").value === "קטן קבוע" ? q("#sn_w").value : "", region: q("#sn_r").value, status: "פעיל", plan: {}, builds: { [newId()]: { kind: q("#sn_t").value === "קטן זמני" ? "זמני" : "קבוע", cid: mrCid(), steps: {} } }, iec: {} });
+    q("#mYes").onclick = async () => { const n = q("#sn_n").value.trim(); if (!n) return; const id = await api.add("sites", { name: n, owner: q("#sn_o").value.trim(), type: q("#sn_t").value, sub: q("#sn_t").value === "קטן קבוע" ? q("#sn_w").value : "", region: q("#sn_r").value, status: "פעיל", plan: {}, builds: { [newId()]: { kind: q("#sn_t").value === "קטן זמני" ? "זמני" : "קבוע", cid: mrCid(), steps: {} } }, iec: {}, ...(pre.fid ? { iecFac: { [pre.fid]: true } } : {}) });
       close(); if (id) { ui.page = "site:" + id; location.hash = ui.page; render(); scrollTo(0, 0); } };
   });
 }
@@ -4655,7 +4734,7 @@ function siteRepModal() {
 async function siteClick(act, b) {
   const [sid, a1, a2, a3] = (b.dataset.id || "").split("|"), s = RAW.sites?.[sid];
   if (act === "siteOpen") { if (b.dataset.g) ui.siteDet = b.dataset.id; ui.page = "site:" + b.dataset.id; location.hash = ui.page; render(); scrollTo(0, 0); }
-  else if (act === "siteF") { const [k, v] = b.dataset.id.split("|"), F = ui.sf; F[k] = (k === "ph" || k === "box") && F[k] === v ? "" : v; render(); }
+  else if (act === "siteF") { const [k, v] = b.dataset.id.split("|"), F = ui.sf; F[k] = k === "sort" ? (F.sort === v ? "-" + v : F.sort === "-" + v ? "" : v) : (k === "ph" || k === "box") && F[k] === v ? "" : v; render(); }
   else if (act === "siteTypeFix") siteTypeFixModal();
   else if (act === "siteGoOrd") document.getElementById("site-orders")?.scrollIntoView({ behavior: "smooth", block: "start" });
   else if (act === "siteIssFull") issueEdit(null, { scope: "sites" });
@@ -4685,6 +4764,8 @@ async function siteClick(act, b) {
   else if (act === "siteOrdNew" && s) { const bd = s.builds?.[a1], cid = bd && buildCid(bd); if (!cid) return;
     const oid = await api.add("orders", { contractorId: cid, name: `אתר איסוף ${s.name} — ${bd.kind === "זמני" ? "אתר זמני" : "ביצוע"}`, kdFrom: s.kd || "", kdTo: "", secFrom: "", secTo: "", lengthKm: "", note: "", x_reqNo: "", x_ordNo: "", siteId: sid, order: Date.now() });
     if (oid) { const B = { ...(s.builds || {}) }; B[a1] = { ...B[a1], orderId: oid }; await siteUpd(sid, { builds: B }); toast("נפתחה הזמנה — ממלאים מספר דרישה ומספר הזמנה ✓"); } }
+  else if (act === "siteIecUn" && s) await siteUpd(sid, { iecFac: { ...(s.iecFac || {}), [a1]: false } });
+  else if (act === "siteFromIec") { const f = IECD?.facilities?.[b.dataset.id]; if (f) siteNewModal({ name: iecNm(f.name) || f.name, region: IEC_SITE_REG(f.district), fid: b.dataset.id }); }
   else if (act === "siteIecDel" && s) { const I = { ...(s.iec || {}) }; delete I[a1]; await siteUpd(sid, { iec: I }); }
   else if (act === "siteDel" && s) { if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = "ללחוץ שוב למחיקה"; return; } await api.remove("sites", sid); ui.page = "sites"; location.hash = "sites"; render(); }
 }
@@ -4693,6 +4774,7 @@ async function siteOrdLink(sid, oid, fr) { const st = RAW.sites?.[sid]; if (!st 
   for (const k in B) if (B[k].orderId === oid) return; let bid = Object.keys(B).find(k => B[k].kind === kind && !B[k].orderId);
   if (!bid) { if (Object.keys(B).some(k => B[k].kind === kind)) return; bid = newId(); B[bid] = { kind, cid: RAW.orders?.[oid]?.contractorId || "", steps: {} }; }
   B[bid] = { ...B[bid], orderId: oid, ...(RAW.orders?.[oid]?.contractorId ? { cid: RAW.orders[oid].contractorId } : {}) }; await siteUpd(sid, { builds: B }); }
+document.addEventListener("toggle", e => { if (e.target?.dataset?.trk) ui.siteTrk = e.target.open; }, true);
 $app.addEventListener("change", async e => { const t = e.target;
   if (t.dataset?.sord) { const [oid, k] = t.dataset.sord.split("|"), o = RAW.orders?.[oid]; if (!o) return; const v = t.value.trim();
     if (k === "siteId" && v !== o.siteId) { const st = RAW.sites?.[o.siteId]; if (st) { const B = { ...(st.builds || {}) }; let ch = false; for (const x in B) if (B[x].orderId === oid) { B[x] = { ...B[x], orderId: "" }; ch = true; } if (ch) await siteUpd(o.siteId, { builds: B }); } }
@@ -4703,6 +4785,8 @@ $app.addEventListener("change", async e => { const t = e.target;
     if (k === "orderId" && t.value && RAW.orders?.[t.value] && !RAW.orders[t.value].siteId) await api.update("orders", t.value, { siteId: sid }); return; }
   if (t.dataset?.sof) { const [oid, k] = t.dataset.sof.split("|"); if (RAW.orders?.[oid]) await api.update("orders", oid, { [k]: t.value.trim() }); return; }
   if (t.dataset?.ssf) { if (t.type === "date" && t.value && +t.value.slice(0, 4) < 1990) return; const [sid, where, n, k] = t.dataset.ssf.split("|"); await siteStepSet(sid, where, n, { [k]: t.value.trim() }); return; }
+  if (t.dataset?.siecf && t.value) { const sid = t.dataset.siecf, s = RAW.sites?.[sid]; if (s) { await siteUpd(sid, { iecFac: { ...(s.iecFac || {}), [t.value]: true } }); toast("המתקן קושר לאתר ✓"); } return; }
+  if (t.dataset?.siecl && t.value) { const s = RAW.sites?.[t.value]; if (s) { await siteUpd(t.value, { iecFac: { ...(s.iecFac || {}), [t.dataset.siecl]: true } }); toast(`קושר לאתר ${s.name} ✓`); } return; }
   if (t.dataset?.siec && t.value) { const sid = t.dataset.siec, s = RAW.sites?.[sid]; if (s) await siteUpd(sid, { iec: { ...(s.iec || {}), [t.value]: true } }); }
 });
 $app.addEventListener("input", e => { const t = e.target; if (t.dataset?.sf !== "q") return; ui.sf.q = t.value; clearTimeout(t._tm); t._tm = setTimeout(() => { const pos = t.selectionStart; render(); const n = document.querySelector('[data-sf="q"]'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }, 300); });
