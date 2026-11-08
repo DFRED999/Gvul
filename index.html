@@ -2853,6 +2853,190 @@ function specialistDash(d, S) {
       ...kinds.map(k => statRow(`<span style="padding-inline-start:14px">${esc(KIND_PLURAL[k] || k)}</span>`, itemStats(its.filter(i => (i.kind || "אחר") === k))))]; });
   return rows.length ? `<h3 style="margin:16px 0 6px">קבלנים ייעודיים${S === "הכל" ? "" : " — " + esc(S)}</h3><div class="tablewrap"><table class="sheet">${statHead("סוג פריט")}<tbody>${rows.join("")}</tbody></table></div>` : "";
 }
+/* =====================================================================
+   דוח הנהלה חח״י — לפי שלבי התשלום. אותו קוד בדיוק באתר חח״י ובאתר הגבול.
+   נבנה ישירות מהנתונים (מתקנים + הזמנות): כל הזמנה נספרת פעם אחת, בשלב המתקדם ביותר שסומן.
+   הזמנות בנות של הזמנה מרכזת — דרך המרכזת. סכומים לפני מע״מ. MR.view(D) — תצוגה באתר; MR.print(D, "desk"|"mob") — הדפסה / PDF.
+   ===================================================================== */
+const MR = (() => {
+  const VAT = 1.18, DIST = ["גליל גולן", "עמקים", "ירושלים"], TO = { "תט״ז": 0, "חדר טרפו": 1, "ארון שקד": 2, "אתר איסוף": 3 };
+  const E = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const has = (o, f) => !!o[f] || !!o["ok_" + f];
+  const dd = s => { const x = String(s || "").slice(0, 10); return /^\d{4}-\d\d-\d\d$/.test(x) && +x.slice(0, 4) > 2020 ? x : ""; };
+  const fd = s => s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(2, 4)}` : "";
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const days = s => s ? Math.round((Date.parse(today()) - Date.parse(s)) / 864e5) : null;
+  const N = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+  const money = v => v ? Math.round(v).toLocaleString("en-US") : "—";
+  const kdOf = f => { const m = String(f.kd || f.name || "").match(/\d{3}/); return m ? +m[0] : 0; };
+  const ST8 = [
+    ["1. שובר מקדמה", u => u.st === "ours" && u.stage === "מקדמה", "#2e9bb8", "השובר התקבל מחח״י — טרם הועבר לאלעוז · \"מתאריך\" = קבלת השובר"],
+    ["2. מקדמה אצל המהנדס", u => u.st === "eng" && u.stage === "מקדמה", "#6aa8bb", "הועבר לאלעוז לאישור · \"מתאריך\" = העברה למהנדס"],
+    ["3. מקדמה באמו״ן", u => u.st === "amon" && u.stage === "מקדמה", "#4f8f9e", "אושר ע״י המהנדס, ממתין לתשלום אמו״ן"],
+    ["4. מקדמה שולמה", u => u.st === "vFin", "#1d8f8a", "המקדמה שולמה — ממתינים לשובר משלים מחח״י · \"מתאריך\" = תשלום המקדמה"],
+    ["5. שובר משלים", u => u.st === "ours" && u.stage === "משלים", "#d4a017", "שובר המשלים התקבל — טרם הועבר לאלעוז"],
+    ["6. משלים אצל המהנדס", u => u.st === "eng" && u.stage === "משלים", "#dba83a", "הועבר לאלעוז לאישור · \"מתאריך\" = העברה למהנדס"],
+    ["7. משלים באמו״ן", u => u.st === "amon" && u.stage === "משלים", "#c98a20", "אושר ע״י המהנדס, ממתין לתשלום אמו״ן"],
+    ["8. משלים שולם", u => u.st === "exec" || u.st === "done", "#2b7a3d", "שולם במלואו — ממתין לביצוע / חישמול של חח״י · \"מתאריך\" = תשלום המשלים"]];
+  const PAY = "1235 67";   // שלבים שבהם יש סכום לתשלום
+  const RANK = { vAdv: 0, ours: 1, eng: 2, amon: 3, vFin: 4, exec: 5, done: 6 };
+  const PAYEV = [["vAdvDate", "שובר מקדמה התקבל"], ["advEng", "מקדמה הועברה לאלעוז"], ["advAmon", "מקדמה הועברה לאמו״ן"], ["advanceDate", "מקדמה שולמה", "advance"],
+    ["vFinDate", "שובר משלים התקבל"], ["finEng", "משלים הועבר לאלעוז"], ["finAmon", "משלים הועבר לאמו״ן"], ["completionDate", "משלים שולם", "completion"]];
+  const SEV = { exec: "🔧 ביצוע", power: "⚡ חושמל", hand: "✅ נמסר" };
+
+  /** ציר העדכונים — כמו "עדכונים" בכרטיס המתקן: הערות, גילי, תשלומים ושוברים, ביצוע / חישמול */
+  function timeline(f, orders) {
+    const T = [], add = (d, t, by) => t && T.push({ d: dd(d), t: String(t) + (by ? " · " + by : "") });
+    Object.values(f?.log || {}).forEach(x => add(x.date, x.text, x.by));
+    for (const o of orders) {
+      Object.values(o.log || {}).forEach(x => add(x.date, x.text, x.by));
+      if (o.gNote && !Object.values(o.log || {}).some(x => String(x.text).includes(o.gNote))) add(o.gAt, "📝 גילי: " + o.gNote);
+      for (const [k, l, a] of PAYEV) if (dd(o[k])) add(o[k], `💳 ${l}${a && N(o[a]) ? ` · ₪${money(N(o[a]) * VAT)}` : ""}`);
+      if (o.chk) add("", "⚠ לבדיקה: " + o.chk);
+    }
+    for (const [k, v] of Object.entries(f?.stages || {})) { if (v && dd(v.date)) add(v.date, SEV[k] || k); if (v && v.note) add("", v.note); }
+    const seen = new Set();
+    return T.sort((a, b) => (b.d || "0").localeCompare(a.d || "0")).filter(x => !seen.has(x.t) && seen.add(x.t));
+  }
+
+  function build(D) {
+    const F = D?.facilities || {}, O = Object.entries(D?.orders || {}).map(([id, o]) => ({ ...o, id }));
+    const by301 = {}; O.forEach(o => { if (o.iec301) by301[o.iec301] = o; });
+    const best = {};
+    for (const o of O) {
+      const f = F[o.facilityId] || {};
+      if (f.status === "בוטל" || /לבטל/.test(f.name || "") || !o.iec301) continue;
+      const par = by301[String(o.parent301 || "").split(",")[0].trim()];
+      if (o.kind === "הזמנה" && par && par.kind === "הזמנה מרכזת") continue;
+      const adv = N(o.advance), comp = N(o.completion) || Math.max(N(o.amount) - adv, 0);
+      let st, stage = "", pay = 0, since = "";
+      if (!has(o, "advanceDate")) { stage = "מקדמה"; pay = adv;
+        if (has(o, "advAmon")) { st = "amon"; since = dd(o.advAmon); } else if (has(o, "advEng")) { st = "eng"; since = dd(o.advEng); }
+        else if (has(o, "vAdvDate")) { st = "ours"; since = dd(o.vAdvDate); } else st = "vAdv"; }
+      else if (!has(o, "completionDate")) { stage = "משלים"; pay = comp;
+        if (has(o, "finAmon")) { st = "amon"; since = dd(o.finAmon); } else if (has(o, "finEng")) { st = "eng"; since = dd(o.finEng); }
+        else if (has(o, "vFinDate")) { st = "ours"; since = dd(o.vFinDate); } else { st = "vFin"; since = dd(o.advanceDate); } }
+      else { st = dd(f.stages?.power?.date) ? "done" : "exec"; since = dd(o.completionDate); }
+      const u = { o301: o.iec301, kind: o.kind, fac: f.name || "", dist: o.district || f.district || "", live: (f.status || "פעיל") === "פעיל", st, stage, pay, since, days: days(since), kd: kdOf(f), tl: timeline(f, [o]) };
+      const b = best[o.iec301];
+      const sc = x => RANK[x.st] * 2 + (x.stage === "משלים" ? 1 : 0);
+      if (!b || sc(u) > sc(b)) best[o.iec301] = u;
+    }
+    const srt = (a, b) => (DIST.indexOf(a.dist) + 1 || 9) - (DIST.indexOf(b.dist) + 1 || 9) || b.kd - a.kd || String(a.fac).localeCompare(String(b.fac), "he");
+    const U = Object.values(best).sort(srt), act = U.filter(u => u.live), frz = U.filter(u => !u.live);
+    const OF = {}; O.forEach(o => (OF[o.facilityId] = OF[o.facilityId] || []).push(o));
+    const noord = Object.entries(F).map(([id, f]) => ({ ...f, id })).filter(f => (f.status || "פעיל") === "פעיל" && !/לבטל/.test(f.name || "") && !(OF[f.id] || []).some(o => o.iec301)
+      && (String(f.kd || "").trim() || f.type === "אתר איסוף"))
+      .map(f => ({ fac: f.name, type: f.type, dist: f.district || "", kd: String(f.kd || "").trim(), k: kdOf(f), tl: timeline(f, []),
+        ref: (OF[f.id] || []).flatMap(o => [o.req880 && "880: " + o.req880, o.ord444 && "444: " + o.ord444]).filter(Boolean).join(" · ") }))
+      .sort((a, b) => (DIST.indexOf(a.dist) + 1 || 9) - (DIST.indexOf(b.dist) + 1 || 9) || (TO[a.type] ?? 9) - (TO[b.type] ?? 9) || b.k - a.k || String(a.fac).localeCompare(String(b.fac), "he"));
+    const S = ST8.map(([t, fn, c, sub]) => ({ t, c, sub, L: act.filter(fn) }));
+    const sum = L => L.reduce((t, u) => t + u.pay, 0), NC = {}; noord.forEach(f => NC[f.type] = (NC[f.type] || 0) + 1);
+    return { U, act, frz, noord, S, sum, NC, vadv: act.filter(u => u.st === "vAdv"),
+      eng: act.filter(u => u.st === "eng"), amon: act.filter(u => u.st === "amon"), vfin: act.filter(u => u.st === "vFin"), ex: act.filter(u => u.st === "exec") };
+  }
+
+  /* ---------- חלקי HTML ---------- */
+  const tlH = tl => tl.map(x => (x.d ? `<b>${fd(x.d)}</b> · ` : "") + E(x.t)).join("<br>");
+  const kindL = u => u.kind && u.kind !== "הזמנה" ? `<div class="mr-k">${E(u.kind)}</div>` : "";
+  const ncTxt = M => Object.entries(M.NC).map(([k, v]) => `${v} ${k}`).join(" · ");
+  function tbl(L, step) {
+    if (!L.length) return `<p class="mr-mut">אין הזמנות בשלב הזה כרגע.</p>`;
+    const pay = PAY.includes(step), cols = [["מס״ד", "3%"], ["נפה", "8%"], ["מתקן", "16%"], ["הזמנת חח״י", "10%"], ...(pay ? [["סכום (לפני מע״מ)", "9%"]] : []), ["מתאריך", "8%"], ["ימים", "5%"], ["עדכונים (מהחדש לישן)", ""]];
+    return `<table class="mr-t"><thead><tr>${cols.map(([h, w]) => `<th style="width:${w}">${h}</th>`).join("")}</tr></thead><tbody>${L.map((u, i) =>
+      `<tr><td class="mr-n">${i + 1}</td><td>${E(u.dist)}</td><td><b>${E(u.fac)}</b>${kindL(u)}</td><td dir="ltr" style="text-align:right">${E(u.o301)}</td>${pay ? `<td>${money(u.pay)}</td>` : ""}<td>${fd(u.since) || "—"}</td><td>${u.days ?? `<span class="mr-mut">—</span>`}</td><td class="mr-tl">${tlH(u.tl)}</td></tr>`).join("")}</tbody></table>`;
+  }
+  const tbl0 = M => M.noord.length ? `<table class="mr-t"><thead><tr><th style="width:3%">מס״ד</th><th style="width:8%">נפה</th><th style="width:8%">סוג</th><th style="width:16%">מתקן</th><th style="width:6%">ק.ד.</th><th style="width:18%">דרישה / הזמנת משהב״ט</th><th>עדכונים</th></tr></thead><tbody>${M.noord.map((f, i) =>
+    `<tr><td class="mr-n">${i + 1}</td><td>${E(f.dist)}</td><td>${E(f.type)}</td><td><b>${E(f.fac)}</b></td><td>${E(f.kd || "—")}</td><td>${E(f.ref || "—")}</td><td class="mr-tl">${tlH(f.tl)}</td></tr>`).join("")}</tbody></table>` : `<p class="mr-mut">אין.</p>`;
+  function card(i, u, step) {
+    const kv = [PAY.includes(step) && u.pay ? `<div><span>לתשלום</span><b>₪${money(u.pay)}</b></div>` : "", step !== "f" ? `<div><span>מתאריך</span><b>${fd(u.since) || "—"}</b></div><div><span>ימים</span><b>${u.days ?? "—"}</b></div>` : ""].join("");
+    return `<div class="mr-c"><div class="mr-ch"><i>${i}</i><b>${E(u.fac)}</b></div><div class="mr-cm"><span dir="ltr">${E(u.o301)}</span> · ${E(u.dist)}${u.kind && u.kind !== "הזמנה" ? " · " + E(u.kind) : ""}</div>${kv ? `<div class="mr-kv">${kv}</div>` : ""}${u.tl.length ? `<div class="mr-cn">${tlH(u.tl)}</div>` : ""}</div>`;
+  }
+  const card0 = (i, f) => `<div class="mr-c"><div class="mr-ch"><i>${i}</i><b>${E(f.fac)}</b></div><div class="mr-cm">${E(f.type)} · ${E(f.dist)}${f.kd ? " · ק.ד. " + E(f.kd) : ""}${f.ref ? " · " + E(f.ref) : ""}</div>${f.tl.length ? `<div class="mr-cn">${tlH(f.tl)}</div>` : ""}</div>`;
+
+  function dash(M, link) {
+    const go = k => link ? ` data-mrgo="${k}" role="button"` : "";
+    const big = M.S.map((s, k) => { const p = M.sum(s.L); return `<div class="mr-big" style="background:${s.c}"${go(k + 1)}><b>${s.L.length}</b><span>${E(s.t)}</span><small>${p && "2367".includes(s.t[0]) ? `₪${money(p)} לתשלום` : ""}</small></div>`; }).join("");
+    const cnt = (L, d) => L.filter(u => u.dist === d).length || "—";
+    const row = (t, c, L, k) => `<tr${go(k)}><td style="border-right:5px solid ${c}"><b>${E(t)}</b></td>${DIST.map(d => `<td>${cnt(L, d)}</td>`).join("")}<td><b>${L.length}</b></td></tr>`;
+    const dt = `<table class="mr-t mr-dt"><thead><tr><th>שלב</th>${DIST.map(d => `<th>${d}</th>`).join("")}<th>סה״כ</th></tr></thead><tbody>${row("0. טרם נפתחה הזמנת חח״י", "#7b8ba3", M.noord, 0)}${M.S.map((s, k) => row(s.t, s.c, s.L, k + 1)).join("")}</tbody></table>`;
+    const tile = (t, n, c, sub, k) => n ? `<div class="mr-tile" style="border-top-color:${c}"${k !== undefined ? go(k) : ""}><span>${t}</span><b>${n}</b><small>${sub}</small></div>` : "";
+    const who = tile("⚡ אצל אלעוז (מהנדס החשמל)", M.eng.length, "#2e8fa8", `₪${money(M.sum(M.eng))} לתשלום`)
+      + tile("🏛 באמו״ן", M.amon.length, "#4f6f9e", `₪${money(M.sum(M.amon))} לתשלום`)
+      + tile("🏢 ממתינים לשובר משלים מחח״י", M.vfin.length, "#0a6ec9", "", 4) + tile("🏢 ממתינים לשובר מקדמה מחח״י", M.vadv.length, "#0a6ec9", "", 1)
+      + tile("🔧 שולם — ממתין לביצוע חח״י", M.ex.length, "#8e5bc2", "", 8) + tile("📭 טרם נפתחה הזמנת חח״י", M.noord.length, "#7b8ba3", ncTxt(M), 0);
+    return `<div class="mr-grid8">${big}</div><div class="mr-two"><div style="flex:1.4"><div class="mr-lab">לפי נפה</div>${dt}</div><div style="flex:1"><div class="mr-lab">אצל מי הכדור</div><div class="mr-tiles">${who}</div></div></div>`;
+  }
+  /** mode: desk — טבלאות; mob — כרטיסים. sec = עטיפת כותרת לשלב */
+  function body(M, mode, link) {
+    const H = (k, t, c, n, sub) => `<h2 class="mr-h" id="mr-s${k}" style="background:${c}">${E(t)} <small>· ${E(n)}</small></h2><p class="mr-sub">${E(sub)}</p>`;
+    let s = H(0, "0. טרם נפתחה הזמנת חח״י", "#7b8ba3", `${M.noord.length} מתקנים${M.noord.length ? " · " + ncTxt(M) : ""}`, "מתקנים פעילים בלי מספר הזמנת חח״י (301)")
+      + (mode === "mob" ? M.noord.map((f, i) => card0(i + 1, f)).join("") || `<p class="mr-mut">אין.</p>` : tbl0(M));
+    M.S.forEach((x, k) => { const p = M.sum(x.L);
+      s += H(k + 1, x.t, x.c, `${x.L.length} הזמנות${p && PAY.includes(x.t[0]) ? ` · ₪${money(p)} לתשלום` : ""}`, x.sub)
+        + (mode === "mob" ? x.L.map((u, i) => card(i + 1, u, x.t[0])).join("") || `<p class="mr-mut">אין הזמנות בשלב הזה כרגע.</p>` : tbl(x.L, x.t[0]));
+      if (x.t[0] === "1" && M.vadv.length) s += `<h3 class="mr-h3">ממתינים לשובר מקדמה מחח״י (${M.vadv.length})</h3>` + (mode === "mob" ? M.vadv.map((u, i) => card(i + 1, u, "f")).join("") : tbl(M.vadv, "4")); });
+    if (M.frz.length) s += H(9, "⏸ מתקנים מוקפאים", "#8a94a3", `${M.frz.length}`, "לא נספרים בשלבים") + (mode === "mob" ? M.frz.map((u, i) => card(i + 1, u, "f")).join("") : tbl(M.frz, "4"));
+    return s;
+  }
+  const META = () => `נכון ל־${fd(today())} · כל הזמנה נספרת פעם אחת, בשלב המתקדם ביותר שסומן · הזמנות בנות של הזמנה מרכזת נספרות דרך המרכזת · סכומים לפני מע״מ · "ימים" = ימים מאז השלב האחרון שתועד · מתקנים מבוטלים לא נכללים`;
+  const CSS = `
+.mr{color:#1c2430} .mr h1{font-size:20px;margin:0} .mr-meta{color:#5b6573;margin:2px 0 10px;font-size:12px}
+.mr-grid8{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 14px} .mr-big{border-radius:8px;color:#fff;text-align:center;padding:12px 6px 10px}
+.mr-big b{display:block;font-size:34px;line-height:1.1} .mr-big span{font-size:13px} .mr-big small{display:block;font-size:11px;opacity:.9;min-height:13px}
+.mr-two{display:flex;gap:24px;align-items:flex-start} .mr-lab{font-weight:bold;margin-bottom:4px} .mr-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mr-tile{border:1px solid #d5dbe3;border-top:4px solid;border-radius:6px;padding:7px 9px;background:#fff} .mr-tile span{display:block;font-size:12px;color:#3b4656;font-weight:bold} .mr-tile b{font-size:22px;display:block} .mr-tile small{color:#5b6573}
+.mr-t{width:100%;border-collapse:collapse;font-size:12.5px} .mr-t th{background:#eef1f5;text-align:right;padding:5px;border:1px solid #c9d0d9;font-size:12px} .mr-t td{border:1px solid #d5dbe3;padding:4px 6px;vertical-align:top;background:#fff}
+.mr-dt{width:auto;min-width:60%} .mr-dt td,.mr-dt th{text-align:center;padding:5px 14px} .mr-dt td:first-child{text-align:right}
+.mr-n{text-align:center;color:#5b6573} .mr-k{font-size:11px;color:#7a4b00} .mr-mut{color:#8a94a3} .mr-tl{line-height:1.45}
+.mr-h{color:#fff;font-size:18px;margin:0 0 6px;padding:5px 10px;border-radius:5px} .mr-h small{color:#fff;font-weight:normal;font-size:13px} .mr-sub{margin:0 0 8px;color:#5b6573;font-size:12.5px}
+.mr-h3{font-size:14px;margin:12px 0 4px}
+.mr-c{border:1px solid #d5dbe3;border-radius:8px;padding:7px 9px;margin-bottom:7px;background:#fff;break-inside:avoid;page-break-inside:avoid} .mr-ch{display:flex;gap:6px;align-items:center}
+.mr-ch i{font-style:normal;background:#eef1f5;border-radius:9px;min-width:18px;text-align:center;font-size:11px;padding:1px 4px;color:#3b4656} .mr-ch b{font-size:14px}
+.mr-cm{color:#5b6573;font-size:12px;margin:2px 0 4px} .mr-kv{display:flex;gap:14px;margin-bottom:4px} .mr-kv span{display:block;color:#8a94a3;font-size:10.5px} .mr-kv b{font-size:13px}
+.mr-cn{border-top:1px dashed #d5dbe3;padding-top:4px;font-size:12px;line-height:1.45}`;
+  const PRINT = {
+    desk: `@page{size:A4 landscape;margin:10mm 9mm 12mm} body{font-family:Arial,sans-serif;font-size:12.5px;margin:0} *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .mr-h{page-break-before:always} thead{display:table-header-group} tr{page-break-inside:avoid}`,
+    mob: `@page{size:90mm 160mm;margin:5mm 4mm 6mm} body{font-family:Arial,sans-serif;font-size:10.5px;margin:0} *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .mr h1{font-size:15px} .mr-meta{font-size:8.5px} .mr-grid8{grid-template-columns:1fr 1fr;gap:4px;margin:6px 0} .mr-big{padding:6px 4px} .mr-big b{font-size:20px} .mr-big span{font-size:9.5px} .mr-big small{font-size:8px;min-height:0}
+      .mr-two{display:block} .mr-dt{display:none} .mr-two .mr-lab:first-child{display:none} .mr-tiles{grid-template-columns:1fr 1fr;gap:4px;margin-top:6px} .mr-tile{padding:4px 6px} .mr-tile span{font-size:9px} .mr-tile b{font-size:15px} .mr-tile small{font-size:8px}
+      .mr-h{page-break-before:always;font-size:13px;padding:6px 8px} .mr-h small{display:block;font-size:9.5px} .mr-sub{font-size:9px}
+      .mr-c{padding:5px 7px;margin-bottom:5px} .mr-ch b{font-size:11.5px} .mr-cm{font-size:9px} .mr-kv b{font-size:10.5px} .mr-kv span{font-size:8px} .mr-cn{font-size:9px}`
+  };
+  function doc(D, mode) {
+    const M = build(D);
+    return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>דוח הנהלה חח״י ${fd(today())}</title><style>${CSS}${PRINT[mode]}</style></head>
+      <body><div class="mr"><h1>חיבורי חח״י — סטטוס תשלומים ותהליכים · דוח הנהלה</h1><div class="mr-meta">${META()}</div>${dash(M, false)}${body(M, mode, false)}</div></body></html>`;
+  }
+  /** הדפסה / שמירה כ־PDF — נפתח בחלון נפרד (בטלפון: שיתוף ← הדפסה ← שמירה כ־PDF) */
+  function print(D, mode) {
+    const w = window.open("", "_blank");
+    if (!w) { alert("הדפדפן חסם חלון חדש — לאפשר חלונות קופצים לאתר ולנסות שוב"); return; }
+    w.document.open(); w.document.write(doc(D, mode)); w.document.close();
+    setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 500);
+  }
+  /** תצוגה באתר: דשבורד (לחיצה על קובייה קופצת לשלב) + כל השלבים. במסך צר — כרטיסים */
+  function view(D) {
+    const M = build(D), mob = typeof innerWidth === "number" && innerWidth < 760;
+    return `<style>${CSS}
+      @media (max-width:760px){.mr-grid8{grid-template-columns:1fr 1fr;gap:6px}.mr-big b{font-size:24px}.mr-two{display:block}.mr-tiles{margin-top:10px}.mr-dt{width:100%;min-width:0}.mr-dt td,.mr-dt th{padding:4px 6px}}
+      .mr [data-mrgo]{cursor:pointer} .mr [data-mrgo]:hover{filter:brightness(1.06)} .mr-h{margin-top:22px;scroll-margin-top:70px} .mr-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}</style>
+      <div class="mr"><div class="mr-bar"><h1 style="margin:0">📊 דוח הנהלה — חיבורי חח״י</h1><span style="flex:1"></span>
+        <button class="btn" data-mrprint="desk">🖨 הפקה למחשב (PDF)</button><button class="btn" data-mrprint="mob">📱 הפקה לנייד (PDF)</button></div>
+      <div class="mr-meta">${META()} · לחיצה על קובייה או על שורה בטבלה קופצת לשלב</div>${dash(M, true)}${body(M, mob ? "mob" : "desk", true)}</div>`;
+  }
+  /** חיבור הלחיצות — פעם אחת לכל אתר. getD מחזיר את נתוני חח״י הנוכחיים */
+  function bind(root, getD) {
+    if (root.__mr) return; root.__mr = true;
+    root.addEventListener("click", e => {
+      const p = e.target.closest("[data-mrprint]"); if (p) { e.preventDefault(); print(getD(), p.dataset.mrprint); return; }
+      const g = e.target.closest("[data-mrgo]"); if (g) { const h = document.getElementById("mr-s" + g.dataset.mrgo); if (h) h.scrollIntoView({ behavior: "smooth", block: "start" }); }
+    });
+  }
+  return { build, view, print, doc, bind };
+})();
+
 const SP_TABS = [["items", "פריטי עבודה"], ["progress", "דיווחי ביצוע"], ["orders", "הזמנות"], ["deliveries", "מסירות תוכניות"], ["issues", "נושאים פתוחים"]];
 /** קוביות ניווט בראש דף קבלן ייעודי — לכל חוצץ קובייה (כמו קוביית ההתמחות), לחיצה עוברת לחוצץ */
 function spNavTiles(d, c, kTiles) {
@@ -2867,12 +3051,13 @@ function spNavTiles(d, c, kTiles) {
     + t("progress", "#2e7d4f", '<path d="M4 19h16M7 16V9M12 16V5M17 16v-4"/>', "דיווחי ביצוע", `<b>${reps.length}</b> דיווחים · ${acts.length} מלאכות${pend ? ` · ${pend} ממתינים` : ""}`)
     + t("orders", "#3d5a80", '<path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/>', "הזמנות", `<b>${so.length}</b> הזמנות${amt ? ` · ${num(Math.round(amt / 1e5) / 10, 1)} מ׳ ₪` : ""}`)
     + t("deliveries", "#9a7b2f", '<path d="M3 7l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/>', "מסירות תוכניות", `<b>${dl.length}</b> מסירות`)
-    + t("issues", "#b8452f", '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>', "נושאים פתוחים", `<b>${iss.length}</b> פתוחים${hold ? ` · HOLD ${hold}` : ""}`);
+    + t("issues", "#b8452f", '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>', "נושאים פתוחים", `<b>${iss.length}</b> פתוחים${hold ? ` · HOLD ${hold}` : ""}`)
+    + (id === IEC_CID ? t("mrep", "#0a6ec9", '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', "דוח הנהלה", IECD ? (M => `<b>${M.eng.length}</b> אצל אלעוז · <b>${M.amon.length}</b> באמו״ן`)(MR.build(IECD)) : "שלבי תשלום · PDF") : "");
 }
 function pageSpecialist(d, c) {
   const id = c.id, its = d.items.filter(i => i.contractorId === id), specs = specsOf(c);
-  const TABS = id === GRATE_CID ? [["grates", "סבכות על מעבירים"], ...SP_TABS] : SP_TABS;
-  if (!TABS.some(t => t[0] === ui.ctab) || isIecOnly()) ui.ctab = id === GRATE_CID && !isIecOnly() ? "grates" : "items";
+  const TABS = id === GRATE_CID ? [["grates", "סבכות על מעבירים"], ...SP_TABS] : id === IEC_CID ? [...SP_TABS, ["mrep", "דוח הנהלה"]] : SP_TABS;
+  if (!TABS.some(t => t[0] === ui.ctab) || (isIecOnly() && ui.ctab !== "mrep")) ui.ctab = id === GRATE_CID && !isIecOnly() ? "grates" : "items";
   const fld = (key, label) => `<label class="field">${label}<input class="inp" id="c_${id}_${key}" value="${esc(c[key])}" data-edit="contractors|${id}|${key}"></label>`;
   const sel = (key, label, opts) => `<label class="field">${label}<select class="inp" id="c_${id}_${key}" data-edit="contractors|${id}|${key}">${["", ...opts].map(o => `<option ${o === c[key] ? "selected" : ""}>${o}</option>`).join("")}</select></label>`;
   const all = [...d.contractors.filter(isMain).map(kdRange), ...its.map(itemRange)].filter(Boolean);
@@ -2901,6 +3086,9 @@ function pageSpecialist(d, c) {
   } else if (ui.ctab === "deliveries") {
     const dls = d.deliveries.filter(x => x.contractorId === id).sort((a, b) => String(b.date).localeCompare(String(a.date)));
     tab = `<h2>רישום מסירה ל${esc(c.name)}</h2>${deliveryForm(d, id)}<h2 style="margin-top:22px">מסירות שבוצעו</h2>${renderSheet("deliveries", dls, "עוד לא נרשמו מסירות")}`;
+  } else if (ui.ctab === "mrep") {
+    MR.bind($app, () => IECD);
+    tab = IECD ? MR.view(IECD) : `<div class="card"><p>${IEC_NOACC || !iecCanRead() ? "<b>אין לך הרשאת צפייה בנתוני חח״י.</b> מנהל נותן אותה באתר חח״י: הגדרות ← הרשאות ← ״צפייה״." : "טוען את הנתונים מאתר חח״י…"}</p></div>`;
   } else if (ui.ctab === "grates") {
     tab = gratesBlock(d);
   } else if (ui.ctab === "progress") {
