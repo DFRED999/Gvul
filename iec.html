@@ -722,7 +722,7 @@ function facModal(id) {
   const html = `<div class="row" data-fid-keep><h2>${TICON[f.type] || ""} ${esc(f.name)}</h2><span class="tag" style="--tc:${s.cur?.color || "#b6c2d3"};--tt:#fff">${live(f) ? (s.cur ? esc(s.cur.name) : "טרם התחיל") : esc(f.status)}</span><span class="spacer"></span>${backBtn()}<button class="btn gh" data-a="close">סגירה</button></div>
     ${s.flags.length || gaps(f).length ? `<div class="chips" style="margin-top:6px">${s.flags.map(x => `<span class="tag r">${esc(x.t)}</span>`).join("")}${gaps(f).map(x => `<span class="tag a">${esc(x.t)}</span>`).join("")}</div>` : ""}
     ${ctrDone(f) ? `<div class="note" style="margin-top:6px;${readyF(f) ? "border-color:#f2c48a;background:#fff7e6" : ""}">🏗 <b>באתר הגבול: הקבלן סיים</b>${ctrDone(f).date ? ` · ${fmtD(ctrDone(f).date)}` : ""}${readyF(f) ? ` — <b style="color:#a4520c">עוד לא ${f.type === "תט״ז" ? "בוצע" : "חושמל"} · ${esc(readyNext(f))}${readyDays(f) !== null ? ` · ${readyDays(f)} ימים מסיום הקבלן` : ""}</b>` : ""}</div>` : ""}
-    ${f.src?.startsWith("item:") ? `<p class="small muted" style="margin:6px 0 0">🔄 מקושר לפריט באתר הגבול — שם, סוג, ק.ד., חתך, קבלן ונ.צ. מתעדכנים משם אוטומטית. כאן מנהלים הזמנות, שלבים ועדכונים.</p>` : ""}
+    ${linkBox(f)}${f.src?.startsWith("item:") ? `<p class="small muted" style="margin:6px 0 0">🔄 מקושר לפריט באתר הגבול — שם, סוג, ק.ד., חתך, קבלן ונ.צ. מתעדכנים משם אוטומטית. כאן מנהלים הזמנות, שלבים ועדכונים.</p>` : ""}
     <div class="form">${fld("name", "שם")}${fld("type", "סוג", "", TYPES.map(t => t[0]))}${fld("kd", "ק.ד.")}${fld("sec", "חתך")}${fld("district", "נפה", "", DISTRICTS)}${fld("contractorId", "קבלן הגזרה", "", contractors().map(c => [c.id, c.name]))}${fld("place", "מקום / ישוב")}${fld("size", "גודל חיבור")}${fld("status", "מצב", "", ["פעיל", "מוקפא", "בוטל"])}${fld("contact", "איש קשר בחח״י", "", list("contacts").map(c => [c.id, c.name + (c.org ? " · " + c.org : "")]))}</div>
     ${isFeeder(f) ? `<div class="sec-h">⚡ ארונות ש${f.type === "תט״ז" ? "התט״ז" : "חדר הטרפו"} מזין <span class="muted small">(עד 2)</span></div><div class="row">${Object.keys(f.feeds || {}).map(cid => `<span class="tag">${esc(RAW.facilities[cid]?.name || "?")} ${ed ? `<a href="#" data-a="unfeed" data-id="${cid}">✕</a>` : ""}</span>`).join("")}
       ${ed ? `<select class="inp sm" id="feedSel"><option value="">+ שיוך ארון…</option>${cabs.filter(c => !f.feeds?.[c.id]).map(c => `<option value="${c.id}">${esc(c.name)} · ק.ד. ${esc(c.kd || "")}</option>`).join("")}</select>` : ""}</div>` : fedBy(f).length ? `<p class="small muted">מוזן מתט״ז: ${fedBy(f).map(t => esc(t.name)).join(", ")}</p>` : ""}
@@ -742,10 +742,50 @@ function facModal(id) {
       Object.keys(cur[sid]).forEach(x => cur[sid][x] === null && delete cur[sid][x]); await api.update("facilities", id, { stages: cur }); facModal(id); });
     m.querySelectorAll("[data-oe]").forEach(e => e.onchange = async () => { const [oid, k, t] = e.dataset.oe.split("|"), v = t === "n" ? (e.value === "" ? "" : N(e.value)) : e.value.trim(); await api.update("orders", oid, { [k]: v, ...(v === "" && RAW.orders[oid]?.["ok_" + k] ? { ["ok_" + k]: null } : {}) }); facModal(id); });
     const fs = m.querySelector("#feedSel"); if (fs) fs.onchange = async () => { if (!fs.value) return; const cur = { ...(RAW.facilities[id].feeds || {}) }; if (Object.keys(cur).length >= 2 && !confirmBox("לתט״ז כבר משויכים 2 ארונות. להוסיף בכל זאת?")) return; cur[fs.value] = true; await api.update("facilities", id, { feeds: cur }); facModal(id); };
+    const ls = m.querySelector("#lnkSel"); if (ls) ls.onchange = () => { m.querySelector("#lnkInfo").innerHTML = ls.value ? linkPlan(id, ls.value).html : ""; };
     m.querySelector("#lgT")?.addEventListener("keydown", e => { if (e.key === "Enter") m.querySelector('[data-a="addLog"]').click(); });
   });
 }
 const isAdmin = () => PERM === "admin" || LOCAL;
+/* ---------- 🔗 קישור מתקן לא מקושר לפריט באתר הגבול ----------
+   אם לפריט כבר יש כאן מתקן מקושר — ההזמנות, העדכונים, השלבים וההזנות עוברים אליו, והמתקן הכפול נמחק.
+   אם אין — המתקן עצמו מקושר, ושם / ק.ד. / חתך / קבלן / נ.צ. מתעדכנים מאתר הגבול. הפריט יוצא מרשימת "מתקנים שמחקת כאן". */
+const lnkNum = x => { const m = String(x ?? "").match(/\d+(\.\d+)?/); return m ? +m[0] : null; };
+function linkBox(f) {
+  if (f.src?.startsWith("item:") || !Object.values(SYNC_T).includes(f.type) || !canEdit() || !isAdmin()) return "";
+  if (!BRD_ITEMS) return `<p class="small muted" style="margin:6px 0 0">🔗 המתקן לא מקושר לאתר הגבול (נתוני אתר הגבול עוד לא נטענו)</p>`;
+  const fk = lnkNum(f.kd), fs = lnkNum(f.sec), bySrc = {}; list("facilities").forEach(x => { if (x.src) bySrc[x.src] = x; });
+  const its = Object.entries(BRD_ITEMS).filter(([, it]) => SYNC_T[it.kind] === f.type).map(([iid, it]) => { const r = itemRec(it, BRD_CT), s2 = lnkNum(r.sec || it.x_mvdmoc2e6ycrl), k2 = lnkNum(r.kd);
+    return { iid, r, s2, d: fs != null && s2 != null ? Math.abs(fs - s2) / 6 : fk != null && k2 != null ? Math.abs(fk - k2) : 999, fac: bySrc["item:" + iid] }; })
+    .sort((a, b) => a.d - b.d || String(a.r.name).localeCompare(String(b.r.name), "he"));
+  return `<div class="note" style="margin-top:8px;border-color:#f2c48a;background:#fff7e6"><b>🔗 המתקן לא מקושר לאתר הגבול</b> — שם, ק.ד. וחתך לא מתעדכנים משם. לקשר לפריט (הקרובים בק.ד. / חתך ראשונים):
+    <div class="row" style="margin-top:6px"><select class="inp sm" id="lnkSel" style="flex:1;min-width:240px"><option value="">בחירת פריט מאתר הגבול…</option>${its.map(x => `<option value="${x.iid}">${esc(x.r.name || "(ללא שם)")} · ק.ד. ${esc(x.r.kd || "—")}${x.s2 != null ? " · חתך " + x.s2 : ""}${x.fac ? " · יש לו כאן מתקן: " + esc(x.fac.name) : ""}</option>`).join("")}</select>
+    <button class="btn sm" data-a="linkItem">🔗 קישור</button></div><div id="lnkInfo" class="small" style="margin-top:6px"></div></div>`;
+}
+function linkPlan(fid, iid) {
+  const f = { id: fid, ...RAW.facilities[fid] }, it = BRD_ITEMS?.[iid] || {}, r = itemRec(it, BRD_CT), target = list("facilities").find(x => x.src === "item:" + iid && x.id !== fid);
+  const n = facOrders(f).length, ign = (S().ignoredSrc || {})[fbKey("item:" + iid)];
+  if (target) { const m = facOrders(target).length;
+    return { target, txt: `לקשר את "${f.name}" לפריט "${r.name}"?\n\nלפריט כבר יש מתקן מקושר: "${target.name}".\n• ${n} הזמנות, העדכונים, השלבים וההזנות של "${f.name}" יעברו אליו${m ? ` (יש בו כבר ${m} הזמנות — הן נשארות)` : ""}.\n• "${f.name}" יימחק אחרי ההעברה.`,
+      html: `⬅ <b>${n} הזמנות</b>, העדכונים, השלבים וההזנות יעברו למתקן המקושר <b>${esc(target.name)}</b>${m ? ` (יש בו כבר ${m} הזמנות)` : ""}, והמתקן הזה יימחק.` }; }
+  return { target: null, txt: `לקשר את "${f.name}" לפריט "${r.name}" באתר הגבול?\n\n• ההזמנות (${n}) והעדכונים נשארים.\n• השם, הק.ד., החתך, הקבלן והנ.צ. יתעדכנו מאתר הגבול${r.name !== f.name ? ` (השם יהיה "${r.name}")` : ""}.${ign ? "\n• הפריט יוסר מרשימת \"מתקנים שמחקת כאן\"." : ""}`,
+    html: `⬅ המתקן הזה יקושר לפריט. ההזמנות (${n}) נשארות; השם${r.name !== f.name ? ` יהיה <b>${esc(r.name)}</b>` : ""}, ק.ד., חתך, קבלן ונ.צ. יתעדכנו מאתר הגבול.${ign ? " הפריט יוסר מרשימת \"מתקנים שמחקת כאן\"." : ""}` };
+}
+async function linkDo(fid, iid, target) {
+  const f = RAW.facilities[fid], key = fbKey("item:" + iid), ign = { ...(S().ignoredSrc || {}) }, orders = facOrders({ id: fid }).slice(), feeders = list("facilities").filter(x => x.feeds?.[fid]);
+  if (ign[key]) { delete ign[key]; await api.setSettings({ ignoredSrc: ign }); }
+  if (!target) { await api.update("facilities", fid, { src: "item:" + iid, srcGone: null }); CACHE = {}; await syncItems(true); toast("🔗 המתקן קושר לפריט באתר הגבול"); return facModal(fid); }
+  const t = RAW.facilities[target.id], patch = {};
+  for (const o of orders) await api.update("orders", o.id, { facilityId: target.id });
+  if (f.log && Object.keys(f.log).length) patch.log = { ...f.log, ...(t.log || {}) };
+  if (f.stages && Object.keys(f.stages).length) { const st = { ...(t.stages || {}) }; for (const [k, v] of Object.entries(f.stages)) st[k] = { ...(v || {}), ...(st[k] || {}) }; patch.stages = st; }
+  if (f.feeds && Object.keys(f.feeds).length) patch.feeds = { ...f.feeds, ...(t.feeds || {}) };
+  ["district", "place", "size", "contact", "note"].forEach(k => { if (!t[k] && f[k]) patch[k] = f[k]; });
+  if (Object.keys(patch).length) await api.update("facilities", target.id, patch);
+  for (const x of feeders) { if (x.id === target.id) continue; const fe = { ...x.feeds }; delete fe[fid]; fe[target.id] = true; await api.update("facilities", x.id, { feeds: fe }); }
+  await api.remove("facilities", fid); CACHE = {};
+  toast(`🔗 הועבר למתקן המקושר "${t.name}" והכפול נמחק`); closeModal(); facModal(target.id);
+}
 /** כפתור ✕ למחיקת תאריך (ו״✓ בלי תאריך״) — בתאריכי שוברים ותשלומים */
 const clrB = (o, k) => canEdit() && (o[k] || o["ok_" + k]) ? `<button class="clr" data-a="clrDate" data-id="${o.id}|${k}" title="מחיקת התאריך">✕</button>` : "";
 /** סימון "בוצע — בלי תאריך" (ok_<שדה>) כשיודעים שזה קרה אבל לא מתי; את התאריך אפשר להשלים אחר כך */
@@ -1776,6 +1816,7 @@ document.addEventListener("click", async e => {
     await api.update("facilities", fid, { log: { ...(RAW.facilities[fid].log || {}), [newId()]: { date: d, text: t, by: who(), at: new Date().toISOString() } } }); reopen(); }
   else if (a === "delLog") { const L = { ...(RAW.facilities[fid].log || {}) }; delete L[id]; await api.update("facilities", fid, { log: L }); reopen(); }
   else if (a === "unfeed") { const c = { ...(RAW.facilities[fid].feeds || {}) }; delete c[id]; await api.update("facilities", fid, { feeds: c }); reopen(); }
+  else if (a === "linkItem") { const iid = document.getElementById("lnkSel")?.value; if (!iid) return toast("לבחור פריט מהרשימה"); const P = linkPlan(fid, iid); if (!confirmBox(P.txt)) return; await linkDo(fid, iid, P.target); }
   else if (a === "delFac") { if (!b.dataset.s) { b.dataset.s = 1; b.textContent = "ללחוץ שוב — המתקן וההזמנות שלו יימחקו"; return; } const src = RAW.facilities[fid]?.src; for (const o of facOrders({ id: fid })) await api.remove("orders", o.id); await api.remove("facilities", fid);
     if (src) await api.setSettings({ ignoredSrc: { ...(S().ignoredSrc || {}), [fbKey(src)]: todayStr() } }); closeModal(); endNav(); }
   else if (a === "corg") { ui.corg = id; render(); }
