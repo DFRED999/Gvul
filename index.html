@@ -3721,7 +3721,7 @@ const WK_M = 20;
 function wkData(data, cid, asOf) {
   const V = o => Object.entries(o || {}).map(([id, v]) => ({ id, ...v })), num = x => { const m = String(x ?? "").match(/\d+(\.\d+)?/); return m ? +m[0] : null; };
   const C = (data.contractors || {})[cid]; if (!C) return null;
-  const offices = data.designOffices || {}, acts = V(data.activities).filter(a => a.contractorId === cid && !/ארונות|תט["״׳']?ז|טרפו/.test(a.name || ""))
+  const offices = data.designOffices || {}, acts = V(data.activities).filter(a => a.contractorId === cid && !/ארונות|תט["״׳']?ז|טרפו|מעביר(י|ים)? מים/.test(a.name || "") && a.stage !== "מעבירי מים" && a.unit !== "יח׳")
     .sort((a, b) => (+a.order || 0) - (+b.order || 0) || String(a.name).localeCompare(String(b.name), "he"));
   const hs = p => p.secFrom !== "" && p.secTo !== "" && p.secFrom != null && p.secTo != null && !isNaN(p.secFrom) && !isNaN(p.secTo);
   const prog = V(data.progress).filter(p => p.contractorId === cid && p.review !== "נדחה" && p.segmentId && hs(p) && String(p.date || "") <= asOf);
