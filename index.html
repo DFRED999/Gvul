@@ -903,8 +903,9 @@ const list0 = col => { const L = Object.entries(RAW[col] || {}).map(([id, v]) =>
   if (col === "items") { const R = itemRepMap(), PR = padRepMap(); L.forEach(i => { const q = PR[i.id]; if (q && i.padStatus !== "הושלם") { i.padStatus = "הושלם"; i.padDone = i.padDone || q.date || ""; i._padRep = q.date || "—"; } });
     L.forEach(i => { const p = R[i.id]; if (p && i.status !== "הושלם" && i.status !== "מבוטל") { i.status = "הושלם"; i.doneDate = i.doneDate || p.date || ""; i._rep = p.date || "—"; } }); }
   return L; };
-/** פריט שהקבלן המבצע שלו דיווח עליו (דיווח מאושר עם בחירת הפריט, באתר הדיווחים) — נחשב "הושלם" */
-function itemRepMap() { const m = {}; Object.values(RAW.progress || {}).forEach(p => { if (p.review || !p.itemIds) return; Object.keys(p.itemIds).forEach(id => { const i = RAW.items?.[id]; if (i && i.contractorId === p.contractorId && i.kind !== "מעבירי מים" && (!m[id] || String(p.date) < String(m[id].date))) m[id] = p; }); }); return m; }
+/** פריט שהקבלן המבצע שלו דיווח עליו (דיווח מאושר עם בחירת הפריט, באתר הדיווחים) — נחשב "הושלם".
+ *  מעבירי מים — רק מדיווח על מלאכת "מעבירי מים" (דיווח "התקנת סבכה" על מעביר מסמן סבכה, לא את המעביר) */
+function itemRepMap() { const m = {}; Object.values(RAW.progress || {}).forEach(p => { if (p.review || !p.itemIds) return; Object.keys(p.itemIds).forEach(id => { const i = RAW.items?.[id]; if (i && (i.kind !== "מעבירי מים" ? i.contractorId === p.contractorId : isCulvAct(RAW.activities?.[p.activityId]) && (i.contractorId === p.contractorId || i.mainId === p.contractorId)) && (!m[id] || String(p.date) < String(m[id].date))) m[id] = p; }); }); return m; }
 /** תט״ז — שני שלבים: הכנת משטח (קבלן הגזרה, padStatus) והצבת התט״ז (חח״י, status). דיווח של קבלן הגזרה עם בחירת התט״ז → המשטח הושלם */
 const PAD_KIND = "תט״ז", PAD_KINDS = ["תט״ז", "חדר טרפו"];   // פריטים עם שלב "הכנת משטח" של קבלן הגזרה
 function padRepMap() { const m = {}; Object.values(RAW.progress || {}).forEach(p => { if (p.review || !p.itemIds) return; Object.keys(p.itemIds).forEach(id => { const i = RAW.items?.[id]; if (i && PAD_KINDS.includes(i.kind) && i.mainId && i.mainId === p.contractorId && (!m[id] || String(p.date) < String(m[id].date))) m[id] = p; }); }); return m; }
@@ -2089,7 +2090,7 @@ const ACT_GROUPS = [
   { key: "prep", name: "הכנות ועבודות מקדימות", color: "#8a6a3a", tint: "#f6efe4", stages: ["חישוף והכנה", "פריסת תלתליות", "פירוק גדר קיימת"] },
   { key: "fence", name: "גדר", color: "#2e7d4f", tint: "#e8f4ec", stages: ["כלונסאות", "קורה", "עמודים", "רשתות / מודולים", "ניו ג׳רסי", "רשת סכינים", "תלתליות על הגדר"] },
   { key: "road", name: "כביש", color: "#5f5a8c", tint: "#efeef7", stages: ["מבנה דרך", "מצעים", "אספלט", "דרך אחזקה", "מעקה בטון"] },
-  { key: "comm", name: "תקשורת ותשתיות", color: "#2f6db5", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "ארונות שקד"] },
+  { key: "comm", name: "תקשורת ותשתיות", color: "#2f6db5", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "ארונות שקד", "משטחי תט״ז", "משטחי טרפו"] },
   { key: "fin", name: "ניקוז וגמר", color: "#13827a", tint: "#e4f3f1", stages: ["מעבירי מים", "מעקות", "סימון כביש ושילוט"] }];
 const actGroup = a => ACT_GROUPS.find(G => G.stages.includes(a.stage || guessStage(a.name))) || { key: "other", name: "אחר", color: "#6b7280", tint: "#f1f2f3" };
 /** מלאכות מקובצות: [{G, acts}] בסדר הקבוצות, ובתוך קבוצה לפי סדר הביצוע */
@@ -2634,7 +2635,7 @@ const STAGE_GROUPS = [
   { name: "מבנה דרך", color: "#8a6a3a", tint: "#f6f0e6", stages: ["מבנה דרך"] },
   { name: "יסוד הגדר", color: "#3d7a5a", tint: "#e8f3ec", stages: ["כלונסאות", "קורה", "עמודים"] },
   { name: "גדר", color: "#2e7d4f", tint: "#eaf5ee", stages: ["רשתות / מודולים", "ניו ג׳רסי", "רשת סכינים", "תלתליות על הגדר"] },
-  { name: "תשתיות", color: "#2f6db5", tint: "#e9f1fb", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "ארונות שקד"] },
+  { name: "תשתיות", color: "#2f6db5", tint: "#e9f1fb", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "ארונות שקד", "משטחי תט״ז", "משטחי טרפו"] },
   { name: "כביש", color: "#6b5b8a", tint: "#f0edf6", stages: ["מצעים", "אספלט", "דרך אחזקה", "מעקה בטון"] },
   { name: "גמר", color: "#13827a", tint: "#e5f4f2", stages: ["מעבירי מים", "מעקות", "סימון כביש ושילוט"] }];
 /** כל השלבים, מסודרים לפי קבוצה: גדר → כביש → תשתיות */
@@ -2651,12 +2652,14 @@ function itemStageStat(d, c, g, asOf) {
 }
 const groupTag = g => { const G = stageGroup(g); return G ? `<span class="pill" style="font-size:11px;padding:1px 7px;background:${G.tint};color:${G.color};border:1px solid ${G.color}55">${G.name}</span>` : ""; };
 /** מלאכה שנספרת ביחידות (למשל שוחות תקשורת) — מדווחים כמות, לא חתכים. activity.unit = "יח׳", activity.planQty = כמות מתוכננת */
-const isUnitAct = a => a?.unit === "יח׳" || /סבכ/.test(a?.name || "");   // התקנת סבכה — תמיד ביחידות (סבכה למעביר)
+/** מעבירי מים — נספרים לפי שם (רשימת מעבירי המים באתר, סטטוס "הושלם"), לא לפי חתכים */
+const isCulvAct = a => !isGrateAct(a) && (a?.stage === "מעבירי מים" || /מעביר(י|ים)? מים/.test(a?.name || ""));
+const isUnitAct = a => a?.unit === "יח׳" || /סבכ/.test(a?.name || "") || isCulvAct(a);   // התקנת סבכה — תמיד ביחידות (סבכה למעביר)
 const isUnitStage = g => !!ITEM_STAGES[g] || list("activities").some(a => a.stage === g && isUnitAct(a));
 /** הצעת שלב משותף לפי שם המלאכה (לשיוך אוטומטי) */
 function guessStage(name) {
   const n = String(name || "");
-  const R = [[/ארו(ן|נות)|שקד/, "ארונות שקד"], [/שוח/, "שוחות תקשורת"], [/מעביר/, "מעבירי מים"], [/סימון|שילוט|תמרור/, "סימון כביש ושילוט"],
+  const R = [[/משטח.*טרפו/, "משטחי טרפו"], [/משטח.*ת["״׳']{0,2}ט/, "משטחי תט״ז"], [/ארו(ן|נות)|שקד/, "ארונות שקד"], [/שוח/, "שוחות תקשורת"], [/מעביר/, "מעבירי מים"], [/סימון|שילוט|תמרור/, "סימון כביש ושילוט"],
     [/צנר|גוב/, "צנרת וגובים (חשמל + תקשורת)"], [/(תשתי|חפיר).*חשמל/, "חפירת תשתיות חשמל"], [/(תשתי|חפיר).*תק/, "חפירת תשתיות תקשורת"],
     [/סכינ/, "רשת סכינים"], [/פריס|פריש/, "פריסת תלתליות"], [/פירוק/, "פירוק גדר קיימת"], [/תלתל/, "תלתליות על הגדר"], [/רשת|מודול|קלמר|ריתוך/, "רשתות / מודולים"],
     [/כלונס|קלונס|קידוח/, "כלונסאות"], [/^מעקות|מעקות בטיחות|מעקה בטיחות/, "מעקות"], [/מעקה בטון|קיר בטון/, "מעקה בטון"], [/ניו|גרסי|ג׳רזי|ג'רזי|ג׳רסי|ג'רסי/, "ניו ג׳רסי"],
@@ -2753,7 +2756,7 @@ function dashboard(d, cs) {
     const t = tot(p => p.st[g]), cov = per.filter(p => p.st[g] !== null).reduce((a, p) => a + p.km, 0);
     if (per.some(p => p.cnt[g])) { /* נספר ביחידות: פריטים (ארונות שקד) או מלאכה ביחידות (שוחות) */
       const ps = per.filter(p => p.cnt[g]), dn = ps.reduce((a, p) => a + p.cnt[g].done, 0), tt = ps.reduce((a, p) => a + p.cnt[g].total, 0), tp = tt ? dn / tt : null;
-      return `<tr class="msub"><td style="border-inline-start:4px solid ${stageGroup(g)?.color || "#ccc"}"><span class="msind">${g}</span><div class="small muted" style="padding-inline-start:18px">${ITEM_STAGES[g] ? "יח׳ — לפי פריטי חח״י באזור הקבלן" : "יח׳ — לפי דיווחי כמות"}</div></td>${per.map(p => p.cnt[g] ? `<td class="c" style="${heatBg(p.cnt[g].pct)}"><b style="font-size:15px">${p.cnt[g].total ? ofT(p.cnt[g].done, p.cnt[g].total + " יח׳") : p.cnt[g].done + " יח׳"}</b>${p.cnt[g].total ? pcs(p.cnt[g].pct) : `<div class="small muted">חסרה כמות מתוכננת</div>`}</td>` : `<td class="c muted">—</td>`).join("")}<td class="c" style="${heatBg(tp)}"><b style="font-size:15px">${tt ? ofT(dn, tt + " יח׳") : "—"}</b>${pcs(tp)}</td></tr>`; }
+      return `<tr class="msub"><td style="border-inline-start:4px solid ${stageGroup(g)?.color || "#ccc"}"><span class="msind">${g}</span><div class="small muted" style="padding-inline-start:18px">${ITEM_STAGES[g] ? "יח׳ — לפי פריטי חח״י באזור הקבלן" : g === "מעבירי מים" ? "יח׳ — לפי רשימת מעבירי המים (הושלם)" : /משטח/.test(g) ? "יח׳ — לפי משטחים שהושלמו" : "יח׳ — לפי דיווחי כמות"}</div></td>${per.map(p => p.cnt[g] ? `<td class="c" style="${heatBg(p.cnt[g].pct)}"><b style="font-size:15px">${p.cnt[g].total ? ofT(p.cnt[g].done, p.cnt[g].total + " יח׳") : p.cnt[g].done + " יח׳"}</b>${p.cnt[g].total ? pcs(p.cnt[g].pct) : `<div class="small muted">חסרה כמות מתוכננת</div>`}</td>` : `<td class="c muted">—</td>`).join("")}<td class="c" style="${heatBg(tp)}"><b style="font-size:15px">${tt ? ofT(dn, tt + " יח׳") : "—"}</b>${pcs(tp)}</td></tr>`; }
     return `<tr class="msub"><td style="border-inline-start:4px solid ${stageGroup(g)?.color || "#ccc"}"><span class="msind">${g}</span></td>${per.map(p => cell(p.st[g], p.km)).join("")}<td class="c" style="${heatBg(t)}"><b style="font-size:15px">${t === null ? "—" : ofT(M(t * cov), M(cov))}</b>${pcs(t)}</td></tr>`;
   };
   const open = ui.msOpen = ui.msOpen || {};
@@ -3162,6 +3165,9 @@ function execState(d, cid, asOf = null) {
   const acts = d.activities.filter(a => a.contractorId === cid);
   const prog = d.progress.filter(p => p.contractorId === cid && !p.review && (!asOf || !p.date || p.date <= asOf));
   const rows = acts.map(a => {
+    if (isCulvAct(a) && isMain(c || {})) { const its = d.items.filter(i => i.kind === "מעבירי מים" && i.status !== "מבוטל" && (mainAt(d, i)?.id || i.contractorId) === cid);   // בלי ק.ד. / קבלן ראשי — לפי הקבלן שרשום על המעביר
+      const done = its.filter(i => i.status === "הושלם" && (!asOf || !i.doneDate || i.doneDate <= asOf)).length + prog.filter(p => p.activityId === a.id && !p.itemIds && Number(p.qty)).reduce((s, p) => s + Number(p.qty), 0), plan = its.length || Number(a.planQty) || 0;
+      return { a, unit: true, cells: ds.map(x => ({ x, done: null, plan: null, pct: null })), done, plan, pct: plan ? Math.min(1, done / plan) : null }; }
     const AK = isUnitAct(a) && !isGrateAct(a) ? actKind(d, a) : null;
     const PK = !AK && isUnitAct(a) && isMain(c || {}) ? (/תט["״׳']{0,2}ז/.test(a.name) ? "תט״ז" : /טרפו/.test(a.name) ? "חדר טרפו" : null) : null;
     if (PK) { const its = d.items.filter(i => i.kind === PK && i.status !== "מבוטל" && mainAt(d, i)?.id === cid);
