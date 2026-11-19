@@ -1611,6 +1611,11 @@ function grateReps(d) { const m = {}; d.progress.forEach(p => { if (p.review ===
 function grateOf(i, R) { const rs = R[i.id] || [], ok = rs.filter(p => !p.review), pd = rs.filter(p => p.review === "לבדיקה");
   return { st: ok.length ? "הותקנה" : i.grate || "", ok, pd, rep: ok.length > 0, date: ok.length ? ok.map(p => p.date || "").sort().pop() : i.grateDate || "" }; }
 const grateNeed = g => !!g.st && g.st !== "לא נדרשת";
+/** סבכות כפריטים (לטבלאות / מצגת): סבכה אחת לכל מעביר מים — כמות הסבכות = כמות המעבירים. סטטוס לפי מצב הסבכה */
+const GRATE_KIND = "סבכות למעבירי מים";
+function grateItems(d) { const R = grateReps(d);
+  return d.items.filter(i => i.kind === "מעבירי מים" && i.status !== "מבוטל").map(i => { const g = grateOf(i, R);
+    return { ...i, kind: GRATE_KIND, _culv: i, _g: g.st, status: g.st === "הותקנה" ? "הושלם" : g.st === "בביצוע" ? "בביצוע" : g.st === "מתוכננת" ? "מתוכנן" : "טרם", doneDate: g.st === "הותקנה" ? g.date : "" }; }); }
 const grateFlag = (i, g) => grateNeed(g) && g.st !== "הותקנה" && i.status === "הושלם" ? `<span class="pill" style="background:#d6ebf7;color:#14527a">מוכן לסבכה</span>`
   : g.st === "הותקנה" && i.status !== "הושלם" ? `<span class="pill warn" title="הסבכה סומנה כהותקנה אבל המעביר עצמו עוד לא סומן כהושלם">סבכה לפני סיום המעביר</span>` : "";
 function grateCell(i, R) { if (i.kind !== "מעבירי מים") return `<span class="muted">—</span>`; const g = grateOf(i, R);
@@ -1627,6 +1632,15 @@ function gratesBlock(d) {
     <p class="small muted" style="margin:8px 0">הסבכה נשמרת על המעביר עצמו — מה שמעדכנים כאן מופיע גם בדף קבלן הגזרה ובדף ״מעבירי מים״. דיווח מפקח ״התקנת סבכה״ (באתר הדיווחים, לפי מספר BC / ק.ד.) מסמן את המעביר ״הותקנה״ אוטומטית.</p>
     ${renderSheet("grates", rows, "אין מעבירים בסינון הזה", { store: "items", del: false })}`;
 }
+/** טבלת ריכוז סבכות לפי גזרה — סה״כ = מספר המעבירים */
+function grateSummary(d) {
+  const G = grateItems(d), mains = d.contractors.filter(isMain).sort(byNorth), n = (a, st) => a.filter(x => x._g === st).length;
+  const row = (lab, a) => { const dn = n(a, "הותקנה"); return `<tr><td><b>${lab}</b></td><td class="c">${a.length}</td><td class="c">${dn}</td><td class="c">${n(a, "בביצוע")}</td><td class="c">${n(a, "מתוכננת")}</td><td class="c">${n(a, "נדרשת")}</td><td class="c">${n(a, "לא נדרשת")}</td><td class="c">${n(a, "")}</td>
+    <td class="c" style="${heatBg(a.length ? dn / a.length : null)}"><b>${a.length ? ofT(dn, a.length) : "—"}</b><div class="small">${a.length ? Math.round(dn / a.length * 100) + "%" : ""}</div></td></tr>`; };
+  const by = mains.map(m => ({ m, a: G.filter(i => mainAt(d, i)?.id === m.id) })).filter(x => x.a.length), none = G.filter(i => !mainAt(d, i));
+  return `<h2 style="margin-top:0">ריכוז לפי גזרה <span class="small muted">— סבכה לכל מעביר מים (${G.length})</span></h2><div class="tablewrap"><table class="sheet"><thead><tr><th>גזרה</th><th>סה״כ</th><th>הותקנו</th><th>בביצוע</th><th>מתוכננות</th><th>נדרשת (טרם)</th><th>לא נדרשת</th><th>לא הוגדר</th><th>הותקנו מתוך</th></tr></thead>
+    <tbody>${by.map(x => row(esc(x.m.name), x.a)).join("")}${none.length ? row("ללא גזרה", none) : ""}${row("סה״כ", G)}</tbody></table></div>`;
+}
 /** רכיבי הפרויקט — דף לכל סוג פריט, מכל הגזרות ומכל הקבלנים. רכיבים נוספים נשמרים בהגדרות (tableConfig/settings/components) */
 const COMPS_BASE = [["trafo", "חדרי טרפו", "חדר טרפו"], ["cab", "ארונות שקד", "ארון שקד"], ["culv", "מעבירי מים", "מעבירי מים"], ["air", "מעבירים איריים", "מעביר אירי"], ["grate", "סבכות", "סבכות למעבירי מים"],
   ["@power", "חיבורי חח״י"], ["@sites", "אתרי איסוף"], ["gate", "שערים ומחסומים", "שערים"], ["ttz", "תט״זים", "תט״ז"], ["mine", "פינוי מוקשים", "פינוי מוקשים"]];
@@ -1637,7 +1651,7 @@ function pageComp(d, key) {
   if (key === "ttz" || key === "trafo") return pageTtz(d, C);
   if (key === "grate") { const old = d.items.filter(i => i.kind === C.kind);
     return `<div class="ch-banner" style="--cc:#37414b"><div><h1>סבכות</h1><span>סבכה לכל מעביר מים — המעביר בביצוע קבלן הגזרה, הסבכה בביצוע ${esc(d.contractors.find(c => c.id === GRATE_CID)?.name || "קבלן הסבכות")}.</span></div></div>
-      <div class="card">${gratesBlock(d)}</div>${old.length ? `<div class="card"><h2>סבכות שנרשמו כפריט נפרד <span class="small muted">(${old.length}) — מומלץ לסמן את הסבכה על המעביר עצמו ולמחוק את הפריט</span></h2>${renderSheet("items", old, "")}</div>` : ""}`; }
+      <div class="card">${grateSummary(d)}</div><div class="card">${gratesBlock(d)}</div>${old.length ? `<div class="card"><h2>סבכות שנרשמו כפריט נפרד <span class="small muted">(${old.length}) — מומלץ לסמן את הסבכה על המעביר עצמו ולמחוק את הפריט</span></h2>${renderSheet("items", old, "")}</div>` : ""}`; }
   const its = d.items.filter(i => i.kind === C.kind), mains = d.contractors.filter(isMain).sort(byNorth), I = KIND_ICON[C.kind] || { c: "#5f6670", i: '<circle cx="12" cy="12" r="7"/>' };
   const execs = [...new Set(its.map(i => i.contractorId))].map(id => d.contractors.find(c => c.id === id)).filter(Boolean), sp = spFor(C.kind);
   const tile = (name, a, col, act) => { const dn = a.filter(i => i.status === "הושלם").length, ip = a.filter(i => i.status === "בביצוע").length;
@@ -1664,6 +1678,8 @@ function pageTtz(d, C) {
   return `<div class="ch-banner" style="--cc:#c27c0e"><div><h1>${esc(C.name)}</h1><span>שני שלבים לכל ${esc(K)}: הכנת משטח — קבלן הגזרה · ${isT ? "הצבת התט״ז" : "הובלה והתקנה"} — ${esc(exN)}.</span></div></div>
     ${mig && !isViewer() ? `<div class="banner"><b>העברת הסטטוסים להכנת משטח</b><span>הסטטוסים שרשומים היום בתט״זים הם בפועל של הכנת המשטח — להעביר אותם לעמודת "הכנת משטח" ולאפס את ההצבה</span><button class="btn sm" data-act="ttzMig">העברה…</button></div>` : ""}
     <div class="ch-tiles" style="--cc:#c27c0e;grid-template-columns:repeat(${byArea.length + 1},minmax(0,1fr))">${tile("כל הקו", its, "#c27c0e")}${byArea.map(x => tile(x.m.name, x.a, cColor(d, x.m), `data-act="nav" data-id="c:${x.m.id}" role="button"`)).join("")}</div>
+    <div class="card">${(() => { const none = its.filter(i => !mainAt(d, i)), padIt = a => a.map(i => ({ ...i, status: i.padStatus || "טרם", kdTo: "" })), tb = (h, f) => `<h2 style="margin:0 0 6px">${h}</h2><div class="tablewrap"><table class="sheet">${statHead("גזרה")}<tbody>${byArea.map(x => statRow(esc(x.m.name), itemStats(f(x.a)))).join("")}${none.length ? statRow("ללא גזרה", itemStats(f(none))) : ""}${statRow("סה״כ", itemStats(f(its)))}</tbody></table></div>`;
+      return tb("הכנת משטח — קבלן הגזרה", padIt) + `<div style="height:14px"></div>` + tb(`${isT ? "הצבה" : "הובלה והתקנה"} — ${esc(exN)}`, a => a.map(i => ({ ...i, kdTo: "" }))); })()}</div>
     <div class="card"><h2>${esc(C.name)} <span class="small muted">(${its.length}) — הכנת משטח וביצוע זה לצד זה</span></h2>${renderSheet("ttz", [...its].sort((a, b) => kd(b) - kd(a)), "אין פריטים", { store: "items" })}
     <div class="row" style="margin-top:10px;gap:8px">${!isViewer() ? `<button class="btn ghost sm" data-act="addItem" data-id="${spFor(C.kind) || IEC_CID}" data-kind="${esc(C.kind)}">+ ${esc(K)}</button>` : ""}<span class="small muted">דיווח מפקח של קבלן הגזרה (מלאכת התט״ז שלו) עם בחירת התט״ז מסמן את המשטח; דיווח "הצבת תט״ז" של חח״י מסמן את ההצבה.</span></div></div>`;
 }
@@ -3165,7 +3181,7 @@ function execState(d, cid, asOf = null) {
   const acts = d.activities.filter(a => a.contractorId === cid);
   const prog = d.progress.filter(p => p.contractorId === cid && !p.review && (!asOf || !p.date || p.date <= asOf));
   const rows = acts.map(a => {
-    if (isCulvAct(a) && isMain(c || {})) { const its = d.items.filter(i => i.kind === "מעבירי מים" && i.status !== "מבוטל" && (mainAt(d, i)?.id || i.contractorId) === cid);   // בלי ק.ד. / קבלן ראשי — לפי הקבלן שרשום על המעביר
+    if (isCulvAct(a) && isMain(c || {})) { const its = d.items.filter(i => i.kind === "מעבירי מים" && i.status !== "מבוטל" && mainAt(d, i)?.id === cid);   // כמו בחוצץ מעבירי מים: לפי הגזרה (קבלן ראשי שנבחר / ק.ד. / משוער לפי נ.צ.)
       const done = its.filter(i => i.status === "הושלם" && (!asOf || !i.doneDate || i.doneDate <= asOf)).length + prog.filter(p => p.activityId === a.id && !p.itemIds && Number(p.qty)).reduce((s, p) => s + Number(p.qty), 0), plan = its.length || Number(a.planQty) || 0;
       return { a, unit: true, cells: ds.map(x => ({ x, done: null, plan: null, pct: null })), done, plan, pct: plan ? Math.min(1, done / plan) : null }; }
     const AK = isUnitAct(a) && !isGrateAct(a) ? actKind(d, a) : null;
@@ -6757,8 +6773,9 @@ async function mgmtDeck(asOf, theme = "color") {
       const done = kdDone(d, c, asOf), doneW = kdDone(d, c, from), doneM = kdDone(d, c, mFrom), acts = d.activities.filter(a => a.contractorId === c.id && !isUnitAct(a)).sort(byOrder);
       const exr = Object.fromEntries(s.now.ex.rows.map(q => [q.a.id, q])), exW = Object.fromEntries(s.prev.ex.rows.map(q => [q.a.id, q.done || 0])), exM = Object.fromEntries(s.mon.ex.rows.map(q => [q.a.id, q.done || 0]));
       const rowsA = acts.map(a => ({ a, iv: (done[a.id] || []).map(clip).filter(([x, y]) => y > x) })).filter(x => x.iv.length);
-      const kinds = [...new Set(d.items.filter(i => i.status !== "מבוטל" && mainAt(d, i)?.id === c.id && kdNum(i.kdFrom) !== null).map(i => i.kind || "אחר"))];
-      const rowsI = kinds.map(k => ({ k, its: d.items.filter(i => (i.kind || "אחר") === k && i.status !== "מבוטל" && mainAt(d, i)?.id === c.id && kdNum(i.kdFrom) !== null) }));
+      const ZI = [...d.items.filter(i => i.kind !== GRATE_KIND), ...grateItems(d)];   // סבכות — אחת לכל מעביר (לא פריטי "סבכות" ישנים)
+      const kinds = [...new Set(ZI.filter(i => i.status !== "מבוטל" && mainAt(d, i)?.id === c.id && itemKd(d, i) !== null).map(i => i.kind || "אחר"))];
+      const rowsI = kinds.map(k => ({ k, its: ZI.filter(i => (i.kind || "אחר") === k && i.status !== "מבוטל" && mainAt(d, i)?.id === c.id) }));   // נספרים כל הפריטים בגזרה (כמו בחוצץ); במפה — רק מי שיש לו ק.ד. (מהטבלה, או משוער לפי נ.צ.)
       const FZ = s.fz, hasF = FZ.found > 0 || FZ.stand > 0;
       const DENSE = new Set(["מעבירי מים", "מעביר אירי"]), IKk = k => DENSE.has(k) ? 2.3 : 1.55;   // מעבירי מים / איריים — מספרי ק.ד. בארבע שורות מתחלפות
       const N = rowsA.length + rowsI.length + (hasF ? 1 : 0);
@@ -6802,8 +6819,8 @@ async function mgmtDeck(asOf, theme = "color") {
       rowsI.forEach(({ k, its }, j) => { const rhI = rh * IKk(k), y = yI(j), dense = DENSE.has(k), dot = Math.min(0.13, rh * 1.55 * 0.3), cy = y + rhI / 2;
         T(sl, KIND_PLURAL[k] || k, { x: barR + 0.12, y, w: LAB, h: rhI, fontSize: fs, valign: "middle", margin: 0, color: FM ? NAVY : "2D6CB8", fit: "shrink" });
         sl.addShape(P.ShapeType.line, { x: barL, y: cy, w: barW, h: 0, line: { color: "D5DAD0", width: 0.75, dashType: "dash" } });
-        const sorted = [...its].sort((p, q) => kdNum(p.kdFrom) - kdNum(q.kdFrom)), last = [-1e9, -1e9, -1e9, -1e9];
-        sorted.forEach((it, n) => { const k0 = kdNum(it.kdFrom); if (k0 < r.lo - 0.5 || k0 > r.hi + 0.5) return; const st = it.status, xx = xOf(Math.max(r.lo, Math.min(r.hi, k0)));
+        const sorted = its.filter(x => itemKd(d, x) !== null).sort((p, q) => itemKd(d, p) - itemKd(d, q)), noK = its.length - sorted.length, last = [-1e9, -1e9, -1e9, -1e9];
+        sorted.forEach((it, n) => { const k0 = itemKd(d, it); if (k0 < r.lo - 0.5 || k0 > r.hi + 0.5) return; const st = it.status, xx = xOf(Math.max(r.lo, Math.min(r.hi, k0)));
           const fill = st === "הושלם" ? (inWeek(it.doneDate) ? C_WK : inMonth(it.doneDate) ? C_MON : C_OLD) : st === "בביצוע" ? C_IP : st === "HOLD" ? C_HOLD : "FFFFFF";
           sl.addShape(P.ShapeType.ellipse, { x: xx - dot / 2, y: cy - dot / 2, w: dot, h: dot, fill: { color: fill }, line: { color: st === "הושלם" ? "1F5E3A" : "8A9088", width: 0.75 } });
           { const num = kd1(k0); let row = n % 2;   // 0 מעל · 1 מתחת · 2 מעל (גבוה) · 3 מתחת (נמוך)
@@ -6812,7 +6829,7 @@ async function mgmtDeck(asOf, theme = "color") {
             T(sl, String(num), { x: xx - 0.25, y: up ? cy - dot / 2 - 0.17 - far : cy + dot / 2 + 0.005 + far, w: 0.5, h: 0.16, fontSize: dense ? 6 : 6.5, align: "center", valign: up ? "bottom" : "top", margin: 0, color: st === "הושלם" ? "1F5E3A" : "555B55", bold: st === "הושלם" }); } });
         const dn = its.filter(x => x.status === "הושלם").length, ip = its.filter(x => x.status === "בביצוע").length, dw = its.filter(x => x.status === "הושלם" && inWeek(x.doneDate)).length, dmn = its.filter(x => x.status === "הושלם" && inMonth(x.doneDate)).length;
         const tf2 = Math.max(7, fs - 1.5);
-        T(sl, [{ text: `${of(dn, its.length)} הושלמו`, options: { fontSize: tf2 } }, ...(dw ? [{ text: " · ", options: { fontSize: tf2 } }, { text: `השבוע +${dw}`, options: { bold: true, color: "C25E00", fontSize: tf2 + 2 } }] : []), { text: `${dmn ? ` · החודש +${dmn}` : ""}${ip ? ` · ${ip} בביצוע` : ""}${k === "ארון שקד" ? (its.every(x => /^ארון שקד\s+\d+\s*$/.test(x.name || "")) ? " · המספר = מס׳ ארון" : its.some(x => /^ארון שקד\s+\d+\s*$/.test(x.name || "")) ? " · המספר = מס׳ ארון או ק.ד." : " · המספר = ק.ד.") : " · המספר = ק.ד."}`, options: { fontSize: tf2 } }], { x: 0.4, y, w: TXT, h: rhI, fontSize: tf2, valign: "middle", margin: 0, color: "333B35", fit: "shrink" }); });
+        T(sl, [{ text: `${of(dn, its.length)} הושלמו`, options: { fontSize: tf2 } }, ...(dw ? [{ text: " · ", options: { fontSize: tf2 } }, { text: `השבוע +${dw}`, options: { bold: true, color: "C25E00", fontSize: tf2 + 2 } }] : []), { text: `${dmn ? ` · החודש +${dmn}` : ""}${ip ? ` · ${ip} בביצוע` : ""}${noK ? ` · ${noK} בלי ק.ד. — לא במפה` : ""}${k === "ארון שקד" ? (its.every(x => /^ארון שקד\s+\d+\s*$/.test(x.name || "")) ? " · המספר = מס׳ ארון" : its.some(x => /^ארון שקד\s+\d+\s*$/.test(x.name || "")) ? " · המספר = מס׳ ארון או ק.ד." : " · המספר = ק.ד.") : " · המספר = ק.ד."}`, options: { fontSize: tf2 } }], { x: 0.4, y, w: TXT, h: rhI, fontSize: tf2, valign: "middle", margin: 0, color: "333B35", fit: "shrink" }); });
       // מקרא צבעים
       [[C_WK, "בוצע בשבוע האחרון"], [C_MON, "בחודש האחרון"], [C_OLD, "לפני כן"], [C_IP, "פריט בביצוע"], [C_HOLD, "HOLD"], ["FFFFFF", "פריט טרם"]].forEach(([col, t], i) => { const x = W - 0.4 - (i + 1) * 1.75;
         sl.addShape(P.ShapeType.rect, { x: x + 1.48, y: 6.86, w: 0.2, h: 0.14, fill: { color: col }, line: { color: "8A9088", width: 0.5 } });
@@ -6869,7 +6886,7 @@ async function mgmtDeck(asOf, theme = "color") {
   // 3. קבלנים ייעודיים — ביחידות, כל נתון בעמודה משלו
   const sp = d.contractors.filter(c => !isMain(c));
   if (sp.length) {
-    const groups = sp.flatMap(c => { const its = d.items.filter(i => i.contractorId === c.id && i.status !== "מבוטל");
+    const groups = sp.flatMap(c => { const its = c.id === GRATE_CID ? grateItems(d) : d.items.filter(i => i.contractorId === c.id && i.status !== "מבוטל");
       return [...new Set(its.map(i => i.kind || "אחר"))].map(k => ({ c, k, ii: its.filter(i => (i.kind || "אחר") === k) })); });
     // כרטיס לכל סוג פריט — כמו אריחי הקבלנים הייעודיים באתר
     const PER = 12, pages = Math.max(1, Math.ceil(groups.length / PER));
