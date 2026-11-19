@@ -207,7 +207,7 @@ const WK_M = 20;
 function wkData(data, cid, asOf) {
   const V = o => Object.entries(o || {}).map(([id, v]) => ({ id, ...v })), num = x => { const m = String(x ?? "").match(/\d+(\.\d+)?/); return m ? +m[0] : null; };
   const C = (data.contractors || {})[cid]; if (!C) return null;
-  const offices = data.designOffices || {}, acts = V(data.activities).filter(a => a.contractorId === cid && !/ארונות|תט["״׳']?ז|טרפו/.test(a.name || ""))
+  const offices = data.designOffices || {}, acts = V(data.activities).filter(a => a.contractorId === cid && !/ארונות|תט["״׳']?ז|טרפו|מעביר(י|ים)? מים/.test(a.name || "") && a.stage !== "מעבירי מים" && a.unit !== "יח׳")
     .sort((a, b) => (+a.order || 0) - (+b.order || 0) || String(a.name).localeCompare(String(b.name), "he"));
   const hs = p => p.secFrom !== "" && p.secTo !== "" && p.secFrom != null && p.secTo != null && !isNaN(p.secFrom) && !isNaN(p.secTo);
   const prog = V(data.progress).filter(p => p.contractorId === cid && p.review !== "נדחה" && p.segmentId && hs(p) && String(p.date || "") <= asOf);
@@ -354,7 +354,7 @@ const ACT_GROUPS = [
   { key: "prep", name: "הכנות ועבודות מקדימות", color: "#9a6a2f", tint: "#f6efe4", stages: ["חישוף והכנה", "פריסת תלתליות", "פירוק גדר קיימת"], re: /חישוף|הכנה|פריס|פריש|פירוק/ },
   { key: "fence", name: "גדר", color: "#2f7d4f", tint: "#e8f4ec", stages: ["כלונסאות", "קורה", "עמודים", "רשתות / מודולים", "ניו ג׳רסי", "רשת סכינים", "תלתליות על הגדר"], re: /גדר|כלונס|קלונס|קור|עמוד|רשת|מודול|ניו|ג.ר[סז]י|סכינ|תלתל|קלמר|ריתוך|בטון רזה/ },
   { key: "road", name: "כביש", color: "#5a55b0", tint: "#efeef7", stages: ["מבנה דרך", "מצעים", "אספלט", "דרך אחזקה", "מעקה בטון"], re: /מבנה דרך|מצע|אספלט|אחזקה|מעקה בטון/ },
-  { key: "comm", name: "תקשורת ותשתיות", color: "#2d6cb8", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)"], re: /תשתי|תקשור|חשמל|שוח|צנר|גוב/ },   // ארונות שקד — תחת "אחר" (פריטים שהקבלן בונה, לא תשתיות)
+  { key: "comm", name: "תקשורת ותשתיות", color: "#2d6cb8", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "משטחי תט״ז", "משטחי טרפו"], re: /תשתי|תקשור|חשמל|שוח|צנר|גוב/ },   // ארונות שקד — תחת "אחר" (פריטים שהקבלן בונה, לא תשתיות)
   { key: "fin", name: "ניקוז וגמר", color: "#127c76", tint: "#e4f3f1", stages: ["מעבירי מים", "מעבירי מים וסבכות", "מעקות", "סימון כביש ושילוט"], re: /מעביר|סבכ|מעקות|סימון|שילוט/ }];
 const OTHER_G = { key: "other", name: "אחר", color: "#5f6670", tint: "#f1f2f3" };
 const actGroup = a => ACT_GROUPS.find(G => G.stages.includes(a.stage)) || (a.stage ? null : ACT_GROUPS.find(G => G.re.test(a.name))) || OTHER_G;
@@ -420,7 +420,8 @@ function noAccess() {
 }
 const list = col => Object.entries(D[col] || {}).map(([id, v]) => ({ id, ...v }));
 /* מלאכה ביחידות (כמות) — וגם "התקנת סבכה", שתמיד נספרת ביחידות: סבכה למעביר מים */
-const isGr = a => /סבכ/.test(a?.name || ""), isUA = a => a?.unit === "יח׳" || isGr(a);
+/* מעבירי מים — מדווחים לפי שם המעביר (כמו תט״ז / ארונות), לא לפי חתכים */
+const isGr = a => /סבכ/.test(a?.name || ""), isCulv = a => !!a && !isGr(a) && (a.stage === "מעבירי מים" || /מעביר(י|ים)? מים/.test(a.name || "")), isUA = a => a?.unit === "יח׳" || isGr(a) || isCulv(a);
 const bcOf = i => String(i.name || "").replace(/^מעביר\s*/, "").trim();
 const normQ = v => String(v || "").toLowerCase().replace(/bc|מעביר|[\s\-_.]/g, "");
 /** מעבירי מים לבחירה בדיווח סבכה — חיפוש לפי מספר BC, ק.ד. או חתך */
@@ -431,7 +432,9 @@ const IEC_CID = "sp-iec", IEC_ALL = ["ארון שקד", "חדר טרפו", "@sit
 /** פריט לפי מזהה — פריט רגיל או אתר איסוף */
 const IT = id => D.items?.[id] || (D.sites?.[id] ? { ...D.sites[id], id, kind: "@site", kdFrom: D.sites[id].kd || "" } : null);
 let LK = null;   // { kind, act, cid } — ההקשר הנוכחי של בורר הפריטים
-function linkKind(a, cid) { if (!a || !isUA(a)) return null; const m = ACT_KINDS.find(([re]) => re.test(a.name)); if (!m) return null;
+function linkKind(a, cid) { if (!a || !isUA(a)) return null;
+  if (isCulv(a)) return list("items").some(i => i.kind === "מעבירי מים" && i.status !== "מבוטל" && (i.contractorId === cid || i.mainId === cid)) ? "culv:מעבירי מים" : null;
+  const m = ACT_KINDS.find(([re]) => re.test(a.name)); if (!m) return null;
   if (m[1] === "מעבירי מים") return m[1];
   if (cid === IEC_CID && IEC_ALL.includes(m[1])) return (m[1] === "@site" ? Object.keys(D.sites || {}).length : list("items").some(i => i.kind === m[1])) ? "all:" + m[1] : null;
   if (list("items").some(i => i.kind === m[1] && i.contractorId === cid && i.status !== "מבוטל")) return m[1];
@@ -440,11 +443,11 @@ const labOf = i => i.kind === "מעבירי מים" ? bcOf(i) : String(i.name ||
 /** הפריטים לבחירה + מצב: "בוצע" (סטטוס הושלם / דיווח מאושר), "ממתין" (דיווח ממתין לאישור) */
 function linkList() { if (!LK) return []; const K = LK.kind, pad = LK.pad, st = {};
   list("progress").forEach(p => { if (p.review === "נדחה") return; const pa = D.activities?.[p.activityId];
-    if (K === "מעבירי מים" ? !isGr(pa) : p.activityId !== LK.act.id) return;
+    if (K === "מעבירי מים" && !LK.culv ? !isGr(pa) : p.activityId !== LK.act.id) return;
     Object.keys(p.itemIds || {}).forEach(id => { if (st[id] !== "בוצע") st[id] = p.review === "לבדיקה" ? "ממתין" : "בוצע"; }); });
   const src = K === "@site" ? Object.keys(D.sites || {}).map(IT).filter(x => x && !["בוטל", "מוקפא"].includes(x.status)) : list("items").filter(i => i.kind === K && i.status !== "מבוטל");
-  return src.filter(i => LK.all || K === "מעבירי מים" || (pad ? i.mainId === LK.cid : i.contractorId === LK.cid))
-    .map(i => ({ ...i, lab: labOf(i), gd: st[i.id] === "בוצע" || (!LK.all && (pad ? i.padStatus === "הושלם" : K === "מעבירי מים" ? i.grate === "הותקנה" : i.status === "הושלם")) ? "בוצע" : st[i.id] || "" }))
+  return src.filter(i => LK.all || (LK.culv ? i.contractorId === LK.cid || i.mainId === LK.cid : K === "מעבירי מים" || (pad ? i.mainId === LK.cid : i.contractorId === LK.cid)))
+    .map(i => ({ ...i, lab: labOf(i), gd: st[i.id] === "בוצע" || (!LK.all && (pad ? i.padStatus === "הושלם" : K === "מעבירי מים" && !LK.culv ? i.grate === "הותקנה" : i.status === "הושלם")) ? "בוצע" : st[i.id] || "" }))
     .sort((a, b) => (parseFloat(b.kdFrom) || 0) - (parseFloat(a.kdFrom) || 0) || a.lab.localeCompare(b.lab, "he", { numeric: true })); }
 function linkFind(q) { const n = normQ(q), all = linkList();
   if (!n) return all.length <= 30 ? all.filter(i => !i.gd) : [];   // מעט פריטים (תט״זים, שערים…) — מציגים מיד את מה שעוד לא בוצע
@@ -503,7 +506,7 @@ function unitModal(act, cid) {
   const who = p => esc(p.reportedByName || (p.reportedBy || "משרד").split("@")[0]), st = p => p.review === "לבדיקה" ? `<span class="pill p0">ממתין</span>` : `<span class="pill p1">אושר</span>`;
   const head = (t, sub) => `<div class="ovl" data-unx="1"><div class="ovc" role="dialog" aria-label="פירוט"><div class="ovh"><div><b>${esc(short(act.name))}</b>${LK?.pad ? " · משטחים" : ""}<div class="hint">${sub}</div></div><button class="btn ghost" data-unx="1" aria-label="סגירה">✕</button></div><div class="ovb">${t}</div></div></div>`;
   if (LK) { const rp = {}; list("progress").forEach(p => { if (p.review === "נדחה") return; const pa = D.activities?.[p.activityId];
-      if (LK.kind === "מעבירי מים" ? !isGr(pa) : p.activityId !== act.id) return; Object.keys(p.itemIds || {}).forEach(id => (rp[id] = rp[id] || []).push(p)); });
+      if (LK.kind === "מעבירי מים" && !LK.culv ? !isGr(pa) : p.activityId !== act.id) return; Object.keys(p.itemIds || {}).forEach(id => (rp[id] = rp[id] || []).push(p)); });
     const all = linkList(), kd = i => i.kdFrom ? `ק.ד. ${esc(i.kdFrom)}` : "", sec = i => i.x_sec ? ` · חתך <span dir="ltr">${esc(i.x_sec)}</span>` : "";
     const rest = all.filter(i => !i.gd), pend = all.filter(i => i.gd === "ממתין"), done = all.filter(i => i.gd === "בוצע");
     const repTxt = i => (rp[i.id] || []).map(p => `${fmtD(p.date)} · ${who(p)}`).join(" · ");
@@ -633,7 +636,7 @@ function myList() {
   return `<div class="card my" id="mycard">${head}${tools}<div id="my_body">${body}</div></div>`;
 }
 function grRes() { const q = S.gq || "", r = linkFind(q); if (!r.length) return normQ(q) ? `<div class="hint">לא נמצא — לבדוק את המספר / הק.ד.</div>` : "";
-  return r.map(i => `<button class="gi ${S.gsel.includes(i.id) ? "on" : ""}" data-gi="${i.id}"><b dir="ltr">${esc(i.lab)}</b><span>${i.kdFrom ? `ק.ד. ${esc(i.kdFrom)}` : ""}${i.x_sec ? ` · חתך <span dir="ltr">${esc(i.x_sec)}</span>` : ""}${LK?.kind === "מעבירי מים" ? ` · ${esc(D.contractors?.[i.contractorId]?.name || "")}` : ""}</span>${i.gd ? `<em class="${i.gd === "ממתין" ? "pd" : ""}">${i.gd === "ממתין" ? "ממתין לאישור" : LK?.kind === "מעבירי מים" ? "יש סבכה ✓" : "בוצע ✓"}</em>` : ""}</button>`).join(""); }
+  return r.map(i => `<button class="gi ${S.gsel.includes(i.id) ? "on" : ""}" data-gi="${i.id}"><b dir="ltr">${esc(i.lab)}</b><span>${i.kdFrom ? `ק.ד. ${esc(i.kdFrom)}` : ""}${i.x_sec ? ` · חתך <span dir="ltr">${esc(i.x_sec)}</span>` : ""}${LK?.kind === "מעבירי מים" && !LK.culv ? ` · ${esc(D.contractors?.[i.contractorId]?.name || "")}` : ""}</span>${i.gd ? `<em class="${i.gd === "ממתין" ? "pd" : ""}">${i.gd === "ממתין" ? "ממתין לאישור" : LK?.kind === "מעבירי מים" && !LK.culv ? "יש סבכה ✓" : "בוצע ✓"}</em>` : ""}</button>`).join(""); }
 function view() {
   const north = k => { const c = D.contractors[k] || {}, a = kdNum(c.kdFrom), b = kdNum(c.kdTo); return c.kind === "ייעודי" ? -1e9 - (+c.order || 0) : a === null && b === null ? -1e9 : Math.max(a ?? -1e9, b ?? -1e9); };   // מצפון לדרום
   const cids = (me.admin ? Object.keys(D.contractors || {}).filter(k => D.contractors[k].kind !== "ייעודי" || Object.values(D.activities || {}).some(a => a.contractorId === k))
@@ -645,7 +648,7 @@ function view() {
   if (!segs.some(s => s.id === S.segId)) S.segId = segs[0]?.id || "";
   S.acts = S.acts.filter(id => acts.some(a => a.id === id));
   const sel = acts.filter(a => S.acts.includes(a.id)), act = sel[0] || null, unit = sel.length === 1 && isUA(act), lkK = unit ? linkKind(act, S.cid) : null, gr = !!lkK && (Object.keys(D.items || {}).length > 0 || String(lkK).endsWith("@site")), isC = lkK === "מעבירי מים";
-  const isP = String(lkK || "").startsWith("pad:"), isA = String(lkK || "").startsWith("all:"); LK = gr ? { kind: isP || isA ? lkK.slice(4) : lkK, pad: isP, all: isA, act, cid: S.cid } : null;
+  const isP = String(lkK || "").startsWith("pad:"), isA = String(lkK || "").startsWith("all:"), isCu = String(lkK || "").startsWith("culv:"); LK = gr ? { kind: isCu ? lkK.slice(5) : isP || isA ? lkK.slice(4) : lkK, pad: isP, all: isA, culv: isCu, act, cid: S.cid } : null;
   S.gsel = (S.gsel || []).filter(id => IT(id)); if (gr) S.qty = S.gsel.length || "";
   const seg = segs.find(s => s.id === S.segId);
   const selName = sel.length <= 2 ? sel.map(a => short(a.name)).join(" + ") : `${short(sel[0].name)} + עוד ${sel.length - 1}`;
@@ -661,9 +664,9 @@ function view() {
       <label class="date"><span>תאריך</span><input type="date" id="dt" value="${esc(S.date)}"></label></div>
   </div>
   <div class="card where">
-    ${gr ? `<div class="lbl" style="margin-top:0">${esc(short(act.name))} — ${isC ? `באיזה מעביר? <span class="hint">(כל מעביר = סבכה אחת)</span>` : isP ? `משטח לאיזה ${esc(LK.kind)}?` : `איזה ${esc(lkK)} בוצע?`}</div>${unitSum(act, S.cid)}
-      <div class="row"><input id="gq" placeholder="${isC ? "מספר מעביר (BC) / ק.ד. / חתך" : "ק.ד. / חתך — או בוחרים מהרשימה"}" autocomplete="off" style="flex:1" value="${esc(S.gq || "")}"></div><div id="gres" class="gres">${grRes()}</div>
-      <div class="gsel">${S.gsel.map(id => { const i = IT(id); return `<span class="gchip"><b dir="ltr">${esc(labOf(i))}</b>${i.kdFrom ? ` · ק.ד. ${esc(i.kdFrom)}` : ""}<button data-gx="${id}" aria-label="הסרה">✕</button></span>`; }).join("") || `<span class="hint">עוד לא נבחר${isC ? " מעביר — מקלידים מספר ובוחרים מהרשימה" : " — בוחרים מהרשימה"}</span>`}</div>`
+    ${gr ? `<div class="lbl" style="margin-top:0">${esc(short(act.name))} — ${isC ? `באיזה מעביר? <span class="hint">(כל מעביר = סבכה אחת)</span>` : isP ? `משטח לאיזה ${esc(LK.kind)}?` : isCu ? "איזה מעביר בוצע?" : `איזה ${esc(lkK)} בוצע?`}</div>${unitSum(act, S.cid)}
+      <div class="row"><input id="gq" placeholder="${isC || isCu ? "מספר מעביר (BC) / ק.ד. / חתך" : "ק.ד. / חתך — או בוחרים מהרשימה"}" autocomplete="off" style="flex:1" value="${esc(S.gq || "")}"></div><div id="gres" class="gres">${grRes()}</div>
+      <div class="gsel">${S.gsel.map(id => { const i = IT(id); return `<span class="gchip"><b dir="ltr">${esc(labOf(i))}</b>${i.kdFrom ? ` · ק.ד. ${esc(i.kdFrom)}` : ""}<button data-gx="${id}" aria-label="הסרה">✕</button></span>`; }).join("") || `<span class="hint">עוד לא נבחר${isC || isCu ? " מעביר — מקלידים מספר ובוחרים מהרשימה" : " — בוחרים מהרשימה"}</span>`}</div>`
     : unit ? `<div class="lbl" style="margin-top:0">${esc(short(act.name))} — כמות (יח׳)</div>${unitSum(act, S.cid)}<div class="row"><input class="num" id="qty" inputmode="numeric" value="${esc(S.qty)}"><input id="loc" placeholder="מיקום (ק.ד. / חתך)" style="flex:1" value="${esc(S.loc || "")}"></div>`
       : `<div class="chips">${segs.map(s => `<button class="chip sm ${s.id === S.segId ? "on" : ""}" data-s="${s.id}">${esc(s.label)}</button>`).join("")}</div>
     <div class="row sec"><span>מחתך</span><input class="num" id="f" inputmode="numeric" value="${esc(S.from)}" placeholder="${seg?.lo ?? ""}"><span>עד</span><input class="num" id="t" inputmode="numeric" value="${esc(S.to)}" placeholder="${seg?.hi ?? ""}"><b id="m" class="len">${m === null ? "" : m.toLocaleString("he-IL") + " מ׳"}</b><button class="btn ghost kdbtn ${S.kdOpen ? "on" : ""}" id="kdt">לפי ק.ד.</button></div>
@@ -684,7 +687,7 @@ function view() {
       ${S.dup.clean.length ? `<div style="margin-top:4px">בלי כפילות (יישלחו במלואן): <b>${S.dup.clean.map(r => esc(short(D.activities?.[r.activityId]?.name || ""))).join(", ")}</b></div>` : ""}</div>
     <div class="row" style="margin-top:8px;gap:6px">${S.dup.full ? "" : `<button class="btn" id="dupNew">${S.dup.hits.length === 1 && !S.dup.clean.length ? `שליחת החדש בלבד: ${S.dup.hits[0].gaps.map(([x, y]) => rng(x, y)).join(", ")}` : "שליחת מה שחדש בלבד"}</button>`}
       <button class="btn ghost" id="dupFix" title="כשהדיווח הקודם שגוי — נשלח עם הערה לבדיקת מנהל הפרויקט">בקשת תיקון</button><button class="btn ghost" id="dupNo">ביטול</button></div></div>` : ""}
-  <div class="sendbar"><div class="sum">${S.msg ? `<div class="msg ${S.err ? "err" : "ok"}" style="margin:0 0 2px">${esc(S.msg)}</div>` : ""}${act ? `<b>${esc(selName)}</b> · ${gr ? (S.gsel.length ? `${S.gsel.length} ${isC ? "סבכות" : "יח׳"} · ${S.gsel.map(id => esc(labOf(IT(id)))).join(", ")}` : isC ? "איזה מעביר?" : "איזה פריט?") : unit ? (S.qty ? S.qty + " יח׳" : "כמות?") : m !== null ? `${rng(S.from, S.to)} · ${m.toLocaleString("he-IL")} מ׳` : "חתכים?"}${sel.length > 1 && m !== null ? ` · ${sel.length} מלאכות` : ""}` : "בחר מלאכה — אפשר כמה"}</div><button class="btn" id="send">שליחת דיווח</button></div>
+  <div class="sendbar"><div class="sum">${S.msg ? `<div class="msg ${S.err ? "err" : "ok"}" style="margin:0 0 2px">${esc(S.msg)}</div>` : ""}${act ? `<b>${esc(selName)}</b> · ${gr ? (S.gsel.length ? `${S.gsel.length} ${isC ? "סבכות" : "יח׳"} · ${S.gsel.map(id => esc(labOf(IT(id)))).join(", ")}` : isC || isCu ? "איזה מעביר?" : "איזה פריט?") : unit ? (S.qty ? S.qty + " יח׳" : "כמות?") : m !== null ? `${rng(S.from, S.to)} · ${m.toLocaleString("he-IL")} מ׳` : "חתכים?"}${sel.length > 1 && m !== null ? ` · ${sel.length} מלאכות` : ""}` : "בחר מלאכה — אפשר כמה"}</div><button class="btn" id="send">שליחת דיווח</button></div>
   </div>
   ${myList()}
 ${rqList()}${covModal(c, seg, acts)}${unit ? unitModal(act, c.id) : ""}${rqModal(c)}`;
@@ -754,7 +757,7 @@ ${rqList()}${covModal(c, seg, acts)}${unit ? unitModal(act, c.id) : ""}${rqModal
     if (!sel.length) return bad("צריך לבחור מלאכה");
     if (!S.date) return bad("חסר תאריך");
     const base = { contractorId: c.id, date: S.date, note: S.note.trim(), review: me.admin ? "" : "לבדיקה", baseline: false, reportedBy: me.email, reportedByName: me.name || "", updatedAt: new Date().toISOString(), updatedBy: me.email };
-    if (gr) { if (!S.gsel.length) return bad(isC ? "צריך לבחור מעביר — לפי מספר BC או ק.ד." : "צריך לבחור מהרשימה מה בוצע");
+    if (gr) { if (!S.gsel.length) return bad(isC || isCu ? "צריך לבחור מעביר — לפי מספר BC או ק.ד." : "צריך לבחור מהרשימה מה בוצע");
       const dupG = S.gsel.filter(id => linkList().find(i => i.id === id)?.gd); if (dupG.length && !S.grOk) { S.grOk = true; return bad(`כבר ${isC ? "דווחה סבכה ב־" : "סומן כבוצע: "}${dupG.map(id => labOf(IT(id))).join(", ")} — ללחוץ שוב על שליחה כדי לשלוח בכל זאת`); }
       return sendRecs([{ ...base, activityId: act.id, segmentId: "", secFrom: "", secTo: "", qty: S.gsel.length, itemIds: Object.fromEntries(S.gsel.map(id => [id, true])), loc: S.gsel.map(id => labOf(IT(id)) + (IT(id).kdFrom ? ` (ק.ד. ${IT(id).kdFrom})` : "")).join(", ") }]); }
     if (unit) { if (!(S.qty > 0)) return bad("צריך כמות"); return sendRecs([{ ...base, activityId: act.id, segmentId: "", secFrom: "", secTo: "", qty: Number(S.qty), loc: S.loc || "" }]); }
@@ -792,7 +795,7 @@ ${rqList()}${covModal(c, seg, acts)}${unit ? unitModal(act, c.id) : ""}${rqModal
 let later = false;
 try { history.scrollRestoration = "manual"; } catch (e) {}   // תמיד להיפתח בראש הדף (Safari זוכר גלילה קודמת)
 let firstView = true;
-const VER = "2026-10-14c";
+const VER = "2026-11-19";
 const fail = (title, detail = "") => { app.innerHTML = `<div class="card"><b>${esc(title)}</b>${detail ? `<div class="small" style="margin-top:6px;color:#666;direction:ltr;text-align:left;word-break:break-word">${esc(detail)}</div>` : ""}
   <div class="row" style="margin-top:12px;gap:8px"><button class="btn" onclick="location.reload()">לנסות שוב</button><button class="btn ghost" onclick="try{firebase.auth().signOut()}catch(e){};setTimeout(()=>location.reload(),300)">התנתקות</button></div>
   <div class="small" style="margin-top:10px;color:#999">גרסה ${VER}</div></div>`; };
