@@ -5068,7 +5068,8 @@ function bgData(d) {
     nextEst: sum(exNext, exAmt), nextCov: sum(exNext, x => x.excluded ? 0 : exCov(x)),
     siteEst: siteTot, siteOrd: cfg.sitesOrdered };
   const OX = cfg.opex ? oxByField() : []; T.opexEst = sum(OX, r => r.est); T.opexCov = sum(OX, r => r.com);   // תקציב תפעולי — נכלל באומדן רק כשמסומן
-  T.est = T.earthEst + T.doneEst + T.nextEst + T.siteEst + T.opexEst; T.cov = T.earthOrd + T.doneCov + T.nextCov + T.siteOrd + T.opexCov; T.left = T.est - T.cov;
+  const IM = iecModOrders(); T.iecEst = sum(IM, o => bgN(o.x_amount)); T.iecCov = sum(IM.filter(ordIssued), o => bgN(o.x_amount));   // חח״י — הזמנות משהב״ט מאתר חח״י: שיצאו = כוסה, עתידיות = חסר
+  T.est = T.earthEst + T.doneEst + T.nextEst + T.siteEst + T.opexEst + T.iecEst; T.cov = T.earthOrd + T.doneCov + T.nextCov + T.siteOrd + T.opexCov + T.iecCov; T.left = T.est - T.cov;
   const specs = d.contractors.filter(c => !isMain(c)).map(c => ({ c, amt: sum(d.orders.filter(o => o.contractorId === c.id), bgOrdAmt), n: d.orders.filter(o => o.contractorId === c.id).length })).filter(x => x.n);
   const iec = (E => E ? { n: E.listO().length, amt: sum(E.listO(), x => E.orderTotal(x)), exc: 0 } : { n: d.iecOrders.length, amt: sum(d.iecOrders, x => bgN(x.amount)), exc: sum(d.iecOrders, x => bgN(x.excAmount)) })(iecE());
   const byC = earth.map(e => { const mine = arr => arr.filter(x => x.contractorId === e.c.id && !x.excluded);
@@ -5076,11 +5077,11 @@ function bgData(d) {
     return { c: e.c, earthEst: e.est, earthOrd: e.amt, done, next, nextCov, tot: e.est + done + next }; });
   const cats = ["סבכות", "שערים", "חשמל"].map(k => { const a = extras.filter(x => !x.excluded && x.cat === k);
     return { k, n: a.length, est: sum(a, x => bgN(x.amount)), cov: sum(a, exCov), rows: a }; });
-  return { cfg, earth, byC, cats, extras, exDone, exNext, sites, T, specs, iec, has: B.length > 0 || T.earthOrd > 0 };
+  return { cfg, earth, byC, cats, extras, exDone, exNext, sites, T, specs, iec, iecMods: IM, has: B.length > 0 || T.earthOrd > 0 };
 }
 /** סרגל העלויות (מהדף הראשי) — בתוך מסך התקציב: חלוקה לקטגוריות + קובייה לכל קבלן ולכל רכיב (שערים, סבכות, חח״י, אתרי איסוף…) */
 function budgetBar(d, R, M) {
-  const T = R.T, parts = [["עבודות עפר", T.earthEst, "#7a5c3e"], ["עבודות נוספות", T.doneEst + T.nextEst, "#4a6d93"], ["אתרי איסוף", T.siteEst, "#2f6b4f"], ["תקציב תפעולי", T.opexEst, "#6b5a3a"]].filter(p => p[1] > 0);
+  const T = R.T, parts = [["עבודות עפר", T.earthEst, "#7a5c3e"], ["עבודות נוספות", T.doneEst + T.nextEst, "#4a6d93"], ["אתרי איסוף", T.siteEst, "#2f6b4f"], ["חיבורי חח״י", T.iecEst, "#0a6ec9"], ["תקציב תפעולי", T.opexEst, "#6b5a3a"]].filter(p => p[1] > 0);
   const col = c => c.c ? (c.sp ? (KIND_ICON[specsOf(c.c)[0]] || {}).c || "#8a9a90" : cColor(d, c.c)) : "#2f6b4f";
   const cube = c => { const x = M.colT(c.id), nm = c.id ? c.name : (M.L.some(l => !l.col && l.cat === "אתרי איסוף") && M.L.filter(l => !l.col).every(l => l.cat === "אתרי איסוף") ? "אתרי איסוף" : c.name);
     return `<div style="--cc:${col(c)}" data-act="bgCol" data-id="${esc(c.id)}" role="button" title="אומדן ${bgM(x.est)} · כוסה ${bgM(x.cov)}"><b>${esc(nm)}</b><span>${bgMM(x.est)}</span><small>${x.est - x.cov > 1 ? `חסר ${bgMM(x.est - x.cov)}` : "כוסה במלואו"}</small>${c.c && R.earth.find(e => e.c.id === c.id)?.bad.length ? `<em title="יש הזמנה שהתקציב שלה לא תואם לאורך × מחיר">⚠</em>` : ""}</div>`; };
@@ -5141,7 +5142,7 @@ function pageBudgetEdit(d) {
     <div class="tablewrap"><table class="sheet"><thead><tr><th>קבלן</th><th>הזמנות</th><th>תקציב בהזמנות</th></tr></thead><tbody>${R.specs.map(s => `<tr><td><b>${esc(s.c.name)}</b></td><td class="c">${s.n}</td><td class="c">${s.amt ? bgM(s.amt) : `<span class="muted">לא הוזן</span>`}</td></tr>`).join("")}
       <tr><td><b>חיבורי חח״י</b> <span class="muted small">(${R.iec.n} חיבורים, לפי סכומי חח״י)</span></td><td class="c">—</td><td class="c">${bgM(R.iec.amt)}${R.iec.exc ? `<div class="small muted">+ חריגים ${bgM(R.iec.exc)}</div>` : ""}</td></tr></tbody></table></div></div>
   <div class="card" style="margin-top:12px"><h2 style="margin-top:0">5. טבלה מרכזת</h2><div class="tablewrap"><table class="sheet"><thead><tr><th></th><th>אומדן</th><th>הוזמן / הועבר</th><th>נדרש להשלמה</th></tr></thead><tbody>
-    ${[["מקטעי עבודה (עבודות עפר)", T.earthEst, T.earthOrd], ["עבודות נוספות שבוצעו", T.doneEst, T.doneCov], ["עבודות נוספות שיבוצעו", T.nextEst, T.nextCov], ["אתרי איסוף", T.siteEst, T.siteOrd]].map(([n, a, b]) => `<tr><td><b>${n}</b></td><td class="c">${bgM(a)}</td><td class="c">${bgM(b)}</td><td class="c"><b>${bgLeft(a - b)}</b></td></tr>`).join("")}
+    ${[["מקטעי עבודה (עבודות עפר)", T.earthEst, T.earthOrd], ["עבודות נוספות שבוצעו", T.doneEst, T.doneCov], ["עבודות נוספות שיבוצעו", T.nextEst, T.nextCov], ["אתרי איסוף", T.siteEst, T.siteOrd], ["חיבורי חח״י — הזמנות משהב״ט", T.iecEst, T.iecCov]].map(([n, a, b]) => `<tr><td><b>${n}</b></td><td class="c">${bgM(a)}</td><td class="c">${bgM(b)}</td><td class="c"><b>${bgLeft(a - b)}</b></td></tr>`).join("")}
     <tr class="sub"><td><b>סה״כ</b></td><td class="c"><b>${bgM(T.est)}</b></td><td class="c"><b>${bgM(T.cov)}</b></td><td class="c"><b>${bgM(T.left)}</b></td></tr></tbody></table></div>
     <p class="small muted" style="margin:6px 0 0">לא כולל תפעול (מדידות, מפקחים, מתאמים, מתכננים, רטג, עתיקות, מעבדה וכד׳).</p></div></div>`;
 }
@@ -5156,6 +5157,7 @@ function bgLines(d, R) {
     exec: x.contractorId || "", title: x.title || "", est: bgN(x.amount), cov: bgLineCov(x), x, phase: x.phase === "בוצע" ? "בוצע" : "יבוצע", note: x.note || "" }));
   R.sites.forEach(x => L.push({ cat: "אתרי איסוף", area: "", exec: "", title: x.title || "", est: bgN(x.mast) + bgN(x.build), cov: 0, site: x, note: x.note || "" }));
   (bgCfg().opex ? oxByField() : []).forEach(r => L.push({ cat: "תקציב תפעולי", area: "", exec: "", title: `תפעולי — ${r.f}`, est: r.est, cov: r.com, opex: r, note: `${r.a.length} ספקים · שולם ${bgM(r.paid)}` }));
+  (R.iecMods || []).forEach(o => L.push({ cat: "חשמל", area: "", exec: IEC_CID, title: `${o._future ? "הזמנת משהב״ט עתידית" : "הזמנת משהב״ט " + o._iecMod}${o._dist ? " · " + o._dist : ""}`, est: bgN(o.x_amount), cov: ordIssued(o) ? bgN(o.x_amount) : 0, iecMod: o, note: `מאתר חח״י · ${o._nIec} הזמנות חח״י${o.x_reqNo ? " · דרישה " + o.x_reqNo : ""}` }));
   if (R.cfg.sitesOrdered) L.push({ cat: "אתרי איסוף", area: "", exec: "", title: "הזמנות שיצאו לאתרי איסוף", est: 0, cov: R.cfg.sitesOrdered, sitesOrd: true });
   L.forEach(l => { if (l.area && !mainIds.has(l.area)) l.area = "";
     // מבצע בפועל: שערים / סבכות / טרפו / חח״י — קבלן ייעודי גם אם בשורה רשום קבלן העפר של הגזרה
@@ -5306,7 +5308,15 @@ function pagePower(d) {
       <td class="small" dir="ltr">${os.map(o => esc(o.iec301)).join("<br>") || "—"}</td>
       <td class="small">${it ? `${esc(it.status || "—")}${it.doneDate ? ` · ${fmtD(it.doneDate)}` : ""}${rd ? `<div style="color:#a4520c;font-weight:700">🏗 הקבלן סיים · הבא: ${esc(s.next?.name || "")}${s.next?.who ? ` (אצל ${esc(s.next.who)})` : ""}${days !== null ? ` · ${days} ימים` : ""}</div>` : ""}` : `<span class="muted">—</span>`}</td>
       <td><a class="btn ghost sm" href="iec.html#fac=${encodeURIComponent(f.id)}" target="_blank" rel="noopener" title="פתיחת כרטיס המתקן באתר חח״י">↗</a></td></tr>`; };
-  return head + tiles + `<div class="card"><h2 style="margin-top:0">איפה עומדים — לפי נפה ושלב</h2>${sumT(A.filter(f => !isSite(f)), "⚡ מתקני המכשול")}${sumT(A.filter(isSite), "📡 אתרי איסוף")}</div>
+  const IM = iecModOrders(), imIss = IM.filter(ordIssued), imFut = IM.filter(o => !ordIssued(o)), imS = a => a.reduce((t, o) => t + bgN(o.x_amount), 0);
+  const modCard = `<div class="card"><h2 style="margin-top:0">🏛 הזמנות משהב״ט לחח״י <span class="muted small">— מאתר חח״י · כולל מע״מ · נכנסות לאומדן הפרויקט: שיצאו = כוסה, עתידיות = חסר</span></h2>
+    <div class="row small" style="gap:14px;margin-bottom:8px"><span>יצאו: <b>${imIss.length}</b> · <b>${bgM(imS(imIss))}</b></span><span>עתידיות: <b>${imFut.length}</b> · <b style="color:#a4520c">${bgM(imS(imFut))}</b></span><span>סה״כ באומדן: <b>${bgM(imS(IM))}</b></span></div>
+    <div class="tablewrap"><table class="sheet"><thead><tr><th>הזמנת משהב״ט</th><th>סטטוס</th><th>דרישה</th><th>נפה</th><th>סכום ההזמנה</th><th>הזמנות חח״י תחתיה</th><th>יתרה בהזמנה</th></tr></thead><tbody>
+    ${IM.map(o => { const fut = !ordIssued(o), bal = bgN(o.x_amount) - o._sumO; return `<tr><td dir="ltr"><b>${fut ? `<span class="muted">${esc(o._iecMod)}</span>` : esc(o._iecMod)}</b></td><td>${fut ? `<span class="pill warn">עתידית</span>` : `<span class="pill ok">יצאה</span>`}</td><td dir="ltr">${esc(o.x_reqNo || "") || `<span class="pill warn">אין</span>`}</td><td>${esc(o._dist || "")}</td>
+      <td class="c">${bgM(o.x_amount)}${/תחתיה/.test(o._amtSrc) ? `<div class="small muted">לפי הזמנות חח״י</div>` : ""}</td><td class="c">${o._nIec} · ${bgM(o._sumO)}</td><td class="c">${/תחתיה/.test(o._amtSrc) ? "—" : bal < -1 ? `<span style="color:#c0392b">חריגה ${bgM(-bal)}</span>` : bgM(bal)}</td></tr>`; }).join("") || `<tr><td colspan="7" class="c muted">אין הזמנות משהב״ט באתר חח״י</td></tr>`}
+    ${IM.length ? `<tr class="rq-sub"><td colspan="4"><b>סה״כ</b></td><td class="c"><b>${bgM(imS(IM))}</b></td><td class="c"><b>${bgM(IM.reduce((t, o) => t + o._sumO, 0))}</b></td><td></td></tr>` : ""}</tbody></table></div>
+    <p class="small muted" style="margin:6px 0 0">הוספה ועריכה — באתר חח״י: הזמנות ← הזמנות משהב״ט (כולל ״הזמנה עתידית״ בלי מספר).</p></div>`;
+  return head + tiles + modCard + `<div class="card"><h2 style="margin-top:0">איפה עומדים — לפי נפה ושלב</h2>${sumT(A.filter(f => !isSite(f)), "⚡ מתקני המכשול")}${sumT(A.filter(isSite), "📡 אתרי איסוף")}</div>
   <div class="card"><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><input class="inp" data-pwq="1" value="${esc(F.q || "")}" placeholder="חיפוש: שם, ק.ד., מספר הזמנה…" style="max-width:260px">
     <select class="inp" data-pwf="type" style="max-width:170px"><option value="">כל הסוגים</option>${types.map(t => `<option ${F.type === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
     <select class="inp" data-pwf="dist" style="max-width:170px"><option value="">כל הנפות</option>${E.DISTRICTS.map(t => `<option ${F.dist === t ? "selected" : ""}>${esc(t)}</option>`).join("")}<option value="-" ${F.dist === "-" ? "selected" : ""}>לא שויך</option></select>
@@ -5324,7 +5334,7 @@ function iecModOrders() {
   const E = iecE(); if (!E) return [];
   const V = 1 + E.VAT(), mainNos = new Set(list("orders").map(o => reqNorm(o.x_ordNo)).filter(Boolean));
   return E.modList().filter(m => !mainNos.has(reqNorm(m.num))).map(m => { const os = E.modOrders(m.num), sumO = os.reduce((t, o) => t + E.orderTotal(o), 0) * V, amt = Math.round(bgN(m.amount) ? bgN(m.amount) * V : sumO);
-    return { id: "iecmod:" + m.num, _iecMod: m.num, _nIec: os.length, _amtSrc: bgN(m.amount) ? "סכום הזמנת משהב״ט כולל מע״מ" : "סכום הזמנות חח״י תחתיה כולל מע״מ", name: `הזמנת משהב״ט לחח״י${m.note ? " — " + m.note : ""}`, contractorId: IEC_CID, x_reqNo: m.req880 || "", x_ordNo: String(m.num), x_amount: amt }; });
+    return { id: "iecmod:" + m.num, _iecMod: m.num, _future: !!m.future, _nIec: os.length, _sumO: Math.round(sumO), _dist: m.district || "", _amtSrc: bgN(m.amount) ? "סכום הזמנת משהב״ט כולל מע״מ" : "סכום הזמנות חח״י תחתיה כולל מע״מ", name: `הזמנת משהב״ט לחח״י${m.future ? " (עתידית)" : ""}${m.note ? " — " + m.note : ""}`, contractorId: IEC_CID, x_reqNo: m.req880 || "", x_ordNo: m.future ? "" : String(m.num), x_signer: m.future ? "עתידי" : "", x_amount: amt }; });
 }
 /** הזנה — מי מזין את הארון / את מי התט״ז או חדר הטרפו מזין. מתוחזק באתר חח״י, כאן לקריאה בלבד */
 function iecFeedTxt(E, f) {
