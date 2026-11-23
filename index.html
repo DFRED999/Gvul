@@ -4999,6 +4999,7 @@ async function siteOrdLink(sid, oid, fr) { const st = RAW.sites?.[sid]; if (!st 
   B[bid] = { ...B[bid], orderId: oid, ...(RAW.orders?.[oid]?.contractorId ? { cid: RAW.orders[oid].contractorId } : {}) }; await siteUpd(sid, { builds: B }); }
 document.addEventListener("toggle", e => { if (e.target?.dataset?.trk) ui.siteTrk = e.target.open; }, true);
 $app.addEventListener("change", async e => { const t = e.target;
+  if (t.dataset && "bgopex" in t.dataset) { const c = bgCfg(); if (c.id) await api.update("budget", c.id, { opexIn: t.checked }); else await api.add("budget", { kind: "cfg", vat: 18, prices: {}, opexIn: t.checked }); toast(t.checked ? "התקציב התפעולי נכלל באומדן" : "התקציב התפעולי לא נכלל באומדן"); return; }
   if (t.dataset?.sord) { const [oid, k] = t.dataset.sord.split("|"), o = RAW.orders?.[oid]; if (!o) return; const v = t.value.trim();
     if (k === "siteId" && v !== o.siteId) { const st = RAW.sites?.[o.siteId]; if (st) { const B = { ...(st.builds || {}) }; let ch = false; for (const x in B) if (B[x].orderId === oid) { B[x] = { ...B[x], orderId: "" }; ch = true; } if (ch) await siteUpd(o.siteId, { builds: B }); } }
     await api.update("orders", oid, { [k]: v, ...(k === "contractorId" && v ? { x_cname: "" } : {}) }); if (k === "siteId" || k === "x_for") await siteOrdLink(k === "siteId" ? v : o.siteId, oid, k === "x_for" ? v : o.x_for || "ביצוע קבוע"); return; }
@@ -5021,7 +5022,7 @@ $app.addEventListener("input", e => { const t = e.target; if (t.dataset?.sf !== 
    הנתונים עצמם לא בקוד — נטענים מקובץ (הגדרות ← הוספת נתונים מקובץ) או מוקלדים כאן.
    ===================================================================== */
 const BG_CAT = ["עבודות נוספות", "גשרים ומעברים", "שערים", "סבכות", "חשמל", "אחר"];
-const bgCfg = () => { const c = Object.values(RAW.budget || {}).find(x => x.kind === "cfg") || {}; return { vat: c.vat === "" || c.vat == null ? 18 : Number(c.vat), prices: c.prices || {}, sitesOrdered: Number(c.sitesOrdered) || 0, id: Object.keys(RAW.budget || {}).find(k => RAW.budget[k].kind === "cfg") }; };
+const bgCfg = () => { const c = Object.values(RAW.budget || {}).find(x => x.kind === "cfg") || {}; return { vat: c.vat === "" || c.vat == null ? 18 : Number(c.vat), prices: c.prices || {}, opex: c.opexIn !== false, sitesOrdered: Number(c.sitesOrdered) || 0, id: Object.keys(RAW.budget || {}).find(k => RAW.budget[k].kind === "cfg") }; };
 const bgN = v => { const n = Number(String(v ?? "").replace(/[^\d.-]/g, "")); return isNaN(n) ? 0 : n; };
 const bgLeft = v => v < -0.5 ? `<span style="color:var(--accent)">עודף ${num(Math.round(-v), 0)} ₪</span>` : `${num(Math.round(v || 0), 0)} ₪`;
 const bgM = v => `${num(Math.round(v || 0), 0)} ₪`, bgMM = v => `${(Math.round((v || 0) / 1e5) / 10).toLocaleString("he-IL")} מ׳ ₪`;
@@ -5063,7 +5064,7 @@ function bgData(d) {
     doneEst: sum(exDone, exAmt), doneCov: sum(exDone, x => x.excluded ? 0 : exCov(x)),
     nextEst: sum(exNext, exAmt), nextCov: sum(exNext, x => x.excluded ? 0 : exCov(x)),
     siteEst: siteTot, siteOrd: cfg.sitesOrdered };
-  const OX = oxByField(); T.opexEst = sum(OX, r => r.est); T.opexCov = sum(OX, r => r.com);
+  const OX = cfg.opex ? oxByField() : []; T.opexEst = sum(OX, r => r.est); T.opexCov = sum(OX, r => r.com);   // תקציב תפעולי — נכלל באומדן רק כשמסומן
   T.est = T.earthEst + T.doneEst + T.nextEst + T.siteEst + T.opexEst; T.cov = T.earthOrd + T.doneCov + T.nextCov + T.siteOrd + T.opexCov; T.left = T.est - T.cov;
   const specs = d.contractors.filter(c => !isMain(c)).map(c => ({ c, amt: sum(d.orders.filter(o => o.contractorId === c.id), bgOrdAmt), n: d.orders.filter(o => o.contractorId === c.id).length })).filter(x => x.n);
   const iec = (E => E ? { n: E.listO().length, amt: sum(E.listO(), x => E.orderTotal(x)), exc: 0 } : { n: d.iecOrders.length, amt: sum(d.iecOrders, x => bgN(x.amount)), exc: sum(d.iecOrders, x => bgN(x.excAmount)) })(iecE());
@@ -5142,7 +5143,7 @@ function bgLines(d, R) {
   R.extras.filter(x => !x.excluded).forEach(x => L.push({ cat: x.cat && BG_ROWS.includes(x.cat) ? x.cat : "עבודות נוספות", area: x.areaId ?? (mainIds.has(x.contractorId) ? x.contractorId : ""),
     exec: x.contractorId || "", title: x.title || "", est: bgN(x.amount), cov: bgN(x.transferred) + bgN(x.ordered) + bgLinkedAmt(x), x, phase: x.phase === "בוצע" ? "בוצע" : "יבוצע", note: x.note || "" }));
   R.sites.forEach(x => L.push({ cat: "אתרי איסוף", area: "", exec: "", title: x.title || "", est: bgN(x.mast) + bgN(x.build), cov: 0, site: x, note: x.note || "" }));
-  oxByField().forEach(r => L.push({ cat: "תקציב תפעולי", area: "", exec: "", title: `תפעולי — ${r.f}`, est: r.est, cov: r.com, opex: r, note: `${r.a.length} ספקים · שולם ${bgM(r.paid)}` }));
+  (bgCfg().opex ? oxByField() : []).forEach(r => L.push({ cat: "תקציב תפעולי", area: "", exec: "", title: `תפעולי — ${r.f}`, est: r.est, cov: r.com, opex: r, note: `${r.a.length} ספקים · שולם ${bgM(r.paid)}` }));
   if (R.cfg.sitesOrdered) L.push({ cat: "אתרי איסוף", area: "", exec: "", title: "הזמנות שיצאו לאתרי איסוף", est: 0, cov: R.cfg.sitesOrdered, sitesOrd: true });
   L.forEach(l => { if (l.area && !mainIds.has(l.area)) l.area = "";
     // מבצע בפועל: שערים / סבכות / טרפו / חח״י — קבלן ייעודי גם אם בשורה רשום קבלן העפר של הגזרה
@@ -5191,8 +5192,8 @@ function pageBudget(d) {
   const table = `<div class="tablewrap"><table class="sheet bg-mx"><thead><tr class="bg-gh"><th></th><th colspan="${nM}">קבלני עבודות עפר (צפון ← דרום)</th>${nS ? `<th colspan="${nS}" class="bg-sp1">קבלנים ייעודיים</th>` : ""}${nG ? `<th colspan="${nG}"></th>` : ""}<th></th></tr><tr><th>סוג עבודה</th>${M.cols.map((c, i) => `<th class="${c.sp && !M.cols[i - 1]?.sp ? "bg-sp1" : ""} ${c.sp ? "bg-sp" : ""}" ${c.c ? `style="border-top:4px solid ${c.sp ? (KIND_ICON[specsOf(c.c)[0]] || {}).c || "#8a9a90" : cColor(d, c.c)}"` : ""} data-act="bgCol" data-id="${esc(c.id)}" role="button" title="כל מה ששייך ל${esc(c.name)}">${esc(c.name)}</th>`).join("")}<th>סה״כ</th></tr></thead><tbody>
     ${M.rows.map(k => `<tr><th class="bg-rh" data-act="bgRow" data-id="${esc(k)}" role="button">${esc(k)}</th>${M.cols.map((c, i) => td(M.cell(k, c.id), "bgCell", `${k}|${c.id}`, sp1(i))).join("")}${td(M.rowT(k), "bgRow", k, "tot")}</tr>`).join("")}
     <tr class="bg-tr"><th>סה״כ</th>${M.cols.map((c, i) => td(M.colT(c.id), "bgCol", c.id, "tot " + sp1(i))).join("")}${td(M.all, "bgRow", "", "tot")}</tr></tbody></table></div>`;
-  return `<div class="bgp"><div class="ch-banner" style="--cc:#7a5c3e"><div><h1>תקציב ואומדן</h1><span>אומדן מול הזמנות — כל הסכומים כולל מע״מ ${R.cfg.vat}% · לא כולל תפעול</span></div>
-    <div class="row" style="gap:6px"><button class="btn ghost" data-act="bgEditTog">✎ עריכת אומדן</button></div></div>
+  return `<div class="bgp"><div class="ch-banner" style="--cc:#7a5c3e"><div><h1>תקציב ואומדן</h1><span>אומדן מול הזמנות — כל הסכומים כולל מע״מ ${R.cfg.vat}% · ${R.cfg.opex ? "כולל תקציב תפעולי" : "ללא תקציב תפעולי"}</span></div>
+    <div class="row" style="gap:6px">${isViewer() ? "" : `<label class="btn ghost" style="gap:6px;cursor:pointer" title="האם התקציב התפעולי (מתכננים, מפקחים, מדידות…) נכלל באומדן הפרויקט ובחסר"><input type="checkbox" data-bgopex ${R.cfg.opex ? "checked" : ""}> כולל תקציב תפעולי</label>`}<button class="btn ghost" data-act="bgEditTog">✎ עריכת אומדן</button></div></div>
   ${R.has ? "" : `<div class="card"><p style="margin:0">עוד אין נתוני אומדן. טוענים את קובץ האומדן ב״הגדרות ← נתונים וגיבוי ← הוספת נתונים מקובץ״, או נכנסים ל״עריכת אומדן״.</p></div>`}
   ${budgetBar(d, R, M)}
   <div class="card bg-head" style="margin-top:12px"><div class="bg-hn"><div><span>אומדן כולל</span><b>${bgMM(T.est)}</b></div><em>←</em><div><span>כוסה (הוזמן / הועבר)</span><b style="color:var(--accent)">${bgMM(T.cov)}</b><small>${pct}%</small></div><em>←</em><div><span>חסר להשלמה</span><b style="color:${T.left > 0 ? "#b8452f" : "var(--accent)"}">${bgMM(T.left)}</b></div></div>
