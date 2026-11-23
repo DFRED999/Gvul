@@ -829,14 +829,47 @@ const allKids = o => kidsOf(o).flatMap(k => [k, ...allKids(k)]);
 const OV = [["mod", "🏛 הזמנות משהב״ט"], ["par", "🗂 הזמנות אב (חח״י)"], ["iec", "🧾 הזמנות חח״י"], ["table", "✎ טבלה לעריכה"]];
 const ordViewSw = () => `<span class="vsw lv">${OV.map(([k, l]) => `<button class="${(ui.ov || "mod") === k ? "on" : ""}" data-a="ov" data-id="${k}">${l}</button>`).join("")}</span>${canEdit() ? `<button class="btn gh sm" data-a="gili" title="עדכון תשלומים וסטטוסים מהאקסל של גילי — מציג מה ישתנה ומבקש אישור">⬆ עדכון מאקסל</button>` : ""}`;
 /** הזמנות משהב״ט: רשומות (mods) + מספרי 444 שמופיעים בהזמנות חח״י. מפתח = המספר */
-const modList = () => memo("mods", () => { const m = {}; list("mods").forEach(r => { if (r.num) m[r.num] = { ...r, rid: r.id }; });
-  listO().forEach(o => { const n = ef(o, "ord444"); if (n && n !== true && !m[n]) m[n] = { num: String(n), virt: true }; }); return Object.values(m).sort((a, b) => String(a.num).localeCompare(String(b.num))); });
+const modList = () => memo("mods", () => { const m = {}; list("mods").filter(r => r.kind !== "req").forEach(r => { const k = modNoOk(r.num) ? String(r.num) : "#" + r.id; m[k] = { ...r, rid: r.id, key: k }; });
+  listO().forEach(o => { const n = ef(o, "ord444"); if (n && n !== true && !m[n]) m[n] = { num: String(n), virt: true, key: String(n) }; }); return Object.values(m).sort((a, b) => (a.future ? 1 : 0) - (b.future ? 1 : 0) || String(a.key).localeCompare(String(b.key))); });
+/** מספר הזמנת משהב״ט אמיתי (לא ריק ולא "עתידית-1" מהגרסה הקודמת) */
+const modNoOk = n => !!String(n ?? "").trim() && !/^עתידית/.test(String(n));
+const modLbl = m => modNoOk(m.num) ? m.num : "ללא מספר";
+/* ---------- דרישות (נשמרות ב-mods עם kind:"req") — סכום כולל מע״מ; מספר הדרישה לא חובה ---------- */
+const reqNoN = v => String(v ?? "").replace(/\D/g, "");
+const reqList = () => memo("reqs", () => list("mods").filter(r => r.kind === "req").sort((a, b) => String(a.createdAt || "").localeCompare(String(b.createdAt || ""))));
+const reqOfMod = m => { if (m.reqId && RAW.mods[m.reqId]?.kind === "req") return { id: m.reqId, ...RAW.mods[m.reqId] }; const n = reqNoN(m.req880); return n ? reqList().find(r => reqNoN(r.no) === n) || null : null; };
+const reqLbl = r => r ? (r.no ? r.no : "דרישה ללא מספר" + (N(r.amount) ? " · " + money(N(r.amount)) : "")) : "";
+/** סכום הזמנת משהב״ט כולל מע״מ: הסכום שנרשם, ואם אין — סכום הזמנות חח״י תחתיה */
+const modAmtV = m => { const V = 1 + VAT(); return N(m.amount) ? N(m.amount) * V : (modNoOk(m.num) ? modOrders(m.num).reduce((t, o) => t + orderTotal(o), 0) * V : 0); };
+/** מאזן חח״י: אומדן ← דרישות ← הוזמן ← יתרה בדרישות ← נדרש השלמה (הכל כולל מע״מ) */
+function iecBudget() { const M = modList(), R = reqList(), E = N(S().iecEst), sum = (L, f) => L.reduce((t, x) => t + f(x), 0);
+  const iss = M.filter(m => !m.future), fut = M.filter(m => m.future), req = sum(R, r => N(r.amount)), issA = sum(iss, modAmtV), futA = sum(fut, modAmtV);
+  return { E, req, issA, futA, nReq: R.length, reqBal: req - issA, needReq: E ? E - req : 0, missing: (E || issA + futA) - issA, noReq: M.filter(m => !reqOfMod(m)).length }; }
 const modOrders = num => listO().filter(o => String(ef(o, "ord444")) === String(num));
+const modOrdersOf = m => modNoOk(m.num) ? modOrders(m.num) : [];   // הזמנה בלי מספר — אין הזמנות חח״י תחתיה
 const parOrders = () => listO().filter(o => o.kind === "הזמנה מרכזת");
 const distOf = o => RAW.facilities[o.facilityId]?.district || o.district || "";
 const bar = (paid, tot) => `<div class="mbar"><i style="width:${tot ? Math.min(100, Math.round(paid / tot * 100)) : 0}%"></i></div>`;
 const ordNum = o => o.iec301 || o.ord444 || o.req880 || "בלי מספר";
 const ordLink = (o, cls = "") => `<a href="#" class="onum ${cls}" data-a="ordc" data-id="${o.id}">${esc(ordNum(o))}</a>`;
+/** מאזן חח״י + טבלת דרישות — בראש מסך הזמנות משהב״ט */
+function iecBudgetHtml() {
+  const B = iecBudget(), ed = canEdit(), dis = ed ? "" : "disabled", V = 1 + VAT(), M = modList();
+  const tl = (l, v, sub, c) => `<div${c ? ` style="border-color:${c}"` : ""}><small>${l}</small><b${c ? ` style="color:${c}"` : ""}>${v}</b><span>${sub || "&nbsp;"}</span></div>`;
+  const tiles = `<div class="totbar">${tl("אומדן חח״י לפרויקט", B.E ? money(B.E) : "—", ed ? `<a href="#" data-a="estEd">✎ עדכון</a>` : "כולל מע״מ")}${tl("דרישות שהתקבלו", money(B.req), `${B.nReq} דרישות`)}
+    ${tl("הוזמן (הזמנות שיצאו)", money(B.issA), B.futA ? `+ עתידיות ${money(B.futA)}` : "כולל מע״מ", "var(--ok)")}${tl("יתרה בדרישות", money(B.reqBal), "דרישות פחות מה שהוזמן", B.reqBal < -1 ? "var(--warn)" : "")}
+    ${tl("נדרש לבקש השלמה", B.E ? money(Math.max(0, B.needReq)) : "—", B.E ? (B.needReq < -1 ? `הדרישות עולות על האומדן ב־${money(-B.needReq)}` : "אומדן פחות דרישות") : "להזין אומדן", B.needReq > 1 ? "var(--org)" : "")}</div>`;
+  const R = reqList(), rows = R.map(r => { const Ms = M.filter(m => reqOfMod(m)?.id === r.id), iss = Ms.filter(m => !m.future), fut = Ms.filter(m => m.future), a = N(r.amount), ia = iss.reduce((t, m) => t + modAmtV(m), 0), fa = fut.reduce((t, m) => t + modAmtV(m), 0);
+    return `<tr><td><input class="ce ltr" data-rq="${r.id}|no" value="${esc(r.no || "")}" placeholder="להשלים" ${dis}></td><td><input class="ce num" data-rq="${r.id}|amount" value="${N(r.amount) ? N(r.amount).toLocaleString("he-IL") : ""}" placeholder="סכום" ${dis}></td>
+      <td>${Ms.length ? Ms.map(m => `<a href="#" data-a="mod" data-id="${esc(m.key)}" class="ltr">${esc(modLbl(m))}</a>${m.future ? ` <span class="tag a">עתידית</span>` : ""}`).join(" · ") : `<span class="muted small">אין</span>`}</td>
+      <td class="num">${money(ia)}</td><td class="num">${fa ? money(fa) : "—"}</td><td class="num" style="color:${a - ia < -1 ? "var(--warn)" : "var(--ok)"}">${a ? money(a - ia) : "—"}</td>
+      <td><input class="ce" data-rq="${r.id}|note" value="${esc(r.note || "")}" ${dis}></td><td>${ed ? `<a href="#" data-a="reqDel" data-id="${r.id}" class="small">מחיקה</a>` : ""}</td></tr>`; }).join("");
+  const nr = M.filter(m => !reqOfMod(m)), nrA = nr.reduce((t, m) => t + modAmtV(m), 0);
+  return tiles + `<div class="sec-h" style="margin-top:12px">📑 דרישות <small class="muted">— סכום הדרישה כולל מע״מ · מספר הדרישה לא חובה, להשלים כשיהיה · שיוך הזמנה לדרישה — בכרטיס ההזמנה</small></div>
+    <div class="tw" style="margin-bottom:12px"><table class="t"><thead><tr><th>מספר דרישה</th><th class="num">סכום הדרישה</th><th>הזמנות משהב״ט עליה</th><th class="num">הוזמן</th><th class="num">עתידיות</th><th class="num">יתרה</th><th>הערה</th><th></th></tr></thead><tbody>
+    ${rows || `<tr><td colspan="8" class="empty">עוד אין דרישות</td></tr>`}${nr.length ? `<tr style="background:#fff8ec"><td colspan="2"><b>הזמנות בלי דרישה</b></td><td>${nr.map(m => `<a href="#" data-a="mod" data-id="${esc(m.key)}" class="ltr">${esc(modLbl(m))}</a>`).join(" · ")}</td><td class="num">${money(nrA)}</td><td colspan="4" class="small muted">לשייך בכרטיס ההזמנה</td></tr>` : ""}</tbody></table></div>
+    ${ed ? `<div class="row" style="margin-bottom:12px"><button class="btn sm" data-a="reqNew">+ דרישה</button></div>` : ""}<div class="sec-h">🏛 הזמנות משהב״ט</div>`;
+}
 function pageOrders() {
   const lv = ui.ov || "mod"; if (lv === "table") return backBar() + pageOrdersTable();
   const V = 1 + VAT(), F = ui.of, q = F.q.trim().toLowerCase(), ed = canEdit(), sum = (L, f) => L.reduce((t, o) => t + f(o), 0);
@@ -844,18 +877,19 @@ function pageOrders() {
   const stuckN = L => new Set(L.map(o => o.facilityId).filter(id => id && RAW.facilities[id] && state({ id, ...RAW.facilities[id] }).stuck)).size;
   let body = "", cnt = 0, add = "";
   if (lv === "mod") {
-    const M = modList().filter(m => !q || [m.num, m.req880, m.note, m.district].join(" ").toLowerCase().includes(q)); cnt = M.length;
+    const M = modList().filter(m => !q || [m.num, m.req880, reqOfMod(m)?.no, m.note, m.district].join(" ").toLowerCase().includes(q)); cnt = M.length;
     add = ed ? `<button class="btn o sm" data-a="modNew">+ הזמנת משהב״ט חדשה / עתידית</button>` : "";
-    { const AO = M.flatMap(m => modOrders(m.num)), MF = M.filter(m => m.future), mt = sum(M.filter(m => !m.future), m => N(m.amount)), t2 = sum(AO, orderTotal), p2 = sum(AO, orderPaid), noAmt = M.filter(m => !N(m.amount)).length;
+    { const AO = M.flatMap(m => modOrdersOf(m)), MF = M.filter(m => m.future), mt = sum(M.filter(m => !m.future), m => N(m.amount)), t2 = sum(AO, orderTotal), p2 = sum(AO, orderPaid), noAmt = M.filter(m => !N(m.amount)).length;
       body = `<div class="totbar"><div><small>${M.length - MF.length} הזמנות משהב״ט · סכום ההזמנות</small><b>${mt ? money(mt * V) : "—"}</b><span>${noAmt ? `${noAmt} בלי סכום` : "כולל מע״מ"}</span></div>${MF.length ? `<div style="border-color:#f2c48a;background:#fff8ec"><small>${MF.length} הזמנות עתידיות</small><b style="color:#b07d00">${money(sum(MF, m => N(m.amount)) * V)}</b><span>עוד לא יצאו — חסר באומדן</span></div>` : ""}<div><small>הוזמן מחח״י</small><b>${money(t2 * V)}</b><span>${AO.length} הזמנות</span></div>
         <div><small>שולם</small><b style="color:var(--ok)">${money(p2 * V)}</b><span>${t2 ? Math.round(p2 / t2 * 100) : 0}% מההזמנות</span></div><div><small>נשאר לשלם</small><b style="color:var(--org)">${money((t2 - p2) * V)}</b><span>&nbsp;</span></div>${(Z => Z.length ? `<div style="border-color:#f2c48a;background:#fff8ec"><small>הזמנות חח״י בלי הזמנת משהב״ט</small><b style="color:#b07d00">${money(sum(Z, orderTotal) * V)}</b><span>${Z.length} הזמנות — לא נספרות כאן · <a href="#" data-a="ov" data-id="iec">להשלמה</a></span></div>` : "")(listO().filter(o => !ef(o, "ord444") || ef(o, "ord444") === true))}${mt ? `<div><small>יתרה פנויה בהזמנות</small><b style="color:${mt - t2 < 0 ? "var(--warn)" : "var(--ok)"}">${money((mt - t2) * V)}</b><span>&nbsp;</span></div>` : ""}</div>`; }
+    body = iecBudgetHtml() + body;
     if (ui.olist) body += `<div class="tw"><table class="t"><thead><tr><th>הזמנת משהב״ט</th><th>דרישה</th><th>נפות</th><th>הזמנות אב</th><th>הזמנות חח״י</th><th>מתקנים</th><th>תקועים</th><th class="num">סכום ההזמנה</th><th class="num">הוזמן</th><th class="num">שולם</th><th class="num">נשאר</th><th class="num">יתרה פנויה</th></tr></thead><tbody>
-      ${M.map(m => { const O = modOrders(m.num), tot = sum(O, orderTotal), paid = sum(O, orderPaid), st = stuckN(O); return `<tr data-a="mod" data-id="${esc(m.num)}" style="cursor:pointer"><td><b class="onum">${esc(m.num)}</b>${m.virt ? ` <span class="tag gr">להשלים</span>` : ""}${m.future ? ` <span class="tag a">עתידית</span>` : ""}</td><td class="ltr">${esc(m.req880 || "")}${m.req880 ? "" : `<span class="tag a">אין</span>`}</td><td>${esc([...new Set([m.district, ...O.map(distOf)].filter(Boolean))].join(", "))}</td>
+      ${M.map(m => { const O = modOrdersOf(m), tot = sum(O, orderTotal), paid = sum(O, orderPaid), st = stuckN(O); return `<tr data-a="mod" data-id="${esc(m.key)}" style="cursor:pointer"><td><b class="onum">${esc(modLbl(m))}</b>${m.virt ? ` <span class="tag gr">להשלים</span>` : ""}${m.future ? ` <span class="tag a">עתידית</span>` : ""}</td><td class="ltr">${(r => r ? esc(reqLbl(r)) : m.req880 ? esc(m.req880) : `<span class="tag a">אין</span>`)(reqOfMod(m))}</td><td>${esc([...new Set([m.district, ...O.map(distOf)].filter(Boolean))].join(", "))}</td>
         <td>${O.filter(o => o.kind === "הזמנה מרכזת").length}</td><td>${O.filter(o => o.kind !== "הזמנה מרכזת").length}</td><td>${new Set(O.map(o => o.facilityId).filter(Boolean)).size}</td><td>${st ? `<span class="tag r">${st}</span>` : ""}</td>
         <td class="num">${N(m.amount) ? money(N(m.amount) * V) : "—"}</td><td class="num">${money(tot * V)}</td><td class="num">${money(paid * V)}</td><td class="num">${money((tot - paid) * V)}</td><td class="num">${N(m.amount) ? money((N(m.amount) - tot) * V) : "—"}</td></tr>`; }).join("") || `<tr><td colspan="12" class="empty">אין</td></tr>`}</tbody></table></div>`;
-    else body += `<div class="lvcards">${M.map(m => { const O = modOrders(m.num), P = O.filter(o => o.kind === "הזמנה מרכזת"), R = O.filter(o => o.kind !== "הזמנה מרכזת"), tot = sum(O, orderTotal), paid = sum(O, orderPaid), st = stuckN(O), ds = [...new Set([m.district, ...O.map(distOf)].filter(Boolean))];
-      return `<button class="lvc" data-a="mod" data-id="${esc(m.num)}"><div class="h"><span class="ic">🏛</span><div><small>הזמנת משהב״ט</small><b class="ltr">${esc(m.num)}</b></div><span class="spacer"></span>${m.future ? `<span class="tag a">עתידית</span>` : ""}${m.virt ? `<span class="tag gr" title="נוצרה מתוך הזמנות חח״י — אפשר להשלים פרטים">להשלים פרטים</span>` : ""}</div>
-        <div class="row small muted">${m.req880 ? `דרישה <b class="ltr">${esc(m.req880)}</b> · ` : `<span class="tag a">אין דרישה</span>`}${esc(ds.join(", ") || "—")}</div>
+    else body += `<div class="lvcards">${M.map(m => { const O = modOrdersOf(m), P = O.filter(o => o.kind === "הזמנה מרכזת"), R = O.filter(o => o.kind !== "הזמנה מרכזת"), tot = sum(O, orderTotal), paid = sum(O, orderPaid), st = stuckN(O), ds = [...new Set([m.district, ...O.map(distOf)].filter(Boolean))];
+      return `<button class="lvc" data-a="mod" data-id="${esc(m.key)}"><div class="h"><span class="ic">🏛</span><div><small>הזמנת משהב״ט</small><b class="ltr">${esc(modLbl(m))}</b></div><span class="spacer"></span>${m.future ? `<span class="tag a">עתידית</span>` : ""}${m.virt ? `<span class="tag gr" title="נוצרה מתוך הזמנות חח״י — אפשר להשלים פרטים">להשלים פרטים</span>` : ""}</div>
+        <div class="row small muted">${(r => r ? `דרישה <b class="ltr">${esc(reqLbl(r))}</b> · ` : m.req880 ? `דרישה <b class="ltr">${esc(m.req880)}</b> · ` : `<span class="tag a">אין דרישה</span>`)(reqOfMod(m))}${esc(ds.join(", ") || "—")}</div>
         <div class="cnts"><span><b>${P.length}</b> הזמנות אב</span><span><b>${R.length}</b> הזמנות חח״י</span><span><b>${new Set(O.map(o => o.facilityId).filter(Boolean)).size}</b> מתקנים</span>${st ? `<span class="tag r">${st} תקועים</span>` : ""}</div>
         ${N(m.amount) ? `<div class="small">סכום ההזמנה: <b>${money(N(m.amount) * V)}</b> · יתרה פנויה: <b style="color:${N(m.amount) - tot < 0 ? "var(--warn)" : "var(--ok)"}">${money((N(m.amount) - tot) * V)}</b></div>` : ""}${money3(tot, paid)}</button>`; }).join("") || `<div class="empty">אין הזמנות משהב״ט</div>`}</div>`;
   } else if (lv === "par") {
@@ -930,13 +964,14 @@ function orderModal(oid) {
 }
 /** כרטיס הזמנת משהב״ט: פרטי ההזמנה (נערכים), כסף ויתרה, הזמנות האב וההזמנות שתחתיה, יצירת הזמנות חדשות תחתיה, עדכונים */
 function modModal(num) {
-  CACHE = {}; DCUR = { t: "mod", id: num }; const V = 1 + VAT(), ed = canEdit(), dis = ed ? "" : "disabled", m = modList().find(x => String(x.num) === String(num)) || { num, virt: true }, O = modOrders(num), tot = O.reduce((t, o) => t + orderTotal(o), 0), paid = O.reduce((t, o) => t + orderPaid(o), 0);
+  CACHE = {}; DCUR = { t: "mod", id: num }; const V = 1 + VAT(), ed = canEdit(), dis = ed ? "" : "disabled", m = modList().find(x => String(x.key) === String(num)) || { num, key: num, virt: true }, O = modNoOk(m.num) ? modOrders(num) : [], tot = O.reduce((t, o) => t + orderTotal(o), 0), paid = O.reduce((t, o) => t + orderPaid(o), 0);
   const P = O.filter(o => o.kind === "הזמנה מרכזת"), D = O.filter(o => o.kind !== "הזמנה מרכזת" && !(upOf(o) && String(ef(upOf(o), "ord444")) === String(num)));
   const ordRow = o => { const f = RAW.facilities[o.facilityId]; return `<tr data-a="ordc" data-id="${o.id}" style="cursor:pointer"><td><b class="onum">${esc(o.iec301 || "—")}</b></td><td>${esc(o.kind || "הזמנה")}</td><td>${f ? esc(f.name) : "—"}</td><td class="num">${money(orderTotal(o) * V)}</td><td class="num">${money(orderPaid(o) * V)}</td><td>${payTag(o)}</td></tr>`; };
   const L = Object.entries(m.log || {}).sort((a, b) => String(b[1].date).localeCompare(String(a[1].date)));
   const fld = (k, l, t = "text", cls = "") => `<label>${l}<input class="inp ${cls}" type="${t}" data-mc="${k}" value="${esc(m[k] ?? "")}" ${dis}></label>`;
-  openModal(`<div class="row" data-oid-keep><h2>🏛 הזמנת משהב״ט <span class="ltr">${esc(num)}</span></h2><span class="spacer"></span>${backBtn()}<button class="btn gh" data-a="close">סגירה</button></div>
-    <div class="form"><label>סטטוס<select class="inp" data-mc="future" ${dis}><option value="">יצאה</option><option value="1" ${m.future ? "selected" : ""}>עתידית — עוד לא יצאה</option></select></label>${fld("num", "מספר הזמנת משהב״ט", "text", "ltr")}${fld("req880", "דרישה", "text", "ltr")}${fld("amount", "סכום ההזמנה (לפני מע״מ)", "text", "ltr")}${fld("date", "תאריך ההזמנה", "date")}<label>נפה<select class="inp" data-mc="district" ${dis}><option value=""></option>${DISTRICTS.map(d => `<option ${m.district === d ? "selected" : ""}>${d}</option>`).join("")}<option ${m.district === "כמה נפות" ? "selected" : ""}>כמה נפות</option></select></label></div>
+  openModal(`<div class="row" data-oid-keep><h2>🏛 הזמנת משהב״ט <span class="ltr">${esc(modLbl(m))}</span>${m.future ? ` <span class="tag a">עתידית</span>` : ""}</h2><span class="spacer"></span>${backBtn()}<button class="btn gh" data-a="close">סגירה</button></div>
+    <div class="form"><label>סטטוס<select class="inp" data-mc="future" ${dis}><option value="">יצאה</option><option value="1" ${m.future ? "selected" : ""}>עתידית — עוד לא יצאה</option></select></label><label>מספר הזמנת משהב״ט<input class="inp ltr" data-mc="num" value="${esc(modNoOk(m.num) ? m.num : "")}" placeholder="לא חובה — להשלים כשיהיה" ${dis}></label>
+      <label>דרישה<select class="inp" data-mc="reqId" ${dis}><option value="">— עוד לא ידוע —</option>${reqList().map(r => `<option value="${r.id}" ${reqOfMod(m)?.id === r.id ? "selected" : ""}>${esc(reqLbl(r))}</option>`).join("")}</select>${!reqOfMod(m) && m.req880 ? `<div class="small muted">רשום: ${esc(m.req880)} — אין דרישה כזו ברשימה</div>` : ""}</label>${fld("amount", "סכום ההזמנה (לפני מע״מ)", "text", "ltr")}${fld("date", "תאריך ההזמנה", "date")}<label>נפה<select class="inp" data-mc="district" ${dis}><option value=""></option>${DISTRICTS.map(d => `<option ${m.district === d ? "selected" : ""}>${d}</option>`).join("")}<option ${m.district === "כמה נפות" ? "selected" : ""}>כמה נפות</option></select></label></div>
     <label class="f">הערה<textarea class="inp" data-mc="note" rows="2" ${dis}>${esc(m.note || "")}</textarea></label>
     <div class="money-box" style="margin-top:10px"><div><small>סכום הזמנת משהב״ט</small><b>${N(m.amount) ? money(N(m.amount) * V) : "—"}</b><span>${N(m.amount) ? money(N(m.amount)) + " לפני מע״מ" : "לא הוזן"}</span></div><div><small>הוזמן מחח״י</small><b>${money(tot * V)}</b><span>${O.length} הזמנות</span></div><div><small>${N(m.amount) ? "יתרה פנויה בהזמנה" : "שולם / נשאר"}</small><b style="color:${N(m.amount) && N(m.amount) - tot < 0 ? "var(--warn)" : "var(--ok)"}">${N(m.amount) ? money((N(m.amount) - tot) * V) : money(paid * V)}</b><span>${N(m.amount) ? `שולם ${money(paid * V)} · נשאר ${money((tot - paid) * V)}` : `נשאר ${money((tot - paid) * V)}`}</span></div></div>
     ${ed ? `<div class="row" style="margin-top:12px"><button class="btn o sm" data-a="modAddPar">+ הזמנת אב של חח״י תחתיה</button><button class="btn sm" data-a="modAddOrd">+ הזמנת חח״י תחתיה</button></div>` : ""}
@@ -946,27 +981,27 @@ function modModal(num) {
     <div class="log">${L.map(([, x]) => `<div><b>${fmtD(x.date)}</b>${esc(x.text)} <span class="muted small">${esc(x.by || "")}</span></div>`).join("") || `<span class="muted small">אין עדכונים</span>`}</div>`, mm => {
     mm.dataset.mod = num;
     mm.querySelectorAll("[data-mc]").forEach(e => e.onchange = async () => { const k = e.dataset.mc, v = k === "amount" ? (e.value === "" ? "" : N(e.value)) : k === "future" ? e.value === "1" : e.value.trim();
+      if (k === "reqId") { const r = v ? RAW.mods[v] : null; const rid = await modSave(m, { reqId: v, req880: r?.no || "" }); if (rid) return modModal(num); return; }
       if (k === "num" && m.future && /^\d{6,}$/.test(v)) { await modSave(m, { future: false }); toast("קיבלה מספר — סומנה כ״יצאה״"); }
-      if (k === "num") { if (!v) return; if (v !== String(num) && modList().some(x => String(x.num) === v)) return toast("המספר כבר קיים");
-        for (const o of listO().filter(o => String(o.ord444) === String(num))) await api.update("orders", o.id, { ord444: v }); }
-      const rid = await modSave(m, { [k]: v }); if (rid) return modModal(k === "num" ? v : num); });
+      if (k === "num") { if (v && v !== String(m.num) && modList().some(x => String(x.num) === v)) return toast("המספר כבר קיים");
+        if (modNoOk(m.num)) for (const o of listO().filter(o => String(o.ord444) === String(m.num))) await api.update("orders", o.id, { ord444: v }); }
+      const rid = await modSave(m, { [k]: v }); if (rid) return modModal(k === "num" ? (modNoOk(v) ? v : "#" + rid) : num); });
     mm.querySelector("#mlT")?.addEventListener("keydown", e => { if (e.key === "Enter") mm.querySelector('[data-a="modLog"]').click(); });
   });
 }
 /** שמירת שדה בהזמנת משהב״ט — יוצר רשומה אם זו הזמנה "וירטואלית" שנוצרה מתוך הזמנות חח״י */
 async function modSave(m, patch) { if (m.rid) { await api.update("mods", m.rid, patch); return m.rid; } return api.add("mods", { num: m.num, ...patch }); }
 function modNewModal() {
-  openModal(`<h2>הזמנת משהב״ט חדשה</h2><p class="small muted" style="margin:0">אחרי השמירה נפתח כרטיס ההזמנה — ומשם פותחים תחתיה הזמנת אב או הזמנות חח״י.</p><div class="form">
-    <label class="row" style="grid-column:1/-1;gap:6px"><input type="checkbox" id="mn_f"> הזמנה עתידית — עוד לא יצאה, אין מספר (הכסף שחסר לאומדן)</label>
-    <label>מספר הזמנת משהב״ט<input class="inp ltr" id="mn_n"></label><label>דרישה<input class="inp ltr" id="mn_r"></label><label>סכום (לפני מע״מ)<input class="inp ltr" id="mn_a"></label><label>תאריך<input class="inp" type="date" id="mn_d" value="${todayStr()}"></label>
+  openModal(`<h2>הזמנת משהב״ט חדשה</h2><p class="small muted" style="margin:0">מספר ההזמנה והדרישה לא חובה — אפשר להשלים אחר כך. אחרי השמירה נפתח כרטיס ההזמנה — ומשם פותחים תחתיה הזמנת אב או הזמנות חח״י.</p><div class="form">
+    <label class="row" style="grid-column:1/-1;gap:6px"><input type="checkbox" id="mn_f"> הזמנה עתידית — עוד לא יצאה (נספרת כחסר באומדן)</label>
+    <label>מספר הזמנת משהב״ט<input class="inp ltr" id="mn_n" placeholder="לא חובה"></label><label>דרישה<select class="inp" id="mn_r"><option value="">— עוד לא ידוע —</option>${reqList().map(r => `<option value="${r.id}">${esc(reqLbl(r))}</option>`).join("")}</select></label><label>סכום (לפני מע״מ)<input class="inp ltr" id="mn_a"></label><label>תאריך<input class="inp" type="date" id="mn_d" value="${todayStr()}"></label>
     <label>נפה<select class="inp" id="mn_s"><option></option>${DISTRICTS.map(d => `<option>${d}</option>`).join("")}<option>כמה נפות</option></select></label></div>
     <div class="row"><button class="btn" id="mn_ok">שמירה</button><button class="btn gh" data-a="close">ביטול</button></div>`, m => {
-    const fut = m.querySelector("#mn_f"); fut.onchange = () => { m.querySelector("#mn_n").placeholder = fut.checked ? "לא חובה — יקבל ״עתידית-1״…" : ""; };
-    m.querySelector("#mn_ok").onclick = async () => { const g = k => m.querySelector(k).value.trim(), F = fut.checked; let n = g("#mn_n");
-      if (!n && F) { let i = 1; while (modList().some(x => String(x.num) === "עתידית-" + i)) i++; n = "עתידית-" + i; }
-      if (!n) return toast("חסר מספר"); if (modList().some(x => String(x.num) === n)) return toast("ההזמנה כבר קיימת");
-      if (F && !g("#mn_a")) return toast("בהזמנה עתידית צריך סכום — זה הכסף שחסר לאומדן");
-      await api.add("mods", { num: n, req880: g("#mn_r"), amount: g("#mn_a") ? N(g("#mn_a")) : "", date: g("#mn_d"), district: g("#mn_s"), ...(F ? { future: true } : {}) }); endNav(); openDet("mod", n); };
+    const fut = m.querySelector("#mn_f");
+    m.querySelector("#mn_ok").onclick = async () => { const g = k => m.querySelector(k).value.trim(), F = fut.checked, n = g("#mn_n"), rq = g("#mn_r");
+      if (n && modList().some(x => String(x.num) === n)) return toast("ההזמנה כבר קיימת");
+      if (!n && !g("#mn_a")) return toast("בלי מספר — צריך לפחות סכום");
+      const id = await api.add("mods", { num: n, reqId: rq, req880: rq ? RAW.mods[rq]?.no || "" : "", amount: g("#mn_a") ? N(g("#mn_a")) : "", date: g("#mn_d"), district: g("#mn_s"), ...(F ? { future: true } : {}) }); endNav(); openDet("mod", n || "#" + id); };
   }, true);
 }
 /** הזמנת חח״י חדשה תחת הזמנה קיימת — עם מספר בלבד; השאר בכרטיס שנפתח */
@@ -1288,7 +1323,7 @@ function fldVal(path, v) { if (v === undefined || v === null || v === "" || v ==
   v = String(v); if (/^\d{4}-\d\d-\d\d$/.test(v)) return fmtD(v); return v.length > 90 ? v.slice(0, 88) + "…" : v; }
 function recLbl(col, r) { r = r || {};
   if (col === "orders") { const f = RAW.facilities[r.facilityId]; return [r.iec301 || (r.kind === "הזמנה מרכזת" ? "הזמנת אב" : "הזמנה בלי מספר"), f?.name].filter(Boolean).join(" · "); }
-  if (col === "mods") return "הזמנת משהב״ט " + (r.num || ""); if (col === "settings") return "הגדרות"; return String(r.name || r.title || ""); }
+  if (col === "mods") return r.kind === "req" ? "דרישה " + (r.no || "") : "הזמנת משהב״ט " + (r.num || ""); if (col === "settings") return "הגדרות"; return String(r.name || r.title || ""); }
 /** ההבדלים בין רשומה לפני ואחרי: [שם שדה, לפני, אחרי] (רישומי יומן חדשים — כטקסט) */
 function diffRec(before, patch, onlyKeys) {
   const out = [];
@@ -1797,11 +1832,15 @@ document.addEventListener("click", async e => {
   else if (a === "who") { ui.who = id; render(); }
   else if (a === "ov") { ui.ov = id; try { localStorage.setItem("iec-ov", id); } catch {} render(); }
   else if (a === "modNew") modNewModal();
+  else if (a === "reqNew") { await api.add("mods", { kind: "req", no: "", amount: "", note: "" }); toast("נוספה דרישה — למלא סכום ומספר"); }
+  else if (a === "reqDel") { const n = modList().filter(m => reqOfMod(m)?.id === id).length; if (!confirm(n ? `לדרישה משויכות ${n} הזמנות — למחוק בכל זאת? ההזמנות יישארו בלי דרישה.` : "למחוק את הדרישה?")) return;
+    for (const m of modList().filter(m => m.rid && m.reqId === id)) await api.update("mods", m.rid, { reqId: "" }); await api.remove("mods", id); }
+  else if (a === "estEd") { const v = prompt("אומדן חח״י לפרויקט — כולל מע״מ (₪)", N(S().iecEst) || ""); if (v === null) return; await api.setSettings({ iecEst: v.trim() === "" ? "" : N(v) }); }
   else if (a === "olist") { ui.olist = !!id; try { localStorage.setItem("iec-olist", id); } catch {} render(); }
   else if (a === "parNew") childOrdModal({ kind: "הזמנה מרכזת" }, "הזמנת אב חדשה של חח״י");
-  else if (a === "modAddPar" || a === "modAddOrd") { const n = document.querySelector(".mdl[data-mod]")?.dataset.mod; childOrdModal({ kind: a === "modAddPar" ? "הזמנה מרכזת" : "הזמנה", ord444: n }, a === "modAddPar" ? `הזמנת אב תחת משהב״ט ${n}` : `הזמנת חח״י תחת משהב״ט ${n}`); }
+  else if (a === "modAddPar" || a === "modAddOrd") { const n = document.querySelector(".mdl[data-mod]")?.dataset.mod; if (String(n).startsWith("#")) return toast("קודם צריך לרשום את מספר הזמנת משהב״ט — הזמנות חח״י מתחברות לפי המספר"); childOrdModal({ kind: a === "modAddPar" ? "הזמנה מרכזת" : "הזמנה", ord444: n }, a === "modAddPar" ? `הזמנת אב תחת משהב״ט ${n}` : `הזמנת חח״י תחת משהב״ט ${n}`); }
   else if (a === "parAddOrd") { const pid = document.querySelector(".mdl[data-oid]")?.dataset.oid, P = RAW.orders[pid]; childOrdModal({ kind: "הזמנה", parent301: P.iec301, district: P.district || "" }, `הזמנה תחת הזמנת האב ${P.iec301}`); }
-  else if (a === "modLog") { const n = document.querySelector(".mdl[data-mod]")?.dataset.mod, t = document.getElementById("mlT").value.trim(); if (!t) return; const m = modList().find(x => String(x.num) === String(n));
+  else if (a === "modLog") { const n = document.querySelector(".mdl[data-mod]")?.dataset.mod, t = document.getElementById("mlT").value.trim(); if (!t) return; const m = modList().find(x => String(x.key) === String(n));
     await modSave(m, { log: { ...(m.log || {}), [newId()]: { date: document.getElementById("mlD").value || todayStr(), text: t, by: who(), at: new Date().toISOString() } } }); modModal(n); }
   else if (a === "ordc") { ui.gq = ""; render(); openDet("ord", id); }
   else if (a === "ordd") openDet("ord", id);
@@ -1867,6 +1906,8 @@ document.addEventListener("change", async e => {
   const t = e.target;
   if (t.dataset.ms) { const [sc, k, v] = t.dataset.ms.split("|"), a = arr(ui[sc][k]).filter(x => x !== v); if (t.checked) a.push(v); ui[sc][k] = a; ui.msOpen = sc + "|" + k; render(); }
   else if (t.dataset.a2 === "feedGrp") { ui.feedGrp = t.checked; render(); }
+  else if (t.dataset.rq) { const [rid, k] = t.dataset.rq.split("|"), v = k === "amount" ? (t.value === "" ? "" : N(t.value)) : t.value.trim(); await api.update("mods", rid, { [k]: v });
+    if (k === "no") for (const m of modList().filter(m => m.rid && m.reqId === rid)) await api.update("mods", m.rid, { req880: v }); }
   else if (t.dataset.oe && !t.closest(".mdl")) { const [oid, k, ty] = t.dataset.oe.split("|"); await api.update("orders", oid, { [k]: ty === "n" ? (t.value === "" ? "" : N(t.value)) : t.value.trim() }); }
   else if (t.dataset.sty) { const [i, ty] = t.dataset.sty.split("|"), ST = stages().map(s => ({ ...s })), cur = new Set(ST[+i].types?.length ? ST[+i].types : TYPES.map(x => x[0])); t.checked ? cur.add(ty) : cur.delete(ty);
     ST[+i].types = cur.size === TYPES.length ? [] : [...cur]; await api.setSettings({ stages: ST }); }
