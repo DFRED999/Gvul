@@ -5147,7 +5147,7 @@ function pageBudgetEdit(d) {
 }
 /* ---------- תקציב: תמונה כוללת — מטריצה סוג עבודה × גזרה (צפון → דרום), העמקה בלחיצה ---------- */
 const BG_ROWS = ["עבודות עפר", "גשרים ומעברים", "שערים", "סבכות", "חשמל", "עבודות נוספות", "אחר", "אתרי איסוף", "תקציב תפעולי"];
-const bgMs = v => (Math.round((v || 0) / 1e5) / 10).toLocaleString("he-IL", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const bgMs = v => Math.round((v || 0) / 1e3).toLocaleString("he-IL");   // אלפי ₪
 /** כל שורות האומדן במבנה אחד: סוג, גזרה (קבלן ראשי או "" = כללי), מבצע, אומדן, מה כוסה (הוזמן + הועבר) */
 function bgLines(d, R) {
   const mainIds = new Set(d.contractors.filter(isMain).map(c => c.id)), L = [];
@@ -5210,7 +5210,7 @@ function pageBudget(d) {
   ${budgetBar(d, R, M)}
   <div class="card bg-head" style="margin-top:12px"><div class="bg-hn"><div><span>אומדן כולל</span><b>${bgMM(T.est)}</b></div><em>←</em><div><span>כוסה (הוזמן / הועבר)</span><b style="color:var(--accent)">${bgMM(T.cov)}</b><small>${pct}%</small></div><em>←</em><div><span>חסר להשלמה</span><b style="color:${T.left > 0 ? "#b8452f" : "var(--accent)"}">${bgMM(T.left)}</b></div></div>
     <div class="bg-pb"><i style="width:${pct}%"></i></div></div>
-  <div class="bg-grid"><div class="card"><div class="row" style="align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px"><h2 style="margin:0">תמונה כוללת <span class="muted small">— מ׳ ₪ · לפי הקבלן המבצע · לחיצה על תא, שורה או קבלן לפירוט</span></h2><span class="spacer"></span>
+  <div class="bg-grid"><div class="card"><div class="row" style="align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px"><h2 style="margin:0">תמונה כוללת <span class="muted small">— אלפי ₪ · לפי הקבלן המבצע · לחיצה על תא, שורה או קבלן לפירוט</span></h2><span class="spacer"></span>
       <div class="viewtabs" style="margin:0">${mbtn("est", "אומדן")}${mbtn("cov", "הוזמן")}${mbtn("left", "חסר")}</div></div>
     ${table}
     <div class="bg-lg small"><span><i class="ok"></i>כוסה במלואו</span><span><i class="part"></i>כוסה חלקית</span><span><i class="no"></i>טרם הוזמן</span><span><i class="x"></i>הוזמן ללא אומדן</span></div></div>
