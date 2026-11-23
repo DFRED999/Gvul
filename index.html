@@ -27,6 +27,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .brand { font-weight: 800; font-size: 18px; color: #fff; padding: 0 10px 14px; line-height: 1.25; }
 .brand small { display: block; font-weight: 400; font-size: 12px; color: var(--side-muted); margin-top: 2px; }
 .grp { font-size: 11.5px; letter-spacing: .04em; color: var(--side-muted); padding: 12px 12px 4px; }
+.grp-fold { display: flex; width: 100%; align-items: center; justify-content: space-between; background: none; border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 700; text-align: start; } .grp-fold:hover { color: #fff; } .nf-ar { font-size: 11px; }
 .nav { all: unset; cursor: pointer; padding: 7px 12px; border-radius: 8px; font-size: 14.5px; display: flex; justify-content: space-between; align-items: center; }
 .nav:hover { background: var(--side-hover); }
 .nav .nl { flex: 1; } .ndot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--d); margin-inline-end: 9px; box-shadow: 0 0 0 2px rgba(255,255,255,.12); }
@@ -1181,6 +1182,8 @@ function dataBar() {
    §4 מבנה האתר — האתר מוכוון ביצוע: חוצץ לכל קבלן, באותה תבנית בדיוק
    ===================================================================== */
 const NAV = () => isIecOnly() ? [{ group: "חיבורי חשמל", items: [["power", "חיבורי חח״י"], ...list("contractors").filter(c => c.id === IEC_CID).map(c => ["c:" + c.id, c.name])] }] : NAV_ALL().filter(g => !isViewer() || g.items.length).map(g => isViewer() ? { ...g, items: g.items.filter(i => i[3] !== "add" && i[0] !== "settings") } : g).filter(g => g.items.length);
+/** קבוצה מתקפלת בתפריט — סגורה כברירת מחדל, נפתחת כשנמצאים באחד המסכים שלה */
+const navOpen = g => { let f = {}; try { f = JSON.parse(localStorage.getItem("nav-fold") || "{}"); } catch {} return g.items.some(i => i[0] === ui.page) || !!f[g.fold]; };
 const NAV_ALL = () => [
   { group: "", items: [["overview", "סקירה כללית"], ["alerts", "לוח התראות", "", "", (() => { try { return allAlerts(D()).filter(a => !a.done).length; } catch { return 0; } })()],
     ["map", "🗺 מפת הקו"],
@@ -1198,7 +1201,8 @@ const NAV_ALL = () => [
   { group: "תכנון", items: [["segments", "קטעי תכנון"], ["deliveries", "מסירות תוכניות"]] },
   { group: "ניהול שוטף", items: [["survey", "סקר שטח"], ["svcmp", "סקר מול דיווחים"], ["dq", "🩺 איכות נתונים", "", "", (() => { try { return dqChecks(D()).filter(c => c.sev === "red" && c.n).length; } catch { return 0; } })()]] },
   { group: "", items: [["contacts", "📇 אנשי קשר"]] },
-  { group: "דוחות", items: [["mreport", "דוח הנהלה"], ["budget", "💰 תקציב ואומדן"], ["reqs", "🧾 דרישות ויתרות"], ...(isMgr() ? [["opex", "🗂 תקציב תפעולי"], ["activity", "📒 יומן פעילות"]] : [])] },
+  { group: "💰 תקציב", fold: "bg", items: [["budget", "תקציב ואומדן"], ["reqs", "דרישות ויתרות"], ...(isMgr() ? [["opex", "תקציב תפעולי"]] : [])] },
+  { group: "דוחות", items: [["mreport", "דוח הנהלה"], ...(isMgr() ? [["activity", "📒 יומן פעילות"]] : [])] },
   { group: "", items: [["settings", "הגדרות"]] },
 ];
 const PLANS = {
@@ -1313,6 +1317,7 @@ function renderInner() {
       ${nav.map(g => { const its = g.items.map(([id, l, s, kind, badge, dot]) => kind === "head" ? `<div class="nb-sub">${esc(l)}</div>` :
         `<button class="nav ${id === p ? "on" : ""} ${kind === "add" ? "addnav" : ""} ${kind === "rq" ? "rqnav" + (badge ? " has" : "") : ""}" data-act="${kind === "add" ? id : "nav"}" data-id="${esc(id)}">${dot ? `<span class="ndot" style="--d:${esc(dot)}"></span>` : ""}<span class="nl">${esc(l)}</span>${s ? `<span class="soon">בהמשך</span>` : ""}${badge ? `<span class="nbadge">${badge}</span>` : ""}</button>`).join("");
         return g.box ? `<div class="navbox"><div class="nb-h"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg>${esc(g.group)}</div>${its}</div>`
+          : g.fold ? (o => `<button class="grp grp-fold" data-act="navFold" data-id="${g.fold}" title="${o ? "לכווץ" : "להרחיב"}">${g.group} <span class="nf-ar">${o ? "▾" : "◂"}</span></button>${o ? its : ""}`)(navOpen(g))
           : `${g.group ? `<div class="grp">${g.group}</div>` : ""}${its}`; }).join("")}
       <div class="modes"><button class="mode-b" data-act="darkTog">${ui.dark ? "☀ מצב בהיר" : "🌙 מצב כהה"}</button><button class="mode-b" data-act="presTog">🖥 מצב הצגה</button></div>
       ${bkChip()}<div class="foot">${esc(LOCAL ? "עבודה מקומית" : (me?.name || user.email))}${LOCAL ? "" : ` · <button data-act="logout">יציאה</button>`}</div>
@@ -5200,6 +5205,27 @@ function bgAttention(d, R, M) {
   return out;
 }
 const bgTone = (est, cov) => est <= 0 ? (cov > 0 ? "x" : "") : cov >= est - 1 ? "ok" : cov > 0 ? "part" : "no";
+/** טבלה מרכזת — לכל רכיב: אומדן ← דרישות (כסף שהתקבל) ← הוזמן ← יתרה בדרישות ← נדרש לבקש השלמה (= אומדן פחות דרישות, כמו באקסל) */
+function bgCentral(d, R) {
+  const T = R.T, RT = new Map(reqTable(d).filter(r => r.no).map(r => [r.no, r])), reqOf = os => [...new Set(os.map(o => reqNorm(o.x_reqNo)).filter(Boolean))].reduce((t, n) => t + (RT.get(n)?.amount || 0), 0);
+  const on = x => !x.excluded && !x.cut;
+  const exRow = (key, name, arr) => { const a = arr.filter(on); return { key, name, n: a.length, est: a.reduce((t, x) => t + bgN(x.amount), 0),
+    req: a.reduce((t, x) => t + Math.max(bgN(x.transferred), reqOf(bgOrdsOf(x))), 0), ord: a.reduce((t, x) => t + bgN(x.ordered) + bgOrdsOf(x).filter(ordIssued).reduce((u, o) => u + bgOrdAmt(o), 0), 0) }; };
+  const earthO = R.earth.flatMap(e => e.ords.map(x => x.o)), ox = R.cfg.opex ? oxByField() : [];
+  const rows = [
+    { key: "earth", name: "מכשול — מקטעי עבודה", n: earthO.length, est: T.earthEst, req: reqOf(earthO), ord: T.earthOrd },
+    exRow("done", "עבודות נוספות שבוצעו", R.exDone), exRow("next", "עבודות נוספות ורכיבים", R.exNext),
+    { key: "iec", name: "חיבורי חח״י", est: T.iecEst, req: iecReqs().reduce((t, r) => t + reqAmt(r.amount), 0), ord: T.iecCov, note: T.iecEstSet ? "" : "אומדן — להזין באתר חח״י" },
+    { key: "sites", name: "אתרי איסוף", n: R.sites.filter(x => !x.cut).length, est: T.siteEst, req: T.siteOrd, ord: T.siteOrd, note: "דרישות = ההזמנות שיצאו" },
+    ...(R.cfg.opex ? [{ key: "opex", name: "תפעול וניהול", n: ox.length, est: T.opexEst, req: ox.reduce((t, r) => t + r.req, 0), ord: T.opexCov }] : [])];
+  rows.forEach(r => { r.bal = r.req - r.ord; r.need = r.key === "iec" && !T.iecEstSet ? 0 : r.est - r.req; });   // חח״י בלי אומדן — אין "נדרש" (לא שלילי)
+  const S = k => rows.reduce((t, r) => t + r[k], 0), m = v => v ? bgM(v) : "—", neg = (v, warn) => Math.abs(v) < 1 ? "—" : v < 0 ? `<span style="color:#c0392b">${bgM(v)}</span>` : warn ? `<b style="color:#b8452f">${bgM(v)}</b>` : bgM(v);
+  const tr = (r, tot) => `<tr class="${tot ? "rq-sub" : ""}" ${tot ? "" : `data-act="bgCen" data-id="${r.key}" role="button" style="cursor:pointer" title="לחיצה לפירוט"`}><td><b>${esc(r.name)}</b>${r.note ? ` <span class="small muted">· ${esc(r.note)}</span>` : ""}</td><td class="c">${m(r.est)}</td><td class="c">${m(r.req)}</td><td class="c">${m(r.ord)}</td><td class="c">${neg(r.bal)}</td><td class="c">${neg(r.need, true)}</td></tr>`;
+  const tot = { name: "סה״כ", est: S("est"), req: S("req"), ord: S("ord"), bal: S("bal"), need: S("need") };
+  return `<div class="card" style="margin-top:12px"><div class="row" style="align-items:baseline;gap:8px;flex-wrap:wrap"><h2 style="margin:0">טבלה מרכזת</h2><span class="muted small">כולל מע״מ · יתרה בדרישות = כסף שהתקבל ועוד לא הוזמן · נדרש לבקש השלמה = אומדן פחות דרישות · לחיצה על שורה לפירוט</span></div>
+    <div class="tablewrap" style="margin-top:8px"><table class="sheet bg-cen"><thead><tr><th>רכיב</th><th>אומדן</th><th>דרישות (התקבל)</th><th>הוזמן</th><th>יתרה בדרישות</th><th>נדרש לבקש השלמה</th></tr></thead><tbody>${rows.map(r => tr(r)).join("")}${tr(tot, true)}</tbody></table></div>
+    <div class="small muted" style="margin-top:6px">חסר לפי ההזמנות שיצאו (אומדן פחות הוזמן): <b>${bgM(tot.est - tot.ord)}</b> — מתוכו ${bgM(tot.bal)} כבר בדרישות${T.cutN ? ` · ✂ רודדו ${T.cutN} עבודות בסך ${bgMM(T.cutEst)} — לא בסה״כ` : ""}${R.cfg.opex ? "" : " · ללא תקציב תפעולי"}</div></div>`;
+}
 function pageBudget(d) {
   if (ui.bgEdit) return pageBudgetEdit(d);
   const R = bgData(d), T = R.T, M = bgMatrix(d, R), mode = ui.bgMode || "est", A = bgAttention(d, R, M);
@@ -5217,9 +5243,7 @@ function pageBudget(d) {
   return `<div class="bgp"><div class="ch-banner" style="--cc:#7a5c3e"><div><h1>תקציב ואומדן</h1><span>אומדן מול הזמנות — כל הסכומים כולל מע״מ ${R.cfg.vat}% · ${R.cfg.opex ? "כולל תקציב תפעולי" : "ללא תקציב תפעולי"}</span></div>
     <div class="row" style="gap:6px">${isViewer() ? "" : `<label class="btn ghost" style="gap:6px;cursor:pointer" title="האם התקציב התפעולי (מתכננים, מפקחים, מדידות…) נכלל באומדן הפרויקט ובחסר"><input type="checkbox" data-bgopex ${R.cfg.opex ? "checked" : ""}> כולל תקציב תפעולי</label>`}<button class="btn ghost" data-act="bgEditTog">✎ עריכת אומדן</button></div></div>
   ${R.has ? "" : `<div class="card"><p style="margin:0">עוד אין נתוני אומדן. טוענים את קובץ האומדן ב״הגדרות ← נתונים וגיבוי ← הוספת נתונים מקובץ״, או נכנסים ל״עריכת אומדן״.</p></div>`}
-  ${budgetBar(d, R, M)}
-  <div class="card bg-head" style="margin-top:12px"><div class="bg-hn"><div><span>אומדן כולל</span><b>${bgMM(T.est)}</b></div><em>←</em><div><span>כוסה (הוזמן / הועבר)</span><b style="color:var(--accent)">${bgMM(T.cov)}</b><small>${pct}%</small></div><em>←</em><div><span>חסר להשלמה</span><b style="color:${T.left > 0 ? "#b8452f" : "var(--accent)"}">${bgMM(T.left)}</b></div></div>
-    <div class="bg-pb"><i style="width:${pct}%"></i></div>${T.cutN ? `<div class="small" style="margin-top:6px">✂ רודדו <b>${T.cutN}</b> עבודות בסך <b>${bgMM(T.cutEst)}</b> — ירדו מהאומדן · אומדן לפני רידוד ${bgMM(T.est + T.cutEst)}</div>` : ""}</div>
+  ${bgCentral(d, R)}
   <div class="bg-grid"><div class="card"><div class="row" style="align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px"><h2 style="margin:0">תמונה כוללת <span class="muted small">— אלפי ₪ · לפי הקבלן המבצע · לחיצה על תא, שורה או קבלן לפירוט</span></h2><span class="spacer"></span>
       <div class="viewtabs" style="margin:0">${mbtn("est", "אומדן")}${mbtn("cov", "הוזמן")}${mbtn("left", "חסר")}</div></div>
     ${table}
@@ -5483,7 +5507,10 @@ function iecEngine(RAW, BRD_PROG, BRD_ACTS) {
    התקשרות לכל ספק (היקף, דרישה, הזמנה) + חשבונות ותשלומים. מנהלים בלבד.
    נכנס לאומדן הכולל (״תקציב ואומדן״) ולדרישות ויתרות (לפי מספר הדרישה).
    ===================================================================== */
-const OX_FIELDS = ["מתכננים", "מתאם רט״ג", "מתאם רשות העתיקות", "יועצים", "מודדים", "פיקוח", "אגרות והיתרים", "אחר"];
+const OX_FIELDS = ["מתכננים", "פיקוח וניהול", "מדידות", "מעבדה", "רשויות", "חמ״ל אחוד", "אחר"];
+/** הצעת תחום לפי נושא העבודה / שם הספק */
+const oxGuessF = x => { const t = `${x.subject || ""} ${x.name || ""}`; return /עתיקות|רט["״']?ג|רשות/.test(t) ? "רשויות" : /חמ["״']?ל/.test(t) ? "חמ״ל אחוד" : /מעבד/.test(t) ? "מעבדה" : /מדיד|מודד|צילומי/.test(t) ? "מדידות"
+  : /פיקוח|מפקח|בקר|מתאם|מתאמת|ניהול/.test(t) ? "פיקוח וניהול" : /מתכנ|תכנון|יועץ/.test(t) ? "מתכננים" : "אחר"; };
 const OX_PST = ["התקבל חשבון", "אושר לתשלום", "שולם"];
 const oxList = () => list("opex").sort((a, b) => oxFields().indexOf(a.field || "אחר") - oxFields().indexOf(b.field || "אחר") || String(a.wbs || "").localeCompare(String(b.wbs || ""), "he", { numeric: true }) || String(a.subject || a.name).localeCompare(String(b.subject || b.name), "he"));
 const oxPays = x => Object.entries(x.pays || {}).map(([id, p]) => ({ id, ...p })).sort((a, b) => String(a.date).localeCompare(String(b.date)));
@@ -5555,7 +5582,7 @@ function pageOpex(d) {
   const grp = [...new Set(rows.map(x => x.field || "אחר"))], NC = 12;
   const gSum = g => { const r = R.find(z => z.f === g); return r ? ` <span class="small" style="font-weight:400;opacity:.9">· אומדן ${bgM(r.plan)} · בדרישות ${bgM(r.req)} · בהזמנות ${bgM(r.com)}${r.req ? ` · יתרה בדרישות ${bgM(r.rfree)}` : ""}</span>` : ""; };
   return `<div class="ch-banner" style="--cc:#6b5a3a"><div><h1>🗂 תקציב תפעולי</h1><span>מתכננים, מתאמים מול רשויות, יועצים ועוד — עבודות, דרישות, הזמנות, הגדלות, חשבונות ותשלומים. נכנס לאומדן הכולל ול״דרישות ויתרות״.</span></div>
-    ${ed ? `<button class="btn" data-act="oxOpen" data-id="">+ עבודה / ספק</button>` : ""}</div>
+    ${ed ? `<div class="row" style="gap:6px"><button class="btn ghost" data-act="oxAutoF" title="סידור כל העבודות לפי תחומים: מתכננים, פיקוח וניהול, מדידות, מעבדה, רשויות, חמ״ל אחוד, אחר — מציג מה ישתנה ומבקש אישור">⇄ סידור תחומים</button><button class="btn" data-act="oxOpen" data-id="">+ עבודה / ספק</button></div>` : ""}</div>
   <div class="ch-tiles" style="grid-template-columns:repeat(6,minmax(0,1fr))">${tile("אומדן", plan ? bgMM(plan) : "—", "#6b5a3a", "מחלונות הספקים")}${tile("בדרישות", req ? bgMM(req) : "—", "#7b5ea7", req ? `יתרה בדרישות ${bgMM(rfree)}` : "")}${tile("בהזמנות", bgMM(com), "#4a6d93", `${L.length} עבודות`)}${tile("שולם", bgMM(paid), "#2f7d4f")}${tile("נשאר לשלם", bgMM(com - paid), "#b86b1d")}${tile("חשבונות ממתינים", bgMM(tot("pend")), "#c0392b", `${L.reduce((t, x) => t + oxPays(x).filter(p => p.status !== "שולם").length, 0)} חשבונות`)}</div>
   <div class="card"><h2 style="margin-top:0">לפי תחום</h2><div class="tablewrap"><table class="sheet rq-t"><thead><tr><th>תחום</th><th>אומדן</th><th>בדרישות</th><th>בהזמנות</th><th>יתרה בדרישות</th><th>שולם</th><th>נשאר לשלם</th><th>יתרה מול האומדן</th><th>ניצול</th></tr></thead><tbody>
     ${R.map(r => fRow(r)).join("") || `<tr><td colspan="9" class="c muted">עוד אין עבודות. מוסיפים ב״+ עבודה / ספק״.</td></tr>`}
@@ -5653,6 +5680,14 @@ function oxUpdModal(id) { const x = { id, ...(RAW.opex?.[id] || {}) }, ed = !isV
     oxUpdBind(m, id, () => { close(); oxUpdModal(id); }); setTimeout(() => m.querySelector("#ou_t")?.focus(), 30); });
 }
 async function oxClick(act, b) {
+  if (act === "oxAutoF") { const ch = oxList().map(x => ({ x, to: oxGuessF(x) })).filter(c => (c.x.field || "") !== c.to);
+    if (!ch.length) return toast("כל העבודות כבר מסודרות לפי התחומים");
+    return modal(`<h2 style="margin:0">סידור תחומים — ${ch.length} שינויים</h2><p class="small muted" style="margin:4px 0 8px">לפי נושא העבודה. אפשר לשנות כל שורה בבחירה, ואחרי השמירה — גם בחלון של כל ספק.</p>
+      <div class="tablewrap" style="max-height:55vh"><table class="sheet"><thead><tr><th>עבודה</th><th>ספק</th><th>תחום היום</th><th>תחום חדש</th></tr></thead><tbody>${ch.map(c => `<tr><td>${esc(c.x.subject || "")}</td><td>${esc(c.x.name || "")}</td><td class="muted">${esc(c.x.field || "—")}</td>
+        <td><select class="inp" data-oxf="${c.x.id}">${OX_FIELDS.map(f => `<option ${f === c.to ? "selected" : ""}>${f}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div>
+      <div class="row" style="margin-top:10px"><button class="btn" id="oxfOk">שמירה</button><span class="spacer"></span><button class="btn ghost" id="oxfNo">ביטול</button></div>`, (m, close) => {
+      m.querySelector(".card").style.width = "min(860px, 96vw)"; m.querySelector("#oxfNo").onclick = close;
+      m.querySelector("#oxfOk").onclick = async () => { const sel = [...m.querySelectorAll("[data-oxf]")]; close(); for (const e of sel) if ((RAW.opex[e.dataset.oxf]?.field || "") !== e.value) await api.update("opex", e.dataset.oxf, { field: e.value }); toast(`עודכנו ${sel.length} עבודות ✓`); }; }); }
   const F = ui.ox || (ui.ox = { f: "", q: "" });
   if (act === "oxOpen") return oxModal(b.dataset.id || "");
   if (act === "oxUpd") return oxUpdModal(b.dataset.id);
@@ -6015,6 +6050,11 @@ function bgLinkModal(lid, done) {
 
 async function bgClick(act, b) {
   if (act === "bgMode") { ui.bgMode = b.dataset.id; render(); return; }
+  if (act === "bgCen") { const k = b.dataset.id, d = D(), R = bgData(d), M = bgMatrix(d, R);
+    if (k === "opex") { ui.page = "opex"; location.hash = "opex"; render(); return; }
+    if (k === "iec") { ui.page = "power"; location.hash = "power"; render(); return; }
+    const f = { earth: l => l.earth, done: l => l.x && l.phase === "בוצע", next: l => l.x && l.phase !== "בוצע", sites: l => l.cat === "אתרי איסוף" }[k];
+    bgDrill({ earth: "מכשול — מקטעי עבודה", done: "עבודות נוספות שבוצעו", next: "עבודות נוספות ורכיבים", sites: "אתרי איסוף" }[k], M.L.filter(f)); return; }
   if (act === "bgUncut") { if (RAW.budget?.[b.dataset.id]) { await api.update("budget", b.dataset.id, { cut: false }); toast("הוחזר לאומדן"); } return; }
   if (act === "bgEditTog") { ui.bgEdit = !ui.bgEdit; ui.bgNew = null; render(); window.scrollTo(0, 0); return; }
   if (["bgCell", "bgRow", "bgCol", "bgList"].includes(act)) return bgOpen(act, b.dataset.id);
@@ -8269,6 +8309,9 @@ $app.addEventListener("click", async e => {
     if (g.page === "power") ui.iec = { dist: "", kind: "", stage: "", q: g.q || "", showOff: true };
     if (g.rid) wGoHl(g.page, g.ctab, g.rid); else { if (g.ctab) ui.ctab = g.ctab; ui.page = g.page; location.hash = g.page; render(); scrollTo(0, 0); } }
   else if (act === "dqGo") { const c = dqChecks(D()).find(x => x.key === b.dataset.id); if (c?.go) { Object.assign(ui, c.go.setTab ? { setTab: c.go.setTab } : {}, c.go.ctab ? { ctab: c.go.ctab } : {}); ui.page = c.go.page; location.hash = c.go.page; render(); scrollTo(0, 0); } }
+  else if (act === "navFold") { let f = {}; try { f = JSON.parse(localStorage.getItem("nav-fold") || "{}"); } catch {} const id = b.dataset.id, g = NAV().find(x => x.fold === id), o = g && navOpen(g);
+    if (o && g.items.some(i => i[0] === ui.page)) { ui.page = "overview"; location.hash = "overview"; }   // כיווץ בזמן שנמצאים בתוכה — חוזרים לסקירה
+    f[id] = !o; try { localStorage.setItem("nav-fold", JSON.stringify(f)); } catch {} render(); }
   else if (act === "darkTog") { ui.dark = !ui.dark; try { localStorage.setItem("dark", ui.dark ? "1" : "0"); } catch (e) {} render(); }
   else if (act === "presTog") { ui.present = !ui.present; ui.menu = false; if (!ui.present) { presAutoSet(false); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} } else { try { document.documentElement.requestFullscreen?.(); } catch (e) {} if (!presPages().includes(ui.page)) ui.page = "overview"; } render(); scrollTo(0, 0); }
   else if (act === "presNext" || act === "presPrev") { presGo(act === "presNext" ? 1 : -1); }
