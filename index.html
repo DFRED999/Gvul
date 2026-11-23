@@ -7313,7 +7313,7 @@ async function addFresh(col, rec) {
   return id;
 }
 document.addEventListener("focusout", e => { const tr = e.target.closest?.("tr.fresh"); if (!tr) return;
-  const id = tr.dataset.rid; setTimeout(() => { if (document.activeElement?.closest?.("tr")?.dataset.rid === id || document.querySelector(".modal")) return; const col = tr.closest("table")?.dataset.table, k = FRESH_KEY[col] || "kdFrom", v = RAW[col]?.[id]?.[k];
+  const id = tr.dataset.rid; setTimeout(() => { if (document.activeElement?.closest?.("tr")?.dataset.rid === id || document.querySelector(".modal")) return; const col = tr.closest("table")?.dataset.table, k = FRESH_KEY[col] || "kdFrom", r0 = RAW[col]?.[id] || {}, v = col === "orders" ? (String(r0.kdFrom ?? "").trim() || (r0.secFrom !== "" && r0.secFrom != null ? r0.secFrom : (ordSecs(r0) ? 1 : ""))) : r0[k];   // הזמנה — מספיק ק.ד. או חתכים
     if (v == null || String(v).trim() === "" || (col === "issues" && v === "נושא חדש")) return;
     FRESH.delete(id); if (!document.activeElement || document.activeElement === document.body) render(); else document.querySelectorAll(`tr.fresh[data-rid="${CSS.escape(id)}"]`).forEach(x => x.classList.remove("fresh")); }, 400); });
 function applyGSearch() {
@@ -8193,7 +8193,8 @@ $app.addEventListener("click", async e => {
     const iid = await api.add("issues", { contractorId: r.contractorId, title: t.length > 90 ? t.slice(0, 88) + "…" : t, category: r.kind === "בעיה בשטח" ? "חסם" : "תכנון", kdFrom: r.kdFrom || "", kdTo: r.kdTo || r.kdFrom || "", owner: "", status: "פתוח", opened: r.date || todayStr(), updated: todayStr(),
       last: `פנייה מהשטח (${r.reportedByName || r.reportedBy || ""}): ${t}`, history: {}, fromRequest: b.dataset.id });
     await api.update("requests", b.dataset.id, { status: "הפך לנושא", issueId: iid || "", reply: txt || "נפתח נושא מעקב — נעדכן כאן", replyByName: me?.name || "מנהל הפרויקט", replyAt: new Date().toISOString() }); }
-  else if (act === "sortCol") { const t = b.dataset.table, k = b.dataset.k, cur = SORTS[t] === "off" ? null : SORTS[t] || SORT_DEF[t];
+  else if (act === "sortCol") { FRESH.clear();   // מיון מפורש — שורות חדשות לא נשארות נעוצות למעלה
+    const t = b.dataset.table, k = b.dataset.k, cur = SORTS[t] === "off" ? null : SORTS[t] || SORT_DEF[t];
     const isDef = !SORTS[t] && !!SORT_DEF[t], nx = !cur || cur.k !== k ? { k, dir: 1 } : isDef ? { k, dir: -cur.dir } : cur.dir > 0 ? { k, dir: -1 } : SORT_DEF[t] ? SORT_DEF[t] : "off";   // עולה → יורד → בלי מיון (הסדר המקורי)
     if (nx !== "off" && SORT_DEF[t] && SORT_DEF[t].k === nx.k && SORT_DEF[t].dir === nx.dir) delete SORTS[t]; else SORTS[t] = nx; saveSorts(); render(); }
   else if (act === "segAsg") { segAsgModal(b.dataset.id); }
