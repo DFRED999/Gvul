@@ -4999,6 +4999,7 @@ async function siteOrdLink(sid, oid, fr) { const st = RAW.sites?.[sid]; if (!st 
   B[bid] = { ...B[bid], orderId: oid, ...(RAW.orders?.[oid]?.contractorId ? { cid: RAW.orders[oid].contractorId } : {}) }; await siteUpd(sid, { builds: B }); }
 document.addEventListener("toggle", e => { if (e.target?.dataset?.trk) ui.siteTrk = e.target.open; }, true);
 $app.addEventListener("change", async e => { const t = e.target;
+  if (t.dataset?.bgf !== undefined) { ui.bgF = { ...(ui.bgF || {}), [t.dataset.bgf]: t.value.trim() }; render(); return; }
   if (t.dataset && "bgopex" in t.dataset) { const c = bgCfg(); if (c.id) await api.update("budget", c.id, { opexIn: t.checked }); else await api.add("budget", { kind: "cfg", vat: 18, prices: {}, opexIn: t.checked }); toast(t.checked ? "התקציב התפעולי נכלל באומדן" : "התקציב התפעולי לא נכלל באומדן"); return; }
   if (t.dataset?.sord) { const [oid, k] = t.dataset.sord.split("|"), o = RAW.orders?.[oid]; if (!o) return; const v = t.value.trim();
     if (k === "siteId" && v !== o.siteId) { const st = RAW.sites?.[o.siteId]; if (st) { const B = { ...(st.builds || {}) }; let ch = false; for (const x in B) if (B[x].orderId === oid) { B[x] = { ...B[x], orderId: "" }; ch = true; } if (ch) await siteUpd(o.siteId, { builds: B }); } }
@@ -5098,16 +5099,25 @@ function pageBudgetEdit(d) {
     + (open[e.c.id] ? e.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || x.o.x_reqNo || "הזמנה")}</span>${x.o._secs ? `<div class="small muted" style="padding-inline-start:18px">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span>${x.o._secParts?.length ? ` · ${esc([...new Set(x.o._secParts.map(p => `${p.office?.name || ""} ${p.s.num}`))].join(", "))}` : ` · <span class="pill warn">אין קטע תכנון עם החתכים האלה</span>`}${x.o._amb ? ` <span class="pill warn" title="החתכים מתאימים ל: ${esc(x.o._amb.join(" / "))} — להזין ק.ד. בהזמנה">לא ברור באיזה קטע — להזין ק.ד.</span>` : ""}</div>` : ""}</td>
         <td class="c">${x.m ? num(x.m, 0) + " מ׳" : "—"}</td><td></td><td class="c">${x.est === null ? "—" : bgM(x.est)}</td><td class="c">${!ordIssued(x.o) ? `<span class="small muted">עתידית — טרם הוזמן</span>` : bgM(x.amt)}</td>
         <td class="c">${!ordIssued(x.o) ? `<span class="pill warn" title="הזמנה עתידית — כל הסכום חסר">חסר ${bgM(x.est ?? x.amt)}</span>` : x.diff === null ? "—" : ordBalPill(x.diff, x.ack)}</td></tr>`).join("") : "")).join("");
+  const F = ui.bgF = ui.bgF || {}, arOf = x => x.areaId ?? (d.contractors.find(c => c.id === x.contractorId && isMain(c)) ? x.contractorId : "");
+  const fOk = x => ui.bgNew?.has(x.id) || (!F.q || `${x.title || ""} ${x.note || ""}`.includes(F.q)) && (!F.area || (F.area === "-" ? !arOf(x) : arOf(x) === F.area)) && (!F.exec || x.contractorId === F.exec) && (!F.cat || (x.cat || "עבודות נוספות") === F.cat) && (!F.st || (F.st === "חסר" ? !x.excluded && bgN(x.amount) - bgLineCov(x) > 1 : F.st === "כוסה" ? bgN(x.amount) - bgLineCov(x) <= 1 : true));
+  const fAny = Object.values(F).some(Boolean), fSel = (k, lab, opts) => `<label class="small">${lab} <select class="inp" data-bgf="${k}"><option value="">הכל</option>${opts.map(([v, t]) => `<option value="${esc(v)}" ${F[k] === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></label>`;
+  const fBar = `<div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0 0;padding:8px 10px;background:var(--soft,#f4f5f2);border-radius:8px"><b class="small">סינון:</b>
+    <input class="inp" data-bgf="q" placeholder="חיפוש בשם / הערה" value="${esc(F.q || "")}" style="width:22ch">
+    ${fSel("area", "גזרה", [...d.contractors.filter(isMain).map(c => [c.id, c.name]), ["-", "כללי / כל הקו"]])}
+    ${fSel("exec", "מבצע", d.contractors.filter(c => R.extras.some(x => x.contractorId === c.id)).map(c => [c.id, c.name]))}
+    ${fSel("cat", "סוג עבודה", BG_CAT.map(k => [k, k]))}${fSel("st", "מצב", [["חסר", "נדרש להשלמה"], ["כוסה", "כוסה"]])}
+    ${fAny ? `<button class="btn ghost sm" data-act="bgFClr">✕ ניקוי</button><span class="small muted">מוצגות ${R.exDone.filter(fOk).length + R.exNext.filter(fOk).length} מתוך ${R.extras.length}</span>` : ""}</div>`;
   const exTable = (arr, title, sub) => `<h3 style="margin:14px 0 6px">${title} <span class="muted small">${sub}</span></h3><div class="tablewrap"><table class="sheet"><thead><tr><th>עבודה</th><th>סוג עבודה</th><th>גזרה</th><th>מבצע</th><th>אומדן (₪)</th><th>הועבר תקציב (₪)</th><th>הוזמן (₪)</th><th>נדרש להשלמה</th><th>הערה</th><th></th></tr></thead><tbody>
-    ${arr.map(x => { const lk = bgLinkedAmt(x), left = x.excluded ? 0 : bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered) - lk;
+    ${arr.map(x => { const lk = bgLinkedAmt(x), left = x.excluded ? 0 : bgN(x.amount) - bgLineCov(x);
       const ar = x.areaId ?? (d.contractors.find(c => c.id === x.contractorId && isMain(c)) ? x.contractorId : "");
-      return `<tr style="${x.excluded ? "opacity:.6" : ""}"><td>${txt(x, "title", 24)}</td>
+      return `<tr class="${ui.bgNew?.has(x.id) ? "bg-new" : ""}" style="${x.excluded ? "opacity:.6" : ""}${ui.bgNew?.has(x.id) ? ";background:#fff6d1" : ""}"><td>${txt(x, "title", 24)}</td>
       <td><select class="inp" data-edit="budget|${x.id}|cat">${BG_CAT.map(k => `<option ${k === (x.cat || "עבודות נוספות") ? "selected" : ""}>${k}</option>`).join("")}</select></td>
       <td><select class="inp" data-edit="budget|${x.id}|areaId"><option value="">כללי / כל הקו</option>${d.contractors.filter(isMain).map(c => `<option value="${c.id}" ${c.id === ar ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></td>
       <td><select class="inp" data-edit="budget|${x.id}|contractorId"><option value="">—</option>${d.contractors.map(c => `<option value="${c.id}" ${c.id === x.contractorId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></td>
       <td>${inp(x, "amount")}</td><td>${inp(x, "transferred")}</td><td>${inp(x, "ordered")}${lk ? `<div class="small" style="color:var(--accent)">+ ${bgM(lk)} בהזמנות מקושרות</div>` : ""}</td><td class="c"><b>${x.excluded ? "לא נכלל" : bgLeft(left)}</b></td><td>${txt(x, "note", 16)}</td>
       <td><button class="lnk" data-act="bgDel" data-id="${x.id}">מחיקה</button></td></tr>`; }).join("") || `<tr><td colspan="10" class="muted">אין שורות</td></tr>`}
-    <tr class="sub"><td colspan="4"><b>סה״כ</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.amount)), 0))}</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.transferred)), 0))}</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.ordered) + bgLinkedAmt(x)), 0))}</b></td><td class="c"><b>${bgLeft(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered) - bgLinkedAmt(x)), 0))}</b></td><td colspan="2"></td></tr></tbody></table></div>`;
+    <tr class="sub"><td colspan="4"><b>סה״כ</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.amount)), 0))}</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.transferred)), 0))}</b></td><td><b>${bgM(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.ordered) + bgLinkedAmt(x)), 0))}</b></td><td class="c"><b>${bgLeft(arr.reduce((a, x) => a + (x.excluded ? 0 : bgN(x.amount) - bgLineCov(x)), 0))}</b></td><td colspan="2"></td></tr></tbody></table></div>`;
   const siteRows = R.sites.map(x => `<tr><td>${txt(x, "title", 20)}</td><td>${inp(x, "mast")}</td><td>${inp(x, "build")}</td><td class="c"><b>${bgM(bgN(x.mast) + bgN(x.build))}</b></td><td>${txt(x, "note", 20)}</td><td><button class="lnk" data-act="bgDel" data-id="${x.id}">מחיקה</button></td></tr>`).join("");
   return `<div class="bgp"><div class="ch-banner" style="--cc:#7a5c3e"><div><h1>עריכת אומדן</h1><span>כל השורות לעריכה — שינוי נשמר מיד. כל הסכומים כולל מע״מ ${cfg.vat}%.</span></div>
     <div class="row" style="gap:6px"><button class="btn ghost" data-act="bgCfg">⚙ מע״מ ומחיר למטר</button><button class="btn" data-act="bgEditTog">✓ סיום עריכה — לתמונה הכוללת</button></div></div>
@@ -5121,7 +5131,7 @@ function pageBudgetEdit(d) {
     <div class="tablewrap"><table class="sheet"><thead><tr><th>קבלן</th><th>אורך</th><th>מחיר למ׳ (לפני מע״מ)</th><th>אומדן</th><th>הזמנות (תקציב)</th><th>בקרה</th></tr></thead><tbody>${earthRows}
       <tr class="sub"><td><b>סה״כ עבודות עפר</b></td><td class="c"><b>${num(R.earth.reduce((a, e) => a + e.m, 0), 0)} מ׳</b></td><td></td><td class="c"><b>${bgM(T.earthEst)}</b></td><td class="c"><b>${bgM(T.earthOrd)}</b></td><td class="c">${bgM(T.earthOrd - T.earthEst)}</td></tr></tbody></table></div></div>
   <div class="card" style="margin-top:12px"><div class="row" style="align-items:center"><h2 style="margin:0">2. עבודות נוספות</h2><span class="spacer"></span><button class="btn sm" data-act="bgAdd" data-id="extra|בוצע">+ שבוצעה</button><button class="btn sm" data-act="bgAdd" data-id="extra|יבוצע">+ שתבוצע</button></div>
-    ${exTable(R.exDone, "שבוצעו", "— חייבות להיות משולמות")}${exTable(R.exNext, "שיבוצעו", "— נדרש להשלמה = אומדן פחות מה שהועבר / הוזמן")}</div>
+    ${fBar}${exTable(R.exDone.filter(fOk), "שבוצעו", "— חייבות להיות משולמות")}${exTable(R.exNext.filter(fOk), "שיבוצעו", "— נדרש להשלמה = אומדן פחות מה שהועבר / הוזמן")}</div>
   <div class="card" style="margin-top:12px"><div class="row" style="align-items:center"><h2 style="margin:0">3. אתרי איסוף <span class="muted small">(${R.sites.length})</span></h2><span class="spacer"></span><button class="btn sm" data-act="bgAdd" data-id="site">+ אתר</button></div>
     <div class="tablewrap"><table class="sheet"><thead><tr><th>אתר</th><th>עלות תורן (₪)</th><th>הקמת אתר — בינוי (₪)</th><th>סה״כ</th><th>הערה</th><th></th></tr></thead><tbody>${siteRows || `<tr><td colspan="6" class="muted">אין אתרים</td></tr>`}
       <tr class="sub"><td><b>סה״כ עלות אתרי איסוף</b></td><td colspan="2"></td><td class="c"><b>${bgM(T.siteEst)}</b></td><td colspan="2"></td></tr>
@@ -5971,12 +5981,15 @@ function bgLinkModal(lid, done) {
 
 async function bgClick(act, b) {
   if (act === "bgMode") { ui.bgMode = b.dataset.id; render(); return; }
-  if (act === "bgEditTog") { ui.bgEdit = !ui.bgEdit; render(); window.scrollTo(0, 0); return; }
+  if (act === "bgEditTog") { ui.bgEdit = !ui.bgEdit; ui.bgNew = null; render(); window.scrollTo(0, 0); return; }
   if (["bgCell", "bgRow", "bgCol", "bgList"].includes(act)) return bgOpen(act, b.dataset.id);
+  if (act === "bgFClr") { ui.bgF = {}; render(); return; }
   if (act === "bgTog") { const o = ui.bgOpen = ui.bgOpen || {}; o[b.dataset.id] = !o[b.dataset.id]; render(); }
   else if (act === "bgDel") { if (b.dataset.sure) { await api.remove("budget", b.dataset.id); } else { b.dataset.sure = 1; b.textContent = "ללחוץ שוב"; } }
   else if (act === "bgAdd") { const [kind, phase] = b.dataset.id.split("|"), n = Object.values(RAW.budget || {}).filter(x => x.kind === kind).length;
-    await api.add("budget", kind === "site" ? { kind, title: "אתר חדש", mast: "", build: "", order: n + 1 } : { kind, phase, title: "עבודה חדשה", cat: "עבודות נוספות", amount: "", transferred: "", ordered: "", order: n + 1 }); }
+    const F = ui.bgF || {}, ar = F.area && F.area !== "-" ? F.area : "";   // שורה חדשה: בראש הטבלה, לפי הסינון הפעיל, ומוצגת גם אם הסינון לא תופס אותה
+    const id = await api.add("budget", kind === "site" ? { kind, title: "אתר חדש", mast: "", build: "", order: n + 1 } : { kind, phase, title: "עבודה חדשה", cat: F.cat || "עבודות נוספות", areaId: ar, contractorId: F.exec || ar, amount: "", transferred: "", ordered: "", order: -Date.now() });
+    if (id && kind !== "site") { (ui.bgNew = ui.bgNew || new Set()).add(id); render(); toast(`נוספה שורה ב"${phase === "בוצע" ? "שבוצעו" : "שיבוצעו"}" — בראש הטבלה ✓`); setTimeout(() => document.querySelector(`tr.bg-new input[data-edit^="budget|${id}|title"]`)?.select(), 80); } }
   else if (act === "bgCfg") { const c = bgCfg(), secs = [...new Set(D().contractors.filter(isMain).map(x => x.sector).filter(Boolean))];
     modal(`<h2>מע״מ ומחיר למטר</h2><label class="field">מע״מ (%) — אחד לכל הפרויקט<input class="inp" id="bg_vat" inputmode="decimal" value="${esc(String(c.vat))}"></label>
       ${secs.map(s => `<label class="field">מחיר למטר לפני מע״מ — גזרת ${esc(s)} (₪)<input class="inp" data-sec="${esc(s)}" inputmode="decimal" value="${esc(String(c.prices[s] ?? ""))}"></label>`).join("")}
