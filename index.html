@@ -5051,7 +5051,7 @@ function bgData(d) {
     const ords = d.orders.filter(o => o.contractorId === c.id && !LK.has(o.id) && o._secs).map(o => { const m = o._secs ? (o._secLen ?? (o._secs[1] - o._secs[0]) * SECTION_M) : 0, est = m && price ? m * price * V : null, amt = bgOrdAmt(o);
       const diff = est === null ? null : amt - est, ack = diff !== null && Math.abs(diff) >= 1 && ordAck(o); return { o, m, est, amt, diff, ack, ok: diff === null ? null : Math.abs(diff) < 1 || ack }; });
     const est = ords.reduce((a, x) => a + (x.est ?? x.amt), 0), amt = ords.reduce((a, x) => a + (ordIssued(x.o) ? x.amt : 0), 0), fut = ords.reduce((a, x) => a + (ordIssued(x.o) ? 0 : x.amt), 0);   // הזמנה עתידית (סטטוס "עתידי" או בלי מס׳ הזמנה) — לא נחשבת "הוזמן", ולכן נשארת בחסר
-    return { c, price, ords, m: ords.reduce((a, x) => a + x.m, 0), est, amt, fut, bad: ords.filter(x => x.diff !== null && !x.ok) }; });
+    return { c, price, ords, m: ords.reduce((a, x) => a + x.m, 0), est, amt, fut, bad: ords.filter(x => x.diff !== null && !x.ok && ordIssued(x.o)) }; });
   const extras = B.filter(x => x.kind === "extra").sort((a, b) => (a.phase === "בוצע" ? 0 : 1) - (b.phase === "בוצע" ? 0 : 1) || (+a.order || 0) - (+b.order || 0));
   const sites = B.filter(x => x.kind === "site").sort((a, b) => (+a.order || 0) - (+b.order || 0));
   const exAmt = x => x.excluded ? 0 : bgN(x.amount), exCov = x => bgN(x.transferred) + bgN(x.ordered) + bgLinkedAmt(x);
@@ -5093,8 +5093,8 @@ function pageBudgetEdit(d) {
       <td class="c">${num(e.m, 0)} מ׳</td><td class="c">${e.price ? `${num(e.price, 0)} ₪` : `<span class="pill warn">אין מחיר לגזרה</span>`}</td><td class="c"><b>${bgM(e.est)}</b></td><td class="c"><b>${bgM(e.amt)}</b></td>
       <td class="c">${e.bad.length ? `<span class="pill warn">${e.bad.length} לא תואמות</span>` : `<span class="pill ok">תואם</span>`}</td></tr>`
     + (open[e.c.id] ? e.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || x.o.x_reqNo || "הזמנה")}</span>${x.o._secs ? `<div class="small muted" style="padding-inline-start:18px">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span>${x.o._secParts?.length ? ` · ${esc([...new Set(x.o._secParts.map(p => `${p.office?.name || ""} ${p.s.num}`))].join(", "))}` : ` · <span class="pill warn">אין קטע תכנון עם החתכים האלה</span>`}${x.o._amb ? ` <span class="pill warn" title="החתכים מתאימים ל: ${esc(x.o._amb.join(" / "))} — להזין ק.ד. בהזמנה">לא ברור באיזה קטע — להזין ק.ד.</span>` : ""}</div>` : ""}</td>
-        <td class="c">${x.m ? num(x.m, 0) + " מ׳" : "—"}</td><td></td><td class="c">${x.est === null ? "—" : bgM(x.est)}</td><td class="c">${bgM(x.amt)}</td>
-        <td class="c">${x.diff === null ? "—" : ordBalPill(x.diff, x.ack)}</td></tr>`).join("") : "")).join("");
+        <td class="c">${x.m ? num(x.m, 0) + " מ׳" : "—"}</td><td></td><td class="c">${x.est === null ? "—" : bgM(x.est)}</td><td class="c">${!ordIssued(x.o) ? `<span class="small muted">עתידית — טרם הוזמן</span>` : bgM(x.amt)}</td>
+        <td class="c">${!ordIssued(x.o) ? `<span class="pill warn" title="הזמנה עתידית — כל הסכום חסר">חסר ${bgM(x.est ?? x.amt)}</span>` : x.diff === null ? "—" : ordBalPill(x.diff, x.ack)}</td></tr>`).join("") : "")).join("");
   const exTable = (arr, title, sub) => `<h3 style="margin:14px 0 6px">${title} <span class="muted small">${sub}</span></h3><div class="tablewrap"><table class="sheet"><thead><tr><th>עבודה</th><th>סוג עבודה</th><th>גזרה</th><th>מבצע</th><th>אומדן (₪)</th><th>הועבר תקציב (₪)</th><th>הוזמן (₪)</th><th>נדרש להשלמה</th><th>הערה</th><th></th></tr></thead><tbody>
     ${arr.map(x => { const lk = bgLinkedAmt(x), left = x.excluded ? 0 : bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered) - lk;
       const ar = x.areaId ?? (d.contractors.find(c => c.id === x.contractorId && isMain(c)) ? x.contractorId : "");
@@ -5908,7 +5908,7 @@ function bgDrill(title, lines) {
       <td class="c">${l.est ? bgM(l.est) : "—"}</td><td class="c">${l.cov ? bgM(l.cov) : "—"}</td><td class="c bg-c ${tn}">${l.est || l.cov ? bgLeft(l.est - l.cov) : ""}</td>
       <td class="small">${l.x ? `${bgOrdsOf(l.x).map(o => `<span class="pill ok bg-ol">${esc(o.name || "הזמנה")} · ${bgM(bgOrdAmt(o))}${isViewer() ? "" : ` <button class="lnk" data-bgun="${l.x.id}|${o.id}" title="ביטול הקישור">✕</button>`}</span>`).join(" ")}${isViewer() ? "" : ` <button class="btn ghost sm" data-bglink="${l.x.id}">🔗 ${bgOrdsOf(l.x).length ? "עוד" : "קישור להזמנה"}</button>`}` : l.earth ? `<span class="muted">${l.earth.ords.length} הזמנות</span>` : ""}</td></tr>`;
     const subs = l.earth ? l.earth.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || "הזמנה")}</span>${x.o._secs ? ` <span class="small muted">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span> · ${num(x.m, 0)} מ׳</span>` : ""}</td><td></td><td></td>
-      <td class="c small">${x.est === null ? "—" : bgM(x.est)}</td><td class="c small">${bgM(x.amt)}</td><td class="c small">${x.diff === null ? "—" : ordBalPill(x.diff, x.ack)}</td><td></td></tr>`).join("") : "";
+      <td class="c small">${x.est === null ? "—" : bgM(x.est)}</td><td class="c small">${!ordIssued(x.o) ? `<span class="small muted">עתידית — טרם הוזמן</span>` : bgM(x.amt)}</td><td class="c small">${!ordIssued(x.o) ? `<span class="pill warn" title="הזמנה עתידית — כל הסכום חסר">חסר ${bgM(x.est ?? x.amt)}</span>` : x.diff === null ? "—" : ordBalPill(x.diff, x.ack)}</td><td></td></tr>`).join("") : "";
     return main + subs; }).join("");
   // מה שקיים באתר מאחורי השורות: דרישות תקציב + חיבורי חח״י, והזמנות של הקבלנים בעמודה שלא שויכו לאומדן
   const V = 1 + iecVat(), xLines = lines.filter(l => l.x), LK = bgLinkedSet();
