@@ -5047,8 +5047,8 @@ function bgData(d) {
   const earth = mains.map(c => { const price = bgN(cfg.prices[c.sector || ""]);
     const ords = d.orders.filter(o => o.contractorId === c.id && !LK.has(o.id) && o._secs).map(o => { const m = o._secs ? (o._secLen ?? (o._secs[1] - o._secs[0]) * SECTION_M) : 0, est = m && price ? m * price * V : null, amt = bgOrdAmt(o);
       const diff = est === null ? null : amt - est, ack = diff !== null && Math.abs(diff) >= 1 && ordAck(o); return { o, m, est, amt, diff, ack, ok: diff === null ? null : Math.abs(diff) < 1 || ack }; });
-    const est = ords.reduce((a, x) => a + (x.est ?? x.amt), 0), amt = ords.reduce((a, x) => a + x.amt, 0);
-    return { c, price, ords, m: ords.reduce((a, x) => a + x.m, 0), est, amt, bad: ords.filter(x => x.diff !== null && !x.ok) }; });
+    const est = ords.reduce((a, x) => a + (x.est ?? x.amt), 0), amt = ords.reduce((a, x) => a + (ordIssued(x.o) ? x.amt : 0), 0), fut = ords.reduce((a, x) => a + (ordIssued(x.o) ? 0 : x.amt), 0);   // הזמנה עתידית (סטטוס "עתידי" או בלי מס׳ הזמנה) — לא נחשבת "הוזמן", ולכן נשארת בחסר
+    return { c, price, ords, m: ords.reduce((a, x) => a + x.m, 0), est, amt, fut, bad: ords.filter(x => x.diff !== null && !x.ok) }; });
   const extras = B.filter(x => x.kind === "extra").sort((a, b) => (a.phase === "בוצע" ? 0 : 1) - (b.phase === "בוצע" ? 0 : 1) || (+a.order || 0) - (+b.order || 0));
   const sites = B.filter(x => x.kind === "site").sort((a, b) => (+a.order || 0) - (+b.order || 0));
   const exAmt = x => x.excluded ? 0 : bgN(x.amount), exCov = x => bgN(x.transferred) + bgN(x.ordered) + bgLinkedAmt(x);
@@ -7729,7 +7729,8 @@ function ordersTab(d, c, ords, cov) {
   const f = v => v ? esc(String(v)) : "";
   const myLines = Object.entries(RAW.budget || {}).filter(([, x]) => x.kind === "extra" && !x.excluded && (x.contractorId === c.id || x.areaId === c.id));
   const loose = ords.filter(o => !o._secs && bgOrdAmt(o) > 0 && !LKline(o.id));
-  const sorted = [...ords].sort((a, b) => (b._secs?.[1] ?? kdRange(b)?.hi ?? 0) - (a._secs?.[1] ?? kdRange(a)?.hi ?? 0));
+  const byN = (a, b) => (b._secs?.[1] ?? kdRange(b)?.hi ?? 0) - (a._secs?.[1] ?? kdRange(a)?.hi ?? 0);
+  const sorted = ords.filter(ordIssued).sort(byN), futO = ords.filter(o => !ordIssued(o)).sort(byN);   // עתידית (סטטוס "עתידי" / בלי מס׳ הזמנה) — יורדת ל"הזמנות עתידיות"
   const card = (o, P = {}) => { const amt = bgOrdAmt(o), x = estOf[o.id], ex = exOf[o.id], ln = LKline(o.id), st = String(ordStatusTxt(o) || ""), inG = !!P.part;
     const stCls = /מאושר|הסתיים/.test(st) ? "ok" : /אין|ממתין|חסר|עתיד/.test(st) ? "warn" : "";
     return `<div class="od-card ${inG ? "od-part" : ""}" style="--cc:${P.col || col}"><div class="od-h">${inG ? `<b style="color:var(--cc)">חלק ${P.part}</b>` : `<b>${esc(o.name || "הזמנה")}</b>${o.x_ordNo ? `<span class="pill od-no" dir="ltr">${f(o.x_ordNo)}</span>` : ""}${st ? `<span class="pill ${stCls}">${esc(st)}</span>` : ""}`}${ln ? `<span class="pill">${esc(ln.title || "")}</span>` : ""}</div>
@@ -7743,18 +7744,19 @@ ${!inG && o.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o.x_r
       </div>
       ${ex != null ? `<div class="od-ex"><span>ביצוע בתחום ההזמנה</span><em><i style="width:${Math.round(ex * 100)}%"></i></em><b>${Math.round(ex * 100)}%</b></div>` : ""}
       ${o.note ? `<div class="od-note">${esc(o.note)}</div>` : ""}
+      ${P.fut && !isViewer() ? `<div class="row" style="gap:6px;margin-top:auto"><button class="btn ghost sm" data-act="odOrdEd" data-id="${o.id}">✎ עריכה</button><span class="small muted">כשמזינים מס׳ הזמנה ומעדכנים סטטוס — עוברת למעלה</span></div>` : ""}
       ${!o._secs && myLines.length && !isViewer() ? `<label class="od-link small ${ln ? "" : "no"}">שורת אומדן: <select class="inp" data-edit="orders|${o.id}|_bgLine"><option value="">${ln ? "— ביטול שיוך" : "— לא משויכת (לבחור)"}</option>${myLines.map(([lid, y]) => `<option value="${lid}" ${y === ln ? "selected" : ""}>${esc(y.title || "")}${y.areaId && y.areaId !== c.id ? ` · ${esc(d.contractors.find(m => m.id === y.areaId)?.name || "")}` : ""}</option>`).join("")}</select></label>` : ""}</div>`; };
-  const tot = ords.reduce((t, o) => t + bgOrdAmt(o), 0), len = ords.reduce((t, o) => t + (o._secLen || 0), 0);
+  const tot = sorted.reduce((t, o) => t + bgOrdAmt(o), 0), len = sorted.reduce((t, o) => t + (o._secLen || 0), 0), futOT = futO.reduce((t, o) => t + bgOrdAmt(o), 0);
   // הזמנות עתידיות = שורות באומדן של הקבלן (גזרה או מבצע) שעוד לא כוסו
   const fut = R ? bgLines(d, R).filter(l => l.x && (l.area === c.id || l.exec === c.id) && l.est - l.cov > 1) : [];
-  const futT = fut.reduce((t, l) => t + l.est - l.cov, 0);
+  const futT = fut.reduce((t, l) => t + l.est - l.cov, 0) + futOT, nFut = fut.length + futO.length;
   const fcard = l => `<div class="od-card fut"><div class="od-h"><b>${esc(l.title)}</b><span class="pill ${l.phase === "בוצע" ? "warn" : ""}">${l.phase === "בוצע" ? "בוצע — אין הזמנה" : "עתידית"}</span><span class="pill">${esc(l.cat)}</span>${l.area && l.area !== c.id ? `<span class="pill" style="border-inline-start:3px solid ${cColor(d, d.contractors.find(m => m.id === l.area) || {})}">גזרת ${esc(d.contractors.find(m => m.id === l.area)?.name || "")}</span>` : ""}</div>
       <div class="od-amt">${num(Math.round(l.est - l.cov), 0)} <small>₪</small>${l.cov ? `<span class="muted small"> מתוך ${num(Math.round(l.est), 0)}</span>` : ""}</div>${l.note ? `<div class="od-note">${esc(l.note)}</div>` : ""}
       ${isViewer() ? "" : `<div class="row" style="gap:6px;margin-top:auto"><button class="btn sm" data-act="odIssue" data-id="${l.x.id}" title="פותח הזמנה בטבלת ההזמנות של הקבלן ומקשר אותה לשורה באומדן">📝 הוצאת הזמנה</button><span class="spacer"></span>
-        <button class="btn ghost sm" data-act="odMove" data-id="${l.x.id}" title="העברה לקבלן אחר">↔ העברה</button><button class="btn del" data-act="odDel" data-id="${l.x.id}" title="מחיקה מהאומדן">מחיקה</button></div>`}</div>`;
-  const nOrd = new Set(ords.map(o => reqNorm(o.x_ordNo) || (reqNorm(o.x_reqNo) ? `r${reqNorm(o.x_reqNo)}|${String(o.name || "").replace(/\s+/g, "")}` : o.id))).size;
-  return `<div class="od-sum"><div><span>הזמנות</span><b>${nOrd}</b>${nOrd < ords.length ? `<small class="muted"> (${ords.length} חלקים)</small>` : ""}</div><div><span>תקציב בהזמנות</span><b>${num(tot, 0)} ₪</b></div>${len ? `<div><span>אורך לפי חתכים</span><b>${num(len, 0)} מ׳</b></div>` : ""}
-      ${cov ? `<div><span>כיסוי הגזרה</span><b>${Math.round(cov.pct * 100)}%</b></div>` : ""}${fut.length ? `<div><span>עתידיות (מהאומדן)</span><b>${fut.length} · ${num(Math.round(futT), 0)} ₪</b></div>` : ""}
+        <button class="btn ghost sm" data-act="odLineEd" data-id="${l.x.id}">✎ עריכה</button><button class="btn ghost sm" data-act="odMove" data-id="${l.x.id}" title="העברה לקבלן אחר">↔ העברה</button><button class="btn del" data-act="odDel" data-id="${l.x.id}" title="מחיקה מהאומדן">מחיקה</button></div>`}</div>`;
+  const nOrd = new Set(sorted.map(o => reqNorm(o.x_ordNo) || (reqNorm(o.x_reqNo) ? `r${reqNorm(o.x_reqNo)}|${String(o.name || "").replace(/\s+/g, "")}` : o.id))).size;
+  return `<div class="od-sum"><div><span>הזמנות</span><b>${nOrd}</b>${nOrd < sorted.length ? `<small class="muted"> (${sorted.length} חלקים)</small>` : ""}</div><div><span>תקציב בהזמנות</span><b>${num(tot, 0)} ₪</b></div>${len ? `<div><span>אורך לפי חתכים</span><b>${num(len, 0)} מ׳</b></div>` : ""}
+      ${cov ? `<div><span>כיסוי הגזרה</span><b>${Math.round(cov.pct * 100)}%</b></div>` : ""}${nFut ? `<div><span>עתידיות</span><b>${nFut} · ${num(Math.round(futT), 0)} ₪</b></div>` : ""}
       <div class="od-tot"><span>סה״כ צפוי לקבלן</span><b>${num(Math.round(tot + futT), 0)} ₪</b><small>הזמנות ${num(tot, 0)} + עתידיות ${num(Math.round(futT), 0)}</small></div></div>
     ${loose.length && myLines.length ? `<div class="banner"><b>${loose.length} הזמנות לא משויכות לאומדן</b><span>בלי שיוך, הסכום שלהן לא יורד מהעתידיות ונספר פעמיים בסה״כ — בוחרים "שורת אומדן" בכרטיס.</span></div>` : ""}
     <div class="od-grid">${(() => { // הזמנה = מס׳ הזמנה; כמה שורות עם אותו מספר (טווחי חתכים שונים) = חלקים של הזמנה אחת, במסגרת אחת בצבע אחד
@@ -7767,7 +7769,7 @@ ${!inG && o.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o.x_r
           <div class="od-g">${q && q.hasAmt ? `<div role="button" data-act="reqOpen" data-id="${q.no}" style="cursor:pointer" title="פירוט הדרישה"><span>יתרה בדרישה</span><b class="${q.free < -1 ? "rq-neg" : "rq-pos"}">${bgMM(q.free)}</b></div>` : ""}${o0.x_sentDate ? `<div><span>נשלחה</span><b>${fmtD(o0.x_sentDate)}</b></div>` : ""}</div>
           <div class="od-parts">${pt.map(({ o }, j) => card(o, { col: oc, part: j + 1 })).join("")}</div></div>`; }).join(""); })() || `<p class="muted">אין הזמנות</p>`}</div>
     <div class="row" style="align-items:center;margin:18px 0 8px"><h3 style="margin:0">הזמנות עתידיות <span class="muted small">— מהאומדן; כשמוציאים הזמנה היא עוברת למעלה ומתעדכנת גם במסך התקציב</span></h3><span class="spacer"></span>${isViewer() ? "" : `<button class="btn ghost sm" data-act="odFuture" data-id="${c.id}">+ הזמנה עתידית</button>`}</div>
-    <div class="od-grid">${fut.map(fcard).join("") || `<p class="muted small">אין הזמנות עתידיות לקבלן הזה באומדן.</p>`}</div>`;
+    <div class="od-grid">${futO.map((o, i) => card(o, { col: "#c27c0e", fut: true })).join("")}${fut.map(fcard).join("")}${nFut ? "" : `<p class="muted small">אין הזמנות עתידיות לקבלן הזה.</p>`}</div>`;
 }
 function odFutureModal(cid) {
   const c = RAW.contractors[cid], sp = c && !isMain(c), mains = list("contractors").filter(isMain), sps = specsOf(c || {}).join(" ");
@@ -8089,6 +8091,34 @@ $app.addEventListener("click", async e => {
   else if (act === "odIssue") bgLinkModal(b.dataset.id, () => render());
   else if (act === "odFuture") odFutureModal(b.dataset.id);
   else if (act === "odDel") { if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "בטוח? למחוק מהאומדן"; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "מחיקה"; } }, 4000); return; } await api.remove("budget", b.dataset.id); toast("נמחק מהאומדן"); }
+  else if (act === "odLineEd") { const id = b.dataset.id, x = RAW.budget?.[id]; if (!x) return;
+    modal(`<h2>עריכת הזמנה עתידית</h2><label class="field">שם העבודה<input class="inp" id="le_t" value="${esc(x.title || "")}"></label>
+      <div class="row" style="gap:8px"><label class="field" style="flex:1">סכום (₪ כולל מע״מ)<input class="inp" id="le_a" inputmode="decimal" value="${esc(moneyTxt(x.amount))}"></label>
+      <label class="field" style="flex:1">סוג עבודה<select class="inp" id="le_c">${BG_CAT.map(k => `<option ${k === x.cat ? "selected" : ""}>${k}</option>`).join("")}</select></label>
+      <label class="field" style="flex:1">מצב<select class="inp" id="le_p">${["יבוצע", "בוצע"].map(k => `<option ${k === (x.phase || "יבוצע") ? "selected" : ""}>${k}</option>`).join("")}</select></label></div>
+      <label class="field">הערה<input class="inp" id="le_n" value="${esc(x.note || "")}"></label>
+      <div class="row"><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+      m.querySelector("#mNo").onclick = close;
+      m.querySelector("#mYes").onclick = async () => { const g = k => m.querySelector(k).value.trim(); if (!g("#le_t")) return;
+        await api.update("budget", id, { title: g("#le_t"), amount: moneyNum(g("#le_a")) ?? "", cat: g("#le_c"), phase: g("#le_p"), note: g("#le_n") }); close(); toast("נשמר ✓"); }; }); }
+  else if (act === "odOrdEd") { const id = b.dataset.id, o = RAW.orders?.[id]; if (!o) return; const K = ordSecKeys(o.contractorId), fk = K.fx || K.f, tk = K.tx || K.t, bk = bgBudgetKey(o.contractorId);
+    const stK = (() => { for (const k of ["orders__" + o.contractorId, "orders"]) for (const [id2, c] of Object.entries(RAW.tableConfig?.[k]?.custom || {})) if (id2 === "signer" || /^\s*סטטוס|החותם/.test(c?.label || "")) return "x_" + id2; return "x_signer"; })();
+    const C = ordCalcAmt({ id, ...o });
+    modal(`<h2>עריכת הזמנה עתידית</h2><label class="field">שם<input class="inp" id="oe_n" value="${esc(o.name || "")}"></label>
+      <div class="row" style="gap:8px"><label class="field" style="flex:1">מחתך<input class="inp" id="oe_f" inputmode="numeric" value="${esc(String(o[fk] ?? ""))}"></label><label class="field" style="flex:1">עד חתך<input class="inp" id="oe_t" inputmode="numeric" value="${esc(String(o[tk] ?? ""))}"></label></div>
+      ${bk ? `<label class="field">תקציב (₪)${C ? ` <span class="small muted">— ריק = מחושב (${num(C, 0)})</span>` : ""}<input class="inp" id="oe_a" inputmode="decimal" value="${esc(moneyTxt(o[bk]))}" placeholder="${C ? esc(C.toLocaleString("he-IL")) : ""}"></label>` : ""}
+      <div class="row" style="gap:8px"><label class="field" style="flex:1">מס׳ דרישה<input class="inp" id="oe_r" value="${esc(o.x_reqNo || "")}"></label><label class="field" style="flex:1">מס׳ הזמנה (רכש)<input class="inp" id="oe_o" value="${esc(o.x_ordNo || "")}"></label>
+      <label class="field" style="flex:1">סטטוס<input class="inp" id="oe_s" value="${esc(o[stK] || "")}" placeholder="עתידי / מאושר…"></label></div>
+      <label class="field">הערה<input class="inp" id="oe_x" value="${esc(o.note || "")}"></label>
+      <div class="row"><button class="btn" id="mYes">שמירה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
+      m.querySelector("#mNo").onclick = close;
+      m.querySelector("#mYes").onclick = async () => { const g = k => m.querySelector(k)?.value.trim() ?? "", nm = v => v === "" ? "" : Number(v);
+        const up = { name: g("#oe_n"), [fk]: nm(g("#oe_f")), [tk]: nm(g("#oe_t")), x_reqNo: g("#oe_r"), x_ordNo: g("#oe_o"), [stK]: g("#oe_s"), note: g("#oe_x") };
+        if (bk) { const a = moneyNum(g("#oe_a")); up[bk] = a ?? ""; const C2 = ordCalcAmt({ id, ...o, ...up, [bk]: "" });
+          if (a !== null && C2 && Math.round(a) !== C2 && a !== bgN(o[bk])) { close(); const ch = await ordAmtAsk(a, C2); if (ch === "cancel") return; if (ch === "calc") { up[bk] = C2; up.x_amtOk = null; } else up.x_amtOk = ch === "ack" ? a : null;
+            await api.update("orders", id, up); toast("נשמר ✓"); return; }
+          if (a === null && reqNorm(up.x_ordNo) && C2) up[bk] = C2; }   // יצא מס׳ הזמנה — הסכום ננעל
+        await api.update("orders", id, up); close(); toast("נשמר ✓"); }; }); }
   else if (act === "odMove") { const x = RAW.budget[b.dataset.id], d = D();
     modal(`<h2>העברת "${esc(x?.title || "")}" לקבלן אחר</h2><label class="field">לקבלן<select class="inp" id="mv_c">${d.contractors.map(c => `<option value="${c.id}" ${c.id === (x.areaId || x.contractorId) ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
       <p class="small muted" style="margin:0">השורה עוברת באומדן לקבלן שנבחר (גזרה + מבצע), ותופיע אצלו בהזמנות העתידיות.</p>
