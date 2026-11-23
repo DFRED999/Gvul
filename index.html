@@ -925,8 +925,19 @@ function ordBySecs(o) {
   const c = RAW.contractors?.[o.contractorId], cr = c && (() => { const a = kdNum(c.kdFrom), b = kdNum(c.kdTo); return a === null || b === null ? null : { lo: Math.min(a, b), hi: Math.max(a, b) }; })();
   const segs = Object.entries(RAW.designSegments || {}).map(([id, v]) => ({ id, ...v })).filter(x => x.secFrom !== "" && x.secTo !== "" && x.secFrom != null);
   const near = x => { if (!cr) return true; const a = kdNum(x.kdFrom), b = kdNum(x.kdTo); return a !== null && b !== null && Math.min(cr.hi + 30, Math.max(a, b)) > Math.max(cr.lo - 30, Math.min(a, b)); };
-  const parts = segs.filter(near).map(x => { const lo = Math.min(+x.secFrom, +x.secTo), hi = Math.max(+x.secFrom, +x.secTo), f = Math.max(lo, sr[0]), t = Math.min(hi, sr[1]);
+  // לכל משרד תכנון מספור חתכים משלו (1000 של ר.ע.מ. ≠ 1000 של ירון עברון) — לכן מחפשים רק בקטעים של הקבלן (לפי ״חלוקה לפי חתכים״),
+  // ואם להזמנה יש ק.ד. — רק בקטעים שבטווח הק.ד. שלה. אם עדיין מתאים ליותר ממשרד אחד — נבחר המשרד שמכסה הכי הרבה, וההזמנה מסומנת "לא חד־משמעית"
+  const okr = (() => { const a = kdNum(o.kdFrom), b = kdNum(o.kdTo); return a === null || b === null ? null : { lo: Math.min(a, b), hi: Math.max(a, b) }; })();
+  const mineIds = c && Object.keys(c.secs || {}).filter(id => secAsg(c, id));
+  let cand = mineIds?.length ? segs.filter(x => mineIds.includes(x.id)) : segs.filter(near);
+  if (okr) { const k = cand.filter(x => { const a = kdNum(x.kdFrom), b = kdNum(x.kdTo); return a !== null && b !== null && Math.min(okr.hi, Math.max(a, b)) > Math.max(okr.lo, Math.min(a, b)) - 0.01; }); if (k.length) cand = k; }
+  let parts = cand.map(x => { const as = mineIds?.length ? secAsg(c, x.id) : null; let lo = Math.min(+x.secFrom, +x.secTo), hi = Math.max(+x.secFrom, +x.secTo); if (as) { lo = Math.max(lo, as[0]); hi = Math.min(hi, as[1]); }
+    const f = Math.max(lo, sr[0]), t = Math.min(hi, sr[1]);
     return t > f ? { s: x, f, t, n: t - f, office: RAW.designOffices?.[x.officeId], full: f === lo && t === hi } : null; }).filter(Boolean);
+  o._amb = null;
+  const byOff = {}; parts.forEach(x => { byOff[x.s.officeId] = (byOff[x.s.officeId] || 0) + x.n; });
+  const offs = Object.entries(byOff).sort((p, q) => q[1] - p[1]);
+  if (offs.length > 1) { if (offs[1][1] >= offs[0][1]) o._amb = offs.map(([id]) => RAW.designOffices?.[id]?.name || id); parts = parts.filter(x => x.s.officeId === offs[0][0]); }
   o._secLen = (parts.length ? parts.reduce((a, x) => a + x.n, 0) : sr[1] - sr[0]) * SECTION_M; o._secParts = parts; o._secs = sr;
   const ks = parts.flatMap(x => [sec2kd(x.s, x.f), sec2kd(x.s, x.t)]).filter(k => k !== null && !isNaN(k));
   if (ks.length && (kdNum(o.kdFrom) === null || kdNum(o.kdTo) === null)) o._kdr = { lo: Math.min(...ks), hi: Math.max(...ks) };
@@ -5026,7 +5037,7 @@ function bgData(d) {
   const LK = bgLinkedSet(), cfg = bgCfg(), V = 1 + cfg.vat / 100, B = Object.entries(RAW.budget || {}).map(([id, v]) => ({ id, ...v }));
   const mains = d.contractors.filter(isMain);
   const earth = mains.map(c => { const price = bgN(cfg.prices[c.sector || ""]);
-    const ords = d.orders.filter(o => o.contractorId === c.id && !LK.has(o.id) && o._secs).map(o => { const m = o._secs ? (o._secs[1] - o._secs[0]) * SECTION_M : 0, est = m && price ? m * price * V : null, amt = bgOrdAmt(o);
+    const ords = d.orders.filter(o => o.contractorId === c.id && !LK.has(o.id) && o._secs).map(o => { const m = o._secs ? (o._secLen ?? (o._secs[1] - o._secs[0]) * SECTION_M) : 0, est = m && price ? m * price * V : null, amt = bgOrdAmt(o);
       return { o, m, est, amt, diff: est === null ? null : amt - est }; });
     const est = ords.reduce((a, x) => a + (x.est ?? x.amt), 0), amt = ords.reduce((a, x) => a + x.amt, 0);
     return { c, price, ords, m: ords.reduce((a, x) => a + x.m, 0), est, amt, bad: ords.filter(x => x.diff !== null && Math.abs(x.diff) > 1000) }; });
@@ -5070,7 +5081,7 @@ function pageBudgetEdit(d) {
   const earthRows = R.earth.map(e => `<tr class="mrow" data-act="bgTog" data-id="${e.c.id}" style="cursor:pointer"><td style="border-inline-start:5px solid ${cColor(d, e.c)}"><b>${open[e.c.id] ? "▾" : "▸"} ${esc(e.c.name)}</b><div class="small muted">${esc(e.c.sector || "")} · ${e.ords.length} הזמנות</div></td>
       <td class="c">${num(e.m, 0)} מ׳</td><td class="c">${e.price ? `${num(e.price, 0)} ₪` : `<span class="pill warn">אין מחיר לגזרה</span>`}</td><td class="c"><b>${bgM(e.est)}</b></td><td class="c"><b>${bgM(e.amt)}</b></td>
       <td class="c">${e.bad.length ? `<span class="pill warn">${e.bad.length} לא תואמות</span>` : `<span class="pill ok">תואם</span>`}</td></tr>`
-    + (open[e.c.id] ? e.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || x.o.x_reqNo || "הזמנה")}</span>${x.o._secs ? `<div class="small muted" style="padding-inline-start:18px">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span></div>` : ""}</td>
+    + (open[e.c.id] ? e.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || x.o.x_reqNo || "הזמנה")}</span>${x.o._secs ? `<div class="small muted" style="padding-inline-start:18px">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span>${x.o._secParts?.length ? ` · ${esc([...new Set(x.o._secParts.map(p => `${p.office?.name || ""} ${p.s.num}`))].join(", "))}` : ` · <span class="pill warn">אין קטע תכנון עם החתכים האלה</span>`}${x.o._amb ? ` <span class="pill warn" title="החתכים מתאימים ל: ${esc(x.o._amb.join(" / "))} — להזין ק.ד. בהזמנה">לא ברור באיזה קטע — להזין ק.ד.</span>` : ""}</div>` : ""}</td>
         <td class="c">${x.m ? num(x.m, 0) + " מ׳" : "—"}</td><td></td><td class="c">${x.est === null ? "—" : bgM(x.est)}</td><td class="c">${bgM(x.amt)}</td>
         <td class="c">${x.diff === null ? "—" : Math.abs(x.diff) <= 1000 ? `<span class="pill ok">תואם</span>` : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td></tr>`).join("") : "")).join("");
   const exTable = (arr, title, sub) => `<h3 style="margin:14px 0 6px">${title} <span class="muted small">${sub}</span></h3><div class="tablewrap"><table class="sheet"><thead><tr><th>עבודה</th><th>סוג עבודה</th><th>גזרה</th><th>מבצע</th><th>אומדן (₪)</th><th>הועבר תקציב (₪)</th><th>הוזמן (₪)</th><th>נדרש להשלמה</th><th>הערה</th><th></th></tr></thead><tbody>
