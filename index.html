@@ -5034,6 +5034,9 @@ const ordIsEarth = o => !!o && !o.siteId && isMain(RAW.contractors?.[o.contracto
 /** סכום מחושב להזמנת מכשול: אורך לפי החתכים בתוך קטעי התכנון × מחיר למטר של הגזרה × מע״מ */
 function ordCalcAmt(o) { if (!ordIsEarth(o)) return null; const x = { ...o }; ordBySecs(x); const cfg = bgCfg(), p = bgN(cfg.prices[RAW.contractors?.[o.contractorId]?.sector || ""]);
   return p && x._secLen ? Math.round(x._secLen * p * (1 + cfg.vat / 100)) : null; }
+/** יתרה / חסר בהזמנה: סכום ההזמנה מול שווי החתכים (אורך × מחיר × מע״מ) */
+const ordBalTxt = diff => diff >= 1 ? `יתרה בהזמנה ${num(Math.round(diff), 0)} ₪` : diff <= -1 ? `חסר בהזמנה ${num(Math.round(-diff), 0)} ₪` : "";
+const ordBalPill = (diff, ack) => Math.abs(diff) < 1 ? `<span class="pill ok">תואם</span>` : `<span class="pill ${diff > 0 ? "ok" : ack ? "" : "warn"}" title="סכום ההזמנה מול אורך × מחיר למטר × מע״מ${ack ? " · אושר" : ""}">${ordBalTxt(diff)}</span>`;
 /** סכום שהוקלד ושונה מהחישוב ואושר ידנית ("התעלמות") — נשמר בהזמנה כ־x_amtOk = הסכום שאושר */
 const ordAck = o => { const v = bgOrdStored(o); return !!v && bgN(o.x_amtOk) === v; };   // x_amount — הזמנות אתרי איסוף
 /** קישור שורת אומדן ↔ הזמנות: בשורה נשמר ords = { מזהה הזמנה: true }. הזמנה מקושרת נספרת בשורה (ולא בעבודות העפר) */
@@ -5091,7 +5094,7 @@ function pageBudgetEdit(d) {
       <td class="c">${e.bad.length ? `<span class="pill warn">${e.bad.length} לא תואמות</span>` : `<span class="pill ok">תואם</span>`}</td></tr>`
     + (open[e.c.id] ? e.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || x.o.x_reqNo || "הזמנה")}</span>${x.o._secs ? `<div class="small muted" style="padding-inline-start:18px">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span>${x.o._secParts?.length ? ` · ${esc([...new Set(x.o._secParts.map(p => `${p.office?.name || ""} ${p.s.num}`))].join(", "))}` : ` · <span class="pill warn">אין קטע תכנון עם החתכים האלה</span>`}${x.o._amb ? ` <span class="pill warn" title="החתכים מתאימים ל: ${esc(x.o._amb.join(" / "))} — להזין ק.ד. בהזמנה">לא ברור באיזה קטע — להזין ק.ד.</span>` : ""}</div>` : ""}</td>
         <td class="c">${x.m ? num(x.m, 0) + " מ׳" : "—"}</td><td></td><td class="c">${x.est === null ? "—" : bgM(x.est)}</td><td class="c">${bgM(x.amt)}</td>
-        <td class="c">${x.diff === null ? "—" : x.ok ? (x.ack ? `<span class="pill" title="שונה מהחישוב — אושר ידנית">אושר ידנית</span>` : `<span class="pill ok">תואם</span>`) : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td></tr>`).join("") : "")).join("");
+        <td class="c">${x.diff === null ? "—" : ordBalPill(x.diff, x.ack)}</td></tr>`).join("") : "")).join("");
   const exTable = (arr, title, sub) => `<h3 style="margin:14px 0 6px">${title} <span class="muted small">${sub}</span></h3><div class="tablewrap"><table class="sheet"><thead><tr><th>עבודה</th><th>סוג עבודה</th><th>גזרה</th><th>מבצע</th><th>אומדן (₪)</th><th>הועבר תקציב (₪)</th><th>הוזמן (₪)</th><th>נדרש להשלמה</th><th>הערה</th><th></th></tr></thead><tbody>
     ${arr.map(x => { const lk = bgLinkedAmt(x), left = x.excluded ? 0 : bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered) - lk;
       const ar = x.areaId ?? (d.contractors.find(c => c.id === x.contractorId && isMain(c)) ? x.contractorId : "");
@@ -5905,7 +5908,7 @@ function bgDrill(title, lines) {
       <td class="c">${l.est ? bgM(l.est) : "—"}</td><td class="c">${l.cov ? bgM(l.cov) : "—"}</td><td class="c bg-c ${tn}">${l.est || l.cov ? bgLeft(l.est - l.cov) : ""}</td>
       <td class="small">${l.x ? `${bgOrdsOf(l.x).map(o => `<span class="pill ok bg-ol">${esc(o.name || "הזמנה")} · ${bgM(bgOrdAmt(o))}${isViewer() ? "" : ` <button class="lnk" data-bgun="${l.x.id}|${o.id}" title="ביטול הקישור">✕</button>`}</span>`).join(" ")}${isViewer() ? "" : ` <button class="btn ghost sm" data-bglink="${l.x.id}">🔗 ${bgOrdsOf(l.x).length ? "עוד" : "קישור להזמנה"}</button>`}` : l.earth ? `<span class="muted">${l.earth.ords.length} הזמנות</span>` : ""}</td></tr>`;
     const subs = l.earth ? l.earth.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || "הזמנה")}</span>${x.o._secs ? ` <span class="small muted">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span> · ${num(x.m, 0)} מ׳</span>` : ""}</td><td></td><td></td>
-      <td class="c small">${x.est === null ? "—" : bgM(x.est)}</td><td class="c small">${bgM(x.amt)}</td><td class="c small">${x.diff === null ? "—" : x.ok ? (x.ack ? `<span class="pill" title="שונה מהחישוב — אושר ידנית">אושר ידנית</span>` : `<span class="pill ok">תואם</span>`) : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td><td></td></tr>`).join("") : "";
+      <td class="c small">${x.est === null ? "—" : bgM(x.est)}</td><td class="c small">${bgM(x.amt)}</td><td class="c small">${x.diff === null ? "—" : ordBalPill(x.diff, x.ack)}</td><td></td></tr>`).join("") : "";
     return main + subs; }).join("");
   // מה שקיים באתר מאחורי השורות: דרישות תקציב + חיבורי חח״י, והזמנות של הקבלנים בעמודה שלא שויכו לאומדן
   const V = 1 + iecVat(), xLines = lines.filter(l => l.x), LK = bgLinkedSet();
@@ -7217,9 +7220,9 @@ function ordAmtCell(r, key) { const C = ordCalcAmt(r), S = moneyNum(r[key]), iss
   if (!C) return inp;
   if (S === null) return inp + `<div class="small muted">מחושב: אורך × מחיר × מע״מ${iss ? ` <button class="btn ghost sm" data-act="ordAmtSet" data-id="${r.id}" title="להזמנה יש מס׳ הזמנה — לשמור את הסכום כדי ששינוי מחיר עתידי לא ישנה אותו">נעילה</button>` : ""}</div>`;
   if (Math.round(S) === C) return inp + `<div class="small"><span class="pill ok">תואם חישוב</span></div>`;
-  const df = `${S > C ? "+" : ""}${num(Math.round(S - C), 0)}`;
-  if (bgN(r.x_amtOk) === S) return inp + `<div class="small muted" title="מחושב ${num(C, 0)} ₪ · הפרש ${df} ₪">שונה מהחישוב (${df}) · אושר</div>`;
-  return inp + `<div class="small" style="min-width:250px;white-space:normal;line-height:1.9"><span class="pill warn" title="אורך × מחיר למטר × מע״מ">מחושב ${num(C, 0)} · הפרש ${df}</span> <button class="btn ghost sm" data-act="ordAmtSet" data-id="${r.id}">עדכון לחישוב</button> <button class="btn ghost sm" data-act="ordAmtOk" data-id="${r.id}">התעלמות</button></div>`; }
+  const bal = ordBalTxt(S - C);
+  if (bgN(r.x_amtOk) === S) return inp + `<div class="small" style="min-width:200px;white-space:normal" title="שווי החתכים ${num(C, 0)} ₪ · אושר"><span class="pill ${S > C ? "ok" : ""}">${bal}</span></div>`;
+  return inp + `<div class="small" style="min-width:250px;white-space:normal;line-height:1.9"><span class="pill ${S > C ? "ok" : "warn"}" title="אורך × מחיר למטר × מע״מ">${bal} · שווי החתכים ${num(C, 0)}</span> <button class="btn ghost sm" data-act="ordAmtSet" data-id="${r.id}">עדכון לחישוב</button> <button class="btn ghost sm" data-act="ordAmtOk" data-id="${r.id}">התעלמות</button></div>`; }
 /** שאלה לפני שמירת סכום ידני שונה מהחישוב */
 const ordAmtAsk = (v, C) => new Promise(res => modal(`<h2>הסכום שונה מהחישוב</h2>
   <p style="margin:0">הוקלד <b>${num(v, 0)} ₪</b> · לפי אורך × מחיר למטר × מע״מ: <b>${num(C, 0)} ₪</b> (הפרש ${v > C ? "+" : ""}${num(Math.round(v - C), 0)} ₪)</p>
@@ -7734,7 +7737,7 @@ function ordersTab(d, c, ords, cov) {
   const card = (o, P = {}) => { const amt = bgOrdAmt(o), x = estOf[o.id], ex = exOf[o.id], ln = LKline(o.id), st = String(ordStatusTxt(o) || ""), inG = !!P.part;
     const stCls = /מאושר|הסתיים/.test(st) ? "ok" : /אין|ממתין|חסר|עתיד/.test(st) ? "warn" : "";
     return `<div class="od-card ${inG ? "od-part" : ""}" style="--cc:${P.col || col}"><div class="od-h">${inG ? `<b style="color:var(--cc)">חלק ${P.part}</b>` : `<b>${esc(o.name || "הזמנה")}</b>${o.x_ordNo ? `<span class="pill od-no" dir="ltr">${f(o.x_ordNo)}</span>` : ""}${st ? `<span class="pill ${stCls}">${esc(st)}</span>` : ""}`}${ln ? `<span class="pill">${esc(ln.title || "")}</span>` : ""}</div>
-      <div class="od-amt">${amt ? `${num(amt, 0)} <small>₪</small>` : `<span class="muted">אין תקציב</span>`}${x && x.diff !== null ? (x.ok ? (x.ack ? `<span class="pill" title="שונה מהחישוב — אושר ידנית">אושר ידנית</span>` : `<span class="pill ok">תואם אומדן</span>`) : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${num(Math.round(x.diff), 0)} מול אומדן</span>`) : ""}</div>
+      <div class="od-amt">${amt ? `${num(amt, 0)} <small>₪</small>` : `<span class="muted">אין תקציב</span>`}${x && x.diff !== null ? (ordBalPill(x.diff, x.ack)) : ""}</div>
       <div class="od-g">
         ${o._secs ? `<div><span>חתכים</span><b dir="ltr">${o._secs[1]}–${o._secs[0]}</b></div><div><span>אורך</span><b>${num(o._secLen || (o._secs[1] - o._secs[0]) * SECTION_M, 0)} מ׳</b></div>` : ""}
         ${kdRange(o) ? `<div><span>ק.ד.</span><b>${kdTxt(kdRange(o))}</b></div>` : ""}
@@ -7746,6 +7749,7 @@ ${!inG && o.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o.x_r
       ${o.note ? `<div class="od-note">${esc(o.note)}</div>` : ""}
       ${P.fut && !isViewer() ? `<div class="row" style="gap:6px;margin-top:auto"><button class="btn ghost sm" data-act="odOrdEd" data-id="${o.id}">✎ עריכה</button><span class="small muted">כשמזינים מס׳ הזמנה ומעדכנים סטטוס — עוברת למעלה</span></div>` : ""}
       ${!o._secs && myLines.length && !isViewer() ? `<label class="od-link small ${ln ? "" : "no"}">שורת אומדן: <select class="inp" data-edit="orders|${o.id}|_bgLine"><option value="">${ln ? "— ביטול שיוך" : "— לא משויכת (לבחור)"}</option>${myLines.map(([lid, y]) => `<option value="${lid}" ${y === ln ? "selected" : ""}>${esc(y.title || "")}${y.areaId && y.areaId !== c.id ? ` · ${esc(d.contractors.find(m => m.id === y.areaId)?.name || "")}` : ""}</option>`).join("")}</select></label>` : ""}</div>`; };
+  const balT = sorted.reduce((t, o) => { const x = estOf[o.id]; return t + (x && x.diff !== null && x.diff >= 1 ? x.diff : 0); }, 0), lackT = sorted.reduce((t, o) => { const x = estOf[o.id]; return t + (x && x.diff !== null && x.diff <= -1 ? -x.diff : 0); }, 0);
   const tot = sorted.reduce((t, o) => t + bgOrdAmt(o), 0), len = sorted.reduce((t, o) => t + (o._secLen || 0), 0), futOT = futO.reduce((t, o) => t + bgOrdAmt(o), 0);
   // הזמנות עתידיות = שורות באומדן של הקבלן (גזרה או מבצע) שעוד לא כוסו
   const fut = R ? bgLines(d, R).filter(l => l.x && (l.area === c.id || l.exec === c.id) && l.est - l.cov > 1) : [];
@@ -7755,7 +7759,7 @@ ${!inG && o.x_reqNo ? `<div><span>מס׳ דרישה</span><b dir="ltr">${f(o.x_r
       ${isViewer() ? "" : `<div class="row" style="gap:6px;margin-top:auto"><button class="btn sm" data-act="odIssue" data-id="${l.x.id}" title="פותח הזמנה בטבלת ההזמנות של הקבלן ומקשר אותה לשורה באומדן">📝 הוצאת הזמנה</button><span class="spacer"></span>
         <button class="btn ghost sm" data-act="odLineEd" data-id="${l.x.id}">✎ עריכה</button><button class="btn ghost sm" data-act="odMove" data-id="${l.x.id}" title="העברה לקבלן אחר">↔ העברה</button><button class="btn del" data-act="odDel" data-id="${l.x.id}" title="מחיקה מהאומדן">מחיקה</button></div>`}</div>`;
   const nOrd = new Set(sorted.map(o => reqNorm(o.x_ordNo) || (reqNorm(o.x_reqNo) ? `r${reqNorm(o.x_reqNo)}|${String(o.name || "").replace(/\s+/g, "")}` : o.id))).size;
-  return `<div class="od-sum"><div><span>הזמנות</span><b>${nOrd}</b>${nOrd < sorted.length ? `<small class="muted"> (${sorted.length} חלקים)</small>` : ""}</div><div><span>תקציב בהזמנות</span><b>${num(tot, 0)} ₪</b></div>${len ? `<div><span>אורך לפי חתכים</span><b>${num(len, 0)} מ׳</b></div>` : ""}
+  return `<div class="od-sum"><div><span>הזמנות</span><b>${nOrd}</b>${nOrd < sorted.length ? `<small class="muted"> (${sorted.length} חלקים)</small>` : ""}</div><div><span>תקציב בהזמנות</span><b>${num(tot, 0)} ₪</b></div>${len ? `<div><span>אורך לפי חתכים</span><b>${num(len, 0)} מ׳</b></div>` : ""}${balT >= 1 ? `<div title="סכום ההזמנות שמעל שווי החתכים שלהן"><span>יתרות בהזמנות</span><b style="color:var(--ok,#2e7d4f)">${num(Math.round(balT), 0)} ₪</b></div>` : ""}${lackT >= 1 ? `<div title="הזמנות שהסכום שלהן נמוך משווי החתכים"><span>חסר בהזמנות</span><b style="color:var(--warn,#b54708)">${num(Math.round(lackT), 0)} ₪</b></div>` : ""}
       ${cov ? `<div><span>כיסוי הגזרה</span><b>${Math.round(cov.pct * 100)}%</b></div>` : ""}${nFut ? `<div><span>עתידיות</span><b>${nFut} · ${num(Math.round(futT), 0)} ₪</b></div>` : ""}
       <div class="od-tot"><span>סה״כ צפוי לקבלן</span><b>${num(Math.round(tot + futT), 0)} ₪</b><small>הזמנות ${num(tot, 0)} + עתידיות ${num(Math.round(futT), 0)}</small></div></div>
     ${loose.length && myLines.length ? `<div class="banner"><b>${loose.length} הזמנות לא משויכות לאומדן</b><span>בלי שיוך, הסכום שלהן לא יורד מהעתידיות ונספר פעמיים בסה״כ — בוחרים "שורת אומדן" בכרטיס.</span></div>` : ""}
