@@ -5235,7 +5235,8 @@ const reqNorm = v => String(v ?? "").replace(/\D/g, "");
 const reqAmt = v => { const t = String(v ?? "").trim(); if (!t) return 0; const n = bgN(t); return /מ[׳']|מיליון|מש["״]?ח/.test(t) ? n * 1e6 : /אלף|א[׳']/.test(t) ? n * 1e3 : n; };
 function ordStatusTxt(o) { const ks = new Set(); for (const k of ["orders", "orders__" + o.contractorId]) Object.entries(RAW.tableConfig?.[k]?.custom || {}).forEach(([id, c]) => { if (id !== "signer" && /^\s*סטטוס/.test(c?.label || "")) ks.add("x_" + id); });
   return [o.x_signer, ...[...ks].map(k => o[k])].filter(Boolean).join(" · "); }
-const ordIssued = o => !!reqNorm(o.x_ordNo) && !/עתיד/.test(ordStatusTxt(o));
+/** הזמנה שיצאה: סטטוס "מאושר" (גם בלי מס׳ 444), או מס׳ הזמנה בלי סטטוס עתידי. עתידית: סטטוס "עתידי", או בלי מספר ובלי אישור */
+const ORD_OK_RE = /מאושר|אושר|יצא/, ordIssued = o => { const st = ordStatusTxt(o); return !/עתיד/.test(st) && (!!reqNorm(o.x_ordNo) || ORD_OK_RE.test(st)); };
 function reqTable(d) {
   const M = new Map(), get = no => { const n = reqNorm(no); if (!n) return null; if (!M.has(n)) M.set(n, { no: n, key: n, rec: null, orders: [], iec: null, pendOrd: [] }); return M.get(n); };
   d.reqs.forEach(r => { const x = get(r.no) || (M.set("~" + r.id, { no: "", key: "~" + r.id, rec: null, orders: [], iec: null, pendOrd: [] }), M.get("~" + r.id)); x.rec = r; });
@@ -8458,8 +8459,8 @@ $app.addEventListener("change", async e => {
       if (C && Math.round(v) !== C && v !== bgN(o[bk])) { const ch = await ordAmtAsk(v, C);
         if (ch === "cancel") { render(); return; } if (ch === "calc") return api.update(col, id, { [bk]: C, x_amtOk: null });
         return api.update(col, id, { [bk]: v, x_amtOk: ch === "ack" ? v : null }); } }
-    if (bk && key === "x_ordNo" && reqNorm(v) && ordIsEarth(o) && moneyNum(o[bk]) === null) { const C = ordCalcAmt(o);   // הזמנה יצאה — הסכום המחושב ננעל (שינוי מחיר עתידי לא ישנה אותה)
-      if (C) { await api.update(col, id, { x_ordNo: v, [bk]: C }); toast(`ההזמנה יצאה — הסכום ננעל: ${num(C, 0)} ₪`); return; } } }
+    if (bk && ((key === "x_ordNo" && reqNorm(v)) || (key === "x_signer" && ORD_OK_RE.test(v) && !/עתיד/.test(v))) && ordIsEarth(o) && moneyNum(o[bk]) === null) { const C = ordCalcAmt(o);   // הזמנה יצאה (מס׳ הזמנה או "מאושר") — הסכום המחושב ננעל (שינוי מחיר עתידי לא ישנה אותה)
+      if (C) { await api.update(col, id, { [key]: v, [bk]: C }); toast(`ההזמנה יצאה — הסכום ננעל: ${num(C, 0)} ₪`); return; } } }
   if (col === "issues" && RAW.issues?.[id] && ["status", "owner", "due", "priority", "mgmt"].includes(key)) { if (v !== RAW.issues[id][key]) await wUpd(id, "", { [key]: v }); return; }
   if (col === "iecOrders") {   // שינוי שלב נרשם בהיסטוריה; תאריך תשלום מקדם את השלב
     const o = RAW.iecOrders?.[id]; if (!o) return;
