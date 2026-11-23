@@ -5027,7 +5027,15 @@ const bgLeft = v => v < -0.5 ? `<span style="color:var(--accent)">עודף ${num
 const bgM = v => `${num(Math.round(v || 0), 0)} ₪`, bgMM = v => `${(Math.round((v || 0) / 1e5) / 10).toLocaleString("he-IL")} מ׳ ₪`;
 /** מפתח עמודת התקציב בהזמנות (עמודה מותאמת בשם "תקציב") */
 function bgBudgetKey(cid) { for (const k of ["orders__" + cid, "orders"]) { const cu = RAW.tableConfig?.[k]?.custom || {}; for (const [key, v] of Object.entries(cu)) if (/תקציב/.test(String(v?.label || ""))) return "x_" + key; } return null; }
-const bgOrdAmt = o => { const k = o.contractorId && bgBudgetKey(o.contractorId); return (k && bgN(o[k])) || bgN(o.x_amount); };   // x_amount — הזמנות אתרי איסוף
+const bgOrdStored = o => { const k = o.contractorId && bgBudgetKey(o.contractorId); return (k && bgN(o[k])) || bgN(o.x_amount); };
+const bgOrdAmt = o => bgOrdStored(o) || ordCalcAmt(o) || 0;   // הזמנת מכשול בלי סכום — לפי החישוב (אורך × מחיר × מע״מ)
+/** הזמנת מכשול = עבודות עפר לפי חתכים: קבלן ראשי, לא אתר איסוף, לא משויכת לשורת אומדן אחרת, ויש לה חתכים */
+const ordIsEarth = o => !!o && !o.siteId && isMain(RAW.contractors?.[o.contractorId] || {}) && !bgLineOfOrder(o.id) && !!ordSecs(o);
+/** סכום מחושב להזמנת מכשול: אורך לפי החתכים בתוך קטעי התכנון × מחיר למטר של הגזרה × מע״מ */
+function ordCalcAmt(o) { if (!ordIsEarth(o)) return null; const x = { ...o }; ordBySecs(x); const cfg = bgCfg(), p = bgN(cfg.prices[RAW.contractors?.[o.contractorId]?.sector || ""]);
+  return p && x._secLen ? Math.round(x._secLen * p * (1 + cfg.vat / 100)) : null; }
+/** סכום שהוקלד ושונה מהחישוב ואושר ידנית ("התעלמות") — נשמר בהזמנה כ־x_amtOk = הסכום שאושר */
+const ordAck = o => { const v = bgOrdStored(o); return !!v && bgN(o.x_amtOk) === v; };   // x_amount — הזמנות אתרי איסוף
 /** קישור שורת אומדן ↔ הזמנות: בשורה נשמר ords = { מזהה הזמנה: true }. הזמנה מקושרת נספרת בשורה (ולא בעבודות העפר) */
 const bgOrdsOf = x => Object.keys(x?.ords || {}).filter(id => RAW.orders?.[id]).map(id => ({ id, ...RAW.orders[id] }));
 const bgLinkedAmt = x => bgOrdsOf(x).reduce((t, o) => t + bgOrdAmt(o), 0);
@@ -5038,9 +5046,9 @@ function bgData(d) {
   const mains = d.contractors.filter(isMain);
   const earth = mains.map(c => { const price = bgN(cfg.prices[c.sector || ""]);
     const ords = d.orders.filter(o => o.contractorId === c.id && !LK.has(o.id) && o._secs).map(o => { const m = o._secs ? (o._secLen ?? (o._secs[1] - o._secs[0]) * SECTION_M) : 0, est = m && price ? m * price * V : null, amt = bgOrdAmt(o);
-      return { o, m, est, amt, diff: est === null ? null : amt - est }; });
+      const diff = est === null ? null : amt - est, ack = diff !== null && Math.abs(diff) >= 1 && ordAck(o); return { o, m, est, amt, diff, ack, ok: diff === null ? null : Math.abs(diff) < 1 || ack }; });
     const est = ords.reduce((a, x) => a + (x.est ?? x.amt), 0), amt = ords.reduce((a, x) => a + x.amt, 0);
-    return { c, price, ords, m: ords.reduce((a, x) => a + x.m, 0), est, amt, bad: ords.filter(x => x.diff !== null && Math.abs(x.diff) > 1000) }; });
+    return { c, price, ords, m: ords.reduce((a, x) => a + x.m, 0), est, amt, bad: ords.filter(x => x.diff !== null && !x.ok) }; });
   const extras = B.filter(x => x.kind === "extra").sort((a, b) => (a.phase === "בוצע" ? 0 : 1) - (b.phase === "בוצע" ? 0 : 1) || (+a.order || 0) - (+b.order || 0));
   const sites = B.filter(x => x.kind === "site").sort((a, b) => (+a.order || 0) - (+b.order || 0));
   const exAmt = x => x.excluded ? 0 : bgN(x.amount), exCov = x => bgN(x.transferred) + bgN(x.ordered) + bgLinkedAmt(x);
@@ -5083,7 +5091,7 @@ function pageBudgetEdit(d) {
       <td class="c">${e.bad.length ? `<span class="pill warn">${e.bad.length} לא תואמות</span>` : `<span class="pill ok">תואם</span>`}</td></tr>`
     + (open[e.c.id] ? e.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || x.o.x_reqNo || "הזמנה")}</span>${x.o._secs ? `<div class="small muted" style="padding-inline-start:18px">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span>${x.o._secParts?.length ? ` · ${esc([...new Set(x.o._secParts.map(p => `${p.office?.name || ""} ${p.s.num}`))].join(", "))}` : ` · <span class="pill warn">אין קטע תכנון עם החתכים האלה</span>`}${x.o._amb ? ` <span class="pill warn" title="החתכים מתאימים ל: ${esc(x.o._amb.join(" / "))} — להזין ק.ד. בהזמנה">לא ברור באיזה קטע — להזין ק.ד.</span>` : ""}</div>` : ""}</td>
         <td class="c">${x.m ? num(x.m, 0) + " מ׳" : "—"}</td><td></td><td class="c">${x.est === null ? "—" : bgM(x.est)}</td><td class="c">${bgM(x.amt)}</td>
-        <td class="c">${x.diff === null ? "—" : Math.abs(x.diff) <= 1000 ? `<span class="pill ok">תואם</span>` : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td></tr>`).join("") : "")).join("");
+        <td class="c">${x.diff === null ? "—" : x.ok ? (x.ack ? `<span class="pill" title="שונה מהחישוב — אושר ידנית">אושר ידנית</span>` : `<span class="pill ok">תואם</span>`) : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td></tr>`).join("") : "")).join("");
   const exTable = (arr, title, sub) => `<h3 style="margin:14px 0 6px">${title} <span class="muted small">${sub}</span></h3><div class="tablewrap"><table class="sheet"><thead><tr><th>עבודה</th><th>סוג עבודה</th><th>גזרה</th><th>מבצע</th><th>אומדן (₪)</th><th>הועבר תקציב (₪)</th><th>הוזמן (₪)</th><th>נדרש להשלמה</th><th>הערה</th><th></th></tr></thead><tbody>
     ${arr.map(x => { const lk = bgLinkedAmt(x), left = x.excluded ? 0 : bgN(x.amount) - bgN(x.transferred) - bgN(x.ordered) - lk;
       const ar = x.areaId ?? (d.contractors.find(c => c.id === x.contractorId && isMain(c)) ? x.contractorId : "");
@@ -5897,7 +5905,7 @@ function bgDrill(title, lines) {
       <td class="c">${l.est ? bgM(l.est) : "—"}</td><td class="c">${l.cov ? bgM(l.cov) : "—"}</td><td class="c bg-c ${tn}">${l.est || l.cov ? bgLeft(l.est - l.cov) : ""}</td>
       <td class="small">${l.x ? `${bgOrdsOf(l.x).map(o => `<span class="pill ok bg-ol">${esc(o.name || "הזמנה")} · ${bgM(bgOrdAmt(o))}${isViewer() ? "" : ` <button class="lnk" data-bgun="${l.x.id}|${o.id}" title="ביטול הקישור">✕</button>`}</span>`).join(" ")}${isViewer() ? "" : ` <button class="btn ghost sm" data-bglink="${l.x.id}">🔗 ${bgOrdsOf(l.x).length ? "עוד" : "קישור להזמנה"}</button>`}` : l.earth ? `<span class="muted">${l.earth.ords.length} הזמנות</span>` : ""}</td></tr>`;
     const subs = l.earth ? l.earth.ords.map(x => `<tr class="msub"><td><span class="msind">${esc(x.o.name || "הזמנה")}</span>${x.o._secs ? ` <span class="small muted">חתכים <span dir="ltr">${x.o._secs[1]}–${x.o._secs[0]}</span> · ${num(x.m, 0)} מ׳</span>` : ""}</td><td></td><td></td>
-      <td class="c small">${x.est === null ? "—" : bgM(x.est)}</td><td class="c small">${bgM(x.amt)}</td><td class="c small">${x.diff === null ? "—" : Math.abs(x.diff) <= 1000 ? `<span class="pill ok">תואם</span>` : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td><td></td></tr>`).join("") : "";
+      <td class="c small">${x.est === null ? "—" : bgM(x.est)}</td><td class="c small">${bgM(x.amt)}</td><td class="c small">${x.diff === null ? "—" : x.ok ? (x.ack ? `<span class="pill" title="שונה מהחישוב — אושר ידנית">אושר ידנית</span>` : `<span class="pill ok">תואם</span>`) : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${bgM(x.diff)}</span>`}</td><td></td></tr>`).join("") : "";
     return main + subs; }).join("");
   // מה שקיים באתר מאחורי השורות: דרישות תקציב + חיבורי חח״י, והזמנות של הקבלנים בעמודה שלא שויכו לאומדן
   const V = 1 + iecVat(), xLines = lines.filter(l => l.x), LK = bgLinkedSet();
@@ -7203,6 +7211,20 @@ const cellInput = (col, row, key, cls = "", extra = "") => /num|kdin/.test(cls)
 const linkCell = (col, row, key) => { const u = safeUrl(row[key]);
   return `<span class="maplink">${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">צפה במפה</a>` : `<span class="empty">אין קישור</span>`}<button data-act="editLink" data-col="${col}" data-id="${row.id}" data-key="${key}" title="עריכת קישור" aria-label="עריכת קישור">✎</button></span>`; };
 
+/** תא "תקציב" בהזמנת מכשול: ריק = מחושב אוטומטית; הוקלד ושונה מהחישוב = מסומן, עם עדכון לחישוב / התעלמות */
+function ordAmtCell(r, key) { const C = ordCalcAmt(r), S = moneyNum(r[key]), iss = ordIssued(r);
+  const inp = `<input class="cell num" id="f_orders_${r.id}_${key}" value="${esc(S === null ? "" : moneyTxt(S))}" placeholder="${C ? esc(C.toLocaleString("he-IL")) : ""}" data-edit="orders|${r.id}|${key}|m" inputmode="decimal" style="field-sizing:content">`;
+  if (!C) return inp;
+  if (S === null) return inp + `<div class="small muted">מחושב: אורך × מחיר × מע״מ${iss ? ` <button class="btn ghost sm" data-act="ordAmtSet" data-id="${r.id}" title="להזמנה יש מס׳ הזמנה — לשמור את הסכום כדי ששינוי מחיר עתידי לא ישנה אותו">נעילה</button>` : ""}</div>`;
+  if (Math.round(S) === C) return inp + `<div class="small"><span class="pill ok">תואם חישוב</span></div>`;
+  const df = `${S > C ? "+" : ""}${num(Math.round(S - C), 0)}`;
+  if (bgN(r.x_amtOk) === S) return inp + `<div class="small muted" title="מחושב ${num(C, 0)} ₪ · הפרש ${df} ₪">שונה מהחישוב (${df}) · אושר</div>`;
+  return inp + `<div class="small" style="min-width:250px;white-space:normal;line-height:1.9"><span class="pill warn" title="אורך × מחיר למטר × מע״מ">מחושב ${num(C, 0)} · הפרש ${df}</span> <button class="btn ghost sm" data-act="ordAmtSet" data-id="${r.id}">עדכון לחישוב</button> <button class="btn ghost sm" data-act="ordAmtOk" data-id="${r.id}">התעלמות</button></div>`; }
+/** שאלה לפני שמירת סכום ידני שונה מהחישוב */
+const ordAmtAsk = (v, C) => new Promise(res => modal(`<h2>הסכום שונה מהחישוב</h2>
+  <p style="margin:0">הוקלד <b>${num(v, 0)} ₪</b> · לפי אורך × מחיר למטר × מע״מ: <b>${num(C, 0)} ₪</b> (הפרש ${v > C ? "+" : ""}${num(Math.round(v - C), 0)} ₪)</p>
+  <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="btn" id="aK">לשמור — ולהתעלם מההפרש</button><button class="btn ghost" id="aW">לשמור — ולהשאיר מסומן</button><button class="btn ghost" id="aC">להשתמש בחישוב (${num(C, 0)})</button><button class="btn ghost" id="aX">ביטול</button></div>`, (m, close) => {
+  const go = r => { close(); res(r); }; m.querySelector("#aK").onclick = () => go("ack"); m.querySelector("#aW").onclick = () => go("keep"); m.querySelector("#aC").onclick = () => go("calc"); m.querySelector("#aX").onclick = () => go("cancel"); }));
 /** עמודה מותאמת אישית → הגדרת עמודה */
 const moneyNum = v => { if (v === "" || v === null || v === undefined) return null; const n = Number(String(v).replace(/[^\d.\-]/g, "")); return isNaN(n) ? null : n; };
 const moneyTxt = v => { const n = moneyNum(v); return n === null ? "" : n.toLocaleString("he-IL"); };
@@ -7211,13 +7233,13 @@ function customColDef(col, c) {
   const cell = {
     text: r => cellInput(col, r, key),
     number: r => cellInput(col, r, key, "num", 'inputmode="decimal"'),
-    money: r => `<input class="cell num" id="f_${col}_${r.id}_${key}" value="${esc(moneyTxt(r[key]))}" data-edit="${col}|${r.id}|${key}|m" inputmode="decimal" style="field-sizing:content">`,
+    money: r => col === "orders" && key === bgBudgetKey(r.contractorId) && ordIsEarth(r) ? ordAmtCell(r, key) : `<input class="cell num" id="f_${col}_${r.id}_${key}" value="${esc(moneyTxt(r[key]))}" data-edit="${col}|${r.id}|${key}|m" inputmode="decimal" style="field-sizing:content">`,
     date: r => `<input type="date" class="cell" id="f_${col}_${r.id}_${key}" value="${esc(r[key])}" data-edit="${col}|${r.id}|${key}">`,
     link: r => linkCell(col, r, key),
     check: r => `<input type="checkbox" id="f_${col}_${r.id}_${key}" ${r[key] ? "checked" : ""} data-edit="${col}|${r.id}|${key}|b" aria-label="${esc(c.label)}">`,
   }[c.type] || (r => cellInput(col, r, key));
   return { key, label: c.label, cls: c.type === "check" || c.type === "number" || c.type === "money" ? "c" : "", cell, custom: true,
-    sum: c.type === "money" || c.type === "number" ? (rows => { const v = rows.map(r => moneyNum(r[key])).filter(x => x !== null); return v.length ? v.reduce((a, b) => a + b, 0) : null; }) : null, money: c.type === "money" };
+    sum: c.type === "money" || c.type === "number" ? (rows => { const v = rows.map(r => col === "orders" && key === bgBudgetKey(r.contractorId) ? (bgOrdAmt(r) || null) : moneyNum(r[key])).filter(x => x !== null); return v.length ? v.reduce((a, b) => a + b, 0) : null; }) : null, money: c.type === "money" };
 }
 /** העמודות המוצגות בפועל: קבועות שלא הוסתרו + מותאמות */
 /** כל העמודות של טבלה (קבועות + שהוספת) לפי הסדר שנקבע. עמודה בלי מיקום שמור — בסוף, בסדר ברירת המחדל. */
@@ -7711,7 +7733,7 @@ function ordersTab(d, c, ords, cov) {
   const card = (o, P = {}) => { const amt = bgOrdAmt(o), x = estOf[o.id], ex = exOf[o.id], ln = LKline(o.id), st = String(ordStatusTxt(o) || ""), inG = !!P.part;
     const stCls = /מאושר|הסתיים/.test(st) ? "ok" : /אין|ממתין|חסר|עתיד/.test(st) ? "warn" : "";
     return `<div class="od-card ${inG ? "od-part" : ""}" style="--cc:${P.col || col}"><div class="od-h">${inG ? `<b style="color:var(--cc)">חלק ${P.part}</b>` : `<b>${esc(o.name || "הזמנה")}</b>${o.x_ordNo ? `<span class="pill od-no" dir="ltr">${f(o.x_ordNo)}</span>` : ""}${st ? `<span class="pill ${stCls}">${esc(st)}</span>` : ""}`}${ln ? `<span class="pill">${esc(ln.title || "")}</span>` : ""}</div>
-      <div class="od-amt">${amt ? `${num(amt, 0)} <small>₪</small>` : `<span class="muted">אין תקציב</span>`}${x && x.diff !== null ? (Math.abs(x.diff) <= 1000 ? `<span class="pill ok">תואם אומדן</span>` : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${num(Math.round(x.diff), 0)} מול אומדן</span>`) : ""}</div>
+      <div class="od-amt">${amt ? `${num(amt, 0)} <small>₪</small>` : `<span class="muted">אין תקציב</span>`}${x && x.diff !== null ? (x.ok ? (x.ack ? `<span class="pill" title="שונה מהחישוב — אושר ידנית">אושר ידנית</span>` : `<span class="pill ok">תואם אומדן</span>`) : `<span class="pill warn">${x.diff > 0 ? "+" : ""}${num(Math.round(x.diff), 0)} מול אומדן</span>`) : ""}</div>
       <div class="od-g">
         ${o._secs ? `<div><span>חתכים</span><b dir="ltr">${o._secs[1]}–${o._secs[0]}</b></div><div><span>אורך</span><b>${num(o._secLen || (o._secs[1] - o._secs[0]) * SECTION_M, 0)} מ׳</b></div>` : ""}
         ${kdRange(o) ? `<div><span>ק.ד.</span><b>${kdTxt(kdRange(o))}</b></div>` : ""}
@@ -8193,6 +8215,9 @@ $app.addEventListener("click", async e => {
     const iid = await api.add("issues", { contractorId: r.contractorId, title: t.length > 90 ? t.slice(0, 88) + "…" : t, category: r.kind === "בעיה בשטח" ? "חסם" : "תכנון", kdFrom: r.kdFrom || "", kdTo: r.kdTo || r.kdFrom || "", owner: "", status: "פתוח", opened: r.date || todayStr(), updated: todayStr(),
       last: `פנייה מהשטח (${r.reportedByName || r.reportedBy || ""}): ${t}`, history: {}, fromRequest: b.dataset.id });
     await api.update("requests", b.dataset.id, { status: "הפך לנושא", issueId: iid || "", reply: txt || "נפתח נושא מעקב — נעדכן כאן", replyByName: me?.name || "מנהל הפרויקט", replyAt: new Date().toISOString() }); }
+  else if (act === "ordAmtSet" || act === "ordAmtOk") { const o = RAW.orders?.[b.dataset.id], k = o && bgBudgetKey(o.contractorId); if (!o || !k) return; const r = { id: b.dataset.id, ...o };
+    if (act === "ordAmtSet") { const C = ordCalcAmt(r); if (C) { await api.update("orders", r.id, { [k]: C, x_amtOk: null }); toast("הסכום עודכן לפי החישוב ✓"); } }
+    else { await api.update("orders", r.id, { x_amtOk: bgN(o[k]) }); toast("סומן כמאושר — ההפרש לא יסומן"); } }
   else if (act === "sortCol") { FRESH.clear();   // מיון מפורש — שורות חדשות לא נשארות נעוצות למעלה
     const t = b.dataset.table, k = b.dataset.k, cur = SORTS[t] === "off" ? null : SORTS[t] || SORT_DEF[t];
     const isDef = !SORTS[t] && !!SORT_DEF[t], nx = !cur || cur.k !== k ? { k, dir: 1 } : isDef ? { k, dir: -cur.dir } : cur.dir > 0 ? { k, dir: -1 } : SORT_DEF[t] ? SORT_DEF[t] : "off";   // עולה → יורד → בלי מיון (הסדר המקורי)
@@ -8346,6 +8371,13 @@ $app.addEventListener("change", async e => {
     await api.update(col, id, { history: hist, last: v, updated: v ? today : x.updated, notMentioned: null, ...(col === "issues" && !isMgr() ? { unseen: new Date().toISOString() } : {}) });
     return;
   }
+  if (col === "orders" && RAW.orders?.[id]) { const o = { id, ...RAW.orders[id] }, bk = bgBudgetKey(o.contractorId);
+    if (bk && key === bk && v !== "" && ordIsEarth(o)) { const C = ordCalcAmt(o);   // סכום ידני בהזמנת מכשול: התראה כשהוא שונה מהחישוב
+      if (C && Math.round(v) !== C && v !== bgN(o[bk])) { const ch = await ordAmtAsk(v, C);
+        if (ch === "cancel") { render(); return; } if (ch === "calc") return api.update(col, id, { [bk]: C, x_amtOk: null });
+        return api.update(col, id, { [bk]: v, x_amtOk: ch === "ack" ? v : null }); } }
+    if (bk && key === "x_ordNo" && reqNorm(v) && ordIsEarth(o) && moneyNum(o[bk]) === null) { const C = ordCalcAmt(o);   // הזמנה יצאה — הסכום המחושב ננעל (שינוי מחיר עתידי לא ישנה אותה)
+      if (C) { await api.update(col, id, { x_ordNo: v, [bk]: C }); toast(`ההזמנה יצאה — הסכום ננעל: ${num(C, 0)} ₪`); return; } } }
   if (col === "issues" && RAW.issues?.[id] && ["status", "owner", "due", "priority", "mgmt"].includes(key)) { if (v !== RAW.issues[id][key]) await wUpd(id, "", { [key]: v }); return; }
   if (col === "iecOrders") {   // שינוי שלב נרשם בהיסטוריה; תאריך תשלום מקדם את השלב
     const o = RAW.iecOrders?.[id]; if (!o) return;
