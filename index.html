@@ -5043,6 +5043,8 @@ const ordAck = o => { const v = bgOrdStored(o); return !!v && bgN(o.x_amtOk) ===
 /** קישור שורת אומדן ↔ הזמנות: בשורה נשמר ords = { מזהה הזמנה: true }. הזמנה מקושרת נספרת בשורה (ולא בעבודות העפר) */
 const bgOrdsOf = x => Object.keys(x?.ords || {}).filter(id => RAW.orders?.[id]).map(id => ({ id, ...RAW.orders[id] }));
 const bgLinkedAmt = x => bgOrdsOf(x).reduce((t, o) => t + bgOrdAmt(o), 0);
+/** כיסוי שורת אומדן: התקציב שהתקבל (הועבר / הוזמן) — וההזמנות המקושרות יוצאות מתוכו, לא מתווספות עליו. לכן הגבוה מבין השניים */
+const bgLineCov = x => Math.max(bgN(x.transferred) + bgN(x.ordered), bgLinkedAmt(x));
 const bgLinkedSet = () => new Set(Object.values(RAW.budget || {}).flatMap(x => Object.keys(x.ords || {})));
 const bgLineOfOrder = oid => Object.entries(RAW.budget || {}).find(([, x]) => x.ords?.[oid])?.[0] || "";
 function bgData(d) {
@@ -5055,7 +5057,7 @@ function bgData(d) {
     return { c, price, ords, m: ords.reduce((a, x) => a + x.m, 0), est, amt, fut, bad: ords.filter(x => x.diff !== null && !x.ok && ordIssued(x.o)) }; });
   const extras = B.filter(x => x.kind === "extra").sort((a, b) => (a.phase === "בוצע" ? 0 : 1) - (b.phase === "בוצע" ? 0 : 1) || (+a.order || 0) - (+b.order || 0));
   const sites = B.filter(x => x.kind === "site").sort((a, b) => (+a.order || 0) - (+b.order || 0));
-  const exAmt = x => x.excluded ? 0 : bgN(x.amount), exCov = x => bgN(x.transferred) + bgN(x.ordered) + bgLinkedAmt(x);
+  const exAmt = x => x.excluded ? 0 : bgN(x.amount), exCov = x => bgLineCov(x);
   const exDone = extras.filter(x => x.phase === "בוצע"), exNext = extras.filter(x => x.phase !== "בוצע");
   const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
   const siteTot = sum(sites, x => bgN(x.mast) + bgN(x.build));
@@ -5141,7 +5143,7 @@ function bgLines(d, R) {
   const mainIds = new Set(d.contractors.filter(isMain).map(c => c.id)), L = [];
   R.earth.forEach(e => L.push({ cat: "עבודות עפר", area: e.c.id, exec: e.c.id, title: `מקטעי עבודה — ${e.c.name}`, est: e.est, cov: e.amt, earth: e }));
   R.extras.filter(x => !x.excluded).forEach(x => L.push({ cat: x.cat && BG_ROWS.includes(x.cat) ? x.cat : "עבודות נוספות", area: x.areaId ?? (mainIds.has(x.contractorId) ? x.contractorId : ""),
-    exec: x.contractorId || "", title: x.title || "", est: bgN(x.amount), cov: bgN(x.transferred) + bgN(x.ordered) + bgLinkedAmt(x), x, phase: x.phase === "בוצע" ? "בוצע" : "יבוצע", note: x.note || "" }));
+    exec: x.contractorId || "", title: x.title || "", est: bgN(x.amount), cov: bgLineCov(x), x, phase: x.phase === "בוצע" ? "בוצע" : "יבוצע", note: x.note || "" }));
   R.sites.forEach(x => L.push({ cat: "אתרי איסוף", area: "", exec: "", title: x.title || "", est: bgN(x.mast) + bgN(x.build), cov: 0, site: x, note: x.note || "" }));
   (bgCfg().opex ? oxByField() : []).forEach(r => L.push({ cat: "תקציב תפעולי", area: "", exec: "", title: `תפעולי — ${r.f}`, est: r.est, cov: r.com, opex: r, note: `${r.a.length} ספקים · שולם ${bgM(r.paid)}` }));
   if (R.cfg.sitesOrdered) L.push({ cat: "אתרי איסוף", area: "", exec: "", title: "הזמנות שיצאו לאתרי איסוף", est: 0, cov: R.cfg.sitesOrdered, sitesOrd: true });
