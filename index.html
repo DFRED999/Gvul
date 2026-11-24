@@ -7003,19 +7003,25 @@ async function mgmtDeck(asOf, theme = "color") {
   if (sp.length) {
     const groups = sp.flatMap(c => { const its = c.id === GRATE_CID ? grateItems(d) : d.items.filter(i => i.contractorId === c.id && i.status !== "מבוטל");
       return [...new Set(its.map(i => i.kind || "אחר"))].map(k => ({ c, k, ii: its.filter(i => (i.kind || "אחר") === k) })); });
-    // כרטיס לכל סוג פריט — כמו אריחי הקבלנים הייעודיים באתר
-    const PER = 12, pages = Math.max(1, Math.ceil(groups.length / PER));
-    for (let pg = 0; pg < pages; pg++) { const sl = P.addSlide(), gs = groups.slice(pg * PER, pg * PER + PER);
-      header(sl, "קבלנים ייעודיים", `שערים · ארונות שקד · חדרי טרפו · תט״ז · פינוי מוקשים · מעבירי מים — ביחידות${pages > 1 ? ` · ${pg + 1}/${pages}` : ""}`, { col: BAN("3B5878") });
+    // דשבורד — אריח לכל פריט שמוצג בשקפים הבאים (בלי פינוי מוקשים)
+    const liveI = i => i.status !== "מבוטל", spName = k => [...new Set(d.items.filter(i => i.kind === k).map(i => i.contractorId))].map(id => d.contractors.find(c => c.id === id)).filter(Boolean);
+    const subOf = k => { const cs = spName(k); return cs.length > 1 || cs.some(isMain) ? "קבלני עבודות עפר" : cs[0]?.name || ""; };
+    const gIt = d.items.filter(i => i.kind === "שערים" && liveI(i));
+    const dash = [...[...new Set(["שער", "ניצב", ...gIt.map(gateT)])].map(g => ({ k: "שערים", lbl: g === "שער" ? "שערים" : g === "ניצב" ? "ניצבים" : g, sub: subOf("שערים"), ii: gIt.filter(i => gateT(i) === g) })),
+      ...["תט״ז", "חדר טרפו", "ארון שקד"].map(k => ({ k, lbl: KIND_PLURAL[k] || k, sub: subOf(k), ii: d.items.filter(i => i.kind === k && liveI(i)) })),
+      { k: "סבכות למעבירי מים", lbl: "סבכות למעבירי מים", sub: d.contractors.find(c => c.id === GRATE_CID)?.name || "", ii: grateItems(d) }].filter(g => g.ii.length);
+    const PER = 8, pages = Math.max(1, Math.ceil(dash.length / PER));
+    for (let pg = 0; pg < pages; pg++) { const sl = P.addSlide(), gs = dash.slice(pg * PER, pg * PER + PER);
+      header(sl, "קבלנים ייעודיים — תמונת מצב", `${dash.map(g => g.lbl).join(" · ")} — ביחידות · נכון לתאריך ${fmtD(asOf)}${pages > 1 ? ` · ${pg + 1}/${pages}` : ""}`, { col: BAN("3B5878") });
       const cols = 4, rows = Math.max(1, Math.ceil(gs.length / cols)), gap = 0.18, cw = (W - 0.6 - (cols - 1) * gap) / cols, ch = Math.min(2.3, (5.7 - (rows - 1) * gap) / rows);
-      gs.forEach(({ c, k, ii }, n) => { const I = KIND_ICON[k] || { c: "#5f6670" }, kc = KC(I.c), x = W - 0.3 - (n % cols + 1) * cw - (n % cols) * gap, y = 1.25 + Math.floor(n / cols) * (ch + gap);
+      gs.forEach(({ k, lbl, sub, ii }, n) => { const I = KIND_ICON[k] || { c: "#5f6670" }, kc = KC(lbl === "ניצבים" ? "#8a6a3a" : I.c), x = W - 0.3 - (n % cols + 1) * cw - (n % cols) * gap, y = 1.25 + Math.floor(n / cols) * (ch + gap);
         const dn = ii.filter(i => i.status === "הושלם").length, ip = ii.filter(i => i.status === "בביצוע").length, ho = ii.filter(i => i.status === "HOLD").length;
         const wk = ii.filter(i => i.status === "הושלם" && inWeek(i.doneDate)).length, mo = ii.filter(i => i.status === "הושלם" && inMonth(i.doneDate)).length;
         sl.addShape(P.ShapeType.roundRect, { x, y, w: cw, h: ch, fill: { color: "FFFFFF" }, line: { color: LINE }, rectRadius: 0.12, shadow: SHo() });
         sl.addShape(P.ShapeType.roundRect, { x: x + cw - 0.62, y: y + 0.14, w: 0.48, h: 0.48, fill: { color: kc }, line: { color: kc }, rectRadius: 0.1 });
-        T(sl, String(KIND_PLURAL[k] || k).slice(0, 1), { x: x + cw - 0.62, y: y + 0.14, w: 0.48, h: 0.48, fontSize: 16, bold: true, color: "FFFFFF", align: "center", valign: "middle", margin: 0 });
-        T(sl, KIND_PLURAL[k] || k, { x: x + 0.12, y: y + 0.1, w: cw - 0.84, h: 0.32, fontSize: 13, bold: true, color: kc, margin: 0, fit: "shrink" });
-        T(sl, c.name, { x: x + 0.12, y: y + 0.4, w: cw - 0.84, h: 0.24, fontSize: 9, color: MUT, margin: 0, fit: "shrink" });
+        T(sl, String(lbl).slice(0, 1), { x: x + cw - 0.62, y: y + 0.14, w: 0.48, h: 0.48, fontSize: 16, bold: true, color: "FFFFFF", align: "center", valign: "middle", margin: 0 });
+        T(sl, lbl, { x: x + 0.12, y: y + 0.1, w: cw - 0.84, h: 0.32, fontSize: 13, bold: true, color: kc, margin: 0, fit: "shrink" });
+        T(sl, sub, { x: x + 0.12, y: y + 0.4, w: cw - 0.84, h: 0.24, fontSize: 9, color: MUT, margin: 0, fit: "shrink" });
         T(sl, [{ text: String(dn), options: { fontSize: 24, bold: true, color: kc } }, { text: `${RLM} / ${ii.length}`, options: { fontSize: 13, color: MUT } }, { text: `${RLM}  הושלמו`, options: { fontSize: 9.5, color: MUT } }], { x: x + 0.12, y: y + 0.66, w: cw - 0.24, h: 0.48, margin: 0, valign: "middle" });
         bar(sl, x + 0.14, y + 1.17, cw - 0.28, 0.1, ii.length ? dn / ii.length : 0, kc, mix(kc, "FFFFFF", 0.85));
         T(sl, [...(wk ? [{ text: `השבוע +${wk}`, options: { bold: true, color: ORG, fontSize: 11 } }] : [{ text: "ללא שינוי השבוע", options: { color: MUT, fontSize: 9 } }]),
