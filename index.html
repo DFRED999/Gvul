@@ -1410,10 +1410,10 @@ function pageMreport(d) {
   const pend = d.progress.filter(p => p.review === "לבדיקה"), mg = d.issues.filter(i => i.mgmt && i.status !== "סגור");
   const det = sp.flatMap(c => [...new Set(d.items.filter(i => i.contractorId === c.id && i.status !== "מבוטל").map(i => i.kind || "אחר"))].map(k => ({ c, k })))
     .filter(({ c, k }) => !["שערים", "תט״ז", "חדר טרפו", "פינוי מוקשים"].includes(k) && d.items.some(i => i.contractorId === c.id && (i.kind || "אחר") === k && ["הושלם", "בביצוע", "HOLD"].includes(i.status)));
-  const nPairs = (d.items.some(i => i.kind === "שערים" && i.status !== "מבוטל") ? 1 : 0) + (d.items.some(i => ["תט״ז", "חדר טרפו"].includes(i.kind) && i.status !== "מבוטל") ? 1 : 0);
+  const nPairs = (d.items.some(i => i.kind === "שערים" && i.status !== "מבוטל") ? 1 : 0) + (d.items.some(i => ["תט״ז", "חדר טרפו"].includes(i.kind) && i.status !== "מבוטל") ? 1 : 0) + (d.items.some(i => i.kind === "ארון שקד" && i.status !== "מבוטל") ? 1 : 0);
   const slides = [["סיכום", "אריחי ביצוע, השבוע והחודש · טבלת קבלנים לפי גזרה", 1, "#2f7d4f"],
     ...mains.map(c => [c.name, "סטטוס לפי שלבים + פריסת ביצוע לפי ק.ד. (השבוע בכתום, החודש בירוק)", 2, cColor(d, c)]),
-    ...(sp.length ? [["קבלנים ייעודיים", "טבלה ביחידות · שערים וניצבים · תט״זים וחדרי טרפו (סה״כ, לפי גזרה, כל הפריטים לפי מצב)" + (det.length ? " · פירוט שאר הפריטים לפי ק.ד." : ""), 1 + nPairs + (det.length ? Math.ceil(det.length / 6) : 0), "#34557a"]] : []),
+    ...(sp.length ? [["קבלנים ייעודיים", "טבלה ביחידות · שערים וניצבים · תט״זים וחדרי טרפו · ארונות שקד (סה״כ, לפי גזרה, כל הפריטים לפי מצב)" + (det.length ? " · פירוט שאר הפריטים לפי ק.ד." : ""), 1 + nPairs + (det.length ? Math.ceil(det.length / 6) : 0), "#34557a"]] : []),
     ["נושאים להחלטת הנהלה", `${mg.length} נושאים מסומנים ״להנהלה״`, Math.max(1, Math.ceil(mg.length / 6)), "#a33a2a"]];
   const total = slides.reduce((t, s) => t + s[2], 0);
   const byC = mains.map(c => [c, pend.filter(p => p.contractorId === c.id).length]).filter(x => x[1]);
@@ -7032,9 +7032,10 @@ async function mgmtDeck(asOf, theme = "color") {
     const CC = { wk: [C_WK, "FFFFFF"], mo: [C_MON, FM ? NAVY : "1F4D30"], old: [C_OLD, "FFFFFF"], ip: [C_IP, FM ? NAVY : "5A4A00"], ho: [C_HOLD, "FFFFFF"], no: [C_NO, "6B7068"] };
     const mainsNS = [...mains].sort(byNorth), live = i => i.status !== "מבוטל";
     const PAIRS = [{ t: "שערים וניצבים", col: "7A5A35", parts: [...new Set(["שער", "ניצב", ...d.items.filter(i => i.kind === "שערים" && live(i)).map(gateT)])].map(g => ({ n: g === "שער" ? "שערים" : g === "ניצב" ? "ניצבים" : g, ii: d.items.filter(i => i.kind === "שערים" && live(i) && gateT(i) === g) })) },
-      { t: "תט״זים וחדרי טרפו", col: "B5541C", parts: [{ n: "תט״זים", ii: d.items.filter(i => i.kind === "תט״ז" && live(i)) }, { n: "חדרי טרפו", ii: d.items.filter(i => i.kind === "חדר טרפו" && live(i)) }] }]
+      { t: "תט״זים וחדרי טרפו", col: "B5541C", parts: [{ n: "תט״זים", ii: d.items.filter(i => i.kind === "תט״ז" && live(i)) }, { n: "חדרי טרפו", ii: d.items.filter(i => i.kind === "חדר טרפו" && live(i)) }] },
+      { t: "ארונות שקד", col: "34557A", parts: [{ n: "ארונות שקד", ii: d.items.filter(i => i.kind === "ארון שקד" && live(i)) }] }]
       .map(p => ({ ...p, parts: p.parts.filter(x => x.ii.length) })).filter(p => p.parts.length);
-    for (const PR of PAIRS) { const sl = P.addSlide(), cs = [...new Set(PR.parts.flatMap(x => x.ii.map(i => i.contractorId)))].map(id => d.contractors.find(c => c.id === id)?.name).filter(Boolean).join(" · ");
+    for (const PR of PAIRS) { const sl = P.addSlide(), cs = [...new Set(PR.parts.flatMap(x => x.ii.map(i => i.contractorId)))].map(id => d.contractors.find(c => c.id === id)).filter(Boolean).sort(byNorth).map(c => c.name).join(" · ");
       header(sl, PR.t, `${cs} · נכון לתאריך ${fmtD(asOf)}`, { col: BAN(PR.col) });
       const cnt = (ii, k) => ii.filter(i => stOf(i) === k).length, dn = ii => ii.filter(i => i.status === "הושלם").length;
       // טבלה 1: סה״כ
