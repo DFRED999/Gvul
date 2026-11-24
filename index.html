@@ -1409,10 +1409,11 @@ function pageMreport(d) {
   const asOf = ui.repDate || todayStr(), from = addDays(asOf, -7), mains = d.contractors.filter(isMain), sp = d.contractors.filter(c => !isMain(c));
   const pend = d.progress.filter(p => p.review === "לבדיקה"), mg = d.issues.filter(i => i.mgmt && i.status !== "סגור");
   const det = sp.flatMap(c => [...new Set(d.items.filter(i => i.contractorId === c.id && i.status !== "מבוטל").map(i => i.kind || "אחר"))].map(k => ({ c, k })))
-    .filter(({ c, k }) => d.items.some(i => i.contractorId === c.id && (i.kind || "אחר") === k && ["הושלם", "בביצוע", "HOLD"].includes(i.status)));
+    .filter(({ c, k }) => !["שערים", "תט״ז", "חדר טרפו", "פינוי מוקשים"].includes(k) && d.items.some(i => i.contractorId === c.id && (i.kind || "אחר") === k && ["הושלם", "בביצוע", "HOLD"].includes(i.status)));
+  const nPairs = (d.items.some(i => i.kind === "שערים" && i.status !== "מבוטל") ? 1 : 0) + (d.items.some(i => ["תט״ז", "חדר טרפו"].includes(i.kind) && i.status !== "מבוטל") ? 1 : 0);
   const slides = [["סיכום", "אריחי ביצוע, השבוע והחודש · טבלת קבלנים לפי גזרה", 1, "#2f7d4f"],
     ...mains.map(c => [c.name, "סטטוס לפי שלבים + פריסת ביצוע לפי ק.ד. (השבוע בכתום, החודש בירוק)", 2, cColor(d, c)]),
-    ...(sp.length ? [["קבלנים ייעודיים", "טבלה ביחידות + פירוט לפי ק.ד. של מה שהושלם / בביצוע / HOLD", 1 + Math.max(1, Math.ceil(det.length / 6)), "#34557a"]] : []),
+    ...(sp.length ? [["קבלנים ייעודיים", "טבלה ביחידות · שערים וניצבים · תט״זים וחדרי טרפו (סה״כ, לפי גזרה, כל הפריטים לפי מצב)" + (det.length ? " · פירוט שאר הפריטים לפי ק.ד." : ""), 1 + nPairs + (det.length ? Math.ceil(det.length / 6) : 0), "#34557a"]] : []),
     ["נושאים להחלטת הנהלה", `${mg.length} נושאים מסומנים ״להנהלה״`, Math.max(1, Math.ceil(mg.length / 6)), "#a33a2a"]];
   const total = slides.reduce((t, s) => t + s[2], 0);
   const byC = mains.map(c => [c, pend.filter(p => p.contractorId === c.id).length]).filter(x => x[1]);
@@ -1659,7 +1660,7 @@ function grateSummary(d) {
 }
 /** רכיבי הפרויקט — דף לכל סוג פריט, מכל הגזרות ומכל הקבלנים. רכיבים נוספים נשמרים בהגדרות (tableConfig/settings/components) */
 const COMPS_BASE = [["trafo", "חדרי טרפו", "חדר טרפו"], ["cab", "ארונות שקד", "ארון שקד"], ["culv", "מעבירי מים", "מעבירי מים"], ["air", "מעבירים איריים", "מעביר אירי"], ["grate", "סבכות", "סבכות למעבירי מים"],
-  ["@power", "חיבורי חח״י"], ["@sites", "אתרי איסוף"], ["gate", "שערים ומחסומים", "שערים"], ["ttz", "תט״זים", "תט״ז"], ["mine", "פינוי מוקשים", "פינוי מוקשים"]];
+  ["@power", "חיבורי חח״י"], ["@sites", "אתרי איסוף"], ["gate", "שערים וניצבים", "שערים"], ["ttz", "תט״זים", "תט״ז"], ["mine", "פינוי מוקשים", "פינוי מוקשים"]];
 const comps = () => [...COMPS_BASE.map(([k, name, kind]) => ({ k, name, kind })), ...Object.entries(RAW.tableConfig?.settings?.components || {}).map(([k, x]) => ({ k: "x" + k, name: x.name, kind: x.kind || x.name, custom: true }))];
 const compOf = kind => comps().find(x => x.kind === kind);
 function pageComp(d, key) {
@@ -2865,10 +2866,11 @@ const ofT = (a, b) => `${a}<span class="ofT"> מתוך ${b}</span>`;
 const statRow = (label, st, extra = "") => `<tr><td><b>${label}</b>${extra}</td><td class="c">${st.total}</td><td class="c">${st.done}</td><td class="c">${st.prog}</td><td class="c">${st.plan}</td><td class="c">${st.notyet}</td><td class="c">${st.hold}</td>
   <td class="c" style="${heatBg(st.total ? st.done / st.total : null)}"><b>${st.total ? ofT(st.done, st.total) : "—"}</b><div class="small">${st.total ? Math.round(st.done / st.total * 100) + "%" : ""}</div></td><td class="c small">${st.km ? `<b>${ofT(num(Math.round(st.kmDone * 1000), 0), MTR(st.km))}</b><div class="small">${Math.round(st.kmDone / st.km * 100)}%</div>` : "—"}</td></tr>`;
 const statHead = first => `<thead><tr><th>${first}</th><th>סה״כ</th><th>הושלמו</th><th>בביצוע</th><th>מתוכננים</th><th>טרם</th><th>HOLD</th><th>הושלמו מתוך</th><th>אורך (טווחים)</th></tr></thead>`;
-/* ---------- סוגי שערים: שער / מחסום / פשפש + סוגים שמגדירים (הגדרות: settings.gateTypes). פריט "שערים" בלי סוג = שער ---------- */
-const GATE_T0 = ["שער", "מחסום", "פשפש"];
-const gateTypes = () => [...new Set([...GATE_T0, ...(RAW.tableConfig?.settings?.gateTypes || []), ...list("items").filter(i => i.kind === "שערים" && i.gateType).map(i => i.gateType)])];
-const gateT = i => i.gateType || "שער";
+/* ---------- סוגי שערים: שער / ניצב / פשפש + סוגים שמגדירים (הגדרות: settings.gateTypes). פריט "שערים" בלי סוג = שער ---------- */
+const GATE_T0 = ["שער", "ניצב", "פשפש"];
+const GT_ALIAS = { "מחסום": "ניצב" };   // שם ישן בנתונים — מוצג ונשמר כ"ניצב"
+const gateTypes = () => [...new Set([...GATE_T0, ...(RAW.tableConfig?.settings?.gateTypes || []), ...list("items").filter(i => i.kind === "שערים" && i.gateType).map(i => GT_ALIAS[i.gateType] || i.gateType)])];
+const gateT = i => GT_ALIAS[i.gateType] || i.gateType || "שער";
 function gateTypeModal(done) {
   modal(`<h2>סוג חדש</h2><label class="field">שם הסוג<input class="inp" id="gt_n" placeholder="למשל: שער כפול, מחסום הידראולי, מעבר הולכי רגל"></label><p class="small muted" id="gt_m"></p>
     <div class="row"><button class="btn" id="mYes">הוספה</button><button class="btn ghost" id="mNo">ביטול</button></div>`, (m, close) => {
@@ -7024,10 +7026,50 @@ async function mgmtDeck(asOf, theme = "color") {
             T(sl, String(v), { x: px, y: y + ch - 0.62, w: pw, h: 0.3, fontSize: 13, bold: true, color: fc, align: "center", valign: "middle", margin: 0 });
             T(sl, l, { x: px, y: y + ch - 0.34, w: pw, h: 0.2, fontSize: 7.5, color: fc, align: "center", valign: "middle", margin: 0 }); }); } });
     }
+    // שקפי זוגות: שערים + ניצבים · תט״זים + חדרי טרפו — טבלת סה״כ, חלוקה לפי גזרה, וכל הפריטים כקוביות לפי מצב
+    const kdT0 = i => [i.kdFrom, i.kdTo].map(kdNum).filter(v => v !== null).map(kd1).filter((v, j, a) => a.indexOf(v) === j).join("–") || "—";
+    const C_NO = "E4E7E2", stOf = i => i.status === "הושלם" ? (inWeek(i.doneDate) ? "wk" : inMonth(i.doneDate) ? "mo" : "old") : i.status === "בביצוע" ? "ip" : i.status === "HOLD" ? "ho" : "no";
+    const CC = { wk: [C_WK, "FFFFFF"], mo: [C_MON, FM ? NAVY : "1F4D30"], old: [C_OLD, "FFFFFF"], ip: [C_IP, FM ? NAVY : "5A4A00"], ho: [C_HOLD, "FFFFFF"], no: [C_NO, "6B7068"] };
+    const mainsNS = [...mains].sort(byNorth), live = i => i.status !== "מבוטל";
+    const PAIRS = [{ t: "שערים וניצבים", col: "7A5A35", parts: [...new Set(["שער", "ניצב", ...d.items.filter(i => i.kind === "שערים" && live(i)).map(gateT)])].map(g => ({ n: g === "שער" ? "שערים" : g === "ניצב" ? "ניצבים" : g, ii: d.items.filter(i => i.kind === "שערים" && live(i) && gateT(i) === g) })) },
+      { t: "תט״זים וחדרי טרפו", col: "B5541C", parts: [{ n: "תט״זים", ii: d.items.filter(i => i.kind === "תט״ז" && live(i)) }, { n: "חדרי טרפו", ii: d.items.filter(i => i.kind === "חדר טרפו" && live(i)) }] }]
+      .map(p => ({ ...p, parts: p.parts.filter(x => x.ii.length) })).filter(p => p.parts.length);
+    for (const PR of PAIRS) { const sl = P.addSlide(), cs = [...new Set(PR.parts.flatMap(x => x.ii.map(i => i.contractorId)))].map(id => d.contractors.find(c => c.id === id)?.name).filter(Boolean).join(" · ");
+      header(sl, PR.t, `${cs} · נכון לתאריך ${fmtD(asOf)}`, { col: BAN(PR.col) });
+      const cnt = (ii, k) => ii.filter(i => stOf(i) === k).length, dn = ii => ii.filter(i => i.status === "הושלם").length;
+      // טבלה 1: סה״כ
+      const y1 = table(sl, ["פריט", "סה״כ", "הושלמו", "מתוכם השבוע", "בביצוע", "HOLD", "טרם"], [...PR.parts.map(x => [x.n, x.ii.length, dn(x.ii), cnt(x.ii, "wk") || "—", cnt(x.ii, "ip") || "—", cnt(x.ii, "ho") || "—", cnt(x.ii, "no") || "—"]),
+        ...(PR.parts.length > 1 ? [(A => [tot("סה״כ"), tot(String(A.length)), tot(String(dn(A))), tot(String(cnt(A, "wk") || "—")), tot(String(cnt(A, "ip") || "—")), tot(String(cnt(A, "ho") || "—")), tot(String(cnt(A, "no") || "—"))])(PR.parts.flatMap(x => x.ii))] : [])],
+        { x: W - 0.3 - 6.0, y: 1.22, w: 6.0, colW: [1.3, 0.75, 0.85, 0.95, 0.75, 0.7, 0.7], rh: 0.32, fs: 10.5 });
+      // טבלה 2: לפי גזרה (צפון ← דרום) — הושלמו / סה״כ
+      const ms = mainsNS.filter(m => PR.parts.some(x => x.ii.some(i => mainAt(d, i)?.id === m.id))), noM = PR.parts.some(x => x.ii.some(i => !mainAt(d, i)));
+      const y2 = table(sl, ["פריט", ...ms.map(m => m.name), ...(noM ? ["ללא גזרה"] : [])], PR.parts.map(x => [x.n, ...ms.map(m => { const a = x.ii.filter(i => mainAt(d, i)?.id === m.id); return a.length ? `${dn(a)} / ${a.length}` : "—"; }), ...(noM ? [(a => a.length ? `${dn(a)} / ${a.length}` : "—")(x.ii.filter(i => !mainAt(d, i)))] : [])]),
+        { x: 0.3, y: 1.22, w: W - 0.6 - 6.0 - 0.25, rh: 0.32, fs: 10.5 });
+      T(sl, "לפי גזרה — הושלמו / סה״כ", { x: 0.3, y: Math.max(y2, 1.22) + 0.02, w: W - 6.85, h: 0.22, fontSize: 8.5, color: MUT, margin: 0 });
+      // קוביות: שורה לכל פריט, לפי ק.ד. (צפון ← דרום)
+      let y = Math.max(y1, y2) + 0.32; const LB = 1.55, X1 = W - 0.3 - LB - 0.12, CW2 = X1 - 0.3, CH2 = 0.27, CG2 = 0.06, cw = t => 0.2 + 0.078 * String(t).length;
+      // גודל הקוביות — הגדול ביותר שנכנס בשקף
+      const mk = f => PR.parts.map(x => { const its = [...x.ii].sort((a, b) => (kdNum(b.kdFrom) ?? -1) - (kdNum(a.kdFrom) ?? -1)), out = []; let cx = 0, ln = 0;
+        for (const it of its) { const t = kdT0(it), w = cw(t) * f; if (cx + w > CW2) { ln++; cx = 0; } out.push({ it, t, w, cx, ln }); cx += w + CG2 * f; } return { x, out, lines: Math.max(1, ln + 1) }; });
+      const needOf = (L, f) => L.reduce((t, l) => t + l.lines * (CH2 + 0.07) * f + 0.08 + 0.12 * f, 0);
+      let sc = 1.6, lays = mk(sc); while (sc > 0.6 && needOf(lays, sc) > 6.8 - y) { sc = Math.round((sc - 0.1) * 10) / 10; lays = mk(sc); }
+      const ch2 = CH2 * sc, gy = 0.07 * sc;
+      for (const L of lays) { const h = L.lines * (ch2 + gy) + 0.08;
+        sl.addShape(P.ShapeType.roundRect, { x: W - 0.3 - LB, y, w: LB, h, fill: { color: PR.col }, line: { color: PR.col }, rectRadius: 0.06 });
+        T(sl, [{ text: L.x.n, options: { bold: true, fontSize: 11, color: "FFFFFF" } }, { text: `\n${dn(L.x.ii)} / ${L.x.ii.length}`, options: { fontSize: 9, color: "FFFFFF" } }], { x: W - 0.3 - LB + 0.06, y, w: LB - 0.12, h, margin: 0, valign: "middle" });
+        for (const c of L.out) { const [bg, fg] = CC[stOf(c.it)], cx = X1 - c.cx - c.w, cy = y + 0.04 + c.ln * (ch2 + gy);
+          sl.addShape(P.ShapeType.roundRect, { x: cx, y: cy, w: c.w, h: ch2, fill: { color: bg }, line: { color: bg === C_IP ? (FM ? "B8C3D1" : "D4B53A") : bg === C_NO ? "C9CFC4" : bg }, rectRadius: 0.05 });
+          T(sl, c.t, { x: cx, y: cy, w: c.w, h: ch2, fontSize: Math.max(6.5, Math.min(12, 8.5 * sc)), bold: true, color: fg, align: "center", valign: "middle", margin: 0 }); }
+        y += h + 0.12 * sc; }
+      [[C_WK, "הושלם השבוע"], [C_MON, "הושלם בחודש"], [C_OLD, "הושלם קודם"], [C_IP, "בביצוע"], [C_HOLD, "HOLD"], [C_NO, "טרם"]].forEach(([col, t], q) => { const x = W - 0.3 - (q + 1) * 1.45;
+        sl.addShape(P.ShapeType.roundRect, { x: x + 1.1, y: 7.0, w: 0.3, h: 0.18, fill: { color: col }, line: { color: col === C_NO ? "C9CFC4" : col }, rectRadius: 0.04 });
+        T(sl, t, { x, y: 6.96, w: 1.05, h: 0.26, fontSize: 9, color: MUT, margin: 0, valign: "middle" }); });
+      T(sl, "המספר על כל קוביה = ק.ד.", { x: 0.3, y: 6.96, w: 2.6, h: 0.26, fontSize: 9, color: MUT, margin: 0, valign: "middle" }); }
     // פירוט לפי ק.ד.: כרטיס לכל סוג, ובו "צ'יפ" צבעוני לכל פריט לפי מצבו
     const kdT = i => [i.kdFrom, i.kdTo].map(kdNum).filter(v => v !== null).map(kd1).filter((v, j, a) => a.indexOf(v) === j).join("–") || "—";
     const chipCol = i => i.status === "הושלם" ? (inWeek(i.doneDate) ? [C_WK, "FFFFFF"] : inMonth(i.doneDate) ? [C_MON, FM ? NAVY : "1F4D30"] : [C_OLD, "FFFFFF"]) : i.status === "בביצוע" ? [C_IP, FM ? NAVY : "5A4A00"] : [C_HOLD, "FFFFFF"];
-    const det = groups.filter(g => g.ii.some(i => ["הושלם", "בביצוע", "HOLD"].includes(i.status)));
+    const PAIR_K = ["שערים", "תט״ז", "חדר טרפו", "פינוי מוקשים"];   // שערים/ניצבים ותט״ז/טרפו — בשקפי הזוגות; פינוי מוקשים — לא מוצג
+    const det = groups.filter(g => !PAIR_K.includes(g.k) && g.ii.some(i => ["הושלם", "בביצוע", "HOLD"].includes(i.status)));
     const LBL = 2.55, CX0 = 0.45, CX1 = W - 0.3 - LBL - 0.15, CW = CX1 - CX0, CH = 0.27, CG = 0.07, MAXL = 4;
     const chipW = t => 0.2 + 0.078 * String(t).length;
     const layout = its => { const out = []; let x = 0, line = 0;
@@ -7036,7 +7078,7 @@ async function mgmtDeck(asOf, theme = "color") {
     const cards = det.map(g => { const its = g.ii.filter(i => ["הושלם", "בביצוע", "HOLD"].includes(i.status)).sort((a, b) => (kdNum(b.kdFrom) ?? -1) - (kdNum(a.kdFrom) ?? -1)), L = layout(its);
       return { ...g, L, h: Math.max(0.84, 0.22 + L.lines * (CH + 0.09) + (L.more ? 0.24 : 0) + 0.06) }; });
     const pagesD = []; { let cur = [], y = 0; for (const c of cards) { if (cur.length && y + c.h > 5.74) { pagesD.push(cur); cur = []; y = 0; } cur.push(c); y += c.h + 0.1; } if (cur.length || !pagesD.length) pagesD.push(cur); }
-    pagesD.forEach((pg, k) => { const sl = P.addSlide();
+    if (det.length) pagesD.forEach((pg, k) => { const sl = P.addSlide();
       header(sl, "קבלנים ייעודיים — פירוט לפי ק.ד.", det.length ? `כל פריט שהושלם, בביצוע או ב-HOLD — לפי ק.ד.${pagesD.length > 1 ? ` · ${k + 1}/${pagesD.length}` : ""}` : "עוד אין פריטים שהושלמו או בביצוע", { col: BAN("3B5878") });
       let y = 1.22;
       for (const { c, k: kk, ii, L, h } of pg) { const I = KIND_ICON[kk] || { c: "#5f6670" }, kc = KC(I.c), dn = ii.filter(i => i.status === "הושלם").length, ip = ii.filter(i => i.status === "בביצוע").length, ho = ii.filter(i => i.status === "HOLD").length, wk = ii.filter(i => i.status === "הושלם" && inWeek(i.doneDate)).length;
