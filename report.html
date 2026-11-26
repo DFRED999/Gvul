@@ -207,7 +207,7 @@ const WK_M = 20;
 function wkData(data, cid, asOf) {
   const V = o => Object.entries(o || {}).map(([id, v]) => ({ id, ...v })), num = x => { const m = String(x ?? "").match(/\d+(\.\d+)?/); return m ? +m[0] : null; };
   const C = (data.contractors || {})[cid]; if (!C) return null;
-  const offices = data.designOffices || {}, acts = V(data.activities).filter(a => a.contractorId === cid && !/ארונות|תט["״׳']?ז|טרפו|מעביר(י|ים)? מים/.test(a.name || "") && a.stage !== "מעבירי מים" && a.unit !== "יח׳")
+  const offices = data.designOffices || {}, acts = V(data.activities).filter(a => a.contractorId === cid && !/ארונות|תט["״׳']?ז|טרפו|מעביר(י|ים)? מים|אירי/.test(a.name || "") && a.stage !== "מעבירי מים" && a.stage !== "מעבירים איריים" && a.unit !== "יח׳")
     .sort((a, b) => (+a.order || 0) - (+b.order || 0) || String(a.name).localeCompare(String(b.name), "he"));
   const hs = p => p.secFrom !== "" && p.secTo !== "" && p.secFrom != null && p.secTo != null && !isNaN(p.secFrom) && !isNaN(p.secTo);
   const prog = V(data.progress).filter(p => p.contractorId === cid && p.review !== "נדחה" && p.segmentId && hs(p) && String(p.date || "") <= asOf);
@@ -355,7 +355,7 @@ const ACT_GROUPS = [
   { key: "fence", name: "גדר", color: "#2f7d4f", tint: "#e8f4ec", stages: ["כלונסאות", "קורה", "עמודים", "רשתות / מודולים", "ניו ג׳רסי", "רשת סכינים", "תלתליות על הגדר"], re: /גדר|כלונס|קלונס|קור|עמוד|רשת|מודול|ניו|ג.ר[סז]י|סכינ|תלתל|קלמר|ריתוך|בטון רזה/ },
   { key: "road", name: "כביש", color: "#5a55b0", tint: "#efeef7", stages: ["מבנה דרך", "מצעים", "אספלט", "דרך אחזקה", "מעקה בטון"], re: /מבנה דרך|מצע|אספלט|אחזקה|מעקה בטון/ },
   { key: "comm", name: "תקשורת ותשתיות", color: "#2d6cb8", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "משטחי תט״ז", "משטחי טרפו"], re: /תשתי|תקשור|חשמל|שוח|צנר|גוב/ },   // ארונות שקד — תחת "אחר" (פריטים שהקבלן בונה, לא תשתיות)
-  { key: "fin", name: "ניקוז וגמר", color: "#127c76", tint: "#e4f3f1", stages: ["מעבירי מים", "מעבירי מים וסבכות", "מעקות", "סימון כביש ושילוט"], re: /מעביר|סבכ|מעקות|סימון|שילוט/ }];
+  { key: "fin", name: "ניקוז וגמר", color: "#127c76", tint: "#e4f3f1", stages: ["מעבירי מים", "מעבירי מים וסבכות", "מעבירים איריים", "מעקות", "סימון כביש ושילוט"], re: /מעביר|סבכ|מעקות|סימון|שילוט/ }];
 const OTHER_G = { key: "other", name: "אחר", color: "#5f6670", tint: "#f1f2f3" };
 const actGroup = a => ACT_GROUPS.find(G => G.stages.includes(a.stage)) || (a.stage ? null : ACT_GROUPS.find(G => G.re.test(a.name))) || OTHER_G;
 const groupActs = acts => [...ACT_GROUPS, OTHER_G].map(G => ({ G, acts: acts.filter(a => actGroup(a).key === G.key) })).filter(x => x.acts.length);
@@ -421,12 +421,14 @@ function noAccess() {
 const list = col => Object.entries(D[col] || {}).map(([id, v]) => ({ id, ...v }));
 /* מלאכה ביחידות (כמות) — וגם "התקנת סבכה", שתמיד נספרת ביחידות: סבכה למעביר מים */
 /* מעבירי מים — מדווחים לפי שם המעביר (כמו תט״ז / ארונות), לא לפי חתכים */
-const isGr = a => /סבכ/.test(a?.name || ""), isCulv = a => !!a && !isGr(a) && (a.stage === "מעבירי מים" || /מעביר(י|ים)? מים/.test(a.name || "")), isUA = a => a?.unit === "יח׳" || isGr(a) || isCulv(a);
+/* מעבירים איריים — מדווחים לפי פריט (בוחרים את המעביר), כמו תט״ז */
+const isAir = a => !!a && (a.stage === "מעבירים איריים" || /אירי/.test(a.name || ""));
+const isGr = a => /סבכ/.test(a?.name || ""), isCulv = a => !!a && !isGr(a) && !isAir(a) && (a.stage === "מעבירי מים" || /מעביר(י|ים)? מים/.test(a.name || "")), isUA = a => a?.unit === "יח׳" || isGr(a) || isCulv(a) || isAir(a);
 const bcOf = i => String(i.name || "").replace(/^מעביר\s*/, "").trim();
 const normQ = v => String(v || "").toLowerCase().replace(/bc|מעביר|[\s\-_.]/g, "");
 /** מעבירי מים לבחירה בדיווח סבכה — חיפוש לפי מספר BC, ק.ד. או חתך */
 /* מלאכה ביחידות שמקושרת לפריטים: התקנת סבכה → מעבירי מים · תט״ז / חדר טרפו / שער → הפריטים של הקבלן הזה. המפקח בוחר איזה פריט בוצע */
-const ACT_KINDS = [[/סבכ/, "מעבירי מים"], [/תט["״׳']{0,2}ז/, "תט״ז"], [/טרפו/, "חדר טרפו"], [/שער/, "שערים"], [/שקד/, "ארון שקד"], [/אתר|איסוף/, "@site"]];
+const ACT_KINDS = [[/אירי/, "מעביר אירי"], [/סבכ/, "מעבירי מים"], [/תט["״׳']{0,2}ז/, "תט״ז"], [/טרפו/, "חדר טרפו"], [/שער/, "שערים"], [/שקד/, "ארון שקד"], [/אתר|איסוף/, "@site"]];
 /** חח״י עובדת על מתקנים של כל הקבלנים (חישמול ארונות / חדרי טרפו, חיבור אתרי איסוף) — הבורר מציג את כולם */
 const IEC_CID = "sp-iec", IEC_ALL = ["ארון שקד", "חדר טרפו", "@site"];
 /** פריט לפי מזהה — פריט רגיל או אתר איסוף */
@@ -439,7 +441,7 @@ function linkKind(a, cid) { if (!a || !isUA(a)) return null;
   if (cid === IEC_CID && IEC_ALL.includes(m[1])) return (m[1] === "@site" ? Object.keys(D.sites || {}).length : list("items").some(i => i.kind === m[1])) ? "all:" + m[1] : null;
   if (list("items").some(i => i.kind === m[1] && i.contractorId === cid && i.status !== "מבוטל")) return m[1];
   return (m[1] === "תט״ז" || m[1] === "חדר טרפו") && list("items").some(i => i.kind === m[1] && i.mainId === cid && i.status !== "מבוטל") ? "pad:" + m[1] : null; }   // קבלן גזרה: משטחים לתט״זים שבגזרה שלו
-const labOf = i => i.kind === "מעבירי מים" ? bcOf(i) : String(i.name || i.kind || "").replace(/\s*\([^)]*\)\s*$/, "");
+const labOf = i => i.kind === "מעבירי מים" ? bcOf(i) : i.kind === "מעביר אירי" ? (String(i.name || "").replace(/^מעביר\s*אירי\s*/, "").trim() || (i.x_sec ? "חתך " + i.x_sec : "מעביר אירי")) : String(i.name || i.kind || "").replace(/\s*\([^)]*\)\s*$/, "");
 /** הפריטים לבחירה + מצב: "בוצע" (סטטוס הושלם / דיווח מאושר), "ממתין" (דיווח ממתין לאישור) */
 function linkList() { if (!LK) return []; const K = LK.kind, pad = LK.pad, st = {};
   list("progress").forEach(p => { if (p.review === "נדחה") return; const pa = D.activities?.[p.activityId];
