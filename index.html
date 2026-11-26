@@ -911,7 +911,7 @@ function itemRepMap() { const m = {}; Object.values(RAW.progress || {}).forEach(
 const PAD_KIND = "תט״ז", PAD_KINDS = ["תט״ז", "חדר טרפו"];   // פריטים עם שלב "הכנת משטח" של קבלן הגזרה
 function padRepMap() { const m = {}; Object.values(RAW.progress || {}).forEach(p => { if (p.review || !p.itemIds) return; Object.keys(p.itemIds).forEach(id => { const i = RAW.items?.[id]; if (i && PAD_KINDS.includes(i.kind) && i.mainId && i.mainId === p.contractorId && (!m[id] || String(p.date) < String(m[id].date))) m[id] = p; }); }); return m; }
 /** מלאכה ביחידות שמקושרת לסוג פריט (תט״ז / חדר טרפו / שער) של אותו קבלן — הביצוע = הפריטים שהושלמו */
-const ACT_KINDS = [[/תט["״׳']{0,2}ז/, "תט״ז"], [/טרפו/, "חדר טרפו"], [/שער/, "שערים"]];
+const ACT_KINDS = [[/אירי/, "מעביר אירי"], [/תט["״׳']{0,2}ז/, "תט״ז"], [/טרפו/, "חדר טרפו"], [/שער/, "שערים"]];
 function actKind(d, a) { const m = ACT_KINDS.find(([re]) => re.test(a?.name || "")); return m && d.items.some(i => i.kind === m[1] && i.contractorId === a.contractorId && i.status !== "מבוטל") ? m[1] : null; }
 /** הזמנה שהוגדרה לפי חתכים הנדסיים (מחתך–עד חתך): האורך = מספר החתכים × 20 מ׳ בקטעי התכנון של הקבלן, והק.ד. נגזר מהחתכים */
 function ordSecKeys(cid) { const out = { f: "secFrom", t: "secTo" };
@@ -2124,7 +2124,7 @@ const ACT_GROUPS = [
   { key: "fence", name: "גדר", color: "#2e7d4f", tint: "#e8f4ec", stages: ["כלונסאות", "קורה", "עמודים", "רשתות / מודולים", "ניו ג׳רסי", "רשת סכינים", "תלתליות על הגדר"] },
   { key: "road", name: "כביש", color: "#5f5a8c", tint: "#efeef7", stages: ["מבנה דרך", "מצעים", "אספלט", "דרך אחזקה", "מעקה בטון"] },
   { key: "comm", name: "תקשורת ותשתיות", color: "#2f6db5", tint: "#e8f0fa", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "ארונות שקד", "משטחי תט״ז", "משטחי טרפו"] },
-  { key: "fin", name: "ניקוז וגמר", color: "#13827a", tint: "#e4f3f1", stages: ["מעבירי מים", "מעקות", "סימון כביש ושילוט"] }];
+  { key: "fin", name: "ניקוז וגמר", color: "#13827a", tint: "#e4f3f1", stages: ["מעבירי מים", "מעבירים איריים", "מעקות", "סימון כביש ושילוט"] }];
 const actGroup = a => ACT_GROUPS.find(G => G.stages.includes(a.stage || guessStage(a.name))) || { key: "other", name: "אחר", color: "#6b7280", tint: "#f1f2f3" };
 /** מלאכות מקובצות: [{G, acts}] בסדר הקבוצות, ובתוך קבוצה לפי סדר הביצוע */
 const groupActs = acts => [...ACT_GROUPS, { key: "other" }].map(G => ({ G: G.key === "other" ? actGroup({}) : G, acts: acts.filter(a => actGroup(a).key === G.key) })).filter(x => x.acts.length);
@@ -2670,12 +2670,12 @@ const STAGE_GROUPS = [
   { name: "גדר", color: "#2e7d4f", tint: "#eaf5ee", stages: ["רשתות / מודולים", "ניו ג׳רסי", "רשת סכינים", "תלתליות על הגדר"] },
   { name: "תשתיות", color: "#2f6db5", tint: "#e9f1fb", stages: ["חפירת תשתיות תקשורת", "חפירת תשתיות חשמל", "שוחות תקשורת", "צנרת וגובים (חשמל + תקשורת)", "ארונות שקד", "משטחי תט״ז", "משטחי טרפו"] },
   { name: "כביש", color: "#6b5b8a", tint: "#f0edf6", stages: ["מצעים", "אספלט", "דרך אחזקה", "מעקה בטון"] },
-  { name: "גמר", color: "#13827a", tint: "#e5f4f2", stages: ["מעבירי מים", "מעקות", "סימון כביש ושילוט"] }];
+  { name: "גמר", color: "#13827a", tint: "#e5f4f2", stages: ["מעבירי מים", "מעבירים איריים", "מעקות", "סימון כביש ושילוט"] }];
 /** כל השלבים, מסודרים לפי קבוצה: גדר → כביש → תשתיות */
 const STAGES = STAGE_GROUPS.flatMap(G => G.stages);
 const stageGroup = g => STAGE_GROUPS.find(x => x.stages.includes(g)) || null;
 /** שלבים שהביצוע שלהם נמדד מפריטי עבודה (במקום מדיווחי מלאכות): ארונות שקד — רשומים אצל חח״י אבל מבוצעים ע״י הקבלן הראשי באזור */
-const ITEM_STAGES = { "ארונות שקד": "ארון שקד" };
+const ITEM_STAGES = { "ארונות שקד": "ארון שקד", "מעבירים איריים": "מעביר אירי" };
 function itemStageStat(d, c, g, asOf) {
   const kind = ITEM_STAGES[g]; if (!kind) return null;
   const its = d.items.filter(i => i.kind === kind && i.status !== "מבוטל" && mainAt(d, i)?.id === c.id);
@@ -2686,13 +2686,14 @@ function itemStageStat(d, c, g, asOf) {
 const groupTag = g => { const G = stageGroup(g); return G ? `<span class="pill" style="font-size:11px;padding:1px 7px;background:${G.tint};color:${G.color};border:1px solid ${G.color}55">${G.name}</span>` : ""; };
 /** מלאכה שנספרת ביחידות (למשל שוחות תקשורת) — מדווחים כמות, לא חתכים. activity.unit = "יח׳", activity.planQty = כמות מתוכננת */
 /** מעבירי מים — נספרים לפי שם (רשימת מעבירי המים באתר, סטטוס "הושלם"), לא לפי חתכים */
-const isCulvAct = a => !isGrateAct(a) && (a?.stage === "מעבירי מים" || /מעביר(י|ים)? מים/.test(a?.name || ""));
-const isUnitAct = a => a?.unit === "יח׳" || /סבכ/.test(a?.name || "") || isCulvAct(a);   // התקנת סבכה — תמיד ביחידות (סבכה למעביר)
+const isAirAct = a => !!a && (a.stage === "מעבירים איריים" || /אירי/.test(a.name || ""));   // מעבירים איריים — מדווחים לפי פריט (כמו תט״ז), לא לפי חתכים
+const isCulvAct = a => !isGrateAct(a) && !isAirAct(a) && (a?.stage === "מעבירי מים" || /מעביר(י|ים)? מים/.test(a?.name || ""));
+const isUnitAct = a => a?.unit === "יח׳" || /סבכ/.test(a?.name || "") || isCulvAct(a) || isAirAct(a);   // התקנת סבכה — תמיד ביחידות (סבכה למעביר)
 const isUnitStage = g => !!ITEM_STAGES[g] || list("activities").some(a => a.stage === g && isUnitAct(a));
 /** הצעת שלב משותף לפי שם המלאכה (לשיוך אוטומטי) */
 function guessStage(name) {
   const n = String(name || "");
-  const R = [[/משטח.*טרפו/, "משטחי טרפו"], [/משטח.*ת["״׳']{0,2}ט/, "משטחי תט״ז"], [/ארו(ן|נות)|שקד/, "ארונות שקד"], [/שוח/, "שוחות תקשורת"], [/מעביר/, "מעבירי מים"], [/סימון|שילוט|תמרור/, "סימון כביש ושילוט"],
+  const R = [[/אירי/, "מעבירים איריים"], [/משטח.*טרפו/, "משטחי טרפו"], [/משטח.*ת["״׳']{0,2}ט/, "משטחי תט״ז"], [/ארו(ן|נות)|שקד/, "ארונות שקד"], [/שוח/, "שוחות תקשורת"], [/מעביר/, "מעבירי מים"], [/סימון|שילוט|תמרור/, "סימון כביש ושילוט"],
     [/צנר|גוב/, "צנרת וגובים (חשמל + תקשורת)"], [/(תשתי|חפיר).*חשמל/, "חפירת תשתיות חשמל"], [/(תשתי|חפיר).*תק/, "חפירת תשתיות תקשורת"],
     [/סכינ/, "רשת סכינים"], [/פריס|פריש/, "פריסת תלתליות"], [/פירוק/, "פירוק גדר קיימת"], [/תלתל/, "תלתליות על הגדר"], [/רשת|מודול|קלמר|ריתוך/, "רשתות / מודולים"],
     [/כלונס|קלונס|קידוח/, "כלונסאות"], [/^מעקות|מעקות בטיחות|מעקה בטיחות/, "מעקות"], [/מעקה בטון|קיר בטון/, "מעקה בטון"], [/ניו|גרסי|ג׳רזי|ג'רזי|ג׳רסי|ג'רסי/, "ניו ג׳רסי"],
