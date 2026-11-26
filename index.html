@@ -7053,21 +7053,32 @@ async function mgmtDeck(asOf, theme = "color") {
       const y2 = table(sl, ["פריט", ...ms.map(m => m.name), ...(noM ? ["ללא גזרה"] : [])], PR.parts.map(x => [x.n, ...ms.map(m => { const a = x.ii.filter(i => mainAt(d, i)?.id === m.id); return a.length ? `${dn(a)} / ${a.length}` : "—"; }), ...(noM ? [(a => a.length ? `${dn(a)} / ${a.length}` : "—")(x.ii.filter(i => !mainAt(d, i)))] : [])]),
         { x: 0.3, y: 1.22, w: W - 0.6 - 6.0 - 0.25, rh: 0.32, fs: 10.5 });
       T(sl, "לפי גזרה — הושלמו / סה״כ", { x: 0.3, y: Math.max(y2, 1.22) + 0.02, w: W - 6.85, h: 0.22, fontSize: 8.5, color: MUT, margin: 0 });
-      // קוביות: שורה לכל פריט, לפי ק.ד. (צפון ← דרום)
-      let y = Math.max(y1, y2) + 0.32; const LB = 1.55, X1 = W - 0.3 - LB - 0.12, CW2 = X1 - 0.3, CH2 = 0.27, CG2 = 0.06, cw = t => 0.2 + 0.078 * String(t).length;
+      // קוביות: לכל פריט — שורה לכל קבלן (גזרה, צפון ← דרום), ובה הפריטים שלו לפי ק.ד.
+      let y = Math.max(y1, y2) + 0.32; const LB = 1.35, CL = 1.3, X1 = W - 0.3 - LB - 0.1 - CL - 0.08, CW2 = X1 - 0.3, CH2 = 0.27, CG2 = 0.06, cw = t => 0.2 + 0.078 * String(t).length;
+      const CC0 = c => FM ? NAVY : hx(cColor(d, c));
+      const grpOf = ii => [...ms.map(m => ({ m, a: ii.filter(i => mainAt(d, i)?.id === m.id) })), { m: null, a: ii.filter(i => !mainAt(d, i)) }].filter(g => g.a.length);
       // גודל הקוביות — הגדול ביותר שנכנס בשקף
-      const mk = f => PR.parts.map(x => { const its = [...x.ii].sort((a, b) => (kdNum(b.kdFrom) ?? -1) - (kdNum(a.kdFrom) ?? -1)), out = []; let cx = 0, ln = 0;
-        for (const it of its) { const t = kdT0(it), w = cw(t) * f; if (cx + w > CW2) { ln++; cx = 0; } out.push({ it, t, w, cx, ln }); cx += w + CG2 * f; } return { x, out, lines: Math.max(1, ln + 1) }; });
-      const needOf = (L, f) => L.reduce((t, l) => t + l.lines * (CH2 + 0.07) * f + 0.08 + 0.12 * f, 0);
-      let sc = 1.6, lays = mk(sc); while (sc > 0.6 && needOf(lays, sc) > 6.8 - y) { sc = Math.round((sc - 0.1) * 10) / 10; lays = mk(sc); }
+      const mk = f => PR.parts.map(x => ({ x, gs: grpOf(x.ii).map(g => { const out = []; let cx = 0, ln = 0;
+        for (const it of [...g.a].sort((a, b) => (kdNum(b.kdFrom) ?? -1) - (kdNum(a.kdFrom) ?? -1))) { const t = kdT0(it), w = cw(t) * f; if (cx + w > CW2) { ln++; cx = 0; } out.push({ it, t, w, cx, ln }); cx += w + CG2 * f; }
+        return { ...g, out, lines: Math.max(1, ln + 1) }; }) }));
+      const gH = (g, f) => g.lines * (CH2 + 0.07) * f + 0.06;
+      const needOf = (L, f) => L.reduce((t, l) => t + l.gs.reduce((u, g) => u + gH(g, f) + 0.05, 0) + 0.06 + 0.14 * f, 0);
+      let sc = 1.5, lays = mk(sc); while (sc > 0.5 && needOf(lays, sc) > 6.8 - y) { sc = Math.round((sc - 0.1) * 10) / 10; lays = mk(sc); }
       const ch2 = CH2 * sc, gy = 0.07 * sc;
-      for (const L of lays) { const h = L.lines * (ch2 + gy) + 0.08;
+      for (const L of lays) { const h = L.gs.reduce((u, g) => u + gH(g, sc) + 0.05, 0) + 0.01;
         sl.addShape(P.ShapeType.roundRect, { x: W - 0.3 - LB, y, w: LB, h, fill: { color: PR.col }, line: { color: PR.col }, rectRadius: 0.06 });
-        T(sl, [{ text: L.x.n, options: { bold: true, fontSize: 11, color: "FFFFFF" } }, { text: `\n${dn(L.x.ii)} / ${L.x.ii.length}`, options: { fontSize: 9, color: "FFFFFF" } }], { x: W - 0.3 - LB + 0.06, y, w: LB - 0.12, h, margin: 0, valign: "middle" });
-        for (const c of L.out) { const [bg, fg] = CC[stOf(c.it)], cx = X1 - c.cx - c.w, cy = y + 0.04 + c.ln * (ch2 + gy);
-          sl.addShape(P.ShapeType.roundRect, { x: cx, y: cy, w: c.w, h: ch2, fill: { color: bg }, line: { color: bg === C_IP ? (FM ? "B8C3D1" : "D4B53A") : bg === C_NO ? "C9CFC4" : bg }, rectRadius: 0.05 });
-          T(sl, c.t, { x: cx, y: cy, w: c.w, h: ch2, fontSize: Math.max(6.5, Math.min(12, 8.5 * sc)), bold: true, color: fg, align: "center", valign: "middle", margin: 0 }); }
-        y += h + 0.12 * sc; }
+        T(sl, [{ text: L.x.n, options: { bold: true, fontSize: 11.5, color: "FFFFFF" } }, { text: `\n${dn(L.x.ii)} / ${L.x.ii.length}`, options: { fontSize: 9.5, color: "FFFFFF" } }], { x: W - 0.3 - LB + 0.06, y, w: LB - 0.12, h, margin: 0, valign: "middle" });
+        let gy0 = y;
+        for (const g of L.gs) { const hh = gH(g, sc), cc = g.m ? CC0(g.m) : "8A8F86", xl = W - 0.3 - LB - 0.1 - CL;
+          sl.addShape(P.ShapeType.rect, { x: xl, y: gy0, w: CL, h: hh, fill: { color: "FFFFFF" }, line: { color: "DADFD6", width: 0.75 } });
+          sl.addShape(P.ShapeType.rect, { x: xl + CL - 0.06, y: gy0, w: 0.06, h: hh, fill: { color: cc }, line: { color: cc } });
+          T(sl, [{ text: g.m ? g.m.name : "ללא גזרה", options: { bold: true, fontSize: 9.5, color: cc } }, { text: `  ${dn(g.a)} / ${g.a.length}`, options: { fontSize: 8.5, color: MUT } }], { x: xl + 0.04, y: gy0, w: CL - 0.14, h: hh, margin: 0, valign: "middle", fit: "shrink" });
+          if (g !== L.gs[L.gs.length - 1]) sl.addShape(P.ShapeType.line, { x: 0.3, y: gy0 + hh + 0.025, w: X1 - 0.3, h: 0, line: { color: "E1E5DD", width: 0.5, dashType: "dash" } });
+          for (const c of g.out) { const [bg, fg] = CC[stOf(c.it)], cx = X1 - c.cx - c.w, cy = gy0 + 0.03 + c.ln * (ch2 + gy);
+            sl.addShape(P.ShapeType.roundRect, { x: cx, y: cy, w: c.w, h: ch2, fill: { color: bg }, line: { color: bg === C_IP ? (FM ? "B8C3D1" : "D4B53A") : bg === C_NO ? "C9CFC4" : bg }, rectRadius: 0.05 });
+            T(sl, c.t, { x: cx, y: cy, w: c.w, h: ch2, fontSize: Math.max(6.5, Math.min(12, 8.5 * sc)), bold: true, color: fg, align: "center", valign: "middle", margin: 0 }); }
+          gy0 += hh + 0.05; }
+        y += h + 0.14 * sc; }
       [[C_WK, "הושלם השבוע"], [C_MON, "הושלם בחודש"], [C_OLD, "הושלם קודם"], [C_IP, "בביצוע"], [C_HOLD, "HOLD"], [C_NO, "טרם"]].forEach(([col, t], q) => { const x = W - 0.3 - (q + 1) * 1.45;
         sl.addShape(P.ShapeType.roundRect, { x: x + 1.1, y: 7.0, w: 0.3, h: 0.18, fill: { color: col }, line: { color: col === C_NO ? "C9CFC4" : col }, rectRadius: 0.04 });
         T(sl, t, { x, y: 6.96, w: 1.05, h: 0.26, fontSize: 9, color: MUT, margin: 0, valign: "middle" }); });
